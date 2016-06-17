@@ -113,4 +113,4 @@ def delete(domain, key, user=None):
 
     '''
     cmd = 'defaults delete "{0}" "{1}"'.format(domain, key)
-    return __salt__['cmd.run'](cmd, runas=user, output_loglevel='debug')
+    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='debug')

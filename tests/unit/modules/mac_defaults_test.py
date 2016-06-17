@@ -74,7 +74,7 @@ class MacDefaultsTestCase(TestCase):
             Test delete a default setting
         '''
         mock = MagicMock()
-        with patch.dict(macdefaults.__salt__, {'cmd.run': mock}):
+        with patch.dict(macdefaults.__salt__, {'cmd.run_all': mock}):
             macdefaults.delete('com.apple.CrashReporter', 'Crash')
             mock.assert_called_once_with('defaults delete "com.apple.CrashReporter" "Crash"', output_loglevel='debug', runas=None)
 
@@ -83,7 +83,7 @@ class MacDefaultsTestCase(TestCase):
             Test delete a default setting as a specific user
         '''
         mock = MagicMock()
-        with patch.dict(macdefaults.__salt__, {'cmd.run': mock}):
+        with patch.dict(macdefaults.__salt__, {'cmd.run_all': mock}):
             macdefaults.delete('com.apple.CrashReporter', 'Crash', user="frank")
             mock.assert_called_once_with('defaults delete "com.apple.CrashReporter" "Crash"', output_loglevel='debug', runas="frank")
 

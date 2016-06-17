@@ -100,7 +100,7 @@ def absent(name, domain, user=None):
 
     out = __salt__['macdefaults.delete'](domain, name, user)
 
-    if 'not avail' in out:
+    if out['retcode'] != 0:
         ret['comment'] += "{0} {1} is already absent".format(domain, name)
     else:
         ret['changes']['absent'] = "{0} {1} is now absent".format(domain, name)

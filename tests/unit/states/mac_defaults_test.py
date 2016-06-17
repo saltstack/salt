@@ -152,11 +152,10 @@ class MacDefaultsTestCase(TestCase):
             'result': True
         }
 
-        mock = MagicMock(return_value={'retcode': 0}) # this is the macdefaults call retcode? or defaults itself?
-        with patch.dict(macdefaults.__salt__, {'macdefaults.absent': mock}):
+        mock = MagicMock(return_value={'retcode': 1})
+        with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
             out = macdefaults.absent('Key', 'com.apple.something')
             mock.assert_called_once_with('com.apple.something', 'Key', None)
-            assert not write_mock.called
             self.assertEqual(out, expected)
 
     def test_absent_deleting_existing(self):
@@ -164,17 +163,16 @@ class MacDefaultsTestCase(TestCase):
             Test removing an existing value
         '''
         expected = {
-            'changes': {},
-            'comment': 'com.apple.something Key is now absent',
+            'changes': {'absent': 'com.apple.something Key is now absent'},
+            'comment': '',
             'name': 'Key',
             'result': True
         }
 
         mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(macdefaults.__salt__, {'macdefaults.absent': mock}):
+        with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
             out = macdefaults.absent('Key', 'com.apple.something')
-            mock.assert_called_once_with('com.apple.something', 'Key')
-            assert not write_mock.called
+            mock.assert_called_once_with('com.apple.something', 'Key', None)
             self.assertEqual(out, expected)
 
 
