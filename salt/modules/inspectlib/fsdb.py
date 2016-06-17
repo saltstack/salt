@@ -24,8 +24,6 @@ class CsvDBEntity(object):
     '''
     Serializable object for the table.
     '''
-    def bind_table(self, table):
-        self.__table = table
 
     def serialize(self, description):
         '''
