@@ -24,8 +24,7 @@ class CsvDBEntity(object):
     '''
     Serializable object for the table.
     '''
-
-    def serialize(self, description):
+    def _serialize(self, description):
         '''
         Serialize the object to a row for CSV according to the table description.
 
@@ -172,7 +171,7 @@ class CsvDB(object):
         descr = self._tables.get(obj._TABLE)
         if descr is None:
             raise Exception('Table {0} not found.'.format(obj._TABLE))
-        return obj.serialize(self._tables[obj._TABLE])
+        return obj._serialize(self._tables[obj._TABLE])
 
     def get(self, table_name, matches=None, mt=None, lt=None, eq=None):
         '''
