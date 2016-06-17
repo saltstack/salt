@@ -766,6 +766,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
                     ret.append(sdecode(relpath))
@@ -784,6 +786,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(sdecode(os.path.relpath(root, path)))
         return ret
