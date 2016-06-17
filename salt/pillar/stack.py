@@ -4,9 +4,13 @@ Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 
 .. versionadded:: 2016.3.0
 
-This custom saltstack ``ext_pillar`` is inspired by
-`varstack <https://github.com/conversis/varstack>`_ but is heavily based on
-Jinja2 for maximum flexibility.
+`PillarStack <https://github.com/bbinet/pillarstack>`_ is a custom saltstack
+``ext_pillar`` which was inspired by `varstack
+<https://github.com/conversis/varstack>`_ but is heavily based on Jinja2 for
+maximum flexibility.
+
+Any issue should be reported to the upstream project at:
+https://github.com/bbinet/pillarstack/issues
 
 It supports the following features:
 
