@@ -215,7 +215,14 @@ def built(name,
         ret['result'] = False
         return ret
 
-    ret['changes'] = __salt__['pkgbuild.build'](
+    func = 'pkgbuild.build'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for res in results:
+            if res.endswith('.rpm'):
+                func = 'rpmbuild.build'
+                break
+
+    ret['changes'] = __salt__[func](
         runas,
         tgt,
         dest_dir,
@@ -237,7 +244,12 @@ def built(name,
     return ret
 
 
-def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='builder'):
+def repo(name,
+         keyid=None,
+         env=None,
+         use_passphrase=False,
+         gnupghome='/etc/salt/gpgkeys',
+         runas='builder'):
     '''
     Make a package repository and optionally sign it and packages present,
     the name is directory to turn into a repo. This state is best used
@@ -330,6 +342,7 @@ def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/
            'changes': {},
            'comment': '',
            'result': True}
+
     if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
@@ -342,6 +355,13 @@ def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/
                           'documentation.')
         return ret
 
-    __salt__['pkgbuild.make_repo'](name, keyid, env, use_passphrase, gnupghome, runas)
+    func = 'pkgbuild.make_repo'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for file in os.listdir(name):
+            if file.endswith('.rpm'):
+                func = 'rpmbuild.make_repo'
+                break
+
+    __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
     ret['changes'] = {'refresh': True}
     return ret
