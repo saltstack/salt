@@ -506,7 +506,7 @@ def latest(name,
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
-                    ident_path = __salt__['cp.cache_file'](ident_path)
+                    ident_path = __salt__['cp.cache_file'](ident_path, __env__)
                 except IOError as exc:
                     log.error(
                         'Failed to cache {0}: {1}'.format(ident_path, exc)
@@ -584,7 +584,8 @@ def latest(name,
             identity=identity,
             https_user=https_user,
             https_pass=https_pass,
-            ignore_retcode=False)
+            ignore_retcode=False,
+            saltenv=__env__)
     except CommandExecutionError as exc:
         return _fail(
             ret,
@@ -1097,7 +1098,8 @@ def latest(name,
                             force=force_fetch,
                             refspecs=refspecs,
                             user=user,
-                            identity=identity)
+                            identity=identity,
+                            saltenv=__env__)
                     except CommandExecutionError as exc:
                         return _failed_fetch(ret, exc, comments)
                     else:
@@ -1284,7 +1286,8 @@ def latest(name,
                             'update',
                             opts=['--init', '--recursive'],
                             user=user,
-                            identity=identity)
+                            identity=identity,
+                            saltenv=__env__)
                     except CommandExecutionError as exc:
                         return _failed_submodule_update(ret, exc, comments)
             elif bare:
@@ -1304,7 +1307,8 @@ def latest(name,
                         force=force_fetch,
                         refspecs=refspecs,
                         user=user,
-                        identity=identity)
+                        identity=identity,
+                        saltenv=__env__)
                 except CommandExecutionError as exc:
                     return _failed_fetch(ret, exc, comments)
                 else:
@@ -1421,7 +1425,8 @@ def latest(name,
                                       opts=clone_opts,
                                       identity=identity,
                                       https_user=https_user,
-                                      https_pass=https_pass)
+                                      https_pass=https_pass,
+                                      saltenv=__env__)
             except CommandExecutionError as exc:
                 msg = 'Clone failed: {0}'.format(_strip_exc(exc))
                 return _fail(ret, msg, comments)
@@ -2046,7 +2051,8 @@ def detached(name,
                                   opts=clone_opts,
                                   identity=identity,
                                   https_user=https_user,
-                                  https_pass=https_pass)
+                                  https_pass=https_pass,
+                                  saltenv=__env__)
             comments.append(
                 '{0} cloned to {1}'.format(
                     name,
@@ -2088,7 +2094,8 @@ def detached(name,
                 force=True,
                 refspecs=refspecs,
                 user=user,
-                identity=identity)
+                identity=identity,
+                saltenv=__env__)
         except CommandExecutionError as exc:
             msg = 'Fetch failed'
             msg += ':\n\n' + str(exc)
