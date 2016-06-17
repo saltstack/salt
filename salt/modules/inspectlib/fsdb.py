@@ -82,7 +82,7 @@ class CsvDB(object):
 
     def open(self, dbname):
         '''
-        Open database from the path with the name.
+        Open database from the path with the name or latest.
 
         :return:
         '''
