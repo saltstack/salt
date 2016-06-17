@@ -232,7 +232,7 @@ def create(name,
 
     # kwargs are sorted to preserve ordering
     # between Python 2 and Python 3
-    for key in sorted(kwargs.keys()):
+    for key in sorted(kwargs):
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
