@@ -17,6 +17,7 @@
 import os
 import csv
 import datetime
+import gzip
 from salt.utils.odict import OrderedDict
 
 
@@ -110,7 +111,7 @@ class CsvDB(object):
         return self._tables.keys()
 
     def _load_table(self, table_name):
-        with open(os.path.join(self.db_path, table_name), 'rb') as table:
+        with gzip.open(os.path.join(self.db_path, table_name), 'rb') as table:
             return OrderedDict([tuple(elm.split(':')) for elm in csv.reader(table).next()])
 
     def open(self, dbname=None):
@@ -153,7 +154,7 @@ class CsvDB(object):
         '''
         get_type = lambda item: str(type(item)).split("'")[1]
         if not os.path.exists(os.path.join(self.db_path, obj._TABLE)):
-            with open(os.path.join(self.db_path, obj._TABLE), 'wb') as table_file:
+            with gzip.open(os.path.join(self.db_path, obj._TABLE), 'wb') as table_file:
                 csv.writer(table_file).writerow(['{col}:{type}'.format(col=elm[0], type=get_type(elm[1]))
                                                  for elm in tuple(obj.__dict__.items())])
 
@@ -164,7 +165,7 @@ class CsvDB(object):
         :param obj:
         :return:
         '''
-        with open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
     def _validate_object(self, obj):
@@ -185,7 +186,7 @@ class CsvDB(object):
         :return:
         '''
         objects = []
-        with open(os.path.join(self.db_path, obj._TABLE), 'rb') as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), 'rb') as table:
             header = None
             for data in csv.reader(table):
                 if not header:
