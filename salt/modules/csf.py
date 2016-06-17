@@ -39,7 +39,7 @@ def _temp_exists(method, ip):
 
 def _exists_with_port(method, rule):
     path = '/etc/csf/csf.{0}'.format(method)
-    return __salt__['file.search'](path, rule)
+    return __salt__['file.contains'](path, rule)
 
 
 def exists(method,
@@ -169,9 +169,9 @@ def _access_rule_with_port(method,
                             port_origin='d',
                             ip_origin='d',
                             comment=''):
-    #_exists = exists(method, ip, port, proto, direction, port_origin, ip_origin, comment)
-    #if _exists:
-    #    return _exists
+    _exists = exists(method, ip, port, proto, direction, port_origin, ip_origin, comment)
+    if _exists:
+        return _exists
     rule = _build_port_rule(ip, port, proto, direction, port_origin, ip_origin, comment)
     path = '/etc/csf/csf.{0}'.format(method)
     return __salt__['file.append'](path, rule)
