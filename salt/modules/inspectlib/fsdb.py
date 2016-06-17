@@ -17,6 +17,7 @@
 import os
 import csv
 import datetime
+from salt.utils.odict import OrderedDict
 
 
 class CsvDBEntity(object):
@@ -76,15 +77,9 @@ class CsvDB(object):
         if not os.path.exists(self.db_path):
             os.makedirs(self.db_path)
         self._opened = True
+        self.list_tables()
 
         return dbname
-
-    def get_tables(self):
-        '''
-        Get a list of existin tables in this database.
-
-        :return:
-        '''
 
     def purge(self, dbid):
         '''
@@ -119,7 +114,7 @@ class CsvDB(object):
 
     def _load_table(self, table_name):
         with open(os.path.join(self.db_path, table_name), 'rb') as table:
-            return dict([tuple(elm.split(':')) for elm in csv.reader(table).next()])
+            return OrderedDict([tuple(elm.split(':')) for elm in csv.reader(table).next()])
 
     def open(self, dbname=None):
         '''
@@ -131,7 +126,9 @@ class CsvDB(object):
         databases = self.list()
         if self.is_closed():
             self.db_path = os.path.join(self.path, dbname or (databases and databases[0] or self.new()))
-            self._opened = True
+            if not self._opened:
+                self.list_tables()
+                self._opened = True
 
     def close(self):
         '''
@@ -170,6 +167,14 @@ class CsvDB(object):
         :param obj:
         :return:
         '''
+        with open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
+            csv.writer(table).writerow(self._validate_object(obj))
+
+    def _validate_object(self, obj):
+        descr = self._tables.get(obj._TABLE)
+        if descr is None:
+            raise Exception('Table {0} not found.'.format(obj._TABLE))
+        return obj.serialize(self._tables[obj._TABLE])
 
     def get(self, table_name, matches=None, mt=None, lt=None, eq=None):
         '''
