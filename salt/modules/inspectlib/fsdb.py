@@ -49,6 +49,7 @@ class CsvDB(object):
         self._opened = False
         self.db_path = None
         self._opened = False
+        self._tables = {}
 
     def _prepare(self, path):
         self.path = path
@@ -103,6 +104,22 @@ class CsvDB(object):
             databases.append(dbname)
         return list(reversed(sorted(databases)))
 
+    def list_tables(self):
+        '''
+        Load existing tables and their descriptions.
+
+        :return:
+        '''
+        if not self._tables:
+            for table_name in os.listdir(self.db_path):
+                self._tables[table_name] = self._load_table(table_name)
+
+        return self._tables.keys()
+
+    def _load_table(self, table_name):
+        with open(os.path.join(self.db_path, table_name), 'rb') as table:
+            return dict([tuple(elm.split(':')) for elm in csv.reader(table).next()])
+
     def open(self, dbname=None):
         '''
         Open database from the path with the name or latest.
@@ -113,6 +130,7 @@ class CsvDB(object):
         databases = self.list()
         if self.is_closed():
             self.db_path = os.path.join(self.path, dbname or (databases and databases[0] or self.new()))
+            self._opened = True
 
     def close(self):
         '''
