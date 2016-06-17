@@ -705,6 +705,24 @@ class DaemonMixIn(object):
             salt.utils.daemonize()
 
 
+class PidfileServiceNowMixin(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--pid-file', dest='pidfile',
+            default=os.path.join(
+                syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
+            ),
+            help=('Specify the location of the pidfile. Default: %default')
+        )
+
+    def set_pidfile(self):
+        from salt.utils.process import set_pidfile
+        set_pidfile(self.config['salt_servicenow_pidfile'], self.config['user'])
+
+
 class PidfileMixin(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 40
@@ -1397,6 +1415,29 @@ class MinionOptionParser(MasterOptionParser):
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
+
+class SnReactOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
+                          PidfileServiceNowMixin):
+    '''
+    Options parser for the ServiceNow daemon
+    '''
+
+    __metaclass__ = OptionParserMeta
+
+    description = (
+        'The ServiceNow daemon, connects ServiceNow with the salt-master'
+    )
+
+    # ConfigDirMixIn config filename attribute, snreact gets config from
+    # the master config
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes, put a special logfile in /var/log/salt
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'salt-servicenow')
+
+    def setup_config(self):
+        c = config.master_config(self.get_config_file_path())
+        return c
 
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
