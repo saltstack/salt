@@ -140,7 +140,7 @@ class MacDefaultsTestCase(TestCase):
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             assert not write_mock.called
             self.assertEqual(out, expected)
------------------------------------------------------------------------------------------
+
     def test_absent_already(self):
         '''
             Test ensuring non-existent defaults value is absent
