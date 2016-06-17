@@ -19,16 +19,26 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
+import logging
 
 # Import Salt Libs
-from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
+from salt.modules.inspectlib import EnvLoader
+from salt.modules.inspectlib import kiwiproc
 import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
+from salt.exceptions import CommandExecutionError
+
+try:
+    import kiwi
+except ImportError:
+    kiwi = None
+
+log = logging.getLogger(__name__)
 
 
-class Inspector(object):
+class Inspector(EnvLoader):
     DEFAULT_MINION_CONFIG_PATH = '/etc/salt/minion'
 
     MODE = ['configuration', 'payload', 'all']
@@ -38,26 +48,14 @@ class Inspector(object):
                     "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh",
                     "/root", "/home"]
 
-    def __init__(self, db_path=None, pid_file=None):
-        # Configured path
-        if not db_path and '__salt__' in globals():
-            db_path = globals().get('__salt__')['config.get']('inspector.db', '')
+    def __init__(self, cachedir=None, piddir=None, pidfilename=None):
+        EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
 
-        if not db_path:
-            raise InspectorSnapshotException('Inspector database location is not configured yet in minion.\n'
-                                             'Add "inspector.db: /path/to/cache" in "/etc/salt/minion".')
-        self.dbfile = db_path
-
-        self.db = DBHandle(self.dbfile)
-        self.db.open()
-
-        if not pid_file and '__salt__' in globals():
-            pid_file = globals().get('__salt__')['config.get']('inspector.pid', '')
-
-        if not pid_file:
-            raise InspectorSnapshotException("Inspector PID file location is not configured yet in minion.\n"
-                                             'Add "inspector.pid: /path/to/pids in "/etc/salt/minion".')
-        self.pidfile = pid_file
+        # TODO: This is nasty. Need to do something with this better. ASAP!
+        try:
+            self.db.open()
+        except Exception as ex:
+            log.error('Unable to [re]open db. Already opened?')
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
@@ -411,7 +409,34 @@ class Inspector(object):
         self._prepare_full_scan(**kwargs)
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
-            priority, __file__, self.pidfile, self.dbfile, mode))
+            priority, __file__, os.path.dirname(self.pidfile), os.path.dirname(self.dbfile), mode))
+
+    def export(self, description, local=False, path='/tmp', format='qcow2'):
+        '''
+        Export description for Kiwi.
+
+        :param local:
+        :param path:
+        :return:
+        '''
+        kiwiproc.__salt__ = __salt__
+        return kiwiproc.KiwiExporter(grains=__grains__,
+                                     format=format).load(**description).export('something')
+
+    def build(self, format='qcow2', path='/tmp'):
+        '''
+        Build an image using Kiwi.
+
+        :param format:
+        :param path:
+        :return:
+        '''
+        if kiwi is None:
+            msg = 'Unable to build the image due to the missing dependencies: Kiwi module is not available.'
+            log.error(msg)
+            raise CommandExecutionError(msg)
+
+        raise CommandExecutionError("Build is not yet implemented")
 
 
 def is_alive(pidfile):
@@ -458,7 +483,7 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             reinit_crypto()
-            fpid = open(pidfile, "w")
+            fpid = open(os.path.join(pidfile, EnvLoader.PID_FILE), "w")
             fpid.write("{0}\n".format(pid))
             fpid.close()
             sys.exit(0)

@@ -1,5 +1,6 @@
 /*custom webhelp*/
 var windowheight = $( window ).height();
+var windowwidth = $( window ).width();
 
 $( document ).ready(function() {
 
@@ -183,7 +184,7 @@ function resizeend() {
         setTimeout(resizeend, delta);
     } else {
         timeout = false;
-        if ($( window ).height() > windowheight || $( window ).height() + 40 < windowheight) {
+        if ($( window ).height() != windowheight && $(window).width() != windowwidth) {
             location.reload(false);
         }
     }
