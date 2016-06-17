@@ -26,12 +26,13 @@ class CsvDBEntity(object):
     def bind_table(self, table):
         self.__table = table
 
-    def serialize(self):
+    def serialize(self, description):
         '''
-        Serialize the object to a row for CSV.
+        Serialize the object to a row for CSV according to the table description.
 
         :return:
         '''
+        return [getattr(self, attr) for attr in description]
 
 
 class CsvDB(object):
