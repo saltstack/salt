@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import datetime
 
 
@@ -43,6 +44,13 @@ class CsvDB(object):
 
         :param path:
         '''
+        self._prepare(path)
+        self._opened = False
+
+    def _prepare(self, path):
+        self.path = path
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
 
     def _label(self):
         '''
@@ -50,6 +58,7 @@ class CsvDB(object):
 
         :return:
         '''
+        return datetime.datetime.utcnow().strftime('%Y%m%d.%H%M%S')
 
     def new(self):
         '''
@@ -57,6 +66,10 @@ class CsvDB(object):
 
         :return:
         '''
+        self.db_path = os.path.join(self.path, self._label())
+        if not os.path.exists(self.db_path):
+            os.makedirs(self.db_path)
+        self._opened = True
 
     def get_tables(self):
         '''
@@ -79,8 +92,12 @@ class CsvDB(object):
 
         :return:
         '''
+        databases = []
+        for dbname in os.listdir(self.path):
+            databases.append(dbname)
+        return reversed(sorted(databases))
 
-    def open(self, dbname):
+    def open(self, dbname=None):
         '''
         Open database from the path with the name or latest.
 
