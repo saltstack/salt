@@ -171,7 +171,7 @@ def check_env_cache(opts, env_cache):
     return None
 
 
-def generate_mtime_map(path_map):
+def generate_mtime_map(opts, path_map):
     '''
     Generate a dict of filename -> mtime
     '''
@@ -179,6 +179,8 @@ def generate_mtime_map(path_map):
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
