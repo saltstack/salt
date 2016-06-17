@@ -105,6 +105,7 @@ class CsvDB(object):
     def open(self, dbname=None):
         '''
         Open database from the path with the name or latest.
+        If there are no yet databases, create a new implicitly.
 
         :return:
         '''
