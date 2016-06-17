@@ -46,6 +46,8 @@ class CsvDB(object):
         '''
         self._prepare(path)
         self._opened = False
+        self.db_path = None
+        self._opened = False
 
     def _prepare(self, path):
         self.path = path
@@ -66,10 +68,13 @@ class CsvDB(object):
 
         :return:
         '''
-        self.db_path = os.path.join(self.path, self._label())
+        dbname = self._label()
+        self.db_path = os.path.join(self.path, dbname)
         if not os.path.exists(self.db_path):
             os.makedirs(self.db_path)
         self._opened = True
+
+        return dbname
 
     def get_tables(self):
         '''
@@ -95,7 +100,7 @@ class CsvDB(object):
         databases = []
         for dbname in os.listdir(self.path):
             databases.append(dbname)
-        return reversed(sorted(databases))
+        return list(reversed(sorted(databases)))
 
     def open(self, dbname=None):
         '''
@@ -103,6 +108,9 @@ class CsvDB(object):
 
         :return:
         '''
+        databases = self.list()
+        if self.is_closed():
+            self.db_path = os.path.join(self.path, dbname or (databases and databases[0] or self.new()))
 
     def close(self):
         '''
@@ -110,6 +118,7 @@ class CsvDB(object):
 
         :return:
         '''
+        self._opened = False
 
     def is_closed(self):
         '''
@@ -117,6 +126,7 @@ class CsvDB(object):
 
         :return:
         '''
+        return not self._opened
 
     def table_from_object(self, obj):
         '''
