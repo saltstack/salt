@@ -68,8 +68,8 @@ CERT_DEFAULTS = {
     'algorithm': 'sha256'
 }
 PEM_RE = re.compile(
-    r"(-----BEGIN CERTIFICATE-----\s?.+?"
-    r"\s?-----END CERTIFICATE-----)\s?",
+    r"\s*(?P<pem_header>-----(?:.+?)-----)\s+"
+    r"(?P<pem_body>.+?)\s+(?P<pem_footer>-----(?:.+?)-----)\s*",
     re.DOTALL
 )
 
@@ -334,7 +334,7 @@ def _get_private_key_obj(private_key):
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key)
+    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
     rsaprivkey = M2Crypto.RSA.load_key_string(private_key)
     evpprivkey = M2Crypto.EVP.PKey()
     evpprivkey.assign_rsa(rsaprivkey)
@@ -367,6 +367,18 @@ def _keygen_callback():
     return
 
 
+def _make_regex(pem_type):
+    '''
+    Dynamically generate a regex to match pem_type
+    '''
+    return re.compile(
+        r"\s*(?P<pem_header>-----BEGIN {0}-----)\s+"
+        r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
+        r"-----END {1}-----)\s*".format(pem_type, pem_type),
+        re.DOTALL
+    )
+
+
 def get_pem_entry(text, pem_type=None):
     '''
     Returns a properly formatted PEM string from the input text fixing
@@ -389,30 +401,35 @@ def get_pem_entry(text, pem_type=None):
     '''
     text = _text_or_file(text)
 
+    _match = None
+
     if not pem_type:
-        # Split based on headers
-        if len(text.split('-----')) is not 5:
-            raise salt.exceptions.SaltInvocationError(
-                'PEM text not valid:\n{0}'.format(text))
-        pem_header = '-----' + text.split('-----')[1] + '-----'
-        # Remove all whitespace from body
-        pem_footer = '-----' + text.split('-----')[3] + '-----'
-    else:
-        pem_header = '-----BEGIN {0}-----'.format(pem_type)
-        pem_footer = '-----END {0}-----'.format(pem_type)
-        if pem_type == 'CERTIFICATE':
-            for _match in PEM_RE.finditer(text):
-                # get the first certificate
-                text = _match.group(0)
+        # Find using a regex iterator, pick the first match
+        for _match in PEM_RE.finditer(text):
+            if _match:
                 break
-        # Split based on defined headers
-        if (len(text.split(pem_header)) is not 2 or
-                len(text.split(pem_footer)) is not 2):
+        if not _match:
+            raise salt.exceptions.SaltInvocationError(
+                'PEM text not valid:\n{0}'.format(text)
+            )
+        _match_dict = _match.groupdict()
+        pem_header = _match_dict['pem_header']
+        pem_footer = _match_dict['pem_footer']
+        pem_body = _match_dict['pem_body']
+    else:
+        _dregex = _make_regex(pem_type)
+        for _match in _dregex.finditer(text):
+            if _match:
+                break
+        if not _match:
             raise salt.exceptions.SaltInvocationError(
                 'PEM does not contain a single entry of type {0}:\n'
-                '{1}'.format(pem_type, text))
-
-    pem_body = text.split(pem_header)[1].split(pem_footer)[0]
+                '{1}'.format(pem_type, text)
+            )
+        _match_dict = _match.groupdict()
+        pem_header = _match_dict['pem_header']
+        pem_footer = _match_dict['pem_footer']
+        pem_body = _match_dict['pem_body']
 
     # Remove all whitespace from body
     pem_body = ''.join(pem_body.split())
@@ -680,7 +697,24 @@ def write_pem(text, path, pem_type=None):
     '''
     old_umask = os.umask(0o77)
     text = get_pem_entry(text, pem_type=pem_type)
-    salt.utils.fopen(path, 'w').write(text)
+    _dhparams = ''
+    _private_key = ''
+    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path):
+        _filecontents = _text_or_file(path)
+        try:
+            _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
+        except salt.exceptions.SaltInvocationError:
+            pass
+        try:
+            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+        except salt.exceptions.SaltInvocationError:
+            pass
+    with salt.utils.fopen(path, 'w') as _fp:
+        if pem_type and pem_type == 'CERTIFICATE' and _private_key:
+            _fp.write(_private_key)
+        _fp.write(text)
+        if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
+            _fp.write(_dhparams)
     os.umask(old_umask)
     return 'PEM written to {0}'.format(path)
 
