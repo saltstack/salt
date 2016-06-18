@@ -362,13 +362,13 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     proxy_lists = {}
 
     # Process docker info
-    for containers in six.itervalues(docker_hosts):
+    for containers in docker_hosts.values():
         host = containers.pop('host')
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for info in six.itervalues(host['interfaces']):
+            for info in host['interfaces'].values():
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
@@ -390,7 +390,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
             host_ips = list(set(good_ips))
 
         # Process each container
-        for container in six.itervalues(containers):
+        for container in containers.values():
             container_id = container['Info']['Id']
             if container['Image'] not in proxy_lists:
                 proxy_lists[container['Image']] = {}
