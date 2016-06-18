@@ -39,7 +39,36 @@ def check_ip(addr):
         salt ns1 dig.check_ip 127.0.0.1
         salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
     '''
-    return salt.utils.network.is_ip(addr)
+
+    try:
+        addr = addr.rsplit('/', 1)
+    except AttributeError:
+        # Non-string passed
+        return False
+
+    if salt.utils.network.is_ipv4(addr[0]):
+        try:
+            if 1 <= int(addr[1]) <= 32:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    if salt.utils.network.is_ipv6(addr[0]):
+        try:
+            if 8 <= int(addr[1]) <= 128:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    return False
 
 
 def A(host, nameserver=None):
