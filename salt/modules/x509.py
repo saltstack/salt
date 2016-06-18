@@ -1221,9 +1221,12 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         return cert_props
 
     if not verify_private_key(kwargs['signing_private_key'], signing_cert):
-        raise salt.exceptions.SaltInvocationError('signing_private_key: {0}'
-                'does no match signing_cert: {1}'.format(kwargs['signing_private_key'],
-                                                         kwargs['signing_cert']))
+        raise salt.exceptions.SaltInvocationError(
+            'signing_private_key: {0} '
+            'does no match signing_cert: {1}'.format(
+                kwargs['signing_private_key'],
+                kwargs.get('signing_cert', '')
+            )
 
     cert.sign(_get_private_key_obj(kwargs['signing_private_key']), kwargs['algorithm'])
 
