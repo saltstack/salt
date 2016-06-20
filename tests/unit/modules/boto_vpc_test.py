@@ -2,6 +2,8 @@
 
 # Import Python Libs
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+import pkg_resources
+from pkg_resources import DistributionNotFound
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -80,8 +82,6 @@ def _get_moto_version():
     try:
         return LooseVersion(moto.__version__)
     except AttributeError:
-        import pkg_resources
-        from pkg_resources import DistributionNotFound
         try:
             return LooseVersion(pkg_resources.get_distribution('moto').version)
         except DistributionNotFound:
