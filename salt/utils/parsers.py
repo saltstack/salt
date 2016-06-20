@@ -1702,8 +1702,14 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
+        opts = config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
                                     cache_minion_id=True)
+        # Optimization: disable multiprocessing logging if running as a
+        #               daemon, without engines and without multiprocessing
+        if not opts.get('engines') and not opts.get('multiprocessing', True) \
+                and self.options.daemon:  # pylint: disable=no-member
+            self._setup_mp_logging_listener_ = False
+        return opts
 
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
