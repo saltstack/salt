@@ -1180,7 +1180,7 @@ def os_data():
                         if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
-                            if grains['lsb_distrib_release'] == "42.1":
+                            if os_release.get("NAME") == "openSUSE Leap":
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
