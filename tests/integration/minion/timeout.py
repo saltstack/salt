@@ -28,7 +28,7 @@ class MinionTimeoutTestCase(integration.ShellCase):
         self.assertTrue(isinstance(ret, list), 'Return is not a list. Minion'
                 ' may have returned error: {0}'.format(ret))
         self.assertTrue('True' in ret[1], 'Minion did not return True after '
-                '{0} secondx.'.format(sleep_length))
+                '{0} seconds.'.format(sleep_length))
 
 
 if __name__ == '__main__':
