@@ -7,6 +7,10 @@ use to fetch their configuration options.
 '''
 from __future__ import absolute_import
 
+# Make this package a namespaced package
+from pkgutil import extend_path
+__path__ = extend_path(__path__, __name__)
+
 import logging
 
 log = logging.getLogger(__name__)
