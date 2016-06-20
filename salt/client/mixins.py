@@ -459,7 +459,7 @@ class AsyncClientMixin(object):
             return
 
         # if we are "quiet", don't print
-        if self.opts.get('quiet', False):
+        if self.opts.get('debug_async_events_to_console', False):
             return
 
         # some suffixes we don't want to print
