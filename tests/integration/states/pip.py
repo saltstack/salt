@@ -31,6 +31,11 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    import pip
+    pip_version = tuple(int(part) for part in pip.__version__.split('.') if part.isdigit())
+except ImportError:
+    pip_version = None
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
@@ -172,6 +177,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    @skipif(pip_version is not None and pip_version >= (7, 0),
+            '--mirrors support was removed in pip >= 7.0.0')
     def test_issue_5940_multiple_pip_mirrors(self):
         ret = self.run_function(
             'state.sls', mods='issue-5940-multiple-pip-mirrors'

@@ -498,28 +498,44 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if error:
         return error
 
+    cur_pip_version = __salt__['pip.version'](bin_env)
+
+    if salt.utils.compare_versions(ver1=cur_pip_version, oper='>=', ver2='7.0.0'):
+        if mirrors:
+            raise CommandExecutionError(
+                'The support for \'mirrors\' was removed in pip >= 7.0.0, please '
+                'use \'index_url\' and \'extra_index_url\' as suggested in the '
+                'release notes of pip'
+            )
+        if no_download:
+            raise CommandExecutionError(
+                'The support for \'no_download\' was removed in pip >= 7.0.0'
+            )
+        if no_install:
+            raise CommandExecutionError(
+                'The support for \'no_install\' was removed in pip >= 7.0.0'
+            )
+
     if use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
                                            ver2=min_version):
             log.error(
                 ('The --use-wheel option is only supported in pip {0} and '
                  'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                 'will be ignored.'.format(min_version, cur_pip_version))
             )
         else:
             cmd.append('--use-wheel')
 
     if no_use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
                                            ver2=min_version):
             log.error(
                 ('The --no-use-wheel option is only supported in pip {0} and '
                  'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                 'will be ignored.'.format(min_version, cur_pip_version))
             )
         else:
             cmd.append('--no-use-wheel')
