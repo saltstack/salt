@@ -124,8 +124,10 @@ def setup_handlers():
             if not transport_registry.supported_scheme(url.scheme):
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
             dsn_config = {}
-            conf_extras = transport_registry.compute_scope(url, dsn_config)
-            dsn_config.update(conf_extras)
+            if (hasattr(transport_registry, 'compute_scope') and
+                    callable(transport_registry.compute_scope)):
+                conf_extras = transport_registry.compute_scope(url, dsn_config)
+                dsn_config.update(conf_extras)
             options.update({
                 'project': dsn_config['SENTRY_PROJECT'],
                 'servers': dsn_config['SENTRY_SERVERS'],
