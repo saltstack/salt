@@ -91,75 +91,43 @@ class SaltSwift(object):
 
         self.kwargs = _sanitize(self.kwargs)
 
-        self.conn = client.Connection(**self.kwargs)
+        self.conn = shade.openstack_cloud(**self.kwargs)
 
-    def get_account(self):
+    def get_account(self, full_listing=True):
         '''
         List Swift containers
         '''
-        try:
-            listing = self.conn.get_account()
-            return listing
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.list_containers(full_listing=full_listing)
 
     def get_container(self, cont):
         '''
         List files in a Swift container
         '''
-        try:
-            listing = self.conn.get_container(cont)
-            return listing
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.get_container(name=cont)
 
-    def put_container(self, cont):
+    def put_container(self, cont, public=False):
         '''
         Create a new Swift container
         '''
-        try:
-            self.conn.put_container(cont)
-            return True
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.create_container(cont, public=public)
 
     def delete_container(self, cont):
         '''
         Delete a Swift container
         '''
-        try:
-            self.conn.delete_container(cont)
-            return True
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.delete_container(cont)
 
-    def post_container(self, cont, metadata=None):
+    def post_container(self, cont, headers=None):
         '''
         Update container metadata
         '''
-        pass
+        return self.conn.update_container(name, headers=headers or {})
 
     def head_container(self, cont):
         '''
         Get container metadata
         '''
-        pass
+        return self.conn.get_container(cont)
 
     def get_object(self, cont, obj, local_file=None, return_bin=False):
         '''
@@ -169,7 +137,7 @@ class SaltSwift(object):
             if local_file is None and return_bin is False:
                 return False
 
-            headers, body = self.conn.get_object(cont, obj, resp_chunk_size=65536)
+            _, body = self.conn.get_object(cont, obj, resp_chunk_size=65536)
 
             if return_bin is True:
                 fp = stdout
@@ -199,36 +167,19 @@ class SaltSwift(object):
         '''
         Upload a file to Swift
         '''
-        try:
-            with salt.utils.fopen(local_file, 'rb') as fp_:
-                self.conn.put_object(cont, obj, fp_)
-            return True
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.create_object(container=cont, name=obj, filename=local_file)
 
     def delete_object(self, cont, obj):
         '''
         Delete a file from Swift
         '''
-        try:
-            self.conn.delete_object(cont, obj)
-            return True
-        except Exception as exc:
-            log.error('There was an error::')
-            if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
-            return False
+        return self.conn.delete_object(cont, obj)
 
     def head_object(self, cont, obj):
         '''
         Get object metadata
         '''
-        pass
+        return self.conn.get_object_metadata(cont, obj)
 
     def post_object(self, cont, obj, metadata):
         '''
