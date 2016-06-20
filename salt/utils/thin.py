@@ -59,6 +59,24 @@ try:
     HAS_XML = True
 except ImportError:
     HAS_XML = False
+
+try:
+    import singledispatch
+    HAS_SINGLEDISPATCH = True
+except ImportError:
+    HAS_SINGLEDISPATCH = False
+
+try:
+    import singledispatch_helpers
+    HAS_SINGLEDISPATCH_HELPERS = True
+except ImportError:
+    HAS_SINGLEDISPATCH_HELPERS = False
+
+try:
+    import backports_abc
+    HAS_BACKPORTS_ABC = True
+except ImportError:
+    HAS_BACKPORTS_ABC = False
 # pylint: enable=import-error,no-name-in-module
 
 try:
@@ -132,6 +150,15 @@ def get_tops(extra_mods='', so_mods=''):
     if HAS_XML:
         # For openSUSE, which apparently doesn't include the whole stdlib
         tops.append(os.path.dirname(xml.__file__))
+
+    if HAS_SINGLEDISPATCH:
+        tops.append(singledispatch.__file__.replace('.pyc', '.py'))
+
+    if HAS_SINGLEDISPATCH_HELPERS:
+        tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
+
+    if HAS_BACKPORTS_ABC:
+        tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
