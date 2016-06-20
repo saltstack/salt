@@ -436,14 +436,20 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         '''
         Tests describing parameters via vpc id if vpc exist
         '''
+        # With moto 0.4.25 is_default is set to True. 0.4.24 and older, is_default is False
+        if LooseVersion(moto.__version__) >= LooseVersion('0.4.25'):
+            is_default = True
+        else:
+            is_default = False
+
         vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
 
         describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
         vpc_properties = dict(cidr_block=unicode(cidr_block),
-                              is_default=False,
+                              is_default=is_default,
                               state=u'available',
-                              tags={'Name': 'test', 'test': 'testvalue'},
+                              tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
                               instance_tenancy=u'default')
 
