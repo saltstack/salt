@@ -96,7 +96,7 @@ try:
         WebSiteManagementClient,
         WebSiteManagementClientConfiguration,
     )
-    from msrestazure.azure_exceptions import CloudError
+    from msrestazure.azure_exceptions import CloudError, DeserializationError
     HAS_LIBS = True
 except ImportError:
     pass
@@ -325,6 +325,8 @@ def _pages_to_list(items):
                 objs.append(item)
         except GeneratorExit:
             break
+        except DeserializationError:
+            break
     return objs
 
 
@@ -424,7 +426,10 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                     ret[node.name]['storage_profile']['image_reference']['version'],
                 ))
             except TypeError:
-                ret[node.name]['image'] = ret[node.name]['storage_profile']['os_disk']['image']['uri']
+                try:
+                    ret[node.name]['image'] = ret[node.name]['storage_profile']['os_disk']['image']['uri']
+                except TypeError:
+                    ret[node.name]['image'] = None
     return ret
 
 
@@ -752,9 +757,12 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('location') is None:
         kwargs['location'] = get_location()
 
-    if kwargs.get('resource_group') is None:
-        kwargs['resource_group'] = config.get_cloud_config_value(
-            'resource_group', vm_, __opts__, search_global=True
+    if kwargs.get('iface_resource_group') is None:
+        kwargs['iface_resource_group'] = config.get_cloud_config_value(
+            'iface_resource_group', vm_, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'resource_group', vm_, __opts__, search_global=True
+            )
         )
 
     if kwargs.get('network') is None:
@@ -776,7 +784,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         group = kwargs['resource_group']
 
     subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['resource_group'],
+        resource_group_name=kwargs['iface_resource_group'],
         virtual_network_name=kwargs['network'],
         subnet_name=kwargs['subnet'],
     )
