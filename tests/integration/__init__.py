@@ -1091,7 +1091,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return self.run_function(_function, args, **kw)
 
     def run_function(self, function, arg=(), minion_tgt='minion', timeout=25,
-                     **kwargs):
+                     async=False, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -1099,9 +1099,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         know_to_return_none = (
             'file.chown', 'file.chgrp', 'ssh.recv_known_host'
         )
-        orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
-        )
+        if async:
+            orig = self.client.cmd_async(
+                minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
+            )
+            return orig
+        else:
+            orig = self.client.cmd(
+                minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
+            )
 
         if minion_tgt not in orig:
             self.skipTest(

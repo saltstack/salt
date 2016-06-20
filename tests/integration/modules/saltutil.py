@@ -53,6 +53,21 @@ class SaltUtilModuleTest(integration.ModuleCase):
         self.assertIn('pub', ret)
         self.assertIn('priv', ret)
 
+    def test_kill_job(self):
+        '''
+        Test to ensure that a long-running job can be killed.
+        '''
+        # Run job as async
+        job_jid = self.run_function('test.sleep', arg=['30'], async=True)
+        # Execute runner to get job status
+        job_status = self.run_function('saltutil.find_job', arg=[job_jid])
+        # TODO migrate to assertDictContainsSubset once 2.6 is gone
+        self.assertIn('jid', job_status)
+        # Kill the job
+        job_kill_ret = self.run_function('saltutil.kill_job', arg=[job_jid])
+        # Check again to see if the job is running. It should be gone
+        job_kill_status = self.run_function('saltutil.find_job', arg=[job_jid])
+        self.assertEqual({}, job_kill_status)
 
 if __name__ == '__main__':
     from integration import run_tests
