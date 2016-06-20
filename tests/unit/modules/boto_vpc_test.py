@@ -73,6 +73,21 @@ def _has_required_boto():
         return True
 
 
+def _get_moto_version():
+    '''
+    Returns the moto version
+    '''
+    try:
+        return LooseVersion(moto.__version__)
+    except AttributeError:
+        import pkg_resources
+        from pkg_resources import DistributionNotFound
+        try:
+            return LooseVersion(pkg_resources.get_distribution('moto').version)
+        except DistributionNotFound:
+            return False
+
+
 def _has_required_moto():
     '''
     Returns True/False boolean depending on if Moto is installed and correct
@@ -81,17 +96,8 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        try:
-            if LooseVersion(moto.__version__) < LooseVersion(required_moto_version):
-                return False
-        except AttributeError:
-            import pkg_resources
-            from pkg_resources import DistributionNotFound
-            try:
-                if LooseVersion(pkg_resources.get_distribution('moto').version) < LooseVersion(required_moto_version):
-                    return False
-            except DistributionNotFound:
-                return False
+        if _get_moto_version() < LooseVersion(required_moto_version):
+            return False
         return True
 
 
@@ -437,7 +443,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         Tests describing parameters via vpc id if vpc exist
         '''
         # With moto 0.4.25 is_default is set to True. 0.4.24 and older, is_default is False
-        if LooseVersion(moto.__version__) >= LooseVersion('0.4.25'):
+        if _get_moto_version() >= LooseVersion('0.4.25'):
             is_default = True
         else:
             is_default = False
