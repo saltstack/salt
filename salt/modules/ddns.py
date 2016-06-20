@@ -142,7 +142,7 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs):
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
             ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
-                         timeout, **kwargs)
+                         timeout=timeout, **kwargs)
         if ptr:
             res = True
     return res
