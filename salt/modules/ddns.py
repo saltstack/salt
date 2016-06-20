@@ -128,7 +128,7 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs):
     except IndexError:
         ips = []
 
-    res = delete(zone, name, nameserver=nameserver, timeout, **kwargs)
+    res = delete(zone, name, nameserver=nameserver, timeout=timeout, **kwargs)
 
     fqdn = fqdn + '.'
     for ip in ips:
