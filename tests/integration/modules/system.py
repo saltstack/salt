@@ -27,10 +27,9 @@ class SystemModuleTest(integration.ModuleCase):
     def _save_time(self):
         self._orig_time = datetime.datetime.now()
 
-    def _set_time(self, new_time, posix=None, utc=None):
+    def _set_time(self, new_time, utc=None):
         t = new_time.timetuple()[:6]
-        return self.run_function('system.set_system_date_time', t,
-                                 posix=posix, utc=utc)
+        return self.run_function('system.set_system_date_time', t, utc=utc)
 
     def _restore_time(self, utc=None):
         if utc is True:
@@ -118,7 +117,7 @@ class SystemModuleTest(integration.ModuleCase):
                                                      self.fmt_str)
 
         self._save_time()
-        result = self._set_time(self._fake_time, posix=True)
+        result = self._set_time(self._fake_time)
 
         time_now = datetime.datetime.now()
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
@@ -140,7 +139,7 @@ class SystemModuleTest(integration.ModuleCase):
                                                      self.fmt_str)
 
         self._save_time()
-        result = self._set_time(self._fake_time, posix=True, utc=True)
+        result = self._set_time(self._fake_time, utc=True)
 
         time_now = datetime.datetime.utcnow()
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"

@@ -219,7 +219,7 @@ def get_system_time(utc=None):
     return datetime.strftime(t, "%I:%M %p")
 
 
-def set_system_time(newtime, utc=None, posix=None):
+def set_system_time(newtime, utc=None):
     '''
     Set the system time.
 
@@ -251,7 +251,7 @@ def set_system_time(newtime, utc=None, posix=None):
         return False
 
     return set_system_date_time(hours=dt_obj.hour, minutes=dt_obj.minute,
-                                seconds=dt_obj.second, utc=utc, posix=posix)
+                                seconds=dt_obj.second, utc=utc)
 
 
 def get_system_date_time(utc=None):
@@ -282,8 +282,7 @@ def set_system_date_time(years=None,
                          hours=None,
                          minutes=None,
                          seconds=None,
-                         utc=None,
-                         posix=None):
+                         utc=None):
     '''
     Set the system date and time. Each argument is an element of the date, but
     not required. If an element is not passed, the current system value for
@@ -298,7 +297,6 @@ def set_system_date_time(years=None,
     :param int minutes: Minutes digit: 0 - 59
     :param int seconds: Seconds digit: 0 - 59
     :param bool utc: A Boolean to specify input time is UTC.
-    :param bool posix: A Boolean to specify to use the posix date backend
 
     :return: True if successful. Otherwise False.
     :rtype: bool
@@ -330,10 +328,10 @@ def set_system_date_time(years=None,
         seconds = date_time.second
 
     dt = datetime(years, months, days, hours, minutes, seconds)
-    if posix is True:
-        return _posix_set_datetime(dt, utc=utc)
-    else:
+    if salt.utils.is_linux():
         return _linux_set_datetime(dt, utc=utc)
+    else:
+        return _posix_set_datetime(dt, utc=utc)
 
 
 def get_system_date(utc=None):
