@@ -216,7 +216,7 @@ class CoreGrainsTestCase(TestCase):
                                 # Mock platform.linux_distribution to give us the
                                 # OS name that we want.
                                 distro_mock = MagicMock(
-                                    return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
+                                    return_value=('SUSE test', 'version', 'arch')
                                 )
                                 with patch("salt.utils.fopen", mock_open()) as suse_release_file:
                                     suse_release_file.return_value.__iter__.return_value = os_release_map.get('suse_release_file', '').splitlines()
@@ -378,7 +378,7 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:opensuse:opensuse:20160504'
             },
-            'oscodename': 'openSUSE Tumbleweed (20160504)',
+            'oscodename': 'openSUSE Tumbleweed (20160504) (x86_64)',
             'osfullname': "Tumbleweed",
             'osrelease': '20160504',
             'osrelease_info': [20160504],
