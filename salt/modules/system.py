@@ -251,7 +251,7 @@ def set_system_time(newtime, utc=None, posix=None):
         return False
 
     return set_system_date_time(hours=dt_obj.hour, minutes=dt_obj.minute,
-            seconds=dt_obj.second, utc=utc, posix=posix)
+                                seconds=dt_obj.second, utc=utc, posix=posix)
 
 
 def get_system_date_time(utc=None):
@@ -286,9 +286,10 @@ def set_system_date_time(years=None,
                          posix=None):
     '''
     Set the system date and time. Each argument is an element of the date, but
-    not required. If an element is not passed, the current system value for that
-    element will be used. For example, if you don't pass the year, the current
-    system year will be used. (Used by set_system_date and set_system_time)
+    not required. If an element is not passed, the current system value for
+    that element will be used. For example, if you don't pass the year, the
+    current system year will be used. (Used by set_system_date and
+    set_system_time)
 
     :param int years: Years digit, ie: 2015
     :param int months: Months digit: 1 - 12
@@ -381,7 +382,7 @@ def set_system_date(newdate, utc=None):
             '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d']
 
     # Get date/time object from newdate
-    #dt_obj = salt.utils.date_cast(newdate)
+    # dt_obj = salt.utils.date_cast(newdate)
     dt_obj = _try_parse_datetime(newdate, fmts)
     if dt_obj is None:
         return False
