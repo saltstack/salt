@@ -81,7 +81,7 @@ def beacon(config):
     out = __salt__['cmd.run']('adb devices', runas=config.get('user', None))
 
     lines = out.split('\n')[1:]
-    last_state_devices = last_state.keys()
+    last_state_devices = list(last_state.keys())
     found_devices = []
 
     for line in lines:
