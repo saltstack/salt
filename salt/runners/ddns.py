@@ -131,7 +131,7 @@ def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout,
     dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
     dns_update.replace(name, ttl, rdata)
 
-    answer = dns.query.udp(dns_update, nameserver, timout)
+    answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
         return {fqdn: 'Failed to update record of type \'{0}\''.format(rdtype)}
 
