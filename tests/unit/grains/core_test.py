@@ -14,6 +14,7 @@ from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
+    mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -217,7 +218,8 @@ class CoreGrainsTestCase(TestCase):
                                 distro_mock = MagicMock(
                                     return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
                                 )
-                                with patch.object(salt.utils, "fopen", MagicMock(return_value=os_release_map.get('suse_release_files'))):
+                                with patch("salt.utils.fopen", mock_open()) as suse_release_file:
+                                    suse_release_file.return_value.__iter__.return_value = os_release_map.get('suse_release_file', '').splitlines()
                                     with patch.object(platform, 'linux_distribution', distro_mock):
                                         with patch.object(core, '_linux_gpu_data', empty_mock):
                                             with patch.object(core, '_linux_cpudata', empty_mock):
@@ -242,15 +244,14 @@ class CoreGrainsTestCase(TestCase):
             '/proc/1/cmdline': False
         }
         _os_release_map = {
-            'suse_release_file': [
-                'SUSE Linux Enterprise Server 11 (x86_64)'
-                'VERSION = 11',
-                'PATCHLEVEL = 3',
-            ],
-            'oscodename': 'SUSE Linux Enterprise Server 12',
+            'suse_release_file': '''SUSE Linux Enterprise Server 11 (x86_64)
+VERSION = 11
+PATCHLEVEL = 3
+''',
+            'oscodename': 'SUSE Linux Enterprise Server 11 SP3',
             'osfullname': "SLES",
-            'osrelease': '12',
-            'osrelease_info': [12],
+            'osrelease': '11.3',
+            'osrelease_info': [11, 3],
             'files': ["/etc/SuSE-release", _path_exists_map],
         }
         self._run_os_grains_tests(_os_release_map)
