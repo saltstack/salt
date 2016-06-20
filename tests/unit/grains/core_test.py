@@ -186,7 +186,7 @@ class CoreGrainsTestCase(TestCase):
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
-    def _run_os_grains_tests(self, os_release_map):
+    def _run_suse_os_grains_tests(self, os_release_map):
         path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map['files'])
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
@@ -251,7 +251,7 @@ PATCHLEVEL = 3
             'osrelease_info': [11, 3],
             'files': ["/etc/SuSE-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp4(self):
@@ -274,7 +274,7 @@ PATCHLEVEL = 3
             'osrelease_info': [11, 4],
             'files': ["/etc/os-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12(self):
@@ -297,7 +297,7 @@ PATCHLEVEL = 3
             'osrelease_info': [12],
             'files': ["/etc/os-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12sp1(self):
@@ -320,7 +320,7 @@ PATCHLEVEL = 3
             'osrelease_info': [12, 1],
             'files': ["/etc/os-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_opensuse_leap_42_1(self):
@@ -343,7 +343,7 @@ PATCHLEVEL = 3
             'osrelease_info': [42, 1],
             'files': ["/etc/os-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_tumbleweed(self):
@@ -366,7 +366,7 @@ PATCHLEVEL = 3
             'osrelease_info': [20160504],
             'files': ["/etc/os-release"],
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map)
 
 
 if __name__ == '__main__':
