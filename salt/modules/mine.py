@@ -82,7 +82,7 @@ def _mine_get(load, opts):
 
 def update(clear=False):
     '''
-    Execute the configured functions and send the data back up to the master
+    Execute the configured functions and send the data back up to the master.
     The functions to be executed are merged from the master config, pillar and
     minion config under the option "function_cache":
 
