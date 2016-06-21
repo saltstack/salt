@@ -1039,7 +1039,6 @@ def install(name=None,
     # information already in __context__ from the previous call to list_pkgs()
     old_as_list = list_pkgs(versions_as_list=True)
 
-
     to_install = []
     to_downgrade = []
     to_reinstall = []
