@@ -16,6 +16,7 @@ Support for YUM/DNF
 
 # Import python libs
 from __future__ import absolute_import
+import contextlib
 import copy
 import fnmatch
 import itertools
@@ -885,6 +886,7 @@ def install(name=None,
             sources=None,
             reinstall=False,
             normalize=True,
+            update_holds=False,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
@@ -929,6 +931,15 @@ def install(name=None,
     version
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
+
+    update_holds : False
+        If ``True``, and this function would update the package version, any
+        packages held using the yum/dnf "versionlock" plugin will be unheld so
+        that they can be updated. Otherwise, if this function attempts to
+        update a held package, the held package(s) will be skipped and an
+        error will be raised.
+
+        .. versionadded:: Carbon
 
 
     Repository Options:
@@ -1027,9 +1038,27 @@ def install(name=None,
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
     old_as_list = list_pkgs(versions_as_list=True)
-    targets = []
-    downgrade = []
-    to_reinstall = {}
+
+
+    to_install = []
+    to_downgrade = []
+    to_reinstall = []
+    # The above three lists will be populated with tuples containing the
+    # package name and the string being used for this particular package
+    # modification. The reason for this method is that the string we use for
+    # installation, downgrading, or reinstallation will be different than the
+    # package name in a couple cases:
+    #
+    #   1) A specific version is being targeted. In this case the string being
+    #      passed to install/downgrade/reinstall will contain the version
+    #      information after the package name.
+    #   2) A binary package is being installed via the "sources" param. In this
+    #      case the string being passed will be the path to the local copy of
+    #      the package in the minion cachedir.
+    #
+    # The reason that we need both items is to be able to modify the installed
+    # version of held packages.
+
     if pkg_type == 'repository':
         pkg_params_items = six.iteritems(pkg_params)
     else:
@@ -1066,11 +1095,11 @@ def install(name=None,
         if version_num is None:
             if pkg_type == 'repository':
                 if reinstall and pkgname in old:
-                    to_reinstall[pkgname] = pkgname
+                    to_reinstall.append((pkgname, pkgname))
                 else:
-                    targets.append(pkgname)
+                    to_install.append((pkgname, pkgname))
             else:
-                targets.append(pkgpath)
+                to_install.append((pkgname, pkgpath))
         else:
             # If we are installing a package file and not one from the repo,
             # and version_num is not None, then we can assume that pkgname is
@@ -1113,11 +1142,11 @@ def install(name=None,
                                                    cmp_func=version_cmp):
                         # This version is already installed, so we need to
                         # reinstall.
-                        to_reinstall[pkgname] = pkgstr
+                        to_reinstall.append((pkgname, pkgstr))
                         break
             else:
                 if not cver:
-                    targets.append(pkgstr)
+                    to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
                         ver = norm_epoch(ver, version_num)
@@ -1125,7 +1154,7 @@ def install(name=None,
                                                        oper='>=',
                                                        ver2=ver,
                                                        cmp_func=version_cmp):
-                            targets.append(pkgstr)
+                            to_install.append((pkgname, pkgstr))
                             break
                     else:
                         if re.match('kernel(-.+)?', name):
@@ -1140,12 +1169,12 @@ def install(name=None,
                             # a lower version than the currently-installed one.
                             # TODO: find a better way to determine if a package
                             # supports multiple installs.
-                            targets.append(pkgstr)
+                            to_install.append((pkgname, pkgstr))
                         else:
                             # None of the currently-installed versions are
                             # greater than the specified version, so this is a
                             # downgrade.
-                            downgrade.append(pkgstr)
+                            to_downgrade.append((pkgname, pkgstr))
 
     def _add_common_args(cmd):
         '''
@@ -1157,77 +1186,127 @@ def install(name=None,
         if skip_verify:
             cmd.append('--nogpgcheck')
 
+    try:
+        holds = list_holds(full=False)
+    except SaltInvocationError:
+        holds = []
+        log.debug(
+            'Failed to get holds, versionlock plugin is probably not '
+            'installed'
+        )
+    unhold_prevented = []
     errors = []
 
-    hold_pkgs = list_holds(full=False)
-    log.error(hold_pkgs)
-    to_hold = []
-    if targets:
-        if len(targets) == 1:
-            to_hold.append(pkgname)
+    @contextlib.contextmanager
+    def _temporarily_unhold(pkgs, targets):
+        '''
+        Temporarily unhold packages that need to be updated. Add any
+        successfully-removed ones (and any packages not in the list of current
+        holds) to the list of targets.
+        '''
+        to_unhold = {}
+        for pkgname, pkgstr in pkgs:
+            if pkgname in holds:
+                if update_holds:
+                    to_unhold[pkgname] = pkgstr
+                else:
+                    unhold_prevented.append(pkgname)
+            else:
+                targets.append(pkgstr)
+
+        if not to_unhold:
+            yield
         else:
-            for _pkg in targets:
-                if _pkg in hold_pkgs:
-                    to_hold.append(_pkg)
-        if to_hold:
-            log.info('Removing lock for package(s) %s', to_hold)
-            unhold(pkgs=to_hold)
-        cmd = [_yum(), '-y']
-        if _yum() == 'dnf':
-            cmd.extend(['--best', '--allowerasing'])
-        _add_common_args(cmd)
-        cmd.append('install')
-        cmd.extend(targets)
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+            log.debug('Unholding packages: {0}'.format(', '.join(to_unhold)))
+            try:
+                # Using list() here for python3 compatibility, dict.keys() no
+                # longer returns a list in python3.
+                unhold_names = list(to_unhold.keys())
+                for unheld_pkg, outcome in \
+                        six.iteritems(unhold(pkgs=unhold_names)):
+                    if outcome['result']:
+                        # Package was successfully unheld, add to targets
+                        targets.append(to_unhold[unheld_pkg])
+                    else:
+                        # Failed to unhold package
+                        errors.append(unheld_pkg)
+                yield
+            except Exception as exc:
+                errors.append(
+                    'Error encountered unholding packages {0}: {1}'
+                    .format(', '.join(to_unhold), exc)
+                )
+            finally:
+                hold(pkgs=unhold_names)
 
-        if to_hold:
-            log.info('Adding lock for package(s) %s', to_hold)
-            hold(pkgs=to_hold)
+    targets = []
+    with _temporarily_unhold(to_install, targets):
+        if targets:
+            cmd = [_yum(), '-y']
+            if _yum() == 'dnf':
+                cmd.extend(['--best', '--allowerasing'])
+            _add_common_args(cmd)
+            cmd.append('install')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
 
-    if downgrade:
-        cmd = [_yum(), '-y']
-        _add_common_args(cmd)
-        cmd.append('downgrade')
-        cmd.extend(downgrade)
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+    targets = []
+    with _temporarily_unhold(to_downgrade, targets):
+        if targets:
+            cmd = [_yum(), '-y']
+            _add_common_args(cmd)
+            cmd.append('downgrade')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
 
-    if to_reinstall:
-        cmd = [_yum(), '-y']
-        _add_common_args(cmd)
-        cmd.append('reinstall')
-        cmd.extend(six.itervalues(to_reinstall))
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False,
-            redirect_stderr=True
-        )
-        if out['retcode'] != 0:
-            errors.append(out['stdout'])
+    targets = []
+    with _temporarily_unhold(to_reinstall, targets):
+        if targets:
+            cmd = [_yum(), '-y']
+            _add_common_args(cmd)
+            cmd.append('reinstall')
+            cmd.extend(targets)
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True
+            )
+            if out['retcode'] != 0:
+                errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs(versions_as_list=False)
 
     ret = salt.utils.compare_dicts(old, new)
 
-    for pkgname in to_reinstall:
+    for pkgname, _ in to_reinstall:
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if unhold_prevented:
+        errors.append(
+            'The following package(s) could not be updated because they are '
+            'being held: {0}. Set \'update_holds\' to True to temporarily '
+            'unhold these packages so that they can be updated.'.format(
+                ', '.join(unhold_prevented)
+            )
+        )
 
     if errors:
         raise CommandExecutionError(
