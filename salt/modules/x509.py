@@ -36,6 +36,11 @@ try:
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False
+try:
+    import OpenSSL
+    HAS_OPENSSL = True
+except ImportError:
+    HAS_OPENSSL = False
 
 __virtualname__ = 'x509'
 
@@ -156,6 +161,10 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
+    if not salt.utils.which('openssl'):
+        raise salt.exceptions.SaltInvocationError(
+            'openssl binary not found in path'
+        )
     cmd = ('openssl req -text -noout -in {0}'.format(csr_filename))
 
     output = __salt__['cmd.run_stdout'](cmd)
@@ -198,6 +207,10 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
+    if not salt.utils.which('openssl'):
+        raise salt.exceptions.SaltInvocationError(
+            'openssl binary not found in path'
+        )
     cmd = ('openssl crl -text -noout -in {0}'.format(crl_filename))
 
     output = __salt__['cmd.run_stdout'](cmd)
@@ -847,7 +860,10 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     # pyOpenSSL Note due to current limitations in pyOpenSSL it is impossible
     # to specify a digest For signing the CRL. This will hopefully be fixed
     # soon: https://github.com/pyca/pyopenssl/pull/161
-    import OpenSSL
+    if not HAS_OPENSSL:
+        raise salt.exceptions.SaltInvocationError(
+            'Could not load OpenSSL module, OpenSSL unavailable'
+        )
     crl = OpenSSL.crypto.CRL()
 
     if revoked is None:
@@ -1551,6 +1567,10 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
+    if not salt.utils.which('openssl'):
+        raise salt.exceptions.SaltInvocationError(
+            'openssl binary not found in path'
+        )
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
