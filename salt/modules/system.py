@@ -10,7 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 __virtualname__ = 'system'
@@ -114,49 +114,7 @@ def shutdown(at_time=None):
     return ret
 
 
-def _linux_set_datetime(new_time, utc=None):
-    '''set the system date/time on linux'''
-    # Modified version of: http://stackoverflow.com/a/12292874
-    import ctypes
-    import ctypes.util
-    import time
-
-    # Temporarily set the TZ environment variable
-    # This must be done before loading the external library
-    if utc is True:
-        save_timezone = os.environ.get('TZ', None)
-        os.environ['TZ'] = 'UTC0'
-
-    class timespec(ctypes.Structure):
-        _fields_ = [("tv_sec", ctypes.c_long),
-                    ("tv_nsec", ctypes.c_long)]
-
-    CLOCK_REALTIME = 0
-    nano_per_micro = 1000
-    librt = ctypes.CDLL(ctypes.util.find_library("rt"))
-
-    # seperate the microseconds part from the seconds part
-    secs_part = datetime(*new_time.timetuple()[:6]).timetuple()
-    micro_part = new_time.timetuple()[6]
-
-    ts = timespec()
-    ts.tv_sec = int(time.mktime(secs_part))
-    ts.tv_nsec = micro_part * nano_per_micro
-
-    # Attempt to set the clock
-    result = not bool(librt.clock_settime(CLOCK_REALTIME, ctypes.byref(ts)))
-
-    # Reset TZ environment variable
-    if utc is True:
-        if save_timezone is not None:
-            os.environ['TZ'] = save_timezone
-        else:
-            del os.environ['TZ']
-
-    return result
-
-
-def _posix_set_datetime(new_date, utc=None):
+def _date_bin_set_datetime(new_date, utc=None):
     '''
     set the system date/time using the date command
 
@@ -166,15 +124,29 @@ def _posix_set_datetime(new_date, utc=None):
     if utc is True:
         cmd += ' -u'
     # the date can be set in the following format:
-    # date mmddhhmm[[cc]yy]
-    cmd += " {1:02}{2:02}{3:02}{4:02}{0:04}".format(*new_date.timetuple())
+    # Note that setting the time with a resolution of seconds
+    # is not a posix feature, so we will attempt it and if it
+    # fails we will try again only using posix features
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    # date MMDDhhmm[[CC]YY[.ss]]
+    non_posix = " {1:02}{2:02}{3:02}{4:02}{0:04}.{5:02}".format(*new_date.timetuple())
+    non_posix_cmd = cmd + non_posix
 
-    if ret['retcode'] != 0:
-        msg = 'date failed: {0}'.format(ret['stderr'])
-        raise CommandExecutionError(msg)
+    ret_non_posix = __salt__['cmd.run_all'](non_posix_cmd, python_shell=False)
+    if ret_non_posix['retcode'] != 0:
+        # We will now try the command again following posix
+        # date MMDDhhmm[[CC]YY]
+        posix = " {1:02}{2:02}{3:02}{4:02}{0:04}".format(*new_date.timetuple())
+        posix_cmd = cmd + posix
 
+        ret_posix = __salt__['cmd.run_all'](posix_cmd, python_shell=False)
+        if ret_posix['retcode'] != 0:
+            # if both fail it's likely an invalid date string
+            # so we will give back the error from the first attemp
+            msg = 'date failed: {0}'.format(ret_non_posix['stderr'])
+            raise CommandExecutionError(msg)
+        else:
+            return True
     return True
 
 
@@ -305,7 +277,7 @@ def set_system_date_time(years=None,
 
     .. code-block:: bash
 
-        salt '*' system.set_system_date_time 2015 5 12 11 37 53
+        salt '*' system.set_system_date_time 2015 5 12 11 37 53 True
     '''
     # Get the current date/time
     if utc is True:
@@ -327,11 +299,12 @@ def set_system_date_time(years=None,
     if seconds is None:
         seconds = date_time.second
 
-    dt = datetime(years, months, days, hours, minutes, seconds)
-    if salt.utils.is_linux():
-        return _linux_set_datetime(dt, utc=utc)
-    else:
-        return _posix_set_datetime(dt, utc=utc)
+    try:
+        dt = datetime(years, months, days, hours, minutes, seconds)
+    except ValueError, e:
+        raise SaltInvocationError(e.message)
+
+    return _date_bin_set_datetime(dt, utc=utc)
 
 
 def get_system_date(utc=None):

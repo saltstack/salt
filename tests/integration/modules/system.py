@@ -108,50 +108,6 @@ class SystemModuleTest(integration.ModuleCase):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_set_system_date_time_posix(self):
-        '''
-        Test changing the system clock. We are only able to set it up to a
-        resolution of a second so this test may appear to run in negative time.
-        '''
-        self._fake_time = datetime.datetime.strptime("1981-02-03 04:05:06",
-                                                     self.fmt_str)
-
-        self._save_time()
-        result = self._set_time(self._fake_time)
-
-        time_now = datetime.datetime.now()
-        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
-               .format(time_now, self._fake_time))
-        # posix only enables setting to minute
-        self.assertTrue(result and self._same_times(time_now, self._fake_time,
-                        seconds_diff=60), msg=msg)
-
-        self._restore_time()
-
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_set_system_date_time_posix_utc(self):
-        '''
-        Test changing the system clock. We are only able to set it up to a
-        resolution of a second so this test may appear to run in negative time.
-        '''
-        self._fake_time = datetime.datetime.strptime("1981-02-03 04:05:06",
-                                                     self.fmt_str)
-
-        self._save_time()
-        result = self._set_time(self._fake_time, utc=True)
-
-        time_now = datetime.datetime.utcnow()
-        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
-               .format(time_now, self._fake_time))
-        # posix only enables setting to minute
-        self.assertTrue(result and self._same_times(time_now, self._fake_time,
-                        seconds_diff=60), msg=msg)
-
-        self._restore_time(utc=True)
-
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_set_system_time(self):
         '''
         Test setting the system time without adjusting the date.
