@@ -2056,6 +2056,11 @@ def absent(name, force=False):
                           'forcibly remove it')
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
+        return ret
+
     try:
         ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
     except Exception as exc:
