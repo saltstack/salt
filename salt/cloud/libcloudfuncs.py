@@ -244,7 +244,7 @@ def get_location(conn, vm_):
     '''
     locations = conn.list_locations()
     vm_location = config.get_cloud_config_value('location', vm_, __opts__)
-    if not six.PY3: 
+    if not six.PY3:
         vm_location = vm_location.encode(
             'ascii', 'salt-cloud-force-ascii'
         )
@@ -276,12 +276,10 @@ def get_image(conn, vm_):
     '''
     images = conn.list_images()
 
-    vm_image = config.get_cloud_config_value('image', vm_, __opts__)
-   
     if not six.PY3:
-        encode(
-            'ascii', 'salt-cloud-force-ascii'
-        )
+        vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
+                'ascii', 'salt-cloud-force-ascii'
+            )
 
     for img in images:
         if isinstance(img.id, string_types) and not six.PY3:
