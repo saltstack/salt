@@ -441,7 +441,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise
+                        raise exc
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
