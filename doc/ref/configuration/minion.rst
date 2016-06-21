@@ -1506,7 +1506,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``info``
+Default: ``warning``
 
 The level of messages to send to the console. See also :conf_log:`log_level`.
 
