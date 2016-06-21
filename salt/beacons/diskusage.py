@@ -68,7 +68,8 @@ def beacon(config):
 
     '''
     ret = []
-    for mount in config:
+    for mounts in config:
+        mount = mounts.keys()[0]
 
         try:
             _current_usage = psutil.disk_usage(mount)
@@ -78,7 +79,7 @@ def beacon(config):
             continue
 
         current_usage = _current_usage.percent
-        monitor_usage = config[mount]
+        monitor_usage = mounts[mount]
         if '%' in monitor_usage:
             monitor_usage = re.sub('%', '', monitor_usage)
         monitor_usage = float(monitor_usage)
