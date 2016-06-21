@@ -65,6 +65,7 @@ class LoadAuthTestCase(TestCase):
             self.lauth.get_groups(valid_eauth_load)
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
+
 @patch('zmq.Context', MagicMock())
 @patch('salt.payload.Serial.dumps', MagicMock())
 @patch('salt.master.tagify', MagicMock())
