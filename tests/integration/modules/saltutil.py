@@ -61,7 +61,7 @@ class SaltUtilModuleTest(integration.ModuleCase):
         # Run job as async
         job_jid = self.run_function('test.sleep', arg=['30'], async=True)
         # Allow for a little time so we don't race the pub
-        time.sleep(1) 
+        time.sleep(1)
         # Execute runner to get job status
         job_status = self.run_function('saltutil.find_job', arg=[job_jid])
         # TODO migrate to assertDictContainsSubset once 2.6 is gone
