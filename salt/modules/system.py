@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 from datetime import datetime, timedelta, tzinfo
-import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -118,15 +118,17 @@ def _date_bin_set_datetime(new_date):
     '''
     set the system date/time using the date command
 
-    Note using a posix date binary we can only set the date up to the minute
+    Note using a strictly posix-compliant date binary we can only set the date
+    up to the minute.
     '''
-
-    cmd = 'date'
+    cmd = ['date']
 
     # if there is a timezone in the datetime object use that offset
-    if new_date.tzname() is not None:
-        new_date += new_date.utcoffset()
-        cmd += ' -u'
+    # This will modify the new_date to be the equivalent time in UTC
+    if new_date.utcoffset() is not None:
+        new_date = new_date - new_date.utcoffset()
+        new_date = new_date.replace(tzinfo=FixedOffset(0))
+        cmd.append('-u')
 
     # the date can be set in the following format:
     # Note that setting the time with a resolution of seconds
@@ -134,24 +136,23 @@ def _date_bin_set_datetime(new_date):
     # fails we will try again only using posix features
 
     # date MMDDhhmm[[CC]YY[.ss]]
-    non_posix = " {1:02}{2:02}{3:02}{4:02}{0:04}.{5:02}".format(*new_date.timetuple())
-    non_posix_cmd = cmd + non_posix
+    non_posix = ("{1:02}{2:02}{3:02}{4:02}{0:04}.{5:02}"
+                 .format(*new_date.timetuple()))
+    non_posix_cmd = cmd + [non_posix]
 
     ret_non_posix = __salt__['cmd.run_all'](non_posix_cmd, python_shell=False)
     if ret_non_posix['retcode'] != 0:
         # We will now try the command again following posix
         # date MMDDhhmm[[CC]YY]
         posix = " {1:02}{2:02}{3:02}{4:02}{0:04}".format(*new_date.timetuple())
-        posix_cmd = cmd + posix
+        posix_cmd = cmd + [posix]
 
         ret_posix = __salt__['cmd.run_all'](posix_cmd, python_shell=False)
         if ret_posix['retcode'] != 0:
             # if both fail it's likely an invalid date string
-            # so we will give back the error from the first attemp
+            # so we will give back the error from the first attempt
             msg = 'date failed: {0}'.format(ret_non_posix['stderr'])
             raise CommandExecutionError(msg)
-        else:
-            return True
     return True
 
 
@@ -175,11 +176,48 @@ def _try_parse_datetime(time_str, fmts):
     return result
 
 
-def get_system_time(utc=None):
+def _offset_to_min(utc_offset):
+    '''
+    Helper function that converts the utc offset string into number of minutes
+    offset. Input is in form "[+-]?HHMM". Example valid inputs are "+0500"
+    "-0300" and "0800". These would return -300, 180, 480 respectively.
+    '''
+    match = re.match(r"^([+-])?(\d\d)(\d\d)$", utc_offset)
+    if not match:
+        raise SaltInvocationError("Invalid UTC offset")
+
+    sign = -1 if match.group(1) == '-' else 1
+    hours_offset = int(match.group(2))
+    minutes_offset = int(match.group(3))
+    total_offset = sign * (hours_offset * 60 + minutes_offset)
+    return total_offset
+
+
+def _get_offset_time(utc_offset):
+    '''
+    Will return the current time adjusted using the input timezone offset.
+
+    :rtype datetime:
+    '''
+    if utc_offset is not None:
+        minutes = _offset_to_min(utc_offset)
+        offset = timedelta(minutes=minutes)
+        offset_time = datetime.utcnow() + offset
+        offset_time = offset_time.replace(tzinfo=FixedOffset(minutes))
+    else:
+        offset_time = datetime.now()
+    return offset_time
+
+
+def get_system_time(utc_offset=None):
     '''
     Get the system time.
 
-    :param bool utc: A Boolean that indicates if the output timezone is UTC.
+    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
+    optional sign (+/-).  Will default to None which will use the local
+    timezone. To set the time based off of UTC use "'+0000'". Note: if being
+    passed through the command line will need to be quoted twice to allow
+    negative offsets.
     :return: Returns the system time in HH:MM AM/PM format.
     :rtype: str
 
@@ -189,14 +227,11 @@ def get_system_time(utc=None):
 
         salt '*' system.get_system_time
     '''
-    if utc is True:
-        t = datetime.utcnow()
-    else:
-        t = datetime.now()
-    return datetime.strftime(t, "%I:%M %p")
+    offset_time = _get_offset_time(utc_offset)
+    return datetime.strftime(offset_time, "%I:%M %p")
 
 
-def set_system_time(newtime, utc=None):
+def set_system_time(newtime, utc_offset=None):
     '''
     Set the system time.
 
@@ -212,6 +247,11 @@ def set_system_time(newtime, utc=None):
         Therefore the argument must be passed in as a string.
         Meaning you may have to quote the text twice from the command line.
 
+    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
+    optional sign (+/-).  Will default to None which will use the local
+    timezone. To set the time based off of UTC use "'+0000'". Note: if being
+    passed through the command line will need to be quoted twice to allow
+    negative offsets.
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
 
@@ -221,21 +261,24 @@ def set_system_time(newtime, utc=None):
 
         salt '*' system.set_system_time "'11:20'"
     '''
-
     fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']
     dt_obj = _try_parse_datetime(newtime, fmts)
     if dt_obj is None:
         return False
 
     return set_system_date_time(hours=dt_obj.hour, minutes=dt_obj.minute,
-                                seconds=dt_obj.second, utc=utc)
+                                seconds=dt_obj.second, utc_offset=utc_offset)
 
 
-def get_system_date_time(utc=None):
+def get_system_date_time(utc_offset=None):
     '''
     Get the system date/time.
 
-    :param bool utc: A Boolean that indicates if the output timezone is UTC.
+    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
+    optional sign (+/-).  Will default to None which will use the local
+    timezone. To set the time based off of UTC use "'+0000'". Note: if being
+    passed through the command line will need to be quoted twice to allow
+    negative offsets.
     :return: Returns the system time in YYYY-MM-DD hh:mm:ss format.
     :rtype: str
 
@@ -243,14 +286,10 @@ def get_system_date_time(utc=None):
 
     .. code-block:: bash
 
-        salt '*' system.get_system_date_time utc=True
+        salt '*' system.get_system_date_time "'-0500'"
     '''
-    if utc is True:
-        t = datetime.utcnow()
-    else:
-        t = datetime.now()
-
-    return datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+    offset_time = _get_offset_time(utc_offset)
+    return datetime.strftime(offset_time, "%Y-%m-%d %H:%M:%S")
 
 
 def set_system_date_time(years=None,
@@ -259,7 +298,7 @@ def set_system_date_time(years=None,
                          hours=None,
                          minutes=None,
                          seconds=None,
-                         utc=None):
+                         utc_offset=None):
     '''
     Set the system date and time. Each argument is an element of the date, but
     not required. If an element is not passed, the current system value for
@@ -273,8 +312,11 @@ def set_system_date_time(years=None,
     :param int hours: Hours digit: 0 - 23
     :param int minutes: Minutes digit: 0 - 59
     :param int seconds: Seconds digit: 0 - 59
-    :param bool utc: A Boolean to specify input time is UTC.
-
+    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
+    optional sign (+/-).  Will default to None which will use the local
+    timezone. To set the time based off of UTC use "'+0000'". Note: if being
+    passed through the command line will need to be quoted twice to allow
+    negative offsets.
     :return: True if successful. Otherwise False.
     :rtype: bool
 
@@ -282,15 +324,10 @@ def set_system_date_time(years=None,
 
     .. code-block:: bash
 
-        salt '*' system.set_system_date_time 2015 5 12 11 37 53 True
+        salt '*' system.set_system_date_time 2015 5 12 11 37 53 "'-0500'"
     '''
     # Get the current date/time
-    if utc is True:
-        date_time = datetime.utcnow()
-        timezone = _UTC()
-    else:
-        date_time = datetime.now()
-        timezone = None
+    date_time = _get_offset_time(utc_offset)
 
     # Check for passed values. If not passed, use current values
     if years is None:
@@ -307,18 +344,23 @@ def set_system_date_time(years=None,
         seconds = date_time.second
 
     try:
-        dt = datetime(years, months, days, hours, minutes, seconds, 0, timezone)
-    except ValueError, e:
-        raise SaltInvocationError(e.message)
+        new_datetime = datetime(years, months, days, hours, minutes, seconds, 0,
+                                date_time.tzinfo)
+    except ValueError, err:
+        raise SaltInvocationError(err.message)
 
-    return _date_bin_set_datetime(dt)
+    return _date_bin_set_datetime(new_datetime)
 
 
-def get_system_date(utc=None):
+def get_system_date(utc_offset=None):
     '''
     Get the system date
 
-    :param bool utc: A Boolean that indicates if the output timezone is UTC.
+    :param str utc_offset: The utc offset in 4 digit (+0600) format with an
+    optional sign (+/-).  Will default to None which will use the local
+    timezone. To set the time based off of UTC use "'+0000'". Note: if being
+    passed through the command line will need to be quoted twice to allow
+    negative offsets.
     :return: Returns the system date.
     :rtype: str
 
@@ -328,15 +370,11 @@ def get_system_date(utc=None):
 
         salt '*' system.get_system_date
     '''
-
-    if utc is True:
-        t = datetime.utcnow()
-    else:
-        t = datetime.now()
-    return datetime.strftime(t, "%a %m/%d/%Y")
+    offset_time = _get_offset_time(utc_offset)
+    return datetime.strftime(offset_time, "%a %m/%d/%Y")
 
 
-def set_system_date(newdate, utc=None):
+def set_system_date(newdate, utc_offset=None):
     '''
     Set the Windows system date. Use <mm-dd-yy> format for the date.
 
@@ -355,29 +393,38 @@ def set_system_date(newdate, utc=None):
 
         salt '*' system.set_system_date '03-28-13'
     '''
-
     fmts = ['%Y-%m-%d', '%m-%d-%Y', '%m-%d-%y',
             '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d']
 
     # Get date/time object from newdate
-    # dt_obj = salt.utils.date_cast(newdate)
     dt_obj = _try_parse_datetime(newdate, fmts)
     if dt_obj is None:
-        return False
+        raise SaltInvocationError("Invalid date format")
 
     # Set time using set_system_date_time()
     return set_system_date_time(years=dt_obj.year, months=dt_obj.month,
-                                days=dt_obj.day, utc=utc)
+                                days=dt_obj.day, utc_offset=utc_offset)
 
 
-class _UTC(tzinfo):
-    """UTC"""
+# Class from: <https://docs.python.org/2.7/library/datetime.html>
 
-    def utcoffset(self, dt):
-        return timedelta(0)
+# A class building tzinfo objects for fixed-offset time zones.
+# Note that FixedOffset(0) is a way to build a UTC tzinfo object.
 
-    def tzname(self, dt):
-        return "UTC"
+class FixedOffset(tzinfo):
+    """
+    Fixed offset in minutes east from UTC.
+    """
 
-    def dst(self, dt):
+    def __init__(self, offset):
+        super(self.__class__, self).__init__()
+        self.__offset = timedelta(minutes=offset)
+
+    def utcoffset(self, dt):  # pylint: disable=W0613
+        return self.__offset
+
+    def tzname(self, dt):  # pylint: disable=W0613
+        return None
+
+    def dst(self, dt):  # pylint: disable=W0613
         return timedelta(0)
