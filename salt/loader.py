@@ -1186,9 +1186,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         curr_ext = self.file_mapping[f_noext][1]
                         #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
                         if '' in (curr_ext, ext) and curr_ext != ext:
-                            log.error('Module/package collision: {0!r} and {1!r}'.format(
-                                fpath, self.file_mapping[f_noext][0]
-                            ))
+                            log.error(
+                                'Module/package collision: \'%s\' and \'%s\'',
+                                fpath,
+                                self.file_mapping[f_noext][0]
+                            )
                         if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
                             continue  # Next filename
 
