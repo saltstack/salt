@@ -685,6 +685,14 @@ def list_ip_configurations(call=None, kwargs=None):  # pylint: disable=unused-ar
     '''
     List IP configurations
     '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient,
+                           NetworkManagementClientConfiguration)
+
+    if kwargs is None:
+        kwargs = {}
+
     if 'group' not in kwargs:
         if 'resource_group' in kwargs:
             kwargs['group'] = kwargs['resource_group']
@@ -722,7 +730,10 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if kwargs.get('resource_group') is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
-            'resource_group', {}, __opts__, search_global=True
+            'resource_group', {}, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'group', {}, __opts__, search_global=True
+            )
         )
 
     region = get_location()
@@ -790,7 +801,8 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     ip_kwargs = {}
-    if bool(kwargs.get('public_ip', False)) is True:
+    ip_configurations = None
+    if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
             resource_group_name=kwargs['resource_group'],
@@ -813,29 +825,40 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                         str(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     break
+                ip_configurations = [
+                    NetworkInterfaceIPConfiguration(
+                        name='{0}-ip'.format(kwargs['iface_name']),
+                        private_ip_allocation_method='Dynamic',
+                        subnet=subnet_obj,
+                        **ip_kwargs
+                    )
+                ]
             except CloudError:
                 pass
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
             time.sleep(5)
-
-    iface_params = NetworkInterface(
-        name=kwargs['iface_name'],
-        location=kwargs['location'],
-        ip_configurations=[
+    else:
+        priv_ip_name = '{0}-ip'.format(kwargs['iface_name'])
+        ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
                 private_ip_allocation_method='Dynamic',
                 subnet=subnet_obj,
-                **ip_kwargs
             )
         ]
+
+    iface_params = NetworkInterface(
+        name=kwargs['iface_name'],
+        location=kwargs['location'],
+        ip_configurations=ip_configurations,
     )
 
-    netconn.network_interfaces.create_or_update(
+    poller = netconn.network_interfaces.create_or_update(
         kwargs['resource_group'], kwargs['iface_name'], iface_params
     )
+    poller.wait()
     count = 0
     while True:
         try:
