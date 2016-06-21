@@ -275,11 +275,10 @@ def get_image(conn, vm_):
     Return the image object to use
     '''
     images = conn.list_images()
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
     if not six.PY3:
-        vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
-                'ascii', 'salt-cloud-force-ascii'
-            )
+        vm_image = vm_image.encode('ascii', 'salt-cloud-force-ascii')
 
     for img in images:
         if isinstance(img.id, string_types) and not six.PY3:
