@@ -1206,7 +1206,7 @@ class Cloud(object):
         if deploy:
             if not make_master and 'master' not in minion_dict:
                 log.warning(
-                    'There\'s no master defined on the {0!r} VM settings.'.format(
+                    'There\'s no master defined on the \'{0}\' VM settings.'.format(
                         vm_['name']
                     )
                 )
