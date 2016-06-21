@@ -1678,7 +1678,7 @@ class ClearFuncs(object):
             log.warning(msg)
             return dict(error=dict(name='EauthAuthenticationError',
                                    message=msg))
-        if not self.loadauth.time_auth(clear_load):
+        if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
@@ -1968,14 +1968,16 @@ class ClearFuncs(object):
                 return ''
 
             # Compile list of authorized actions for the user
-            auth_list = []
-            # Add permissions for '*' or user-specific to the auth list
-            for user_key in ('*', token['name']):
-                auth_list.extend(eauth_config.get(user_key, []))
-            # Add any add'l permissions allowed by group membership
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            auth_list = token.get('auth_list')
+            if auth_list is None:
+                auth_list = []
+                # Add permissions for '*' or user-specific to the auth list
+                for user_key in ('*', token['name']):
+                    auth_list.extend(eauth_config.get(user_key, []))
+                # Add any add'l permissions allowed by group membership
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2000,10 +2002,11 @@ class ClearFuncs(object):
                     'Authentication failure of type "eauth" occurred.'
                 )
                 return ''
+            auth_list = None
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                if groups is None:
+                if groups is None or groups is False:
                     groups = []
                 group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
@@ -2041,7 +2044,10 @@ class ClearFuncs(object):
 
                 # Perform the actual authentication. If we fail here, do not
                 # continue.
-                if not self.loadauth.time_auth(extra):
+                auth_ret = self.loadauth.time_auth(extra)
+                if isinstance(auth_ret, list):
+                    auth_list = auth_ret
+                elif not auth_ret:
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2056,23 +2062,21 @@ class ClearFuncs(object):
                     type_, value_, traceback_))
                 return ''
 
-#            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
-
             # We now have an authenticated session and it is time to determine
             # what the user has access to.
-
-            auth_list = []
-            if '*' in self.opts['external_auth'][extra['eauth']]:
-                auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
-            if name in self.opts['external_auth'][extra['eauth']]:
-                auth_list = self.opts['external_auth'][extra['eauth']][name]
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(
-                        self.opts['external_auth'][extra['eauth']],
-                        groups,
-                        auth_list)
-            if extra['eauth'] == 'ldap':
-                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if auth_list is None:
+                auth_list = []
+                if '*' in self.opts['external_auth'][extra['eauth']]:
+                    auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
+                if name in self.opts['external_auth'][extra['eauth']]:
+                    auth_list = self.opts['external_auth'][extra['eauth']][name]
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(
+                            self.opts['external_auth'][extra['eauth']],
+                            groups,
+                            auth_list)
+                if extra['eauth'] == 'ldap':
+                    auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
