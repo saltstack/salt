@@ -418,7 +418,6 @@ class GitProvider(object):
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.
                         pid = 0
-                #if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
                 global_lock_key = self.role + '_global_lock'
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
