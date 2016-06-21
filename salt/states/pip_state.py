@@ -151,7 +151,7 @@ def _check_pkg_version_format(pkg):
             )
             return ret
         ret['comment'] = (
-            'pip raised an exception while parsing {0!r}: {1}'.format(
+            'pip raised an exception while parsing \'{0}\': {1}'.format(
                 pkg, exc
             )
         )
@@ -195,8 +195,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
         prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = None
-        ret['comment'] = 'Error installing {0!r}: {1}'.format(state_pkg_name,
-                                                              err)
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(state_pkg_name, err)
         return ret
 
     # If the package was already installed, check
@@ -577,8 +576,8 @@ def installed(name,
     if repo is not None:
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
                'be removed in Salt {version}. Please use \'name\' instead. '
-               'The current value for name, {0!r} will be replaced by the '
-               'value of repo, {1!r}'.format(
+               'The current value for name, \'{0}\' will be replaced by the '
+               'value of repo, \'{1}\''.format(
                    name,
                    repo,
                    version=_SaltStackVersion.from_name('Lithium').formatted_version
@@ -617,7 +616,7 @@ def installed(name,
             if requirements:
                 # TODO: Check requirements file against currently-installed
                 # packages to provide more accurate state output.
-                comments.append('Requirements file {0!r} will be '
+                comments.append('Requirements file \'{0}\' will be '
                                 'processed.'.format(requirements))
             if editable:
                 comments.append(
