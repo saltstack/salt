@@ -5,6 +5,7 @@ Integration tests for the saltutil module.
 
 # Import Python libs
 from __future__ import absolute_import
+import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -59,12 +60,15 @@ class SaltUtilModuleTest(integration.ModuleCase):
         '''
         # Run job as async
         job_jid = self.run_function('test.sleep', arg=['30'], async=True)
+        # Allow for a little time so we don't race the pub
+        time.sleep(1) 
         # Execute runner to get job status
         job_status = self.run_function('saltutil.find_job', arg=[job_jid])
         # TODO migrate to assertDictContainsSubset once 2.6 is gone
         self.assertIn('jid', job_status)
         # Kill the job
         job_kill_ret = self.run_function('saltutil.kill_job', arg=[job_jid])
+        time.sleep(1)
         # Check again to see if the job is running. It should be gone
         job_kill_status = self.run_function('saltutil.find_job', arg=[job_jid])
         self.assertEqual({}, job_kill_status)
