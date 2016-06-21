@@ -2428,7 +2428,7 @@ def recurse(name,
 
     for precheck in source_list:
         if not precheck.startswith('salt://'):
-            return _error(ret, ('Invalid source {0!r} '
+            return _error(ret, ('Invalid source \'{0}\' '
                                 '(must be a salt:// URI)'.format(precheck)))
 
     # Select the first source in source_list that exists
@@ -2448,8 +2448,8 @@ def recurse(name,
                          if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The directory {0!r} does not exist on the salt fileserver '
-            'in saltenv {1!r}'.format(source, __env__)
+            'The directory \'{0}\' does not exist on the salt fileserver '
+            'in saltenv \'{1}\''.format(source, __env__)
         )
         return ret
 
@@ -4239,7 +4239,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv {1!r}'
+        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
                           .format(source, __env__))
         return ret
 
@@ -5167,7 +5167,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     else:
         ret['comment'] = (
-            'Node type unavailable: {0!r}. Available node types are '
+            'Node type unavailable: \'{0}\'. Available node types are '
             'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
         )
 
