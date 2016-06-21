@@ -15,13 +15,8 @@ from __future__ import absolute_import, print_function
 import errno
 import logging
 import os
-import sys
 import tempfile
 import shutil
-import time
-import re
-import traceback
-## import functools
 
 # Import salt libs
 import salt.utils
@@ -624,4 +619,3 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
     if use_passphrase and local_keyid is not None:
         cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
         __salt__['cmd.run'](cmd, runas=runas)
-
