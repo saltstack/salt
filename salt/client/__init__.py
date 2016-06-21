@@ -1712,6 +1712,7 @@ class Caller(object):
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
             mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
         import salt.minion
         if mopts:
             self.opts = mopts

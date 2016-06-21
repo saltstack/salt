@@ -425,6 +425,7 @@ def salt_cloud():
     The main function for salt-cloud
     '''
     try:
+        # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
         has_saltcloud = True
