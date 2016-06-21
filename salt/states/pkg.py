@@ -1761,7 +1761,7 @@ def latest(
     if minion_os == 'Gentoo' and watch_flags:
         for pkg in desired_pkgs:
             if not avail[pkg] and not cur[pkg]:
-                msg = 'No information found for {0!r}.'.format(pkg)
+                msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
             else:
