@@ -1069,6 +1069,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                                                   'saltutil.find_job',
                                                   [jid],
                                                   expr_form=tgt_type)
+        if not ping_pub_data:
+            raise tornado.gen.Return(True)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
