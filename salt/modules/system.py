@@ -5,7 +5,7 @@ Support for reboot, shutdown, etc
 from __future__ import absolute_import
 
 # Import python libs
-from datetime import datetime
+from datetime import datetime, timedelta, tzinfo
 import os
 
 # Import salt libs
@@ -114,15 +114,20 @@ def shutdown(at_time=None):
     return ret
 
 
-def _date_bin_set_datetime(new_date, utc=None):
+def _date_bin_set_datetime(new_date):
     '''
     set the system date/time using the date command
 
     Note using a posix date binary we can only set the date up to the minute
     '''
+
     cmd = 'date'
-    if utc is True:
+
+    # if there is a timezone in the datetime object use that offset
+    if new_date.tzname() is not None:
+        new_date += new_date.utcoffset()
         cmd += ' -u'
+
     # the date can be set in the following format:
     # Note that setting the time with a resolution of seconds
     # is not a posix feature, so we will attempt it and if it
@@ -282,8 +287,10 @@ def set_system_date_time(years=None,
     # Get the current date/time
     if utc is True:
         date_time = datetime.utcnow()
+        timezone = _UTC()
     else:
         date_time = datetime.now()
+        timezone = None
 
     # Check for passed values. If not passed, use current values
     if years is None:
@@ -300,11 +307,11 @@ def set_system_date_time(years=None,
         seconds = date_time.second
 
     try:
-        dt = datetime(years, months, days, hours, minutes, seconds)
+        dt = datetime(years, months, days, hours, minutes, seconds, 0, timezone)
     except ValueError, e:
         raise SaltInvocationError(e.message)
 
-    return _date_bin_set_datetime(dt, utc=utc)
+    return _date_bin_set_datetime(dt)
 
 
 def get_system_date(utc=None):
@@ -361,3 +368,16 @@ def set_system_date(newdate, utc=None):
     # Set time using set_system_date_time()
     return set_system_date_time(years=dt_obj.year, months=dt_obj.month,
                                 days=dt_obj.day, utc=utc)
+
+
+class _UTC(tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return timedelta(0)
