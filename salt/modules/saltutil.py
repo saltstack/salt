@@ -51,7 +51,12 @@ import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
-import salt.utils.psutil_compat as psutil
+
+HAS_PSUTIL = True
+try:
+    import salt.utils.psutil_compat
+except ImportError:
+    HAS_PSUTIL = False
 
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
@@ -861,12 +866,20 @@ def signal_job(jid, sig):
 
         salt '*' saltutil.signal_job <job id> 15
     '''
+    if HAS_PSUTIL is False:
+        log.warning('saltutil.signal job called, but psutil is not installed. '
+                    'Install psutil to ensure more reliable and accurate PID '
+                    'management.')
     for data in running():
         if data['jid'] == jid:
             try:
-                for proc in psutil.Process(pid=data['pid']).children(recursive=True):
-                    proc.send_signal(sig)
+                if HAS_PSUTIL:
+                    for proc in salt.utils.psutil_compat.Process(pid=data['pid']).children(recursive=True):
+                        proc.send_signal(sig)
                 os.kill(int(data['pid']), sig)
+                if HAS_PSUTIL is False and 'child_pids' in data:
+                    for pid in data['child_pids']:
+                        os.kill(int(pid), sig)
                 return 'Signal {0} sent to job {1} at pid {2}'.format(
                         int(sig),
                         jid,
