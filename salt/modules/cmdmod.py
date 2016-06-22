@@ -2271,10 +2271,21 @@ def exec_code_all(lang, code, cwd=None):
 
         salt '*' cmd.exec_code_all ruby 'puts "cheese"'
     '''
-    codefile = salt.utils.mkstemp()
+    powershell = lang.lower().startswith("powershell")
+
+    if powershell:
+        codefile = salt.utils.mkstemp(suffix=".ps1")
+    else:
+        codefile = salt.utils.mkstemp()
+
     with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
-    cmd = [lang, codefile]
+
+    if powershell:
+        cmd = [lang, "-File", codefile]
+    else:
+        cmd = [lang, codefile]
+
     ret = run_all(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
