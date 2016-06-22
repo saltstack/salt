@@ -992,6 +992,8 @@ _OS_NAME_MAP = {
     'debian': 'Debian',
     'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
+    'chapeau': 'Chapeau',
+    'korora': 'Korora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'enterprise': 'OEL',
@@ -1015,6 +1017,8 @@ _OS_NAME_MAP = {
 _OS_FAMILY_MAP = {
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
+    'Chapeau': 'RedHat',
+    'Korora': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
