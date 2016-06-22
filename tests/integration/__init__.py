@@ -717,13 +717,14 @@ class TestDaemon(object):
         self.master_process.display_name = 'salt-master'
         self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
         self.minion_process.display_name = 'salt-minion'
-        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
-        self.sub_minion_process.display_name = 'sub salt-minion'
+        #self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
+        #self.sub_minion_process.display_name = 'sub salt-minion'
         self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
-        for process in (self.master_process, self.minion_process, self.sub_minion_process,
+        #for process in (self.master_process, self.minion_process, self.sub_minion_process,
+        for process in (self.master_process, self.minion_process,
                         self.smaster_process, self.syndic_process):
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
@@ -978,19 +979,19 @@ class TestDaemon(object):
             running_tests_user = win32api.GetUserName()
         else:
             running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
-        master_opts['user'] = running_tests_user
+
         tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
+
+        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
+        master_opts['user'] = running_tests_user
         master_opts['known_hosts_file'] = tests_known_hosts_file
         master_opts['conf_dir'] = TMP_CONF_DIR
 
-        minion_config_path = os.path.join(CONF_DIR, 'minion')
-        minion_opts = salt.config._read_conf_file(minion_config_path)
+        minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
         minion_opts['user'] = running_tests_user
         minion_opts['conf_dir'] = TMP_CONF_DIR
-
         minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
@@ -1209,7 +1210,7 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
+        #self.sub_minion_process.terminate()
         self.minion_process.terminate()
         self.master_process.terminate()
         try:
