@@ -319,10 +319,6 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
             shutil.copy(full, trgt)
             ret.append(trgt)
 
-        trgt = os.path.join(dest_dir, os.path.basename(spec_pathfile))
-        shutil.copy(spec_pathfile, trgt)
-        ret.append(trgt)
-
         return ret
 
     # obtain name of 'python setup.py sdist' generated tarball, extract the version
@@ -412,6 +408,12 @@ def build(runas,
         log.error('Failed to make src package')
         return ret
 
+    cmd = 'pbuilder --create'
+    __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+
+    # use default /var/cache/pbuilder/result
+    results_dir = '/var/cache/pbuilder/result'
+
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
         afile = os.path.basename(dsc)
@@ -420,26 +422,31 @@ def build(runas,
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
-            results_dir = tempfile.mkdtemp()
             try:
                 __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
-                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
 
-                cmd = 'pbuilder --create'
-                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-                cmd = 'pbuilder --build --buildresult {1} {0}'.format(
-                    dsc, results_dir)
+                cmd = 'pbuilder --update --override-config'
                 __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
+                cmd = 'pbuilder --build {0}'.format(dsc)
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+
+                # ignore local deps generated package file
                 for bfile in os.listdir(results_dir):
-                    full = os.path.join(results_dir, bfile)
-                    bdist = os.path.join(dest_dir, bfile)
-                    shutil.copy(full, bdist)
-                    ret.setdefault('Packages', []).append(bdist)
+                    if bfile != 'Packages':
+                        full = os.path.join(results_dir, bfile)
+                        bdist = os.path.join(dest_dir, bfile)
+                        shutil.copy(full, bdist)
+                        ret.setdefault('Packages', []).append(bdist)
+
             except Exception as exc:
                 log.error('Error building from {0}: {1}'.format(dsc, exc))
-            finally:
-                shutil.rmtree(results_dir)
+
+    # remove any Packages file created for local dependency processing
+    for pkgzfile in os.listdir(dest_dir):
+        if pkgzfile == 'Packages':
+            pkgzabsfile = os.path.join(dest_dir, pkgzfile)
+            os.remove(pkgzabsfile)
 
     shutil.rmtree(dsc_dir)
     return ret
