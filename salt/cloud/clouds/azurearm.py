@@ -824,15 +824,15 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_kwargs['public_ip_address'] = Resource(
                         str(pub_ip_data.id),  # pylint: disable=no-member
                     )
+                    ip_configurations = [
+                        NetworkInterfaceIPConfiguration(
+                            name='{0}-ip'.format(kwargs['iface_name']),
+                            private_ip_allocation_method='Dynamic',
+                            subnet=subnet_obj,
+                            **ip_kwargs
+                        )
+                    ]
                     break
-                ip_configurations = [
-                    NetworkInterfaceIPConfiguration(
-                        name='{0}-ip'.format(kwargs['iface_name']),
-                        private_ip_allocation_method='Dynamic',
-                        subnet=subnet_obj,
-                        **ip_kwargs
-                    )
-                ]
             except CloudError:
                 pass
             count += 1
