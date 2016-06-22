@@ -67,30 +67,27 @@ class WinrepoTestCase(TestCase):
                'changes': {},
                'result': False,
                'comment': ''}
-        mock = MagicMock(side_effect=[False, True, True, True, True, True,
-                                      True])
-        with patch.object(os.path, 'exists', mock):
-            ret.update({'comment': '/srv/salt/win/repo is missing'})
-            self.assertDictEqual(winrepo.genrepo('salt'), ret)
+        ret.update({'comment': '/srv/salt/win/repo is missing'})
+        self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-            mock = MagicMock(return_value={'winrepo_dir': 'salt',
-                                           'winrepo_cachefile': 'abc'})
-            with patch.object(salt.config, 'master_config', mock):
-                mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
-                with patch.object(os, 'stat', mock):
-                    mock = MagicMock(return_value=[])
-                    with patch.object(os, 'walk', mock):
-                        with patch.dict(winrepo.__opts__, {'test': True}):
-                            ret.update({'comment': '', 'result': None})
-                            self.assertDictEqual(winrepo.genrepo('salt'), ret)
+        mock = MagicMock(return_value={'winrepo_dir': 'salt',
+                                       'winrepo_cachefile': 'abc'})
+        with patch.object(salt.config, 'master_config', mock):
+            mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
+            with patch.object(os, 'stat', mock):
+                mock = MagicMock(return_value=[])
+                with patch.object(os, 'walk', mock):
+                    with patch.dict(winrepo.__opts__, {'test': True}):
+                        ret.update({'comment': '', 'result': None})
+                        self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-                        with patch.dict(winrepo.__opts__, {'test': False}):
-                            ret.update({'result': True})
-                            self.assertDictEqual(winrepo.genrepo('salt'), ret)
+                    with patch.dict(winrepo.__opts__, {'test': False}):
+                        ret.update({'result': True})
+                        self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-                            ret.update({'changes': {'winrepo': []}})
-                            self.assertDictEqual(winrepo.genrepo('salt', True),
-                                                 ret)
+                        ret.update({'changes': {'winrepo': []}})
+                        self.assertDictEqual(winrepo.genrepo('salt', True),
+                                             ret)
 
 
 if __name__ == '__main__':
