@@ -153,6 +153,17 @@ def is_empty(filename):
         return False
 
 
+def is_hex(value):
+    '''
+    Returns True if value is a hexidecimal string, otherwise returns False
+    '''
+    try:
+        int(value, 16)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def get_color_theme(theme):
     '''
     Return the color theme to use
