@@ -1440,7 +1440,7 @@ class Pygit2(GitProvider):
             return None
         try:
             commit = self.repo.revparse_single(tgt_ref)
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, ValueError):
             # Not a valid commit, likely not a commit SHA
             pass
         else:
