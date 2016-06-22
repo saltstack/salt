@@ -63,14 +63,12 @@ correctly:
       full_ret  text NOT NULL,
       id        varchar(255) NOT NULL,
       success   varchar(10) NOT NULL,
-      created   TIMESTAMP WITH TIME ZONE DEFAULT now(),
       alter_time   TIMESTAMP WITH TIME ZONE DEFAULT now()
     );
 
     CREATE INDEX idx_salt_returns_id ON salt_returns (id);
     CREATE INDEX idx_salt_returns_jid ON salt_returns (jid);
     CREATE INDEX idx_salt_returns_fun ON salt_returns (fun);
-    CREATE INDEX idx_salt_returns_created ON salt_returns (created);
     CREATE INDEX idx_salt_returns_updated ON salt_returns (alter_time);
 
     --
@@ -220,8 +218,8 @@ def returner(ret):
     try:
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO salt_returns
-                    (fun, jid, return, id, success, full_ret, alter_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)'''
+                    (fun, jid, return, id, success, full_ret)
+                    VALUES (%s, %s, %s, %s, %s, %s)'''
             cur.execute(
                 sql, (
                     ret['fun'],
@@ -229,10 +227,9 @@ def returner(ret):
                     json.dumps(ret['return']),
                     ret['id'],
                     ret.get('success', False),
-                    json.dumps(ret),
-                    time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                    json.dumps(ret)))
     except salt.exceptions.SaltMasterError:
-        log.critical('Could not store return with pgjsonb returner. PostgreSQL server unavailable.')
+        log.critical('Could not store return with postgres returner. PostgreSQL server unavailable.')
 
 
 def event_return(events):
@@ -246,14 +243,14 @@ def event_return(events):
         for event in events:
             tag = event.get('tag', '')
             data = event.get('data', '')
-            sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, %s)'''
+            sql = '''INSERT INTO salt_events (tag, data, master_id)
+                     VALUES (%s, %s, %s)'''
             cur.execute(sql, (tag,
                               json.dumps(data),
-                              __opts__['id'],
-                              time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              __opts__['id']))
 
-def save_load(jid, load, minions=None):
+
+def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
     '''
     Save the load to the specified jid id
     '''
@@ -351,6 +348,7 @@ def get_jids():
             ret[jid] = salt.utils.jid.format_jid_instance(jid,
                                                           json.loads(load))
         return ret
+
 
 def get_minions():
     '''
