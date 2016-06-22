@@ -5,7 +5,6 @@ publish_port: 64505
 ret_port: 64506
 worker_threads: 3
 root_dir: /tmp/salttest
-pki_dir: pki
 pidfile: master.pid
 timeout: 3
 open_mode: True
