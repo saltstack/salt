@@ -592,7 +592,11 @@ def list_repo_pkgs(*args, **kwargs):
     .. versionchanged:: 2014.7.0
         All available versions of each package are now returned. This required
         a slight modification to the structure of the return dict. The return
-        data shown below reflects the updated return dict structure.
+        data shown below reflects the updated return dict structure. Note that
+        packages which are version-locked using :py:mod:`pkg.hold
+        <salt.modules.yumpkg.hold>` will only show the currently-installed
+        version, as locking a package will make other versions appear
+        unavailable to yum/dnf.
 
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
