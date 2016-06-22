@@ -716,17 +716,17 @@ def set_system_date_time(years=None,
         return False
 
     # Check for passed values. If not passed, use current values
-    if not years:
+    if years is None:
         years = date_time[0]
-    if not months:
+    if months is None:
         months = date_time[1]
-    if not days:
+    if days is None:
         days = date_time[3]
-    if not hours:
+    if hours is None:
         hours = date_time[4]
-    if not minutes:
+    if minutes is None:
         minutes = date_time[5]
-    if not seconds:
+    if seconds is None:
         seconds = date_time[6]
 
     # Create the time tuple to be passed to SetLocalTime, including day_of_week
