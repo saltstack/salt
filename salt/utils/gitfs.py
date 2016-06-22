@@ -1835,9 +1835,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         # SHA-1 hashes.
         if not self.env_is_exposed(tgt_env):
             return None
-        try:
-            int(tgt_ref, 16)
-        except ValueError:
+        elif not salt.utils.is_hex(tgt_ref):
             # Not hexidecimal, likely just a non-matching environment
             return None
 
