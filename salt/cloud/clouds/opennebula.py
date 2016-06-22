@@ -847,11 +847,27 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
+    Optional vm_ dict options for overwriting template:
+
+    region_id
+        Optional - OpenNebula Zone ID
+
+    memory
+        Optional - In MB
+
+    cpu
+        Optional - Percent of host CPU to allocate
+
+    vcpu
+        Optional - Amount of vCPUs to allocate
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -p my-opennebula-profile vm_name
+
+        salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
 
     '''
     try:
@@ -901,9 +917,16 @@ def create(vm_):
         {'kwargs': kwargs},
     )
 
-    region = ''
-    if kwargs['region_id'] is not None:
-        region = 'SCHED_REQUIREMENTS="ID={0}"'.format(kwargs['region_id'])
+    template = []
+    if kwargs.get('region_id'):
+        template.append('SCHED_REQUIREMENTS="ID={0}"'.format(kwargs.get('region_id')))
+    if vm_.get('memory'):
+        template.append('MEMORY={0}'.format(vm_.get('memory')))
+    if vm_.get('cpu'):
+        template.append('CPU={0}'.format(vm_.get('cpu')))
+    if vm_.get('vcpu'):
+        template.append('VCPU={0}'.format(vm_.get('vcpu')))
+    template_args = "\n".join(template)
     try:
         server, user, password = _get_xml_rpc()
         auth = ':'.join([user, password])
@@ -911,7 +934,7 @@ def create(vm_):
                                         int(kwargs['template_id']),
                                         kwargs['name'],
                                         False,
-                                        region)
+                                        template_args)
         if not cret[0]:
             log.error(
                 'Error creating {0} on OpenNebula\n\n'
