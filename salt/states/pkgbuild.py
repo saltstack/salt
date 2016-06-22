@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 The pkgbuild state is the front of Salt package building backend. It
-automatically
+automatically builds DEB and RPM packages from specified sources
 
 .. versionadded:: 2015.8.0
 
@@ -116,6 +116,7 @@ def built(name,
         Run the spec file through a templating engine
 
         .. versionchanged:: 2015.8.2
+
             This argument is now optional, allowing for no templating engine to
             be used if none is desired.
 
@@ -132,8 +133,8 @@ def built(name,
 
         .. code-block:: yaml
 
-                - env:
-                    DEB_BUILD_OPTIONS: 'nocheck'
+            - env:
+                DEB_BUILD_OPTIONS: 'nocheck'
 
         .. warning::
 
@@ -305,8 +306,8 @@ def repo(name,
 
         .. code-block:: yaml
 
-                - env:
-                    OPTIONS: 'ask-passphrase'
+            - env:
+                OPTIONS: 'ask-passphrase'
 
         .. warning::
 
