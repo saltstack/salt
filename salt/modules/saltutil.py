@@ -1107,7 +1107,8 @@ def runner(_fun, **kwargs):
 
 def wheel(_fun, *args, **kwargs):
     '''
-    Execute a wheel module (this function must be run on the master)
+    Execute a wheel module and function. This function must be run against a
+    minion that is local to the master.
 
     .. versionadded:: 2014.7.0
 
@@ -1127,7 +1128,17 @@ def wheel(_fun, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' saltutil.wheel key.accept jerry
+        salt my-local-minion saltutil.wheel key.accept jerry
+        salt my-local-minion saltutil.wheel minions.connected
+
+    .. note::
+
+        Since this function must be run against a minion that is running locally
+        on the master in order to get accurate returns, if this function is run
+        against minions that are not local to the master, "empty" returns are
+        expected. The remote minion does not have access to wheel functions and
+        their return data.
+
     '''
     if __opts__['__role'] == 'minion':
         master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
