@@ -2088,12 +2088,19 @@ def clone(name,
     size = select('size', '1G')
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
-    cmd = 'lxc-clone'
+    # LXC commands and options changed in 2.0 - CF issue #34086 for details
+    if version() >= distutils.version.LooseVersion('2.0'):
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
+        cmd = 'lxc-copy'
+        cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)
+    else:
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-clone.1.html
+        cmd = 'lxc-clone'
+        cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if path:
         cmd += ' -P {0}'.format(pipes.quote(path))
         if not os.path.exists(path):
             os.makedirs(path)
-    cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
