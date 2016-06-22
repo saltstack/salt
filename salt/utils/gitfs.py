@@ -2535,7 +2535,8 @@ class GitFS(GitBase):
         '''
         fnd = {'path': '',
                'rel': ''}
-        if os.path.isabs(path) or tgt_env not in self.envs():
+        if os.path.isabs(path) or \
+                (not salt.utils.is_hex(tgt_env) and tgt_env not in self.envs()):
             return fnd
 
         dest = os.path.join(self.cache_root, 'refs', tgt_env, path)
@@ -2715,7 +2716,8 @@ class GitFS(GitBase):
             return cache_match
         if refresh_cache:
             ret = {'files': set(), 'symlinks': {}, 'dirs': set()}
-            if load['saltenv'] in self.envs():
+            if salt.utils.is_hex(load['saltenv']) \
+                    or load['saltenv'] in self.envs():
                 for repo in self.remotes:
                     repo_files, repo_symlinks = repo.file_list(load['saltenv'])
                     ret['files'].update(repo_files)
@@ -2761,7 +2763,8 @@ class GitFS(GitBase):
             )
             load['saltenv'] = load.pop('env')
 
-        if load['saltenv'] not in self.envs():
+        if not salt.utils.is_hex(load['saltenv']) \
+                and load['saltenv'] not in self.envs():
             return {}
         if 'prefix' in load:
             prefix = load['prefix'].strip('/')
