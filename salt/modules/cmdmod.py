@@ -2272,7 +2272,7 @@ def exec_code_all(lang, code, cwd=None):
         salt '*' cmd.exec_code_all ruby 'puts "cheese"'
     '''
     codefile = salt.utils.mkstemp()
-    with salt.utils.fopen(codefile, 'w+t') as fp_:
+    with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
     cmd = [lang, codefile]
     ret = run_all(cmd, cwd=cwd, python_shell=False)
