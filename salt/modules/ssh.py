@@ -839,7 +839,11 @@ def recv_known_host(hostname,
         cmd.append('-H')
     cmd.extend(['-T', str(timeout)])
     cmd.append(hostname)
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    lines = None
+    attempts = 5
+    while not lines and attempts > 0:
+        attempts = attempts - 1
+        lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
