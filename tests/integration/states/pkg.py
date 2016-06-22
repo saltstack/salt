@@ -37,6 +37,7 @@ _PKG_TARGETS = {
     'FreeBSD': ['aalib', 'pth'],
     'SUSE': ['aalib', 'python-pssh'],
     'MacOS': ['libpng', 'jpeg'],
+    'Windows': ['firefox', '7zip'],
 }
 
 _PKG_TARGETS_32 = {
