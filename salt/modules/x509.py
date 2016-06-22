@@ -717,7 +717,8 @@ def write_pem(text, path, overwrite=True, pem_type=None):
     text = get_pem_entry(text, pem_type=pem_type)
     _dhparams = ''
     _private_key = ''
-    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and not overwrite:
+    if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
+            not overwrite:
         _filecontents = _text_or_file(path)
         try:
             _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
@@ -1012,7 +1013,8 @@ def get_signing_policy(signing_policy_name):
 
 
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **kwargs):
+def create_certificate(
+        path=None, text=False, overwrite=True, ca_server=None, **kwargs):
     '''
     Create an X509 certificate.
 
@@ -1024,9 +1026,9 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         Default ``False``.
 
     overwrite:
-        If True(default), create_certificate will overwrite the entire pem file.
-        Set False to preserve existing private keys and dh params that may
-        exist in the pem file.
+        If True(default), create_certificate will overwrite the entire pem
+        file. Set False to preserve existing private keys and dh params that
+        may exist in the pem file.
 
     kwargs:
         Any of the properties below can be included as additional
@@ -1279,7 +1281,12 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             fun='x509.sign_remote_certificate',
             arg=str(kwargs))[ca_server]
         if path:
-            return write_pem(text=cert_txt, overwrite=overwrite, path=path, pem_type='CERTIFICATE')
+            return write_pem(
+                text=cert_txt,
+                overwrite=overwrite,
+                path=path,
+                pem_type='CERTIFICATE'
+            )
         else:
             return cert_txt
 
@@ -1414,7 +1421,12 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         )
 
     if path:
-        return write_pem(text=cert.as_pem(), overwrite=overwrite, path=path, pem_type='CERTIFICATE')
+        return write_pem(
+            text=cert.as_pem(),
+            overwrite=overwrite,
+            path=path,
+            pem_type='CERTIFICATE'
+        )
     else:
         return cert.as_pem()
 # pylint: enable=too-many-locals
