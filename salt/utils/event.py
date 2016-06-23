@@ -70,7 +70,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.loader
 import salt.utils
 import salt.utils.async
 import salt.utils.cache

@@ -24,6 +24,7 @@ import binascii
 import sys
 
 # Import salt libs
+import salt.output
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config

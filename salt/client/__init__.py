@@ -27,11 +27,9 @@ from datetime import datetime
 
 # Import salt libs
 import salt.config
-import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event
@@ -1714,6 +1712,8 @@ class Caller(object):
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
             mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
         if mopts:
             self.opts = mopts
         else:
