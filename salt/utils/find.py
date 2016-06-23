@@ -630,9 +630,13 @@ class Finder(object):
         This method is a generator and should be repeatedly called
         until there are no more results.
         '''
+        if self.mindepth < 1:
+            yield path
+
         for dirpath, dirs, files in os.walk(path):
-            depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
-            if depth >= self.mindepth:
+            relpath = os.path.relpath(dirpath, path)
+            depth = path_depth(relpath) + 1
+            if depth >= self.mindepth and (self.maxdepth is None or self.maxdepth >= depth):
                 for name in dirs + files:
                     fstat = None
                     matches = True
@@ -662,8 +666,20 @@ class Finder(object):
                             if result is not None:
                                 yield result
 
-            if depth == self.maxdepth:
+            if self.maxdepth is not None and depth > self.maxdepth:
                 dirs[:] = []
+
+
+def path_depth(path):
+    depth = 0
+    head = path
+    while True:
+        head, tail = os.path.split(head)
+        if not tail:
+            break
+        if tail != '.':
+            depth += 1
+    return depth
 
 
 def find(path, options):
