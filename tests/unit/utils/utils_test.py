@@ -547,9 +547,17 @@ class UtilsTestCase(TestCase):
         for teststr in (r'"\ []{}"',):
             self.assertEqual(teststr, yaml.safe_load(utils.yamlencoding.yaml_dquote(teststr)))
 
+    def test_yaml_dquote_doesNotAddNewLines(self):
+        teststr = '"' * 100
+        self.assertNotIn('\n', utils.yamlencoding.yaml_dquote(teststr))
+
     def test_yaml_squote(self):
         ret = utils.yamlencoding.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
+
+    def test_yaml_squote_doesNotAddNewLines(self):
+        teststr = "'" * 100
+        self.assertNotIn('\n', utils.yamlencoding.yaml_squote(teststr))
 
     def test_yaml_encode(self):
         for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
