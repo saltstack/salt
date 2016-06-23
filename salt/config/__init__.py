@@ -2916,7 +2916,7 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
-    is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
+    is_ipv4 = salt.utils.network.is_ipv4(newid)
     return newid, is_ipv4
 
 
