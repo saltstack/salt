@@ -858,6 +858,8 @@ def swaps():
     '''
     Return a dict containing information on active swap
 
+    .. versionchanged:: 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -865,7 +867,16 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    if __grains__['os'] != 'OpenBSD':
+    if __grains__['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run_stdout']('swap -l').splitlines():
+            if line.startswith('swapfile'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = {'type': 'device' if comps[0].startswith(('/dev', 'swap')) else 'file',
+                             'size': int(comps[3]),
+                             'used': (int(comps[3]) - int(comps[4])),
+                             'priority': '-'}
+    elif __grains__['os'] != 'OpenBSD':
         with salt.utils.fopen('/proc/swaps') as fp_:
             for line in fp_:
                 if line.startswith('Filename'):
