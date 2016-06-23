@@ -120,7 +120,7 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
         fire_master = None
 
     message_format = __opts__.get('sqs.message_format', None)
-    
+
     def fire(tag, msg):
         if fire_master:
             fire_master(msg, tag)
