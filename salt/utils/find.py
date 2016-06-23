@@ -640,17 +640,24 @@ class Finder(object):
                     for criterion in self.criteria:
                         if fstat is None and criterion.requires() & _REQUIRES_STAT:
                             fullpath = os.path.join(dirpath, name)
-                            fstat = os.stat(fullpath)
+                            try:
+                                fstat = os.stat(fullpath)
+                            except OSError:
+                                fstat = os.lstat(fullpath)
                         if not criterion.match(dirpath, name, fstat):
                             matches = False
                             break
+
                     if matches:
                         if fullpath is None:
                             fullpath = os.path.join(dirpath, name)
                         for action in self.actions:
                             if (fstat is None and
                                     action.requires() & _REQUIRES_STAT):
-                                fstat = os.stat(fullpath)
+                                try:
+                                    fstat = os.stat(fullpath)
+                                except OSError:
+                                    fstat = os.lstat(fullpath)
                             result = action.execute(fullpath, fstat, test=self.test)
                             if result is not None:
                                 yield result
