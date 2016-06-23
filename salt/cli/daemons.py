@@ -585,11 +585,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
-        # if its a multisyndic, do so
-        if isinstance(self.config.get('master'), list):
-            self.syndic = salt.minion.MultiSyndic(self.config)
-        else:
-            self.syndic = salt.minion.Syndic(self.config)
+        self.syndic = salt.minion.SyndicManager(self.config)
         self.set_pidfile()
 
     def start(self):

@@ -560,9 +560,9 @@ VALID_OPTS = {
     'preserve_minion_cache': bool,
     'syndic_master': (string_types, list),
 
-    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
-    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
-    # if 'ordered' the configured order will be used.
+    # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
+    # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
+    # order if 'ordered' the configured order will be used.
     'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
@@ -736,9 +736,6 @@ VALID_OPTS = {
 
     # The number of seconds for a syndic to poll for new messages that need to be forwarded
     'syndic_event_forward_timeout': float,
-
-    # The number of seconds for the syndic to spend polling the event bus
-    'syndic_max_event_process_time': float,
 
     # The length that the syndic event queue must hit before events are popped off and forwarded
     'syndic_jid_forward_cache_hwm': int,
@@ -1285,7 +1282,6 @@ DEFAULT_MASTER_OPTS = {
     'transport': 'zeromq',
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
-    'syndic_max_event_process_time': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
     'ssh_passwd': '',
     'ssh_port': '22',
