@@ -159,8 +159,10 @@ class LoadAuth(object):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = self.time_auth(load)
-        if ret is False:
+        auth_ret = self.time_auth(load)
+        if not isinstance(auth_ret, list) and not isinstance(auth_ret, bool):
+            auth_ret = False
+        if auth_ret is False:
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
@@ -184,6 +186,9 @@ class LoadAuth(object):
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
                  'token': tok}
+
+        if auth_ret is not True:
+            tdata['auth_list'] = auth_ret
 
         if 'groups' in load:
             tdata['groups'] = load['groups']

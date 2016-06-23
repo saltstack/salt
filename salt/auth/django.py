@@ -117,7 +117,7 @@ def auth(username, password):
 
             auth_dict_from_db = retrieve_auth_entries(username)[username]
             if auth_dict_from_db is not None:
-                __opts__['external_auth']['django'][username] = auth_dict_from_db
+                return auth_dict_from_db
 
             return True
         else:
