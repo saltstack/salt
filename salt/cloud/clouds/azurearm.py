@@ -8,7 +8,7 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ == 2.0rc2
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc3
     * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_
 :configuration:
     Required provider parameters:
