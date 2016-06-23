@@ -1936,7 +1936,13 @@ class State(object):
         chunk is evaluated an event will be set up to the master with the
         results.
         '''
-        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event) and self.opts.get('master_uri'):
+        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event):
+            if not self.opts.get('master_uri'):
+                ev_func = lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+                    self.opts, self.opts['sock_dir'], listen=False).fire_event(ret, tag)
+            else:
+                ev_func = self.functions['event.fire_master']
+            
             ret = {'ret': chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
@@ -1952,7 +1958,8 @@ class State(object):
                         )
                 ret['len'] = length
             preload = {'jid': self.jid}
-            self.functions['event.fire_master'](ret, tag, preload=preload)
+            ev_func(ret, tag, preload=preload)
+
 
     def call_chunk(self, low, running, chunks):
         '''
