@@ -631,43 +631,49 @@ class Finder(object):
         until there are no more results.
         '''
         if self.mindepth < 1:
-            yield path
+            dirpath, name = os.path.split(path)
+            match, fstat = self._check_criteria(dirpath, name, path)
+            if match:
+                for result in self._perform_actions(path, fstat=fstat):
+                    yield result
 
         for dirpath, dirs, files in os.walk(path):
             relpath = os.path.relpath(dirpath, path)
             depth = path_depth(relpath) + 1
             if depth >= self.mindepth and (self.maxdepth is None or self.maxdepth >= depth):
                 for name in dirs + files:
-                    fstat = None
-                    matches = True
-                    fullpath = None
-                    for criterion in self.criteria:
-                        if fstat is None and criterion.requires() & _REQUIRES_STAT:
-                            fullpath = os.path.join(dirpath, name)
-                            try:
-                                fstat = os.stat(fullpath)
-                            except OSError:
-                                fstat = os.lstat(fullpath)
-                        if not criterion.match(dirpath, name, fstat):
-                            matches = False
-                            break
-
-                    if matches:
-                        if fullpath is None:
-                            fullpath = os.path.join(dirpath, name)
-                        for action in self.actions:
-                            if (fstat is None and
-                                    action.requires() & _REQUIRES_STAT):
-                                try:
-                                    fstat = os.stat(fullpath)
-                                except OSError:
-                                    fstat = os.lstat(fullpath)
-                            result = action.execute(fullpath, fstat, test=self.test)
-                            if result is not None:
-                                yield result
+                    fullpath = os.path.join(dirpath, name)
+                    match, fstat = self._check_criteria(dirpath, name, fullpath)
+                    if match:
+                        for result in self._perform_actions(fullpath, fstat=fstat):
+                            yield result
 
             if self.maxdepth is not None and depth > self.maxdepth:
                 dirs[:] = []
+
+    def _check_criteria(self, dirpath, name, fullpath, fstat=None):
+        match = True
+        for criterion in self.criteria:
+            if fstat is None and criterion.requires() & _REQUIRES_STAT:
+                try:
+                    fstat = os.stat(fullpath)
+                except OSError:
+                    fstat = os.lstat(fullpath)
+            if not criterion.match(dirpath, name, fstat):
+                match = False
+                break
+        return match, fstat
+
+    def _perform_actions(self, fullpath, fstat=None):
+        for action in self.actions:
+            if fstat is None and action.requires() & _REQUIRES_STAT:
+                try:
+                    fstat = os.stat(fullpath)
+                except OSError:
+                    fstat = os.lstat(fullpath)
+            result = action.execute(fullpath, fstat, test=self.test)
+            if result is not None:
+                yield result
 
 
 _PATH_DEPTH_IGNORED = (os.path.sep, os.path.curdir, os.path.pardir)
