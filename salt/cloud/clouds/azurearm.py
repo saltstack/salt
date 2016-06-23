@@ -96,7 +96,7 @@ try:
         WebSiteManagementClient,
         WebSiteManagementClientConfiguration,
     )
-    from msrestazure.azure_exceptions import CloudError, DeserializationError
+    from msrestazure.azure_exceptions import CloudError
     HAS_LIBS = True
 except ImportError:
     pass
