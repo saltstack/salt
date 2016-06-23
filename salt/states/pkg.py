@@ -1275,6 +1275,7 @@ def installed(
                                               sources=sources,
                                               reinstall=bool(to_reinstall),
                                               normalize=normalize,
+                                              update_holds=update_holds,
                                               **kwargs)
 
             if os.path.isfile(rtag) and refresh:
