@@ -670,14 +670,16 @@ class Finder(object):
                 dirs[:] = []
 
 
+_PATH_DEPTH_IGNORED = (os.path.sep, os.path.curdir, os.path.pardir)
+
 def path_depth(path):
     depth = 0
     head = path
     while True:
         head, tail = os.path.split(head)
-        if not tail and (not head or head in (os.path.sep, os.path.curdir)):
+        if not tail and (not head or head in _PATH_DEPTH_IGNORED):
             break
-        if tail and tail != os.path.curdir:
+        if tail and tail not in _PATH_DEPTH_IGNORED:
             depth += 1
     return depth
 
