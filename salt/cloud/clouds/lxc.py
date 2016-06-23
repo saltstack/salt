@@ -279,27 +279,22 @@ def list_nodes(conn=None, call=None):
     nodes = {}
     for state, lxcs in lxclist.items():
         for lxcc, linfos in lxcs.items():
-            info = {
-                'id': lxcc,
-                'name': lxcc,  # required for cloud cache
-                'image': None,
-                'size': linfos['size'],
-                'state': state.lower(),
-                'public_ips': linfos['public_ips'],
-                'private_ips': linfos['private_ips'],
-            }
             # in creation mode, we need to go inside the create method
             # so we hide the running vm from being seen as already installed
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
-            if (
-                (call in ['full'] or not hide)
-                and (
-                    (lxcc in names and call in ['action'])
-                    or (call in ['full'])
-                )
-            ):
-                nodes[lxcc] = info
+            if (call in ['full'] or not hide) and ((lxcc in names and call in ['action']) or call in ['full']):
+                nodes[lxcc] = {
+                    'id': lxcc,
+                    'name': lxcc,  # required for cloud cache
+                    'image': None,
+                    'size': linfos['size'],
+                    'state': state.lower(),
+                    'public_ips': linfos['public_ips'],
+                    'private_ips': linfos['private_ips'],
+                }
+            else:
+                nodes[lxcc] = {'id': lxcc, 'state': state.lower()}
     return nodes
 
 
