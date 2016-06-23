@@ -675,9 +675,9 @@ def path_depth(path):
     head = path
     while True:
         head, tail = os.path.split(head)
-        if not tail:
+        if not tail and (not head or head in (os.path.sep, os.path.curdir)):
             break
-        if tail != '.':
+        if tail and tail != os.path.curdir:
             depth += 1
     return depth
 
