@@ -296,7 +296,14 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
-    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    try:
+        cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
+
     if any((pkgs, sources)):
         if pkgs:
             desired = _repack_pkgs(pkgs)
@@ -1047,7 +1054,13 @@ def installed(
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
-            version = __salt__['pkg.version'](name)
+            try:
+                version = __salt__['pkg.version'](name)
+            except CommandExecutionError as exc:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
@@ -1524,7 +1537,6 @@ def latest(
         else:
             desired_pkgs = [name]
 
-    cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                                fromrepo=fromrepo,
@@ -1537,6 +1549,14 @@ def latest(
                 'comment': 'An error was encountered while checking the '
                            'newest available version of package(s): {0}'
                            .format(exc)}
+
+    try:
+        cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
 
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
