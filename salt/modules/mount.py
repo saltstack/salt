@@ -202,7 +202,7 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
-    elif __grains__['os'] == 'Solaris':
+    elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
