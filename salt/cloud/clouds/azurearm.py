@@ -52,7 +52,7 @@ try:
     from salt.utils.msazure import object_to_dict
     import azure.storage
     from azure.common.credentials import UserPassCredentials
-    from azure.mgmt.compute import (
+    from azure.mgmt.compute.compute_management_client import (
         ComputeManagementClient,
         ComputeManagementClientConfiguration,
     )
@@ -71,7 +71,7 @@ try:
         VirtualMachine,
         VirtualMachineSizeTypes,
     )
-    from azure.mgmt.network import (
+    from azure.mgmt.network.network_management_client import (
         NetworkManagementClient,
         NetworkManagementClientConfiguration,
     )
@@ -84,15 +84,15 @@ try:
         Resource,
         SecurityRule,
     )
-    from azure.mgmt.resource.resources import (
+    from azure.mgmt.resource.resources.resource_management_client import (
         ResourceManagementClient,
         ResourceManagementClientConfiguration,
     )
-    from azure.mgmt.storage import (
+    from azure.mgmt.storage.storage_management_client import (
         StorageManagementClient,
         StorageManagementClientConfiguration,
     )
-    from azure.mgmt.web import (
+    from azure.mgmt.web.web_site_management_client import (
         WebSiteManagementClient,
         WebSiteManagementClientConfiguration,
     )
@@ -181,10 +181,8 @@ def get_conn(Client=None, ClientConfig=None):
 
     credentials = UserPassCredentials(username, password)
     client = Client(
-        ClientConfig(
-            credentials,
-            subscription_id=subscription_id,
-        )
+        credentials,
+        subscription_id=subscription_id,
     )
     return client
 
