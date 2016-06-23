@@ -323,8 +323,6 @@ def _pages_to_list(items):
                 objs.append(item)
         except GeneratorExit:
             break
-        except DeserializationError:
-            break
     return objs
 
 
