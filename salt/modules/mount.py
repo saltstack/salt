@@ -311,8 +311,8 @@ class _vfstab_entry(object):
         '''Error raised when a line isn't parsible as an fstab entry'''
 
     vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
-
-    vfstab_format = '{device}\t{device_fsck}\t{name}\t{fstype}\t{pass_fsck}\t{mount_at_boot}\t{opts}\n'
+    ##NOTE: weird formatting to match default spacing on Solaris
+    vfstab_format = '{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n'
 
     @classmethod
     def dict_from_line(cls, line):
@@ -331,7 +331,7 @@ class _vfstab_entry(object):
 
     @classmethod
     def dict_to_line(cls, entry):
-        return cls.fstab_format.format(**entry)
+        return cls.vfstab_format.format(**entry)
 
     def __str__(self):
         '''string value, only works for full repr'''
@@ -515,9 +515,6 @@ def set_fstab(
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
 
-    if __grains__['kernel'] == 'SunOS':
-        return {'Error': 'set_fstab not support on Solaris like platforms, use set_vfstab.'}
-
     # Fix the opts type if it is a list
     if isinstance(opts, list):
         opts = ','.join(opts)
@@ -595,6 +592,134 @@ def set_fstab(
                         lines.append(line)
 
                 except _fstab_entry.ParseError:
+                    lines.append(line)
+
+    except (IOError, OSError) as exc:
+        msg = 'Couldn\'t read from {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # add line if not present or changed
+    if ret is None:
+        lines.append(str(entry))
+        ret = 'new'
+
+    if ret != 'present':  # ret in ['new', 'change']:
+        if not salt.utils.test_mode(test=test, **kwargs):
+            try:
+                with salt.utils.fopen(config, 'w+') as ofile:
+                    # The line was changed, commit it!
+                    ofile.writelines(lines)
+            except (IOError, OSError):
+                msg = 'File not writable {0}'
+                raise CommandExecutionError(msg.format(config))
+
+    return ret
+
+
+def set_vfstab(
+        name,
+        device,
+        fstype,
+        opts='-',
+        device_fsck='-',
+        pass_fsck='-',
+        mount_at_boot='yes',
+        config='/etc/vfstab',
+        test=False,
+        match_on='auto',
+        **kwargs):
+    '''
+    ..verionadded:: 2016.3.2
+    Verify that this mount is represented in the fstab, change the mount
+    to match the data passed, or add the mount if it is not present.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.set_vfstab /mnt/foo /device/c0t0d0p0 ufs
+    '''
+
+    # Fix the opts type if it is a list
+    if isinstance(opts, list):
+        opts = ','.join(opts)
+
+    # Map unknown values for mount_at_boot to no
+    if mount_at_boot != 'yes':
+        mount_at_boot = 'no'
+
+    # preserve arguments for updating
+    entry_args = {
+        'name': name,
+        'device': device,
+        'fstype': fstype,
+        'opts': opts,
+        'device_fsck': device_fsck,
+        'pass_fsck': pass_fsck,
+        'mount_at_boot': mount_at_boot,
+    }
+
+    lines = []
+    ret = None
+
+    # Transform match_on into list--items will be checked later
+    if isinstance(match_on, list):
+        pass
+    elif not isinstance(match_on, six.string_types):
+        msg = 'match_on must be a string or list of strings'
+        raise CommandExecutionError(msg)
+    elif match_on == 'auto':
+        # Try to guess right criteria for auto....
+        # NOTE: missing some special fstypes here
+        specialFSes = frozenset([
+            'devfs',
+            'proc',
+            'ctfs',
+            'objfs',
+            'sharefs',
+            'fs',
+            'tmpfs'])
+
+        if fstype in specialFSes:
+            match_on = ['name']
+        else:
+            match_on = ['device']
+    else:
+        match_on = [match_on]
+
+    # generate entry and criteria objects, handle invalid keys in match_on
+    entry = _vfstab_entry(**entry_args)
+    try:
+        criteria = entry.pick(match_on)
+
+    except KeyError:
+        filterFn = lambda key: key not in _vfstab_entry.vfstab_keys
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        raise CommandExecutionError(msg)
+
+    # parse file, use ret to cache status
+    if not os.path.isfile(config):
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                try:
+                    if criteria.match(line):
+                        # Note: If ret isn't None here,
+                        # we've matched multiple lines
+                        ret = 'present'
+                        if entry.match(line):
+                            lines.append(line)
+                        else:
+                            ret = 'change'
+                            lines.append(str(entry))
+                    else:
+                        lines.append(line)
+
+                except _vfstab_entry.ParseError:
                     lines.append(line)
 
     except (IOError, OSError) as exc:
