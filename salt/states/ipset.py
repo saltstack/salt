@@ -209,8 +209,6 @@ def present(name, entry=None, family='ipv4', **kwargs):
         if __salt__['ipset.check'](kwargs['set_name'],
                                    _entry,
                                    family) is True:
-            if test_flag is False:
-                ret['result'] = True
             ret['comment'] += 'entry for {0} already in set {1} for {2}\n'.format(
                 entry,
                 kwargs['set_name'],
