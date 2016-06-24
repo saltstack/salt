@@ -1603,9 +1603,8 @@ def fqdn_ip4():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip4': addrs}
@@ -1633,9 +1632,8 @@ def fqdn_ip6():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip6': addrs}
