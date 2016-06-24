@@ -653,6 +653,7 @@ def _elb_present(
                 return ret
             subnets.append(r['id'])
 
+    _security_groups = None
     if subnets:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](subnets, region, key, keyid, profile)
         vpc_id = vpc_id.get('vpc_id')
