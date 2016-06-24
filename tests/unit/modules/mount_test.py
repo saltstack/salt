@@ -103,6 +103,30 @@ class MountTestCase(TestCase):
                                                            'opts': ['D', 'E', 'F'],
                                                            'pass': 'H'}})
 
+    def test_vfstab(self):
+        '''
+        List the content of the vfstab
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.object(os.path, 'isfile', mock):
+            self.assertEqual(mount.vfstab(), {})
+
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'kernel': 'SunOS'}):
+            with patch.object(os.path, 'isfile', mock):
+                file_data = '\n'.join(['#',
+                                       'swap        -   /tmp                tmpfs    -   yes    size=2048m'])
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=file_data),
+                           create=True) as m:
+                    m.return_value.__iter__.return_value = file_data.splitlines()
+                    self.assertEqual(mount.fstab(), {'/tmp': {'device': 'swap',
+                                                              'device_fsck': '-',
+                                                              'fstype': 'tmpfs',
+                                                              'mount_at_boot': 'yes',
+                                                              'opts': ['size=2048m'],
+                                                              'pass_fsck': '-'}})
+
     def test_rm_fstab(self):
         '''
         Remove the mount point from the fstab
