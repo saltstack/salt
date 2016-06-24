@@ -844,7 +844,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in [pool.create_floating_ip()]:
+                for idx in pool.list_floating_ips():
                     if idx.node_id is None:
                         floating.append(idx)
                 if not floating:
