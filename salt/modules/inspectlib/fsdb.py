@@ -18,6 +18,7 @@ import os
 import csv
 import datetime
 import gzip
+import shutil
 from salt.utils.odict import OrderedDict
 
 
@@ -86,6 +87,10 @@ class CsvDB(object):
         :param dbid:
         :return:
         '''
+        db_path = os.path.join(self.path, dbid)
+        if os.path.exists(db_path):
+            shutil.rmtree(db_path, ignore_errors=True)
+
 
     def list(self):
         '''
