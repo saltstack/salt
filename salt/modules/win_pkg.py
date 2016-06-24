@@ -228,6 +228,10 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
+    if kwargs.get('refresh', False):
+        # _get_name_map() needs a refresh_db if cache is not present
+        refresh_db()
+
     ret = {}
     name_map = _get_name_map()
     for pkg_name, val in six.iteritems(_get_reg_software()):
