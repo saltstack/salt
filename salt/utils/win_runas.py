@@ -298,6 +298,10 @@ def runas_system(cmd, username, password):
                                     win32con.LOGON32_LOGON_INTERACTIVE,
                                     win32con.LOGON32_PROVIDER_DEFAULT)
 
+    # Get Unrestricted Token (UAC) if this is an Admin Account
+    elevated_token = win32security.GetTokenInformation(
+        token, win32security.TokenLinkedToken)
+
     # Get Security Attributes
     security_attributes = win32security.SECURITY_ATTRIBUTES()
     security_attributes.bInheritHandle = 1
@@ -337,8 +341,8 @@ def runas_system(cmd, username, password):
                 None,
                 startup_info)
 
-    hProcess, hThread, PId, TId = win32process.CreateProcessAsUser(token,
-                                                                   *procArgs)
+    hProcess, hThread, PId, TId = \
+        win32process.CreateProcessAsUser(elevated_token, *procArgs)
 
     if stdin_read is not None:
         stdin_read.Close()
