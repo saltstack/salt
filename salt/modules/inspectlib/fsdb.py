@@ -91,6 +91,16 @@ class CsvDB(object):
         if os.path.exists(db_path):
             shutil.rmtree(db_path, ignore_errors=True)
 
+    def flush(self, table):
+        '''
+        Flush table.
+
+        :param table:
+        :return:
+        '''
+        table_path = os.path.join(self.db_path, table)
+        if os.path.exists(table_path):
+            os.unlink(table_path)
 
     def list(self):
         '''
