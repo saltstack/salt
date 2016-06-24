@@ -366,13 +366,10 @@ class _vfstab_entry(object):
         return True
 
 
-def fstab(config=None):
+def fstab(config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
     List the contents of the fstab
-
-    config : string
-        optional path of fstab
 
     CLI Example:
 
@@ -381,11 +378,6 @@ def fstab(config=None):
         salt '*' mount.fstab
     '''
     ret = {}
-    if not config:
-        if __grains__['kernel'] == 'SunOS':
-            config = '/etc/vfstab'
-        else:
-            config = '/etc/fstab'
     if not os.path.isfile(config):
         return ret
     with salt.utils.fopen(config) as ifile:
@@ -415,7 +407,22 @@ def fstab(config=None):
     return ret
 
 
-def rm_fstab(name, device, config=None):
+def vfstab(config='/etc/vfstab'):
+    '''
+    .. versionadded:: 2016.3.2
+    List the contents of the vfstab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.vfstab
+    '''
+    ## NOTE: vfstab is a wrapper, we share all code with fstab
+    return fstab(config)
+
+
+def rm_fstab(name, device, config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
     Remove the mount point from the fstab
@@ -430,12 +437,6 @@ def rm_fstab(name, device, config=None):
         salt '*' mount.rm_fstab /mnt/foo /dev/sdg
     '''
     modified = False
-
-    if not config:
-        if __grains__['kernel'] == 'SunOS':
-            config = '/etc/vfstab'
-        else:
-            config = '/etc/fstab'
 
     if __grains__['kernel'] == 'SunOS':
         criteria = _vfstab_entry(name=name, device=device)
@@ -472,6 +473,24 @@ def rm_fstab(name, device, config=None):
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
     return True
+
+
+def rm_vfstab(name, device, config='/etc/vfstab'):
+    '''
+    .. versionadded:: 2016.3.2
+    Remove the mount point from the vfstab
+
+    config : string
+        optional path of vfstab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.rm_vfstab /mnt/foo /device/c0t0d0p0
+    '''
+    ## NOTE: rm_vfstab is a wrapper, we share all code with fstab
+    return rm_fstab(name, device, config)
 
 
 def set_fstab(
