@@ -378,7 +378,7 @@ class SaltScriptBase(ScriptPathMixin):
         return []
 
 
-class SaltDaemonScriptBase(SaltScriptBase):
+class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
     '''
     Base class for Salt Daemon CLI scripts
     '''
@@ -549,15 +549,21 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 self._connectable.set()
                 break
             for port in set(check_ports):
-                log.trace('Checking connectable status on port: %s', port)
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                conn = sock.connect_ex(('localhost', port))
-                if conn == 0:
-                    log.debug('Port %s is connectable!', port)
-                    check_ports.remove(port)
-                    sock.shutdown(socket.SHUT_RDWR)
-                    sock.close()
-                del sock
+                if isinstance(port, int):
+                    log.trace('Checking connectable status on port: %s', port)
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    conn = sock.connect_ex(('localhost', port))
+                    if conn == 0:
+                        log.debug('Port %s is connectable!', port)
+                        check_ports.remove(port)
+                        sock.shutdown(socket.SHUT_RDWR)
+                        sock.close()
+                    del sock
+                elif isinstance(port, str):
+                    joined = self.run_run('manage.joined', config_dir=self.config_dir)
+                    joined = [x.lstrip('- ') for x in joined]
+                    if port in joined:
+                        check_ports.remove(port)
             yield gen.sleep(0.125)
         # A final sleep to allow the ioloop to do other things
         yield gen.sleep(0.125)
@@ -579,7 +585,7 @@ class SaltMinion(SaltDaemonScriptBase):
         return script_args
 
     def get_check_ports(self):
-        return set([self.config['runtests_conn_check_port']])
+        return set([self.config['id']])
 
 
 class SaltMaster(SaltDaemonScriptBase):
@@ -612,7 +618,7 @@ class SaltSyndic(SaltDaemonScriptBase):
         return ['-l', 'quiet']
 
     def get_check_ports(self):
-        return set([self.config['runtests_conn_check_port']])
+        return set()
 
 
 class TestDaemon(object):
