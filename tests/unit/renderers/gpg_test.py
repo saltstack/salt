@@ -39,18 +39,6 @@ class GPGTestCase(TestCase):
         with patch('salt.utils.which', MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
-    def test__get_key_dir(self):
-        '''
-        test _get_key_dir
-        '''
-        cfg_dir = '/gpg/cfg/dir'
-        with patch.dict(gpg.__salt__, {'config.get': MagicMock(return_value=cfg_dir)}):
-            self.assertEqual(gpg._get_key_dir(), cfg_dir)
-
-        def_dir = '/etc/salt/gpgkeys'
-        with patch.dict(gpg.__salt__, {'config.get': MagicMock(return_value=False)}):
-            self.assertEqual(gpg._get_key_dir(), def_dir)
-
     def test__decrypt_ciphertext(self):
         '''
         test _decrypt_ciphertext
