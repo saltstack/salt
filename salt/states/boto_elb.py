@@ -237,14 +237,18 @@ Tags can also be set:
 
 # Import Python Libs
 from __future__ import absolute_import
+import logging
 
 # Import Salt Libs
 import hashlib
 import re
 import salt.utils.dictupdate as dictupdate
+from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
 
+
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -258,6 +262,7 @@ def present(
         listeners,
         availability_zones=None,
         subnets=None,
+        subnet_names=None,
         security_groups=None,
         scheme='internet-facing',
         health_check=None,
@@ -274,7 +279,9 @@ def present(
         keyid=None,
         profile=None,
         wait_for_sync=True,
-        tags=None):
+        tags=None,
+        instance_ids=None,
+        instance_names=None):
     '''
     Ensure the ELB exists.
 
@@ -294,6 +301,9 @@ def present(
 
     subnets
         A list of subnet IDs in your VPC to attach to your LoadBalancer.
+
+    subnet_names
+        A list of subnet names in your VPC to attach to your LoadBalancer.
 
     security_groups
         The security groups assigned to your LoadBalancer within your VPC. Must
@@ -371,6 +381,14 @@ def present(
 
     tags
         dict of tags
+
+    instance_ids
+        list of instance ids.  The state will ensure that these, and ONLY these, instances
+        are registered with the ELB.  This is additive with instance_names.
+
+    instance_names
+        list of instance names.  The state will ensure that these, and ONLY these, instances
+        are registered with the ELB.  This is additive with instance_ids.
     '''
 
     # load data from attributes_from_pillar and merge with attributes
@@ -391,7 +409,7 @@ def present(
                              'a comma-separated string.'
             return ret
 
-    _ret = _elb_present(name, availability_zones, listeners, subnets,
+    _ret = _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                         security_groups, scheme, region, key, keyid, profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -471,6 +489,28 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+
+    if not instance_ids:
+        instance_ids = []
+    if instance_names:
+        for n in instance_names:
+            instance_ids += __salt__['boto_ec2.find_instances'](name=n, region=region,
+                                                                key=key, keyid=keyid,
+                                                                profile=profile)
+    # Backwards compat:  Only touch attached instances if requested (e.g. if some are defined).
+    if instance_ids:
+        if __opts__['test']:
+            if __salt__['boto_elb.set_instances'](name, instance_ids, True, region,
+                                                  key, keyid, profile):
+                ret['comment'] += ' ELB {0} instances would be updated.'.format(name)
+                ret['result'] = None
+                return ret
+        _ret = __salt__['boto_elb.set_instances'](name, instance_ids, False, region,
+                                                  key, keyid, profile)
+        if not _ret:
+            ret['comment'] += "Failed to set requested instances."
+            ret['result'] = _ret
+
     return ret
 
 
@@ -554,6 +594,7 @@ def _elb_present(
         availability_zones,
         listeners,
         subnets,
+        subnet_names,
         security_groups,
         scheme,
         region,
@@ -561,12 +602,9 @@ def _elb_present(
         keyid,
         profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
-    if not (availability_zones or subnets):
-        raise SaltInvocationError('Either availability_zones or subnets must'
-                                  ' be provided as arguments.')
-    if availability_zones and subnets:
-        raise SaltInvocationError('availability_zones and subnets are mutually'
-                                  ' exclusive arguments.')
+    if not exactly_one((availability_zones, subnets, subnet_names)):
+        raise SaltInvocationError('Exactly one of availability_zones, subnets, '
+                                  'subnet_names must be provided as arguments.')
     if not listeners:
         listeners = []
     for listener in listeners:
@@ -599,32 +637,50 @@ def _elb_present(
         if policies_pillar:
             policies += __salt__['pillar.get'](policies_pillar, {}).get(listener['elb_protocol'], [])
 
+    # Look up subnet ids from names if provided
+    if subnet_names:
+        subnets = []
+        for i in subnet_names:
+            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i, region=region,
+                                                     key=key, keyid=keyid, profile=profile)
+            if 'error' in r:
+                ret['comment'] = 'Error looking up subnet ids: {0}'.format(r['error'])
+                ret['result'] = False
+                return ret
+            if 'id' not in r:
+                ret['comment'] = 'Subnet {0} does not exist.'.format(i)
+                ret['result'] = False
+                return ret
+            subnets.append(r['id'])
+
     if subnets:
-        vpc_id = __salt__['boto_vpc.get_subnet_association'](
-            subnets, region, key, keyid, profile
-        )
+        vpc_id = __salt__['boto_vpc.get_subnet_association'](subnets, region, key, keyid, profile)
         vpc_id = vpc_id.get('vpc_id')
         if not vpc_id:
-            msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
-            raise SaltInvocationError(msg)
-        security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
+            ret['comment'] = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
+            ret['result'] = False
+            return ret
+        _security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
             security_groups, vpc_id=vpc_id, region=region, key=key,
             keyid=keyid, profile=profile
         )
-        if not security_groups:
+        if not _security_groups:
             msg = 'Security groups {0} do not map to valid security group ids.'
-            msg = msg.format(security_groups)
-            raise SaltInvocationError(msg)
+            ret['comment'] = msg.format(security_groups)
+            ret['result'] = False
+            return ret
     exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_elb.create'](name, availability_zones,
-                                              listeners, subnets,
-                                              security_groups, scheme, region,
-                                              key, keyid, profile)
+        created = __salt__['boto_elb.create'](name=name,
+                                              availability_zones=availability_zones,
+                                              listeners=listeners, subnets=subnets,
+                                              security_groups=_security_groups,
+                                              scheme=scheme, region=region, key=key,
+                                              keyid=keyid, profile=profile)
         if created:
             ret['changes']['old'] = {'elb': None}
             ret['changes']['new'] = {'elb': name}
@@ -635,7 +691,7 @@ def _elb_present(
     else:
         ret['comment'] = 'ELB {0} present.'.format(name)
         _ret = _security_groups_present(
-            name, security_groups, region, key, keyid, profile
+            name, _security_groups, region, key, keyid, profile
         )
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -682,7 +738,8 @@ def _listeners_present(
     if not lb:
         msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
-        ret['result'] = False
+        if not __opts__['test']:
+            ret['result'] = False
         return ret
     if not listeners:
         listeners = []
@@ -770,7 +827,8 @@ def _security_groups_present(
     if not lb:
         msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
-        ret['result'] = False
+        if not __opts__['test']:
+            ret['result'] = False
         return ret
     if not security_groups:
         security_groups = []
@@ -1135,7 +1193,8 @@ def _policies_present(
     if not lb:
         msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
-        ret['result'] = False
+        if not __opts__['test']:
+            ret['result'] = False
         return ret
 
     # Policies have two names:
