@@ -292,9 +292,87 @@ class _fstab_entry(object):
         return True
 
 
-def fstab(config='/etc/fstab'):
+class _vfstab_entry(object):
     '''
+    Utility class for manipulating vfstab entries. Primarily we're parsing,
+    formatting, and comparing lines. Parsing emits dicts expected from
+    fstab() or raises a ValueError.
+
+    Note: We'll probably want to use os.normpath and os.normcase on 'name'
+    Note: This parses vfstab entries on Solaris like systems
+
+    #device     device      mount       FS  fsck    mount   mount
+    #to mount   to fsck     point       type    pass    at boot options
+    #
+    /devices    -   /devices            devfs    -   no     -
+    '''
+
+    class ParseError(ValueError):
+        '''Error raised when a line isn't parsible as an fstab entry'''
+
+    vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
+
+    vfstab_format = '{device}\t{device_fsck}\t{name}\t{fstype}\t{pass_fsck}\t{mount_at_boot}\t{opts}\n'
+
+    @classmethod
+    def dict_from_line(cls, line):
+        if line.startswith('#'):
+            raise cls.ParseError("Comment!")
+
+        comps = line.split()
+        if len(comps) != 7:
+            raise cls.ParseError("Invalid Entry!")
+
+        return dict(zip(cls.vfstab_keys, comps))
+
+    @classmethod
+    def from_line(cls, *args, **kwargs):
+        return cls(** cls.dict_from_line(*args, **kwargs))
+
+    @classmethod
+    def dict_to_line(cls, entry):
+        return cls.fstab_format.format(**entry)
+
+    def __str__(self):
+        '''string value, only works for full repr'''
+        return self.dict_to_line(self.criteria)
+
+    def __repr__(self):
+        '''always works'''
+        return str(self.criteria)
+
+    def pick(self, keys):
+        '''returns an instance with just those keys'''
+        subset = dict([(key, self.criteria[key]) for key in keys])
+        return self.__class__(**subset)
+
+    def __init__(self, **criteria):
+        '''Store non-empty, non-null values to use as filter'''
+        items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
+        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
+        self.criteria = dict(items)
+
+    @staticmethod
+    def norm_path(path):
+        '''Resolve equivalent paths equivalently'''
+        return os.path.normcase(os.path.normpath(path))
+
+    def match(self, line):
+        '''compare potentially partial criteria against line'''
+        entry = self.dict_from_line(line)
+        for key, value in six.iteritems(self.criteria):
+            if entry[key] != value:
+                return False
+        return True
+
+
+def fstab(config=None):
+    '''
+    .. versionchanged:: 2016.3.2
     List the contents of the fstab
+
+    config : string
+        optional path of fstab
 
     CLI Example:
 
@@ -303,14 +381,26 @@ def fstab(config='/etc/fstab'):
         salt '*' mount.fstab
     '''
     ret = {}
+    if not config:
+        if __grains__['kernel'] == 'SunOS':
+            config = '/etc/vfstab'
+        else:
+            config = '/etc/fstab'
     if not os.path.isfile(config):
         return ret
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
             try:
-                entry = _fstab_entry.dict_from_line(
-                    line,
-                    _fstab_entry.compatibility_keys)
+                if __grains__['kernel'] == 'SunOS':
+                    ## Note: comments use in default vfstab file!
+                    if line[0] == '#':
+                        continue
+                    entry = _vfstab_entry.dict_from_line(
+                        line)
+                else:
+                    entry = _fstab_entry.dict_from_line(
+                        line,
+                        _fstab_entry.compatibility_keys)
 
                 entry['opts'] = entry['opts'].split(',')
                 while entry['name'] in ret:
@@ -318,6 +408,8 @@ def fstab(config='/etc/fstab'):
 
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
+                pass
+            except _vfstab_entry.ParseError:
                 pass
 
     return ret
