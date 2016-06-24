@@ -311,7 +311,7 @@ class _vfstab_entry(object):
         '''Error raised when a line isn't parsible as an fstab entry'''
 
     vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
-    ##NOTE: weird formatting to match default spacing on Solaris
+    ## NOTE: weird formatting to match default spacing on Solaris
     vfstab_format = '{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n'
 
     @classmethod
