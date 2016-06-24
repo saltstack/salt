@@ -40,7 +40,7 @@ class MountTestCase(TestCase):
         '''
         List the active mounts.
         '''
-        with patch.dict(mount.__grains__, {'os': 'FreeBSD'}):
+        with patch.dict(mount.__grains__, {'os': 'FreeBSD', 'kernel': 'FreeBSD'}):
             # uid=user1 tests the improbable case where a OS returns a name
             # instead of a numeric id, for #25293
             mock = MagicMock(return_value='A B C D,E,F,uid=user1,gid=grp1')
@@ -56,7 +56,7 @@ class MountTestCase(TestCase):
                                                             'gid=100'],
                                                    'fstype': 'C'}})
 
-        with patch.dict(mount.__grains__, {'os': 'Solaris'}):
+        with patch.dict(mount.__grains__, {'os': 'Solaris', 'kernel': 'SunOS'}):
             mock = MagicMock(return_value='A * B * C D/E/F')
             with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
                 self.assertEqual(mount.active(), {'B':
@@ -64,17 +64,17 @@ class MountTestCase(TestCase):
                                                    'opts': ['D', 'E', 'F'],
                                                    'fstype': 'C'}})
 
-        with patch.dict(mount.__grains__, {'os': 'OpenBSD'}):
+        with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mounts_openbsd', mock):
                 self.assertEqual(mount.active(), {})
 
-        with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+        with patch.dict(mount.__grains__, {'os': 'MacOS', 'kernel': 'Darwin'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mounts_darwin', mock):
                 self.assertEqual(mount.active(), {})
 
-        with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+        with patch.dict(mount.__grains__, {'os': 'MacOS', 'kernel': 'Darwin'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mountinfo', mock):
                 with patch.object(mount, '_active_mounts_darwin', mock):
@@ -248,7 +248,7 @@ class MountTestCase(TestCase):
 
         file_data = '\n'.join(['Filename Type Size Used Priority',
                                '/dev/sda1 partition 31249404 4100 -1'])
-        with patch.dict(mount.__grains__, {'os': ''}):
+        with patch.dict(mount.__grains__, {'os': '', 'kernel': ''}):
             with patch('salt.utils.fopen',
                        mock_open(read_data=file_data),
                        create=True) as m:
@@ -263,7 +263,7 @@ class MountTestCase(TestCase):
         file_data = '\n'.join(['Device Size Used Unknown Unknown Priority',
                                '/dev/sda1 31249404 4100 unknown unknown -1'])
         mock = MagicMock(return_value=file_data)
-        with patch.dict(mount.__grains__, {'os': 'OpenBSD'}):
+        with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
             with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
                 self.assertDictEqual(mount.swaps(), {'/dev/sda1':
                                                      {'priority': '-1',
@@ -276,44 +276,50 @@ class MountTestCase(TestCase):
         Activate a swap disk
         '''
         mock = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'swaps', mock):
-            self.assertEqual(mount.swapon('name'),
-                             {'stats': 'name', 'new': False})
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapon('name'),
+                                 {'stats': 'name', 'new': False})
 
         mock = MagicMock(return_value={})
-        with patch.object(mount, 'swaps', mock):
-            mock = MagicMock(return_value=None)
-            with patch.dict(mount.__salt__, {'cmd.run': mock}):
-                self.assertEqual(mount.swapon('name', False), {})
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name', False), {})
 
         mock = MagicMock(side_effect=[{}, {'name': 'name'}])
-        with patch.object(mount, 'swaps', mock):
-            mock = MagicMock(return_value=None)
-            with patch.dict(mount.__salt__, {'cmd.run': mock}):
-                self.assertEqual(mount.swapon('name'), {'stats': 'name',
-                                                        'new': True})
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name'), {'stats': 'name',
+                                                            'new': True})
 
     def test_swapoff(self):
         '''
         Deactivate a named swap mount
         '''
         mock = MagicMock(return_value={})
-        with patch.object(mount, 'swaps', mock):
-            self.assertEqual(mount.swapoff('name'), None)
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapoff('name'), None)
 
         mock = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'swaps', mock):
-            with patch.dict(mount.__grains__, {'os': 'test'}):
-                mock = MagicMock(return_value=None)
-                with patch.dict(mount.__salt__, {'cmd.run': mock}):
-                    self.assertFalse(mount.swapoff('name'))
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertFalse(mount.swapoff('name'))
 
         mock = MagicMock(side_effect=[{'name': 'name'}, {}])
-        with patch.object(mount, 'swaps', mock):
-            with patch.dict(mount.__grains__, {'os': 'test'}):
-                mock = MagicMock(return_value=None)
-                with patch.dict(mount.__salt__, {'cmd.run': mock}):
-                    self.assertTrue(mount.swapoff('name'))
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertTrue(mount.swapoff('name'))
 
     def test_is_mounted(self):
         '''
