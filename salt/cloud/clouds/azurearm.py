@@ -291,21 +291,6 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def _pages_to_list(items):
-    '''
-    Convert a set of links from a group of pages to a list
-    '''
-    objs = []
-    while True:
-        try:
-            page = items.next()
-            for item in page:
-                objs.append(item)
-        except GeneratorExit:
-            break
-    return objs
-
-
 def _pages_to_list_old(items):
     '''
     Convert a set of links from a group of pages to a list
@@ -338,8 +323,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
     ret = {}
     location = get_location()
     sizes = compconn.virtual_machine_sizes.list(location)
-    sizeobjs = _pages_to_list(sizes)
-    for size in sizeobjs:
+    for size in sizes:
         ret[size.name] = object_to_dict(size)
     return ret
 
@@ -382,8 +366,7 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     ret = {}
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
-        nodeobjs = _pages_to_list(nodes)
-        for node in nodeobjs:
+        for node in nodes:
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
