@@ -963,7 +963,7 @@ class CkMinions(object):
         for item in auth_list:
             if isinstance(item, six.string_types):
                 continue
-            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
         if ou_names:
             auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
