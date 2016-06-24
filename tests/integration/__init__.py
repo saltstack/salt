@@ -717,14 +717,14 @@ class TestDaemon(object):
         self.master_process.display_name = 'salt-master'
         self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
         self.minion_process.display_name = 'salt-minion'
-        #self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
-        #self.sub_minion_process.display_name = 'sub salt-minion'
+        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
+        self.sub_minion_process.display_name = 'sub salt-minion'
         self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
-        #for process in (self.master_process, self.minion_process, self.sub_minion_process,
-        for process in (self.master_process, self.minion_process,
+        for process in (self.master_process, self.minion_process, self.sub_minion_process,
+        #for process in (self.master_process, self.minion_process,
                         self.smaster_process, self.syndic_process):
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
@@ -987,22 +987,22 @@ class TestDaemon(object):
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['conf_dir'] = TMP_CONF_DIR
+        master_opts['config_dir'] = TMP_CONF_DIR
 
         minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
         minion_opts['user'] = running_tests_user
-        minion_opts['conf_dir'] = TMP_CONF_DIR
+        minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
         sub_minion_opts['user'] = running_tests_user
-        sub_minion_opts['conf_dir'] = TMP_SUB_MINION_CONF_DIR
+        sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
 
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
         syndic_master_opts['user'] = running_tests_user
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
 
         # The syndic config file has an include setting to include the master configuration
         # Let's start with a copy of the syndic master configuration
@@ -1012,7 +1012,7 @@ class TestDaemon(object):
         # Lets remove the include setting
         syndic_opts.pop('include')
         syndic_opts['user'] = running_tests_user
-        syndic_opts['conf_dir'] = TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts['config_dir'] = TMP_SYNDIC_MINION_CONF_DIR
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -1210,7 +1210,7 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        #self.sub_minion_process.terminate()
+        self.sub_minion_process.terminate()
         self.minion_process.terminate()
         self.master_process.terminate()
         try:
