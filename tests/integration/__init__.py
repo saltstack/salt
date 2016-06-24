@@ -717,14 +717,14 @@ class TestDaemon(object):
         self.master_process.display_name = 'salt-master'
         self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
         self.minion_process.display_name = 'salt-minion'
-        #self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
-        #self.sub_minion_process.display_name = 'sub salt-minion'
+        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
+        self.sub_minion_process.display_name = 'sub salt-minion'
         self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
-        #for process in (self.master_process, self.minion_process, self.sub_minion_process,
-        for process in (self.master_process, self.minion_process,
+        for process in (self.master_process, self.minion_process, self.sub_minion_process,
+        #for process in (self.master_process, self.minion_process,
                         self.smaster_process, self.syndic_process):
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
@@ -1210,7 +1210,7 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        #self.sub_minion_process.terminate()
+        self.sub_minion_process.terminate()
         self.minion_process.terminate()
         self.master_process.terminate()
         try:
