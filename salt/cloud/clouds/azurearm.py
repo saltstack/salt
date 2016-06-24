@@ -43,6 +43,7 @@ import salt.cache
 import salt.config as config
 import salt.utils.cloud
 import salt.ext.six as six
+import salt.version
 from salt.exceptions import SaltCloudSystemExit
 
 # Import 3rd-party libs
@@ -166,6 +167,7 @@ def get_conn(Client=None):
         credentials=credentials,
         subscription_id=subscription_id,
     )
+    client.config.add_user_agent('SaltCloud/{0}'.format(salt.version.__version__))
     return client
 
 
