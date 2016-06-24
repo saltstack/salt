@@ -248,7 +248,7 @@ def _get_key_dir():
         gpg_keydir = __salt__['config.get']('gpg_keydir')
     else:
         gpg_keydir = __opts__.get('gpg_keydir')
-    return gpg_keydir or os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+    return gpg_keydir or os.path.join(__opts__['config_dir'], 'gpgkeys')
 
 
 def _decrypt_ciphertext(cipher, translate_newlines=False):
