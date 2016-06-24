@@ -415,9 +415,13 @@ def fstab(config=None):
     return ret
 
 
-def rm_fstab(name, device, config='/etc/fstab'):
+def rm_fstab(name, device, config=None):
     '''
+    .. versionchanged:: 2016.3.2
     Remove the mount point from the fstab
+
+    config : string
+        optional path of fstab
 
     CLI Example:
 
@@ -427,7 +431,16 @@ def rm_fstab(name, device, config='/etc/fstab'):
     '''
     modified = False
 
-    criteria = _fstab_entry(name=name, device=device)
+    if not config:
+        if __grains__['kernel'] == 'SunOS':
+            config = '/etc/vfstab'
+        else:
+            config = '/etc/fstab'
+
+    if __grains__['kernel'] == 'SunOS':
+        criteria = _vfstab_entry(name=name, device=device)
+    else:
+        criteria = _fstab_entry(name=name, device=device)
 
     lines = []
     try:
@@ -441,6 +454,8 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
                 except _fstab_entry.ParseError:
                     lines.append(line)
+                except _vfstab_entry.ParseError:
+                    lines.append(line)
 
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
@@ -453,6 +468,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
             raise CommandExecutionError(msg.format(config, str(exc)))
+            return False
 
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
