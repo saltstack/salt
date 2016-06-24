@@ -423,8 +423,20 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 data = image_labels
 
             def _filter_swarm_labels(_api_data):
-                return { k: v for k, v in _api_data.iteritems()
-                        if k != 'com.docker.swarm.id' }
+                _filtered = dict(_api_data)
+
+                #  The swarm ID is irrelevant.  If a container is running
+                #  anywhere in the cluster, it's valid.
+                if 'com.docker.swarm.id' in _filtered:
+                    del _filtered['com.docker.swarm.id']
+
+                #  No explicit affinities, as represented in the label as '[]',
+                #  is equivalent to no label at all.
+                if ('com.docker.swarm.affinities' in _filtered and
+                        _filtered['com.docker.swarm.affinities'] == '[]'):
+                    del _filtered['com.docker.swarm.affinities']
+
+                return _filtered
 
             if (_filter_swarm_labels(actual_data) !=
                     _filter_swarm_labels(data)):
