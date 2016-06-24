@@ -1333,47 +1333,39 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     '''
     Check a whitelist and/or blacklist to see if the value matches it.
     '''
-    if not any((whitelist, blacklist)):
-        return True
-    in_whitelist = False
-    in_blacklist = False
-    if whitelist:
-        if not isinstance(whitelist, list):
-            whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    in_whitelist = True
-                    break
-        except TypeError:
-            log.error('Non-iterable whitelist {0}'.format(whitelist))
-            whitelist = None
-    else:
-        whitelist = None
-
-    if blacklist:
-        if not isinstance(blacklist, list):
+    if blacklist is not None:
+        if not hasattr(blacklist, '__iter__'):
             blacklist = [blacklist]
         try:
             for expr in blacklist:
                 if expr_match(value, expr):
-                    in_blacklist = True
-                    break
+                    return False
         except TypeError:
             log.error('Non-iterable blacklist {0}'.format(whitelist))
-            blacklist = None
-    else:
-        blacklist = None
 
-    if whitelist and not blacklist:
-        ret = in_whitelist
-    elif blacklist and not whitelist:
-        ret = not in_blacklist
-    elif whitelist and blacklist:
-        ret = in_whitelist and not in_blacklist
+    if whitelist:
+        if not hasattr(whitelist, '__iter__'):
+            whitelist = [whitelist]
+        try:
+            for expr in whitelist:
+                if expr_match(value, expr):
+                    return True
+        except TypeError:
+            log.error('Non-iterable whitelist {0}'.format(whitelist))
     else:
-        ret = True
+        return True
 
+    return False
+
+
+def get_values_of_matching_keys(pattern_dict, user_name):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    ret = []
+    for expr in pattern_dict:
+        if expr_match(user_name, expr):
+            ret.extend(pattern_dict[expr])
     return ret
 
 
