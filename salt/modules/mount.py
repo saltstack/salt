@@ -468,7 +468,6 @@ def rm_fstab(name, device, config=None):
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
             raise CommandExecutionError(msg.format(config, str(exc)))
-            return False
 
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
@@ -496,6 +495,9 @@ def set_fstab(
 
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
+
+    if __grains__['kernel'] == 'SunOS':
+        return {'Error': 'set_fstab not support on Solaris like platforms, use set_vfstab.'}
 
     # Fix the opts type if it is a list
     if isinstance(opts, list):
