@@ -123,10 +123,14 @@ def _get_key_dir():
     '''
     return the location of the GPG key directory
     '''
-    if __salt__['config.get']('gpg_keydir'):
-        return __salt__['config.get']('gpg_keydir')
-    else:
-        return os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+    key_dir = __salt__['config.get']('gpg_keydir')
+    if not key_dir:
+        key_dir = os.path.join(
+            __salt__['config.get']('config_dir'),
+            'gpgkeys'
+        )
+
+    return key_dir
 
 
 def _decrypt_ciphertext(cipher):
