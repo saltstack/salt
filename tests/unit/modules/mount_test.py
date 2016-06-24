@@ -89,18 +89,19 @@ class MountTestCase(TestCase):
             self.assertEqual(mount.fstab(), {})
 
         mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'isfile', mock):
-            file_data = '\n'.join(['#',
-                                   'A B C D,E,F G H'])
-            with patch('salt.utils.fopen',
-                       mock_open(read_data=file_data),
-                       create=True) as m:
-                m.return_value.__iter__.return_value = file_data.splitlines()
-                self.assertEqual(mount.fstab(), {'B': {'device': 'A',
-                                                       'dump': 'G',
-                                                       'fstype': 'C',
-                                                       'opts': ['D', 'E', 'F'],
-                                                       'pass': 'H'}})
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(os.path, 'isfile', mock):
+                file_data = '\n'.join(['#',
+                                       'A B C D,E,F G H'])
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=file_data),
+                           create=True) as m:
+                    m.return_value.__iter__.return_value = file_data.splitlines()
+                    self.assertEqual(mount.fstab(), {'B': {'device': 'A',
+                                                           'dump': 'G',
+                                                           'fstype': 'C',
+                                                           'opts': ['D', 'E', 'F'],
+                                                           'pass': 'H'}})
 
     def test_rm_fstab(self):
         '''
