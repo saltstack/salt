@@ -181,7 +181,7 @@ def get_conn(Client=None, ClientConfig=None):
 
     credentials = UserPassCredentials(username, password)
     client = Client(
-        credentials,
+        credentials=credentials,
         subscription_id=subscription_id,
     )
     return client
@@ -764,14 +764,6 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('location') is None:
         kwargs['location'] = get_location()
 
-    if kwargs.get('iface_resource_group') is None:
-        kwargs['iface_resource_group'] = config.get_cloud_config_value(
-            'iface_resource_group', vm_, __opts__, search_global=True,
-            default=config.get_cloud_config_value(
-                'resource_group', vm_, __opts__, search_global=True
-            )
-        )
-
     if kwargs.get('network') is None:
         kwargs['network'] = config.get_cloud_config_value(
             'network', vm_, __opts__, search_global=True
@@ -791,7 +783,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         group = kwargs['resource_group']
 
     subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['iface_resource_group'],
+        resource_group_name=group,
         virtual_network_name=kwargs['network'],
         subnet_name=kwargs['subnet'],
     )
@@ -801,7 +793,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
-            resource_group_name=kwargs['resource_group'],
+            resource_group_name=group,
             public_ip_address_name=pub_ip_name,
             parameters=PublicIPAddress(
                 location=kwargs['location'],
@@ -813,11 +805,11 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         while True:
             try:
                 pub_ip_data = netconn.public_ip_addresses.get(
-                    kwargs['resource_group'],
+                    group,
                     pub_ip_name,
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
-                    ip_kwargs['public_ip_address'] = Resource(
+                    ip_kwargs['public_ip_address'] = PublicIPAddress(
                         str(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
@@ -852,10 +844,11 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     poller = netconn.network_interfaces.create_or_update(
-        kwargs['resource_group'], kwargs['iface_name'], iface_params
+        group, kwargs['iface_name'], iface_params
     )
     poller.wait()
     count = 0
+    kwargs['resource_group'] = group
     while True:
         try:
             return show_interface(kwargs=kwargs)
