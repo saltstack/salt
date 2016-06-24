@@ -1938,7 +1938,7 @@ class State(object):
                     self.opts, self.opts['sock_dir'], listen=False).fire_event(ret, tag)
             else:
                 ev_func = self.functions['event.fire_master']
-            
+
             ret = {'ret': chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
@@ -1955,7 +1955,6 @@ class State(object):
                 ret['len'] = length
             preload = {'jid': self.jid}
             ev_func(ret, tag, preload=preload)
-
 
     def call_chunk(self, low, running, chunks):
         '''
