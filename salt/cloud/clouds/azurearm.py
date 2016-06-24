@@ -293,21 +293,6 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def _pages_to_list_old(items):
-    '''
-    Convert a set of links from a group of pages to a list
-    '''
-    objs = []
-    while True:
-        try:
-            page = items.next()
-            for item in page:
-                objs.append(item)
-        except GeneratorExit:
-            break
-    return objs
-
-
 def avail_sizes(call=None):  # pylint: disable=unused-argument
     '''
     Return a list of sizes from Azure
