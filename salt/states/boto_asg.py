@@ -438,6 +438,7 @@ def present(
         }
 
         if 'image_name' in launch_config:
+            image_name = launch_config['image_name']
             args = {'ami_name': image_name, 'region': region, 'key': key,
                     'keyid': keyid, 'profile': profile}
             image_ids = __salt__['boto_ec2.find_images'](**args)
