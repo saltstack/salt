@@ -247,8 +247,8 @@ from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
