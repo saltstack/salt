@@ -402,7 +402,6 @@ class PkgTest(integration.ModuleCase,
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     def test_pkg_008_latest_with_epoch(self):
         '''
