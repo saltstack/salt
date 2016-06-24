@@ -285,7 +285,6 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                 kwargs['set_name'],
                 family)
         else:
-
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] += 'ipset entry {0} needs to removed from set {1} for family {2}\n'.format(
