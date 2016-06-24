@@ -260,25 +260,48 @@ class Pillar(object):
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None):
+        # save the pristine, original arguments
+        self._opts = opts
+        self._functions = functions
         self.minion_id = minion_id
         # Store the file_roots path so we can restore later. Issue 5449
-        self.actual_file_roots = opts['file_roots']
+        self.actual_file_roots = self._opts['file_roots']
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
+        self.opts = self.__gen_opts(self._opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
         self.client = salt.fileclient.get_file_client(self.opts, True)
 
-        if opts.get('file_client', '') == 'local':
-            opts['grains'] = grains
+        if self._opts.get('file_client', '') == 'local':
+            self._opts['grains'] = grains
+
+        self.merge_strategy = 'smart'
+        if self._opts.get('pillar_source_merging_strategy'):
+            self.merge_strategy = opts['pillar_source_merging_strategy']
+
+        self.__load_modules()
+
+        self.ignored_pillars = {}
+        self.pillar_override = {}
+        if pillar is not None:
+            if isinstance(pillar, dict):
+                self.pillar_override = pillar
+            else:
+                log.error('Pillar data must be a dictionary')
+
+    def __load_modules(self):
+        '''
+        All invocations of loader are collected here so that modules can be loaded
+        at instantiation and reloaded after external pillar is fetched.
+        '''
 
         # if we didn't pass in functions, lets load them
-        if functions is None:
-            utils = salt.loader.utils(opts)
-            if opts.get('file_client', '') == 'local':
-                self.functions = salt.loader.minion_mods(opts, utils=utils)
+        if self._functions is None:
+            utils = salt.loader.utils(self._opts)
+            if self._opts.get('file_client', '') == 'local':
+                self.functions = salt.loader.minion_mods(self._opts, utils=utils)
             else:
                 self.functions = salt.loader.minion_mods(self.opts, utils=utils)
         else:
-            self.functions = functions
+            self.functions = self._functions
 
         self.matcher = salt.minion.Matcher(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -287,20 +310,10 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts['file_roots'] = self.actual_file_roots
         # Keep the incoming opts ID intact, ie, the master id
-        if 'id' in opts:
-            ext_pillar_opts['id'] = opts['id']
-        self.merge_strategy = 'smart'
-        if opts.get('pillar_source_merging_strategy'):
-            self.merge_strategy = opts['pillar_source_merging_strategy']
+        if 'id' in self._opts:
+            ext_pillar_opts['id'] = self._opts['id']
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
-        self.ignored_pillars = {}
-        self.pillar_override = {}
-        if pillar is not None:
-            if isinstance(pillar, dict):
-                self.pillar_override = pillar
-            else:
-                log.error('Pillar data must be a dictionary')
 
     def __valid_ext(self, ext):
         '''
@@ -772,15 +785,16 @@ class Pillar(object):
         '''
         Render the pillar data and return
         '''
-        top, top_errors = self.get_top()
         if ext:
             if self.opts.get('pillar_roots_override_ext_pillar', False) or self.opts.get('ext_pillar_first', False):
                 salt.utils.warn_until('Nitrogen',
                      'The \'ext_pillar_first\' option has been deprecated and '
                      'replaced by \'pillar_roots_override_ext_pillar\'.'
                 )
-                self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
-                self.rend = salt.loader.render(self.opts, self.functions)
+                self._opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
+                self.opts['pillar'] = copy.deepcopy(self._opts['pillar'])
+                self.__load_modules()
+                top, top_errors = self.get_top()
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 if self.opts.get('pillar_roots_override_ext_pillar', False):
@@ -796,11 +810,13 @@ class Pillar(object):
                                    self.opts.get('renderer', 'yaml'),
                                    self.opts.get('pillar_merge_lists', False))
             else:
+                top, top_errors = self.get_top()
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
                 pillar, errors = self.ext_pillar(
                     pillar, pillar_dirs, errors=errors)
         else:
+            top, top_errors = self.get_top()
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
         errors.extend(top_errors)
