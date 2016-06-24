@@ -418,7 +418,7 @@ def vfstab(config='/etc/vfstab'):
 
         salt '*' mount.vfstab
     '''
-    ## NOTE: vfstab is a wrapper, we share all code with fstab
+    ## NOTE: vfstab is a wrapper for fstab
     return fstab(config)
 
 
@@ -426,9 +426,6 @@ def rm_fstab(name, device, config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
     Remove the mount point from the fstab
-
-    config : string
-        optional path of fstab
 
     CLI Example:
 
@@ -480,16 +477,13 @@ def rm_vfstab(name, device, config='/etc/vfstab'):
     .. versionadded:: 2016.3.2
     Remove the mount point from the vfstab
 
-    config : string
-        optional path of vfstab
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mount.rm_vfstab /mnt/foo /device/c0t0d0p0
     '''
-    ## NOTE: rm_vfstab is a wrapper, we share all code with fstab
+    ## NOTE: rm_vfstab is a wrapper for rm_fstab
     return rm_fstab(name, device, config)
 
 
