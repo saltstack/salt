@@ -6,11 +6,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Python libs
-import os
 
 # Salt libs
 import integration
-import salt.utils
 
 # Salttesting libs
 from salttesting import skipIf
@@ -25,6 +23,7 @@ def _check_arch_linux():
         return r
 
 
+@destructiveTest
 @skipIf(_check_arch_linux() == 'Arch Linux', 'Network state not support on Arch')
 class NetworkTest(integration.ModuleCase):
     '''
