@@ -969,7 +969,6 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
 
     params = VirtualMachine(
-        name=vm_['name'],
         location=vm_['location'],
         plan=None,
         hardware_profile=HardwareProfile(
