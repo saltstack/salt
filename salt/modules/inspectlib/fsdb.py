@@ -159,7 +159,7 @@ class CsvDB(object):
         '''
         return not self._opened
 
-    def table_from_object(self, obj):
+    def create_table_from_object(self, obj):
         '''
         Create a table from the object.
         NOTE: This method doesn't stores anything.
@@ -172,6 +172,7 @@ class CsvDB(object):
             with gzip.open(os.path.join(self.db_path, obj._TABLE), 'wb') as table_file:
                 csv.writer(table_file).writerow(['{col}:{type}'.format(col=elm[0], type=get_type(elm[1]))
                                                  for elm in tuple(obj.__dict__.items())])
+            self._tables[obj._TABLE] = self._load_table(obj._TABLE)
 
     def store(self, obj):
         '''
