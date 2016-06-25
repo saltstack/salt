@@ -734,10 +734,44 @@ def netdev():
             for i in range(4, 13):  # The columns we want
                 ret[comps[0]][comps[2]][comps[3]][header[i]] = _number(comps[i])
         return ret
+
+    def sunos_netdev():
+        '''
+        sunos specific implementation of netdev
+        '''
+        ret = {}
+        ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+            # fetch device info
+            netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
+            netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()
+
+            # prepare data
+            netstat_ipv4[0] = netstat_ipv4[0].split()
+            netstat_ipv4[1] = netstat_ipv4[1].split()
+            netstat_ipv6[0] = netstat_ipv6[0].split()
+            netstat_ipv6[1] = netstat_ipv6[1].split()
+
+            # add data
+            ret[dev] = {}
+            for i in range(len(netstat_ipv4[0])-1):
+                if netstat_ipv4[0][i] in ['Address', 'Net/Dest']:
+                    ret[dev]['IPv4 {field}'.format(field=netstat_ipv4[0][i])] = netstat_ipv4[1][i]
+                else:
+                    ret[dev][netstat_ipv4[0][i]] = netstat_ipv4[1][i]
+            for i in range(len(netstat_ipv6[0])-1):
+                if netstat_ipv6[0][i] in ['Address', 'Net/Dest']:
+                    ret[dev]['IPv6 {field}'.format(field=netstat_ipv6[0][i])] = netstat_ipv6[1][i]
+                else:
+                    ret[dev][netstat_ipv6[0][i]] = netstat_ipv6[1][i]
+
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netdev,
         'FreeBSD': freebsd_netdev,
+        'SunOS': sunos_netdev,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
