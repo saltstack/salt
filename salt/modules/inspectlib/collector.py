@@ -374,16 +374,15 @@ class Inspector(EnvLoader):
         '''
         # Get ignored points
         allowed = list()
-        self.db.cursor.execute("SELECT path FROM inspector_allowed")
-        for alwd_path in self.db.cursor.fetchall():
-            if os.path.exists(alwd_path[0]):
-                allowed.append(alwd_path[0])
+        for allowed_dir in self.db._csv_db.get(AllowedDir):
+            if os.path.exists(allowed_dir.path):
+                allowed.append(allowed_dir.path)
 
         ignored = list()
         if not allowed:
-            self.db.cursor.execute("SELECT path FROM inspector_ignored")
-            for ign_path in self.db.cursor.fetchall():
-                ignored.append(ign_path[0])
+            for ignored_dir in self.db._csv_db.get(IgnoredDir):
+                if os.path.exists(ignored_dir.path):
+                    ignored.append(ignored_dir.path)
 
         all_files = list()
         all_dirs = list()
