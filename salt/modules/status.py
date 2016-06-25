@@ -641,10 +641,31 @@ def netstats():
                     ret[key][' '.join(comps[1:])] = comps[0]
         return ret
 
+    def sunos_netstats():
+        '''
+        sunos specific netstats implementation
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('netstat -s').splitlines():
+            line = line.replace('=', ' = ').split()
+            if len(line) > 6:
+                line.pop(0)
+            if '=' in line:
+                if len(line) >= 3:
+                    if line[2].isdigit() or line[2][0] == '-':
+                        line[2] = int(line[2])
+                    ret[line[0]] = line[2]
+                if len(line) >= 6:
+                    if line[5].isdigit() or line[5][0] == '-':
+                        line[5] = int(line[5])
+                    ret[line[3]] = line[5]
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netstats,
         'FreeBSD': freebsd_netstats,
+        'SunOS': sunos_netstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
