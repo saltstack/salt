@@ -268,10 +268,27 @@ def cpustats():
             cpuctr += 1
         return ret
 
+    def sunos_cpustats():
+        '''
+        sunos specific implementation of cpustats
+        '''
+        mpstat = __salt__['cmd.run']('mpstat 1 2').splitlines()
+        fields = mpstat[0].split()
+        ret = {}
+        for cpu in mpstat:
+            if cpu.startswith('CPU'):
+                continue
+            cpu = cpu.split()
+            ret[_number(cpu[0])] = {}
+            for i in range(1, len(fields)-1):
+                ret[_number(cpu[0])][fields[i]] = _number(cpu[i])
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
+        'SunOS': sunos_cpustats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -433,19 +450,19 @@ def cpuinfo():
                 ret['psrinfo'].append({})
                 if 'cores' in line:
                     ret['psrinfo'][procn]['topology'] = {}
-                    ret['psrinfo'][procn]['topology']['cores'] = int(line[4])
-                    ret['psrinfo'][procn]['topology']['threads'] = int(line[7])
+                    ret['psrinfo'][procn]['topology']['cores'] = _number(line[4])
+                    ret['psrinfo'][procn]['topology']['threads'] = _number(line[7])
                 elif 'virtual' in line:
                     ret['psrinfo'][procn]['topology'] = {}
-                    ret['psrinfo'][procn]['topology']['threads'] = int(line[4])
+                    ret['psrinfo'][procn]['topology']['threads'] = _number(line[4])
             elif line.startswith(' ' * 6):  # 3x2 space indent
                 ret['psrinfo'][procn]['name'] = line.strip()
             elif line.startswith(' ' * 4):  # 2x2 space indent
                 line = line.strip().split()
                 ret['psrinfo'][procn]['vendor'] = line[1][1:]
-                ret['psrinfo'][procn]['family'] = int(line[4]) if line[4].isdigit() else line[4]
-                ret['psrinfo'][procn]['model'] = int(line[6]) if line[6].isdigit() else line[6]
-                ret['psrinfo'][procn]['step'] = int(line[8]) if line[8].isdigit() else line[8]
+                ret['psrinfo'][procn]['family'] = _number(line[4])
+                ret['psrinfo'][procn]['model'] = _number(line[6])
+                ret['psrinfo'][procn]['step'] = _number(line[8])
                 ret['psrinfo'][procn]['clock'] = "{0} {1}".format(line[10], line[11][:-1])
         return ret
 
@@ -638,7 +655,7 @@ def vmstats():
         for line in __salt__['cmd.run']('vmstat -s').splitlines():
             comps = line.split()
             if comps[0].isdigit():
-                ret[' '.join(comps[1:])] = _number(comps[0])
+                ret[' '.join(comps[1:])] = _number(comps[0].strip())
         return ret
     # dict that returns a function that does the right thing per platform
     get_version = {
@@ -663,7 +680,7 @@ def nproc():
         salt '*' status.nproc
     '''
     try:
-        return int(__salt__['cmd.run']('nproc').strip())
+        return _number(__salt__['cmd.run']('nproc').strip())
     except ValueError:
         return 0
 
@@ -735,11 +752,11 @@ def netstats():
             if '=' in line:
                 if len(line) >= 3:
                     if line[2].isdigit() or line[2][0] == '-':
-                        line[2] = int(line[2])
+                        line[2] = _number(line[2])
                     ret[line[0]] = line[2]
                 if len(line) >= 6:
                     if line[5].isdigit() or line[5][0] == '-':
-                        line[5] = int(line[5])
+                        line[5] = _number(line[5])
                     ret[line[3]] = line[5]
         return ret
 
@@ -843,14 +860,14 @@ def netdev():
                 if netstat_ipv4[0][i] in ['Address', 'Net/Dest']:
                     ret[dev]['IPv4 {field}'.format(field=netstat_ipv4[0][i])] = netstat_ipv4[1][i]
                 else:
-                    ret[dev][netstat_ipv4[0][i]] = int(netstat_ipv4[1][i]) if netstat_ipv4[1][i].isdigit() else netstat_ipv4[1][i]
+                    ret[dev][netstat_ipv4[0][i]] = _number(netstat_ipv4[1][i])
             for i in range(len(netstat_ipv6[0])-1):
                 if netstat_ipv6[0][i] == 'Name':
                     continue
                 if netstat_ipv6[0][i] in ['Address', 'Net/Dest']:
                     ret[dev]['IPv6 {field}'.format(field=netstat_ipv6[0][i])] = netstat_ipv6[1][i]
                 else:
-                    ret[dev][netstat_ipv6[0][i]] = int(netstat_ipv6[1][i]) if netstat_ipv6[1][i].isdigit() else netstat_ipv6[1][i]
+                    ret[dev][netstat_ipv6[0][i]] = _number(netstat_ipv6[1][i])
 
         return ret
 
