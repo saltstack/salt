@@ -200,6 +200,34 @@ class Inspector(EnvLoader):
 
         return f_data
 
+    def _save_cfg_packages(self, data):
+        '''
+        Save configuration packages. (NG)
+
+        :param data:
+        :return:
+        '''
+        self.db._csv_db.create_table_from_object(Package())
+        self.db._csv_db.create_table_from_object(PackageCfgFile())
+
+        pkg_id = 0
+        pkg_cfg_id = 0
+        for pkg_name, pkg_configs in data.items():
+            pkg = Package()
+            pkg.id = pkg_id
+            pkg.name = pkg_name
+            self.db._csv_db.store(pkg)
+
+            for pkg_config in pkg_configs:
+                cfg = PackageCfgFile()
+                cfg.id = pkg_cfg_id
+                cfg.pkgid = pkg_id
+                cfg.path = pkg_config
+                self.db._csv_db.store(cfg)
+                pkg_cfg_id += 1
+
+            pkg_id += 1
+
     def _save_cfg_pkgs(self, data):
         '''
         Save configuration packages.
