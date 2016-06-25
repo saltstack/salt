@@ -232,9 +232,6 @@ class Inspector(EnvLoader):
         '''
         Save configuration packages.
         '''
-        for table in ["inspector_pkg", "inspector_pkg_cfg_files"]:
-            self.db.flush(table)
-
         pkg_id = 0
         pkg_cfg_id = 0
         for pkg_name, pkg_configs in data.items():
