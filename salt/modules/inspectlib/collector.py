@@ -490,8 +490,15 @@ class Inspector(EnvLoader):
         '''
         self._init_env()
 
-        self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
-        self._save_payload(*self._scan_payload())
+        changed_cfg_pkgs = self._get_changed_cfg_pkgs(self._get_cfg_pkgs())
+        self._save_cfg_packages(changed_cfg_pkgs)
+
+        payload = self._scan_payload()
+        self._save_payload(*payload)
+
+        # Old stuff
+        self._save_cfg_pkgs(changed_cfg_pkgs)
+        self._save_pld(*payload)
 
     def request_snapshot(self, mode, priority=19, **kwargs):
         '''
