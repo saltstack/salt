@@ -522,6 +522,7 @@ def diskusage(*args):
 
 def vmstats():
     '''
+    ..versionchanged:: 2016.3.2
     Return the virtual memory stats for this minion
 
     CLI Example:
@@ -546,9 +547,10 @@ def vmstats():
             ret[comps[0]] = _number(comps[1])
         return ret
 
-    def freebsd_vmstats():
+    def generic_vmstats():
         '''
-        freebsd specific implementation of vmstats
+        generic implementation of vmstats
+        note: works on FreeBSD, SunOS and OpenBSD (possibly others)
         '''
         ret = {}
         for line in __salt__['cmd.run']('vmstat -s').splitlines():
@@ -559,7 +561,9 @@ def vmstats():
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_vmstats,
-        'FreeBSD': freebsd_vmstats,
+        'FreeBSD': generic_vmstats,
+        'OpenBSD': generic_vmstats,
+        'SunOS': generic_vmstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
