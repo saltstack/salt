@@ -928,7 +928,7 @@ def all_status():
             'meminfo': meminfo(),
             'netdev': netdev(),
             'netstats': netstats(),
-            'uptime': uptime(),
+            'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
             'vmstats': vmstats(),
             'w': w()}
 
