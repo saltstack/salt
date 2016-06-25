@@ -339,6 +339,7 @@ def meminfo():
 
 def cpuinfo():
     '''
+    ..versionchanged:: 2016.3.2
     Return the CPU info for this minion
 
     CLI Example:
@@ -367,7 +368,7 @@ def cpuinfo():
                 ret[comps[0]] = comps[1].strip()
         return ret
 
-    def freebsd_cpuinfo():
+    def bsd_cpuinfo():
         '''
         freebsd specific cpuinfo implementation
         '''
@@ -381,10 +382,79 @@ def cpuinfo():
             ret[comps[0]] = comps[1].strip()
         return ret
 
+    def sunos_cpuinfo():
+        '''
+        sunos specific cpuinfo implementation
+        '''
+        ret = {}
+        ret['isainfo'] = {}
+        for line in __salt__['cmd.run']('isainfo -x').splitlines():
+            # Note: isainfo is per-system and not per-cpu
+            # Output Example:
+            #amd64: rdrand f16c vmx avx xsave pclmulqdq aes sse4.2 sse4.1 ssse3 popcnt tscp cx16 sse3 sse2 sse fxsr mmx cmov amd_sysc cx8 tsc fpu
+            #i386: rdrand f16c vmx avx xsave pclmulqdq aes sse4.2 sse4.1 ssse3 popcnt tscp ahf cx16 sse3 sse2 sse fxsr mmx cmov sep cx8 tsc fpu
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            ret['isainfo'][comps[0]] = sorted(comps[1].strip().split())
+        ret['psrinfo'] = []
+        procn = None
+        for line in __salt__['cmd.run']('psrinfo -v -p').splitlines():
+            # Output Example:
+            #The physical processor has 6 cores and 12 virtual processors (0-5 12-17)
+            #  The core has 2 virtual processors (0 12)
+            #  The core has 2 virtual processors (1 13)
+            #  The core has 2 virtual processors (2 14)
+            #  The core has 2 virtual processors (3 15)
+            #  The core has 2 virtual processors (4 16)
+            #  The core has 2 virtual processors (5 17)
+            #    x86 (GenuineIntel 306E4 family 6 model 62 step 4 clock 2100 MHz)
+            #      Intel(r) Xeon(r) CPU E5-2620 v2 @ 2.10GHz
+            #The physical processor has 6 cores and 12 virtual processors (6-11 18-23)
+            #  The core has 2 virtual processors (6 18)
+            #  The core has 2 virtual processors (7 19)
+            #  The core has 2 virtual processors (8 20)
+            #  The core has 2 virtual processors (9 21)
+            #  The core has 2 virtual processors (10 22)
+            #  The core has 2 virtual processors (11 23)
+            #    x86 (GenuineIntel 306E4 family 6 model 62 step 4 clock 2100 MHz)
+            #      Intel(r) Xeon(r) CPU E5-2620 v2 @ 2.10GHz
+            #
+            # Output Example 2:
+            #The physical processor has 4 virtual processors (0-3)
+            #  x86 (GenuineIntel 406D8 family 6 model 77 step 8 clock 2400 MHz)
+            #        Intel(r) Atom(tm) CPU  C2558  @ 2.40GHz
+            if not line:
+                continue
+            if line.startswith('The physical processor'):
+                procn = len(ret['psrinfo'])
+                line = line.split()
+                ret['psrinfo'].append({})
+                if 'cores' in line:
+                    ret['psrinfo'][procn]['topology'] = {}
+                    ret['psrinfo'][procn]['topology']['cores'] = int(line[4])
+                    ret['psrinfo'][procn]['topology']['threads'] = int(line[7])
+                elif 'virtual' in line:
+                    ret['psrinfo'][procn]['topology'] = {}
+                    ret['psrinfo'][procn]['topology']['threads'] = int(line[4])
+            elif line.startswith(' ' * 6):  # 3x2 space indent
+                ret['psrinfo'][procn]['name'] = line.strip()
+            elif line.startswith(' ' * 4):  # 2x2 space indent
+                line = line.strip().split()
+                ret['psrinfo'][procn]['vendor'] = line[1][1:]
+                ret['psrinfo'][procn]['family'] = int(line[4]) if line[4].isdigit() else line[4]
+                ret['psrinfo'][procn]['model'] = int(line[6]) if line[6].isdigit() else line[6]
+                ret['psrinfo'][procn]['step'] = int(line[8]) if line[8].isdigit() else line[8]
+                ret['psrinfo'][procn]['clock'] = "{0} {1}".format(line[10], line[11][:-1])
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpuinfo,
-        'FreeBSD': freebsd_cpuinfo,
+        'FreeBSD': bsd_cpuinfo,
+        'OpenBSD': bsd_cpuinfo,
+        'SunOS': sunos_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
