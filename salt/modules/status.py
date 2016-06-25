@@ -500,14 +500,23 @@ def diskusage(*args):
             ifile = salt.utils.fopen(procf, 'r').readlines()
         elif __grains__['kernel'] == 'FreeBSD':
             ifile = __salt__['cmd.run']('mount -p').splitlines()
+        elif __grains__['kernel'] == 'SunOS':
+            ifile = __salt__['cmd.run']('mount -p').splitlines()
 
         for line in ifile:
             comps = line.split()
-            if len(comps) >= 3:
-                mntpt = comps[1]
-                fstype = comps[2]
-                if regex.match(fstype):
-                    selected.add(mntpt)
+            if __grains__['kernel'] == 'SunOS':
+                if len(comps) >= 4:
+                    mntpt = comps[2]
+                    fstype = comps[3]
+                    if regex.match(fstype):
+                        selected.add(mntpt)
+            else:
+                if len(comps) >= 3:
+                    mntpt = comps[1]
+                    fstype = comps[2]
+                    if regex.match(fstype):
+                        selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
@@ -674,6 +683,7 @@ def netstats():
 
 def netdev():
     '''
+    ..versionchanged:: 2016.3.2
     Return the network device stats for this minion
 
     CLI Example:
