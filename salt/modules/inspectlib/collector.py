@@ -91,6 +91,7 @@ class Inspector(EnvLoader):
             self.db.open()
         except Exception as ex:
             log.error('Unable to [re]open db. Already opened?')
+        self.db._csv_db.open()
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
