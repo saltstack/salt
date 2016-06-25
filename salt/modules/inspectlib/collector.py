@@ -403,8 +403,12 @@ class Inspector(EnvLoader):
         '''
         Prepare full system scan by setting up the database etc.
         '''
-        # TODO: Backup the SQLite database. Backup should be restored automatically if current db failed while queried.
         self.db.purge()
+
+        # Initialize CsvDB
+        self.db._csv_db.new()
+        self.db._csv_db.create_table_from_object(AllowedDir())
+        self.db._csv_db.create_table_from_object(IgnoredDir())
 
         # Add ignored filesystems
         ignored_fs = set()
@@ -431,12 +435,16 @@ class Inspector(EnvLoader):
                 ignored_all.append(entry)
         # Save to the database for further scan
         for ignored_dir in ignored_all:
-            self.db.cursor.execute("INSERT INTO inspector_ignored VALUES (?)", (ignored_dir,))
+            dir_obj = IgnoredDir()
+            dir_obj.path = ignored_dir
+            self.db._csv_db.store(dir_obj)
 
         # Add allowed filesystems (overrides all above at full scan)
         allowed = [elm for elm in kwargs.get("filter", "").split(",") if elm]
         for allowed_dir in allowed:
-            self.db.cursor.execute("INSERT INTO inspector_allowed VALUES (?)", (allowed_dir,))
+            dir_obj = AllowedDir()
+            dir_obj.path = allowed_dir
+            self.db._csv_db.store(dir_obj)
 
         self.db.connection.commit()
 
