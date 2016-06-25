@@ -393,6 +393,7 @@ def cpuinfo():
 
 def diskstats():
     '''
+    ..versionchanged:: 2016.3.2
     Return the disk stats for this minion
 
     CLI Example:
@@ -430,9 +431,10 @@ def diskstats():
                              'weighted_ms_spent_in_io': _number(comps[13])}
         return ret
 
-    def freebsd_diskstats():
+    def generic_diskstats():
         '''
-        freebsd specific implementation of diskstats
+        generic implementation of diskstats
+        note: freebsd and sunos
         '''
         ret = {}
         iostat = __salt__['cmd.run']('iostat -xzd').splitlines()
@@ -447,7 +449,8 @@ def diskstats():
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_diskstats,
-        'FreeBSD': freebsd_diskstats,
+        'FreeBSD': generic_diskstats,
+        'SunOS': generic_diskstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
