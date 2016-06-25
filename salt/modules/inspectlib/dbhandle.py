@@ -57,6 +57,11 @@ class DBHandleBase(object):
         self._run_init_queries()
         self.connection.commit()
 
+        if new:
+            self._csv_db.new()
+        else:
+            self._csv_db.open()
+
     def _run_init_queries(self):
         '''
         Initialization queries
