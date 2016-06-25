@@ -838,7 +838,7 @@ def master(master=None, connected=True):
 
     Fire an event if the minion gets disconnected from its master. This
     function is meant to be run via a scheduled job from the minion. If
-    master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
+    master_ip is an FQDN/Hostname, it must be resolvable to a valid IPv4
     address.
 
     CLI Example:
@@ -893,7 +893,8 @@ def ping_master(master):
 
     opts = copy.deepcopy(__opts__)
     opts['master'] = master
-    del opts['master_ip']  # avoid 'master ip changed' warning
+    if 'master_ip' in opts:  # avoid 'master ip changed' warning
+        del opts['master_ip']
     opts.update(salt.minion.prep_ip_port(opts))
     try:
         opts.update(salt.minion.resolve_dns(opts, fallback=False))
