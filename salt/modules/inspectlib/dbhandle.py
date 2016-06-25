@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 import sqlite3
 import os
+from salt.modules.inspectlib.fsdb import CsvDB
 
 
 class DBHandleBase(object):
@@ -35,6 +36,7 @@ class DBHandleBase(object):
         self.connection = None
         self.cursor = None
         self.init_queries = list()
+        self._csv_db = CsvDB("/tmp/salt.fsdb")  ## Replace with the self._path afterwards
 
     def open(self, new=False):
         '''
