@@ -80,12 +80,16 @@ class DBHandleBase(object):
             self.connection.commit()
         self._run_init_queries()
 
+        for db_id in self._csv_db.list():
+            self._csv_db.purge(db_id)
+
     def flush(self, table):
         '''
         Flush the table.
         '''
         self.cursor.execute("DELETE FROM " + table)
         self.connection.commit()
+        self._csv_db.flush(table)
 
     def close(self):
         '''
@@ -94,6 +98,7 @@ class DBHandleBase(object):
         if self.cursor is not None and self.connection is not None:
             self.connection.close()
             self.cursor = self.connection = None
+            self._csv_db.close()
 
 
 class DBHandle(DBHandleBase):
