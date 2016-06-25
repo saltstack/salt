@@ -25,6 +25,8 @@ import logging
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 from salt.modules.inspectlib import EnvLoader
 from salt.modules.inspectlib import kiwiproc
+from salt.modules.inspectlib.fsdb import CsvDBEntity
+
 import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
@@ -36,6 +38,39 @@ except ImportError:
     kiwi = None
 
 log = logging.getLogger(__name__)
+
+
+class Package(CsvDBEntity):
+    _TABLE = 'inspector_pkg'
+
+    def __init__(self):
+        self.id = 0
+        self.name = ''
+
+
+class PackageCfgFile(CsvDBEntity):
+    _TABLE = 'inspector_pkg_cfg_files'
+
+    def __init__(self):
+        self.id = 0
+        self.pkgid = 0
+        self.path = ''
+
+
+class PayloadFile(CsvDBEntity):
+    _TABLE = 'inspector_payload'
+
+    def __init__(self):
+        self.id = 0
+        self.path = ''
+        self.p_type = ''
+        self.mode = 0
+        self.uid = 0
+        self.gid = 0
+        self.p_size = 0
+        self.atime = 0.
+        self.mtime = 0.
+        self.ctime = 0.
 
 
 class Inspector(EnvLoader):
