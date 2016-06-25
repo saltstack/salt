@@ -222,6 +222,39 @@ class Inspector(EnvLoader):
     def _save_payload(self, files, directories, links):
         '''
         Save payload (unmanaged files)
+
+        :param files:
+        :param directories:
+        :param links:
+        :return:
+        '''
+
+        self.db._csv_db.create_table_from_object(PayloadFile())
+
+        idx = 0
+        for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
+            for p_obj in p_list:
+                stats = os.stat(p_obj)
+
+                payload = PayloadFile()
+                payload.id = idx
+                payload.path = p_obj
+                payload.p_type = p_type
+                payload.mode = stats.st_mode
+                payload.uid = stats.st_uid
+                payload.gid = stats.st_gid
+                payload.p_size = stats.st_size
+                payload.atime = stats.st_atime
+                payload.mtime = stats.st_mtime
+                payload.ctime = stats.st_ctime
+
+                idx += 1
+                self.db._csv_db.store(payload)
+
+
+    def _save_pld(self, files, directories, links):
+        '''
+        Save payload (unmanaged files)
         '''
         idx = 0
         for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
