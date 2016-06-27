@@ -2346,9 +2346,9 @@ There are additional details at :ref:`salt-pillars`
 .. conf_master:: pillar_roots_override_ext_pillar
 
 ``pillar_roots_override_ext_pillar``
---------------------
+------------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: Carbon
 
 Default: ``False``
 
