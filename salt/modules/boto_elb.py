@@ -111,7 +111,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
             log.debug(msg)
             return False
     except boto.exception.BotoServerError as error:
-        log.debug(error)
+        log.warning(error)
         return False
 
 
@@ -130,7 +130,7 @@ def get_all_elbs(region=None, key=None, keyid=None, profile=None):
     try:
         return [e for e in conn.get_all_load_balancers()]
     except boto.exception.BotoServerError as error:
-        log.debug(error)
+        log.warning(error)
         return []
 
 
@@ -145,7 +145,8 @@ def list_elbs(region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.list_elbs region=us-east-1
     '''
 
-    return [e.name for e in get_all_elbs(region=region, key=key, keyid=keyid, profile=profile)]
+    return [e.name for e in get_all_elbs(region=region, key=key, keyid=keyid,
+                                         profile=profile)]
 
 
 def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
