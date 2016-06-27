@@ -922,7 +922,7 @@ def symlink(
             )
     if __salt__['file.is_link'](name):
         # The link exists, verify that it matches the target
-        if __salt__['file.readlink'](name) != target:
+        if os.path.normpath(__salt__['file.readlink'](name)) != os.path.normpath(target):
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -2480,7 +2480,6 @@ def recurse(name,
             ret['changes'][path] = _ret['changes']
 
     def manage_file(path, source):
-        source = salt.utils.url.escape(source)
         if clean and os.path.exists(path) and os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:

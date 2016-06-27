@@ -202,7 +202,7 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
-    elif __grains__['os'] == 'Solaris':
+    elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
@@ -859,6 +859,8 @@ def swaps():
     '''
     Return a dict containing information on active swap
 
+    .. versionchanged:: 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -866,7 +868,16 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    if __grains__['os'] != 'OpenBSD':
+    if __grains__['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run_stdout']('swap -l').splitlines():
+            if line.startswith('swapfile'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = {'type': 'device' if comps[0].startswith(('/dev', 'swap')) else 'file',
+                             'size': int(comps[3]),
+                             'used': (int(comps[3]) - int(comps[4])),
+                             'priority': '-'}
+    elif __grains__['os'] != 'OpenBSD':
         with salt.utils.fopen('/proc/swaps') as fp_:
             for line in fp_:
                 if line.startswith('Filename'):
@@ -895,6 +906,8 @@ def swapon(name, priority=None):
     '''
     Activate a swap disk
 
+    .. versionchanged:: 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -907,21 +920,32 @@ def swapon(name, priority=None):
         ret['stats'] = on_[name]
         ret['new'] = False
         return ret
-    cmd = 'swapon {0}'.format(name)
-    if priority:
-        cmd += ' -p {0}'.format(priority)
-    __salt__['cmd.run'](cmd, python_shell=False)
+
+    if __grains__['kernel'] == 'SunOS':
+        if __grains__['virtual'] != 'zone':
+            __salt__['cmd.run']('swap -a {0}'.format(name), python_shell=False)
+        else:
+            return False
+    else:
+        cmd = 'swapon {0}'.format(name)
+        if priority:
+            cmd += ' -p {0}'.format(priority)
+        __salt__['cmd.run'](cmd, python_shell=False)
+
     on_ = swaps()
     if name in on_:
         ret['stats'] = on_[name]
         ret['new'] = True
         return ret
+
     return ret
 
 
 def swapoff(name):
     '''
     Deactivate a named swap mount
+
+    .. versionchanged:: 2016.3.2
 
     CLI Example:
 
@@ -931,7 +955,12 @@ def swapoff(name):
     '''
     on_ = swaps()
     if name in on_:
-        if __grains__['os'] != 'OpenBSD':
+        if __grains__['kernel'] == 'SunOS':
+            if __grains__['virtual'] != 'zone':
+                __salt__['cmd.run']('swap -a {0}'.format(name), python_shell=False)
+            else:
+                return False
+        elif __grains__['os'] != 'OpenBSD':
             __salt__['cmd.run']('swapoff {0}'.format(name), python_shell=False)
         else:
             __salt__['cmd.run']('swapctl -d {0}'.format(name),
