@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import re
 import csv
 import datetime
 import gzip
@@ -189,6 +190,39 @@ class CsvDB(object):
         if descr is None:
             raise Exception('Table {0} not found.'.format(obj._TABLE))
         return obj._serialize(self._tables[obj._TABLE])
+
+    def __criteria(self, obj, matches=None, mt=None, lt=None, eq=None):
+        '''
+        Returns True if object is aligned to the criteria.
+
+        :param obj:
+        :param matches:
+        :param mt:
+        :param lt:
+        :param eq:
+        :return: Boolean
+        '''
+        # Fail matcher if "less than"
+        for field, value in (mt or {}).items():
+            if getattr(obj, field) < value:
+                return False
+
+        # Fail matcher if "more than"
+        for field, value in (lt or {}).items():
+            if getattr(obj, field) > value:
+                return False
+
+        # Fail matcher if "not equal"
+        for field, value in (eq or {}).items():
+            if getattr(obj, field) != value:
+                return False
+
+        # Fail matcher if "doesn't match"
+        for field, value in (matches or {}).items():
+            if not re.search(value, str(getattr(obj, field))):
+                return False
+
+        return True
 
     def get(self, obj, matches=None, mt=None, lt=None, eq=None):
         '''
