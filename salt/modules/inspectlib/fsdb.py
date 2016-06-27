@@ -175,14 +175,13 @@ class CsvDB(object):
                                                  for elm in tuple(obj.__dict__.items())])
             self._tables[obj._TABLE] = self._load_table(obj._TABLE)
 
-    def store(self, obj, distinct=False, update=None):
+    def store(self, obj, distinct=False):
         '''
         Store an object in the table.
 
         :param obj: An object to store
         :param distinct: Store object only if there is none identical of such.
                           If at least one field is different, store it.
-        :param update: Update an object by the following keys. Parameter should be an array of keys.
         :return:
         '''
         if distinct:
