@@ -229,18 +229,18 @@ class CsvDB(object):
         '''
         deleted = False
         objects = list()
-        for obj in self.get(obj):
-            if not self.__criteria(obj, matches=matches, mt=mt, lt=lt, eq=eq):
-                objects.append(obj)
+        for _obj in self.get(obj):
+            if not self.__criteria(_obj, matches=matches, mt=mt, lt=lt, eq=eq):
+                objects.append(_obj)
             else:
                 deleted = True
+
         self.flush(obj._TABLE)
-        self.create_table_from_object(obj)
-        for obj in objects:
-            self.store(obj)
+        self.create_table_from_object(obj())
+        for _obj in objects:
+            self.store(_obj)
 
         return deleted
-
 
     def _validate_object(self, obj):
         descr = self._tables.get(obj._TABLE)
