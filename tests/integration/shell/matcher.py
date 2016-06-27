@@ -150,7 +150,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test salt grain matcher
         '''
-	# Sync grains
+        # Sync grains
         self.run_salt('-t1 "*" saltutil.sync_grains')
         # First-level grain (string value)
         data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
