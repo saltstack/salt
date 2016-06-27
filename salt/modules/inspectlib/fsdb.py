@@ -185,6 +185,27 @@ class CsvDB(object):
         with gzip.open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
+    def delete(self, obj, matches=None, mt=None, lt=None, eq=None):
+        '''
+        Delete object from the database.
+
+        :param obj:
+        :param matches:
+        :param mt:
+        :param lt:
+        :param eq:
+        :return:
+        '''
+        objects = list()
+        for obj in self.get(obj):
+            if not self.__criteria(obj, matches=matches, mt=mt, lt=lt, eq=eq):
+                objects.append(obj)
+        self.flush(obj._TABLE)
+        self.create_table_from_object(obj)
+        for obj in objects:
+            self.store(obj)
+
+
     def _validate_object(self, obj):
         descr = self._tables.get(obj._TABLE)
         if descr is None:
