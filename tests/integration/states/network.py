@@ -71,7 +71,7 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         network.system
         '''
-        self.run_function('state.sls', mods='network.system')
+        ret = self.run_function('state.sls', mods='network.system')
 
         self.assertSaltTrueReturn(ret)
 
