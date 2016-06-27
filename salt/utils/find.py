@@ -143,6 +143,8 @@ _INTERVAL_REGEX = re.compile(r'''
                              ''',
                              flags=re.VERBOSE)
 
+_PATH_DEPTH_IGNORED = (os.path.sep, os.path.curdir, os.path.pardir)
+
 
 def _parse_interval(value):
     '''
@@ -675,8 +677,6 @@ class Finder(object):
             if result is not None:
                 yield result
 
-
-_PATH_DEPTH_IGNORED = (os.path.sep, os.path.curdir, os.path.pardir)
 
 def path_depth(path):
     depth = 0
