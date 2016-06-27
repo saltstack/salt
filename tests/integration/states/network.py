@@ -18,6 +18,7 @@ from salttesting.helpers import destructiveTest, ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+
 def _check_arch_linux():
     with salt.utils.open('/etc/os-release', 'r') as f:
         release = f.readline()
@@ -26,7 +27,7 @@ def _check_arch_linux():
 
 
 @destructiveTest
-@skipIf(_check_arch_linux() == 'Arch Linux', 'Network state not support on Arch')
+@skipIf(_check_arch_linux() == 'Arch Linux', 'Network state not supported on Arch')
 class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate network state module
