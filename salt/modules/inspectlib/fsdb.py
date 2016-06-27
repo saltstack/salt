@@ -276,7 +276,8 @@ class CsvDB(object):
                 for t_attr, t_data in zip(header, data):
                     t_attr, t_type = t_attr.split(':')
                     setattr(_obj, t_attr, self._to_type(t_data, t_type))
-                objects.append(_obj)
+                if self.__criteria(_obj, matches=matches, mt=mt, lt=lt, eq=eq):
+                    objects.append(_obj)
         return objects
 
     def _to_type(self, data, type):
