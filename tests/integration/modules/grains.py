@@ -105,6 +105,7 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
+
     def test_get_core_grains(self):
         '''
         test to ensure some core grains are returned
