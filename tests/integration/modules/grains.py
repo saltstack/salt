@@ -105,6 +105,14 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
+    def test_get_core_grains(self):
+        '''
+        test to ensure some core grains are returned
+        '''
+        grains = ['os', 'os_family', 'osmajorrelease', 'osrelease', 'osfullname', 'id']
+        for grain in grains:
+            get_grain = self.run_function('grains.get', [grain])
+            self.assertTrue(get_grain, grain + "is not available")
 
 
 class GrainsAppendTestCase(integration.ModuleCase):
