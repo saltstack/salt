@@ -724,7 +724,6 @@ class TestDaemon(object):
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
         for process in (self.master_process, self.minion_process, self.sub_minion_process,
-        #for process in (self.master_process, self.minion_process,
                         self.smaster_process, self.syndic_process):
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
