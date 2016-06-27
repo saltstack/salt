@@ -175,13 +175,22 @@ class CsvDB(object):
                                                  for elm in tuple(obj.__dict__.items())])
             self._tables[obj._TABLE] = self._load_table(obj._TABLE)
 
-    def store(self, obj):
+    def store(self, obj, distinct=False, update=None):
         '''
         Store an object in the table.
 
-        :param obj:
+        :param obj: An object to store
+        :param distinct: Store object only if there is none identical of such.
+                          If at least one field is different, store it.
+        :param update: Update an object by the following keys. Parameter should be an array of keys.
         :return:
         '''
+        if distinct:
+            fields = dict(zip(self._tables[obj._TABLE].keys(), obj._serialize(self._tables[obj._TABLE])))
+            db_obj = self.get(obj.__class__, eq=fields)
+            if db_obj and distinct:
+                raise Exception("Object already in the database.")
+
         with gzip.open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
