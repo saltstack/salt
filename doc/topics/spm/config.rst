@@ -41,7 +41,7 @@ and the metadata for those files.
 
 spm_build_dir
 -------------
-Default: ``/srv/spm``
+Default: ``/srv/spm_build``
 
 When packages are built, they will be placed in this directory.
 
