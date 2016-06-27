@@ -39,7 +39,7 @@ class CsvDBEntity(object):
 class CsvDB(object):
     '''
     File-based CSV database.
-    This database is in-memory operating plain text csv files.
+    This database is in-memory operating relatively small plain text csv files.
     '''
     def __init__(self, path):
         '''
