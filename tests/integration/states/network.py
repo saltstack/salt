@@ -6,9 +6,11 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Python libs
+from __future__ import absolute_import
 
 # Salt libs
 import integration
+import salt.utils
 
 # Salttesting libs
 from salttesting import skipIf
@@ -17,7 +19,7 @@ from salttesting.helpers import destructiveTest, ensure_in_syspath
 ensure_in_syspath('../../')
 
 def _check_arch_linux():
-    with open('/etc/os-release', 'r') as f:
+    with salt.utils.open('/etc/os-release', 'r') as f:
         release = f.readline()
         r = release.split('=')[1].strip().strip('"')
         return r
@@ -25,7 +27,7 @@ def _check_arch_linux():
 
 @destructiveTest
 @skipIf(_check_arch_linux() == 'Arch Linux', 'Network state not support on Arch')
-class NetworkTest(integration.ModuleCase):
+class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate network state module
     '''
@@ -40,8 +42,6 @@ class NetworkTest(integration.ModuleCase):
         network.managed
         '''
         if_name = 'dummy0'
-        enabled = True
-        _type = 'eth'
         ipaddr = '10.1.0.1'
         netmask = '255.255.255.0'
         broadcast = '10.1.0.255'
@@ -52,12 +52,9 @@ class NetworkTest(integration.ModuleCase):
                     "label": if_name,
                     "address": ipaddr
                 }]
-        interface = self.run_function('network.interface', [if_name])
-        self.assertEqual(interface, '')
 
-        ret = self.run_state('network.managed',
-                            name=if_name, enabled=enabled, type=_type,
-                            ipaddr=ipaddr, netmask=netmask)
+        ret = self.run_function('state.sls', mods='network.managed')
+        self.assertSaltTrueReturn(ret)
 
         interface = self.run_function('network.interface', [if_name])
         self.assertEqual(interface, expected_if_ret)
@@ -66,31 +63,17 @@ class NetworkTest(integration.ModuleCase):
         '''
         network.routes
         '''
-        if_name = 'dummy0'
-        routes = [{'name': 'secure_network',
-                   'ipaddr': '10.2.0.0',
-                   'netmask': '255.255.255.0',
-                   'gateway': '10.1.0.3'}]
+        ret = self.run_function('state.sls', mods='network.routes')
 
-        ret = self.run_state('network.routes', name=if_name, routes=routes)
-
-        self.assertTrue(ret['network_|-dummy0_|-dummy0_|-routes']['result'])
+        self.assertSaltTrueReturn(ret)
 
     def test_system(self):
         '''
         network.system
         '''
-        conf_name = 'dummy_system'
-        enabled = True
-        hostname = 'server1.example.com'
-        gateway = '10.1.0.1'
-        gatewaydev = 'dummy0'
+        self.run_function('state.sls', mods='network.system')
 
-        ret = self.run_state('network.system',
-                    name=conf_name, enabled=enabled, hostname=hostname,
-                    gateway=gateway, gatewaydev=gatewaydev)
-
-        self.assertTrue(ret['network_|-dummy_system_|-dummy_system_|-system']['result'])
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':
