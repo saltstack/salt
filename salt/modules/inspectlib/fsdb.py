@@ -205,14 +205,19 @@ class CsvDB(object):
         :param eq:
         :return:
         '''
+        deleted = False
         objects = list()
         for obj in self.get(obj):
             if not self.__criteria(obj, matches=matches, mt=mt, lt=lt, eq=eq):
                 objects.append(obj)
+            else:
+                deleted = True
         self.flush(obj._TABLE)
         self.create_table_from_object(obj)
         for obj in objects:
             self.store(obj)
+
+        return deleted
 
 
     def _validate_object(self, obj):
