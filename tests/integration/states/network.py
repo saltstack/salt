@@ -20,7 +20,7 @@ ensure_in_syspath('../../')
 
 
 def _check_arch_linux():
-    with salt.utils.open('/etc/os-release', 'r') as f:
+    with salt.utils.fopen('/etc/os-release', 'r') as f:
         release = f.readline()
         r = release.split('=')[1].strip().strip('"')
         return r
