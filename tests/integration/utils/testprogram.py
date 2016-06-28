@@ -640,7 +640,7 @@ class TestProgramSalt(TestSaltProgram):
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
 
-    pass
+    configs = {'minion':{}}
 
 
 class TestProgramSaltRun(TestSaltProgram):
