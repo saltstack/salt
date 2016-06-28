@@ -24,6 +24,7 @@ import salt.loader
 from salt.modules import boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
+from salt.ext.six.moves import range
 
 # Import 3rd-party libs
 import salt.ext.six as six

@@ -14,7 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Import Python libs
+from __future__ import absolute_import
 import os
+
+# Import Salt libs
 from salt.modules.inspectlib.exceptions import InspectorSnapshotException
 from salt.modules.inspectlib.dbhandle import DBHandle
 

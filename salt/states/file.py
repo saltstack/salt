@@ -4405,6 +4405,7 @@ def accumulated(name, filename, text, **kwargs):
     _persist_accummulators(accum_data, accum_deps)
     return ret
 
+
 def serialize(name,
               dataset=None,
               dataset_pillar=None,
