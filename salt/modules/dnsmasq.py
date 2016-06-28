@@ -71,13 +71,19 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
     to the end of the main config file (and not to any includes). If you need
     an option added to a specific include file, specify it as the config_file.
 
+    :param string config_file: config file where settings should be updated / added.
+    :param bool follow: attempt to set the config option inside any file within
+        the ``conf-dir`` where it has already been enabled.
+    :param kwargs: key value pairs that contain the configuration settings that you
+        want set.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' dnsmasq.set_config domain=mydomain.com
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
-        salt '*' dnsmasq.set_config file=/etc/dnsmasq.conf domain=mydomain.com
+        salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
     '''
     dnsopts = get_config(config_file)
     includes = [config_file]
