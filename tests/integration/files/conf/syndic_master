@@ -4,9 +4,7 @@ publish_port: 54505
 ret_port: 54506
 worker_threads: 3
 pidfile: syndic_master.pid
-cachedir: cache
 sock_dir: syndic_master_sock
-pki_dir: pki
 timeout: 1
 open_mode: True
 order_masters: True
