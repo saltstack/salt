@@ -3,9 +3,7 @@ interface: 127.0.0.1
 publish_port: 54505
 ret_port: 54506
 worker_threads: 3
-root_dir: /tmp/saltsyndictest
 pidfile: syndic_master.pid
-pki_dir: pki
 cachedir: cache
 timeout: 1
 sock_dir: syndic_master_sock
