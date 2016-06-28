@@ -987,6 +987,8 @@ class TestDaemon(object):
         master_opts['user'] = running_tests_user
         master_opts['known_hosts_file'] = tests_known_hosts_file
         master_opts['config_dir'] = TMP_CONF_DIR
+        master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        #master_opts['pki_dir'] = os.path.join(TMP, 'rootdir','pki')
 
         minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
         minion_opts['user'] = running_tests_user
@@ -1002,6 +1004,8 @@ class TestDaemon(object):
         syndic_master_opts['user'] = running_tests_user
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
+        #syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki')
 
         # The syndic config file has an include setting to include the master configuration
         # Let's start with a copy of the syndic master configuration
