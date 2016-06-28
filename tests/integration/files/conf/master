@@ -4,9 +4,7 @@ publish_port: 64505
 ret_port: 64506
 worker_threads: 3
 pidfile: master.pid
-cachedir: cache
 sock_dir: master_sock
-pki_dir: pki
 timeout: 3
 open_mode: True
 syndic_master: localhost
