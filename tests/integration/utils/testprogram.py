@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 
 import yaml
 
@@ -39,19 +40,51 @@ if 'TimeoutError' not in __builtins__:
     __builtins__['TimeoutError'] = TimeoutError
 
 
+class TestProgramMeta(type):
+    '''
+    Stack all inherited config_attrs and dirtree dirs from the base classes.
+    '''
+    def __new__(mcs, name, bases, attrs):
+        config_attrs = {}
+        dirtree = set()
+        for base in bases:
+            config_attrs.update(getattr(base, 'config_attrs', {}))
+            dirtree.update(getattr(base, 'dirtree', []))
+        config_attrs.update(attrs.get('config_attrs', {}))
+        dirtree.update(attrs.get('dirtree', []))
+        attrs['config_attrs'] = config_attrs
+        attrs['dirtree'] = dirtree
+
+        return super(TestProgramMeta, mcs).__new__(mcs, name, bases, attrs)
+
+
 # pylint: disable=too-many-instance-attributes
 class TestProgram(object):
     '''
     Set up an arbitrary executable to run.
-    '''
 
-    def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True):
+    :attribute dirtree: An iterable of directories to be created
+    '''
+    __metaclass__ = TestProgramMeta
+
+    empty_config = ''
+    config_file = ''
+
+    config_types = (six.string_types,)
+
+    dirtree = [
+        '&config_dir',
+    ]
+
+    def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True, **kwargs):
         self.program = program or getattr(self, 'program', None)
         self.name = name or getattr(self, 'name', None)
         self.env = env or {}
         self.shell = shell
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
+        self._config = kwargs.pop('config', copy.copy(self.empty_config))
+        self.config_file = kwargs.pop('config_file', self.config_file)
 
         if not self.name:
             if not self.program:
@@ -70,6 +103,11 @@ class TestProgram(object):
 
     def __exit__(self, typ, value, traceback):
         pass
+
+    @property
+    def root_dir(self):
+        '''Directory that will contains all of the static and dynamic files for the daemon'''
+        return os.path.join(self.parent_dir, self.name)
 
     @property
     def start_pid(self):
@@ -91,9 +129,99 @@ class TestProgram(object):
                 raise ValueError('Parent path "{0}" exists but is not a directory'.format(self._parent_dir))
         return self._parent_dir
 
+    @property
+    def config_dir(self):
+        '''Directory of the config file'''
+        return os.path.join(self.root_dir, os.path.dirname(self.config_file) if self.config_file else '')
+
+    @property
+    def config_path(self):
+        '''The full path of the configuration file.'''
+        return os.path.join(self.root_dir, self.config_file)
+
+    def config_write(self):
+        '''Write out the config to a file'''
+        if not self.config_file:
+            return
+        with open(self.config_path, 'w') as cfo:
+            cfg = self.config_stringify()
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(
+                self.name, self.config_path, cfg
+            ))
+            cfo.write(cfg)
+            cfo.flush()
+
+    def config_type(self, config):
+        '''Check if a configuration is an acceptable type.'''
+        return isinstance(config, self.config_types)
+
+    def config_cast(self, config):
+        '''Cast a configuration to the internal expected type.'''
+        if not self.config_type(config):
+            config = str(config)
+        return config
+
+    def config_stringify(self):
+        '''Get the configuration as a string'''
+        return self.config
+
+    def config_merge(self, base, overrides):
+        '''Merge two configuration hunks'''
+        base = self.config_cast(base)
+        overrides = self.config_cast(overrides)
+        return ''.join([base, overrides])
+
+    @property
+    def config(self):
+        '''Get the configuration data'''
+        return self._config
+
+    @config.setter
+    def config(self, val):
+        '''Set the configuration data'''
+        if val is None:
+            val = ''
+        self._config = self.config_cast(val)
+
+    def make_dirtree(self):
+        '''Create directory structure.'''
+        for branch in self.dirtree:
+            if branch and isinstance(branch, six.string_types) and branch[0] == '&':
+                dirattr = getattr(self, branch[1:], None)
+                if not dirattr:
+                    raise ValueError(
+                        'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}"'.format(
+                            branch, self.__class__.__name__, self.name,
+                        )
+                    )
+                subdir = ''
+                if isinstance(dirattr, six.string_types):
+                    subdir = dirattr
+                elif isinstance(dirattr, types.FunctionType):
+                    subdir = dirattr(self)
+                else:
+                    raise TypeError("Branch type of {0} in dirtree is unhandled".format(branch))
+                if not subdir:
+                    continue
+            elif isinstance(branch, six.string_types):
+                subdir = branch
+            else:
+                raise TypeError("Branch type of {0} in dirtree is unhandled".format(branch))
+            path = os.path.join(self.root_dir, subdir)
+            if not os.path.exists(path):
+                LOG.debug('make_dirtree: {0}'.format(path))
+                os.makedirs(path)
+
     def setup(self, *args, **kwargs):
         '''Create any scaffolding for run-time'''
-        pass
+
+        # unused
+        _ = args, kwargs
+
+        if not self._setup_done:
+            self.make_dirtree()
+            self.config_write()
+            self._setup_done = True
 
     def cleanup(self, *args, **kwargs):
         ''' Clean out scaffolding of setup() and any run-time generated files.'''
@@ -106,6 +234,8 @@ class TestProgram(object):
                 self.process.wait()
             except OSError:
                 pass
+        if os.path.exists(self.root_dir):
+            shutil.rmtree(self.root_dir)
         if self.created_parent_dir and os.path.exists(self.parent_dir):
             shutil.rmtree(self.parent_dir)
 
@@ -150,9 +280,7 @@ class TestProgram(object):
         # unused for now
         _ = verbatim_args
 
-        if not self._setup_done:
-            self.setup()
-            self._setup_done = True
+        self.setup()
 
         if args is None:
             args = []
@@ -324,7 +452,7 @@ class TestProgram(object):
                 pass
 
 
-class TestSaltProgramMeta(type):
+class TestSaltProgramMeta(TestProgramMeta):
     '''
     A Meta-class to set self.script from the class name when it is
     not specifically set by a "script" argument.
@@ -340,6 +468,9 @@ class TestSaltProgramMeta(type):
                 )
             attrs['script'] = script
 
+        if 'config_file' in attrs and os.path.sep not in attrs['config_file']:
+            attrs['config_file'] = os.path.join('etc', 'salt', attrs['config_file'])
+
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
@@ -351,6 +482,18 @@ class TestSaltProgram(TestProgram):
 
     __metaclass__ = TestSaltProgramMeta
 
+    config_types = (dict,)
+    config_attrs = {
+        'root_dir': None,
+        'config_dir': None,
+    }
+    empty_config = {}
+
+    dirtree = [
+        os.path.join('var', 'log', 'salt'),
+        '&script_dir',
+    ]
+
     script = ''
 
     def __init__(self, *args, **kwargs):
@@ -359,6 +502,8 @@ class TestSaltProgram(TestProgram):
             kwargs['program'] = self.script
         super(TestSaltProgram, self).__init__(*args, **kwargs)
         self.program = self.script_path
+        path = self.env.get('PATH', os.getenv('PATH'))
+        self.env['PATH'] = ':'.join([self.script_dir, path])
 
     @property
     def script_dir(self):
@@ -370,15 +515,33 @@ class TestSaltProgram(TestProgram):
         '''Full path of the run-time script.'''
         return os.path.join(self.script_dir, self.script)
 
+    def config_cast(self, config):
+        if isinstance(config, six.string_types):
+            config = yaml.safe_load(config)
+        return config
+
+    def config_merge(self, base, overrides):
+        _base = self.config_cast(copy.deepcopy(base))
+        _overrides = self.config_cast(overrides)
+        # NOTE: this simple update will not work for deep dictionaries
+        _base.update(copy.deepcopy(_overrides))
+        return _base
+
+    @property
+    def config(self):
+        attr_vals = dict([(k, getattr(self, v if v else k)) for k, v in self.config_attrs.items()])
+        merged = self.config_merge(self._config, attr_vals)
+        return merged
+
+    def config_stringify(self):
+        return yaml.safe_dump(self.config, default_flow_style=False)
+
     def setup(self, *args, **kwargs):
         super(TestSaltProgram, self).setup(*args, **kwargs)
         self.install_script()
 
     def install_script(self):
         '''Generate the script file that calls python objects and libraries.'''
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
-
         lines = []
         script_source = os.path.join(integration.CODE_DIR, 'scripts', self.script)
         with open(script_source, 'r') as sso:
@@ -393,10 +556,24 @@ class TestSaltProgram(TestProgram):
 
         os.chmod(self.script_path, 0755)
 
+    def run(self, **kwargs):
+        if not kwargs.get('verbatim_args'):
+            args = kwargs.setdefault('args', [])
+            if '-c' not in args and '--config-dir' not in args:
+                args.extend(['--config-dir', self.config_dir])
+        return super(TestSaltProgram, self).run(**kwargs)
+
 
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
-    pass
+
+    config_file = 'minion'
+
+
+class TestProgramSaltRun(TestSaltProgram):
+    '''Class to manage salt-run'''
+
+    config_file = 'minion'
 
 
 class TestDaemon(TestProgram):
@@ -405,29 +582,16 @@ class TestDaemon(TestProgram):
     '''
 
     script = None
-    empty_config = ''
     pid_file = None
-    config_file = ''
-
-    config_types = (six.string_types,)
-
-    dirtree = []
 
     def __init__(self, *args, **kwargs):
-        self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
-        self.config_file = kwargs.pop('config_file', self.config_file)
         self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
         super(TestDaemon, self).__init__(*args, **kwargs)
-
-    @property
-    def root_dir(self):
-        '''Directory that will contains all of the static and dynamic files for the daemon'''
-        return os.path.join(self.parent_dir, self.name)
 
     @property
     def pid_path(self):
@@ -481,96 +645,10 @@ class TestDaemon(TestProgram):
                 time.sleep(0.1)
             self._shutdown = True
 
-    @property
-    def config_dir(self):
-        '''Directory of the config file'''
-        return os.path.join(self.root_dir, 'etc', 'salt')
-
-    def setup(self, *args, **kwargs):
-        '''Perform any necessary setup to be ready to run'''
-        super(TestDaemon, self).setup(*args, **kwargs)
-        self.config_write()
-        self.make_dirtree()
-
     def cleanup(self, *args, **kwargs):
         '''Remove left-over scaffolding - antithesis of setup()'''
         self.shutdown()
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
         super(TestDaemon, self).cleanup(*args, **kwargs)
-
-    @property
-    def config_path(self):
-        '''The full path of the configuration file.'''
-        return os.path.join(self.config_dir, self.config_file)
-
-    def config_write(self):
-        '''Write out the config to a file'''
-        if not os.path.exists(self.config_dir):
-            os.makedirs(self.config_dir)
-        with open(self.config_path, 'w') as cfo:
-            cfg = self.config_stringify()
-            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(
-                self.name, self.config_path, cfg
-            ))
-            cfo.write(cfg)
-            cfo.flush()
-
-    def make_dirtree(self):
-        '''Create directory structure.'''
-        for branch in self.dirtree:
-            path = os.path.join(self.root_dir, branch)
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-    def config_type(self, config):
-        '''Check if a configuration is an acceptable type.'''
-        return isinstance(config, self.config_types)
-
-    def config_cast(self, config):
-        '''Cast a configuration to the internal expected type.'''
-        if not isinstance(config, six.string_types):
-            config = str(config)
-        return config
-
-    def config_stringify(self):
-        '''Marshall the configuration to a string'''
-        return self.config
-
-    def config_merge(self, base, overrides):
-        '''Merge two configuration hunks'''
-        base = self.config_cast(base)
-        overrides = self.config_cast(overrides)
-        return ''.join([base, overrides])
-
-    @property
-    def config(self):
-        '''Get the configuration'''
-        return self._config
-
-    @config.setter
-    def config(self, val):
-        '''Set the configuration'''
-        if val is None:
-            val = ''
-        self._config = self.config_cast(val)
-
-
-class TestSaltDaemonMeta(TestSaltProgramMeta, type):
-    '''
-    A meta-class to stack all inherited config_attrs from the base classes.
-    '''
-    def __new__(mcs, name, bases, attrs):
-        config_attrs = {}
-        dirtree = set()
-        for base in bases:
-            config_attrs.update(getattr(base, 'config_attrs', {}))
-            dirtree.update(getattr(base, 'dirtree', []))
-        config_attrs.update(attrs.get('config_attrs', {}))
-        dirtree.update(attrs.get('dirtree', []))
-        attrs['config_attrs'] = config_attrs
-        attrs['dirtree'] = dirtree
-        return super(TestSaltDaemonMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
 class TestSaltDaemon(TestDaemon, TestSaltProgram):
@@ -578,52 +656,7 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
 
-    __metaclass__ = TestSaltDaemonMeta
-
-    config_types = (dict,)
-    config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
-    }
-    script = ''
-    empty_config = {}
-
-    dirtree = [
-        'var/log/salt',
-    ]
-
-    def __init__(self, *args, **kwargs):
-        super(TestSaltDaemon, self).__init__(*args, **kwargs)
-        path = self.env.get('PATH', os.getenv('PATH'))
-        self.env['PATH'] = ':'.join([self.script_dir, path])
-
-    def config_cast(self, config):
-        if isinstance(config, six.string_types):
-            config = yaml.safe_load(config)
-        return config
-
-    def config_merge(self, base, overrides):
-        _base = self.config_cast(copy.deepcopy(base))
-        _overrides = self.config_cast(overrides)
-        # NOTE: this simple update will not work for deep dictionaries
-        _base.update(copy.deepcopy(_overrides))
-        return _base
-
-    @property
-    def config(self):
-        attr_vals = dict([(k, getattr(self, v if v else k)) for k, v in self.config_attrs.items()])
-        merged = self.config_merge(self._config, attr_vals)
-        return merged
-
-    def config_stringify(self):
-        return yaml.safe_dump(self.config, default_flow_style=False)
-
-    def run(self, **kwargs):
-        if not kwargs.get('verbatim_args'):
-            args = kwargs.setdefault('args', [])
-            if '-c' not in args and '--config-dir' not in args:
-                args.extend(['--config-dir', self.config_dir])
-        return super(TestSaltDaemon, self).run(**kwargs)
+    pass
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -666,7 +699,7 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
     Manager for salt-syndic daemon.
     '''
-    pass
+    config_file = 'master'
 
 
 class TestDaemonSaltProxy(TestSaltDaemon):
