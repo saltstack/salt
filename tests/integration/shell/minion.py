@@ -156,25 +156,35 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         for mname in minions:
             minion = testprogram.TestDaemonSaltMinion(
                 name=mname,
+                root_dir='init_script',
+                config_dir=os.path.join('etc', mname),
                 parent_dir=self._test_dir,
+                configs = {
+                    'minion':{
+                        'map':{
+                            'pidfile':os.path.join('var', 'run', 'salt-{0}.pid'.format(mname)),
+                            'sock_dir':os.path.join('var', 'run', 'salt', mname),
+                        },
+                    },
+                },
             )
             # Call setup here to ensure config and script exist
             minion.setup()
             _minions.append(minion)
 
         # Need salt-call, salt-minion for wrapper script
-        salt_call = testprogram.TestProgramSaltCall(parent_dir=self._test_dir)
+        salt_call = testprogram.TestProgramSaltCall(root_dir='init_script', parent_dir=self._test_dir)
         # Ensure that run-time files are generated
         salt_call.setup()
-        sysconf_dir = os.path.dirname(_minions[0].config_dir)
+        sysconf_dir = os.path.dirname(_minions[0].abs_path(_minions[0].config_dir))
         cmd_env = {
-            'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
+            'PATH': ':'.join([salt_call.abs_path(salt_call.script_dir), os.getenv('PATH')]),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
             'SALTMINION_SYSCONFDIR': sysconf_dir,
-            'SALTMINION_BINDIR': _minions[0].script_dir,
+            'SALTMINION_BINDIR': _minions[0].abs_path(_minions[0].script_dir),
             'SALTMINION_CONFIGS': '\n'.join([
-                '{0} {1}'.format(user, minion.config_dir) for minion in _minions
+                '{0} {1}'.format(user, minion.abs_path(minion.config_dir)) for minion in _minions
             ]),
         }
 
@@ -205,7 +215,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         if pform not in ('linux',):
             self.skipTest('salt-minion init script is unavailable on {1}'.format(platform))
 
-        minions, _, init_script = self._initscript_setup(self._test_minions[:1])
+        minions, _, init_script = self._initscript_setup(self._test_minions)
 
         try:
             # These tests are grouped together, rather than split into individual test functions,
@@ -254,7 +264,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_user',
-            config={'user': 'unknown'},
+            configs={'minion':{'map':{'user': 'unknown'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
