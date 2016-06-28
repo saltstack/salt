@@ -4,9 +4,10 @@ publish_port: 64505
 ret_port: 64506
 worker_threads: 3
 pidfile: master.pid
-user: ubuntu
-timeout: 3
+cachedir: cache
 sock_dir: master_sock
+pki_dir: pki
+timeout: 3
 open_mode: True
 syndic_master: localhost
 fileserver_list_cache_time: 0
