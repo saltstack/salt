@@ -215,7 +215,6 @@ class CsvDB(object):
 
         return updated
 
-
     def delete(self, obj, matches=None, mt=None, lt=None, eq=None):
         '''
         Delete object from the database.
