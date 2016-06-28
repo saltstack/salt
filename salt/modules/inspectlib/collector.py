@@ -175,9 +175,6 @@ class Inspector(EnvLoader):
         :param data:
         :return:
         '''
-        self.db._csv_db.create_table_from_object(Package())
-        self.db._csv_db.create_table_from_object(PackageCfgFile())
-
         pkg_id = 0
         pkg_cfg_id = 0
         for pkg_name, pkg_configs in data.items():
@@ -222,8 +219,6 @@ class Inspector(EnvLoader):
         :param links:
         :return:
         '''
-
-        self.db._csv_db.create_table_from_object(PayloadFile())
 
         idx = 0
         for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
@@ -404,11 +399,6 @@ class Inspector(EnvLoader):
         Prepare full system scan by setting up the database etc.
         '''
         self.db.purge()
-
-        # Initialize CsvDB
-        self.db._csv_db.new()
-        self.db._csv_db.create_table_from_object(AllowedDir())
-        self.db._csv_db.create_table_from_object(IgnoredDir())
 
         # Add ignored filesystems
         ignored_fs = set()

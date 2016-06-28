@@ -19,7 +19,8 @@ from __future__ import absolute_import
 import sqlite3
 import os
 from salt.modules.inspectlib.fsdb import CsvDB
-
+from salt.modules.inspectlib.entities import (Package, PackageCfgFile,
+                                              PayloadFile, IgnoredDir, AllowedDir)
 
 class DBHandleBase(object):
     '''
@@ -56,18 +57,22 @@ class DBHandleBase(object):
         if self.cursor.fetchall():
             return
 
-        self._run_init_queries()
-        self.connection.commit()
 
         if new:
             self._csv_db.new()
         else:
             self._csv_db.open()
 
+        self._run_init_queries()
+        self.connection.commit()
+
     def _run_init_queries(self):
         '''
         Initialization queries
         '''
+        for obj in (Package, PackageCfgFile, PayloadFile, IgnoredDir, AllowedDir):
+            self._csv_db.create_table_from_object(obj())
+
         for query in self.init_queries:
             self.cursor.execute(query)
 
@@ -80,10 +85,11 @@ class DBHandleBase(object):
             for table_name in self.cursor.fetchall():
                 self.cursor.execute("DROP TABLE {0}".format(table_name[0]))
             self.connection.commit()
-        self._run_init_queries()
 
-        for db_id in self._csv_db.list():
-            self._csv_db.purge(db_id)
+        for table_name in self._csv_db.list_tables():
+            self._csv_db.flush(table_name)
+
+        self._run_init_queries()
 
     def flush(self, table):
         '''
