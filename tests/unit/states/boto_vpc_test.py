@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 import salt.utils.boto
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,unused-import
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
