@@ -756,6 +756,7 @@ class TestDaemon(TestProgram):
         if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
             future = datetime.now() + timedelta(seconds=timeout)
             pid = self.wait_for_daemon_pid(timeout)
+            LOG.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
             while True:
                 try:
                     os.kill(pid, signum)
@@ -764,7 +765,19 @@ class TestDaemon(TestProgram):
                         break
                     raise
                 if datetime.now() > future:
-                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
+                    # One last attempt with a big hammer
+                    try:
+                        pgid = os.getpgid(pid)
+                        os.killpg(pgid, signum)
+                        time.sleep(0.1)
+                        LOG.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
+                        os.killpg(pgid, signal.SIGKILL)
+                        time.sleep(0.1)
+                        os.killpg(pgid, signal.SIGKILL)
+                    except OSError as err:
+                        if errno.ESRCH == err.errno:
+                            break
+                    raise TimeoutError('Timeout waiting for "{0}" pid {1} to shutdown'.format(self.name, pid))
                 time.sleep(0.1)
             self._shutdown = True
 
@@ -820,7 +833,7 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
 
     configs = {
-        'master':{},
+        'master':{'map':{'syndic_master':'localhost',},},
         'minion':{'map':{'id':'{name}',},},
     }
 
