@@ -70,6 +70,11 @@ import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
 from salt.utils.versions import LooseVersion
+
+NIPKG_REG_PATH = 'SOFTWARE\\National Instruments\\NI Package Manager\\CurrentVersion'
+NIPKG_REG_VALUE_PATH = 'Path'
+NIPKG_REG_VALUE_EXE_NAME = 'CLIExecutableName'
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -81,6 +86,25 @@ def __virtual__():
     Set the virtual pkg module if the os is Windows
     '''
     if salt.utils.platform.is_windows():
+        # Test for nipkg. If nipkg is found, don't load this module.
+        try:
+            try:
+                import winreg
+            except ImportError:
+                import _winreg as winreg
+
+            with winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    NIPKG_REG_PATH,
+                    0,
+                    winreg.KEY_READ) as hkey:
+                (exe_dir, _) = winreg.QueryValueEx(hkey, NIPKG_REG_VALUE_PATH)
+                (exe_name, _) = winreg.QueryValueEx(hkey, NIPKG_REG_VALUE_EXE_NAME)
+                exe_path = os.path.join(exe_dir, exe_name)
+                if os.path.isfile(exe_path):
+                    return (False, "Module win_pkg: module only works when nipkg is not installed")
+        except (WindowsError, ImportError):
+            pass
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
 
