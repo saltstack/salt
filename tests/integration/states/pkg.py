@@ -414,7 +414,7 @@ class PkgTest(integration.ModuleCase,
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
-        ret = self.run_function('state.sls', mods='pkg_latest_epoch')
+        ret = self.run_state('pkg.installed', name='bash-completion')
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.is_windows(), 'minion is windows')
