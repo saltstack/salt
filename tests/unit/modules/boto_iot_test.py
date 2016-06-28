@@ -22,7 +22,7 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 from salt.modules import boto_iot
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 import logging

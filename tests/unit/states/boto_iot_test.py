@@ -22,7 +22,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from unit.modules.boto_iot_test import BotoIoTTestCaseMixin

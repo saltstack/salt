@@ -24,7 +24,7 @@ import salt.config
 import salt.loader
 from salt.modules import boto_lambda
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 from tempfile import NamedTemporaryFile
