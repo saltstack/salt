@@ -11,6 +11,7 @@ import hashlib
 # Import salt libs
 import salt.key
 import salt.crypt
+import salt.utils
 
 __func_alias__ = {
     'list_': 'list'
