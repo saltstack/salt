@@ -111,6 +111,32 @@ def pkgmgr_avail(run_function, grains):
     return True
 
 
+def latest_version(run_function, *names):
+    '''
+    Helper function which ensures that we don't make any unnecessary calls to
+    pkg.latest_version to figure out what version we need to install. This
+    won't stop pkg.latest_version from being run in a pkg.latest state, but it
+    will reduce the amount of times we check the latest version here in the
+    test suite.
+    '''
+    key = 'latest_version'
+    if key not in __testcontext__:
+        __testcontext__[key] = {}
+    targets = [x for x in names if x not in __testcontext__[key]]
+    if targets:
+        result = run_function('pkg.latest_version', targets, refresh=False)
+        try:
+            __testcontext__[key].update(result)
+        except ValueError:
+            # Only a single target, pkg.latest_version returned a string
+            __testcontext__[key][targets[0]] = result
+
+    ret = dict([(x, __testcontext__[key][x]) for x in names])
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
@@ -191,9 +217,7 @@ class PkgTest(integration.ModuleCase,
                 time.sleep(5)
 
         target = pkg_targets[0]
-        version = self.run_function('pkg.latest_version',
-                                    [target],
-                                    refresh=False)
+        version = latest_version(self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -272,9 +296,7 @@ class PkgTest(integration.ModuleCase,
                     break
                 time.sleep(5)
 
-        version = self.run_function('pkg.latest_version',
-                                    [pkg_targets[0]],
-                                    refresh=False)
+        version = latest_version(self.run_function, pkg_targets[0])
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -359,9 +381,7 @@ class PkgTest(integration.ModuleCase,
                     and grains['osrelease'].startswith('5.'):
                 target = target.replace('.i686', '.i386')
 
-            version = self.run_function('pkg.latest_version',
-                                        [target],
-                                        refresh=False)
+            version = latest_version(self.run_function, target)
 
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
@@ -394,9 +414,7 @@ class PkgTest(integration.ModuleCase,
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
         if target:
-            version = self.run_function('pkg.latest_version',
-                                        [target],
-                                        refresh=False)
+            version = latest_version(self.run_function, target)
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
             # the target needs to not be installed before we run the
@@ -424,9 +442,7 @@ class PkgTest(integration.ModuleCase,
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
         if target:
-            version = self.run_function('pkg.latest_version',
-                                        [target],
-                                        refresh=False)
+            version = latest_version(self.run_function, target)
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
             # the target needs to not be installed before we run the
@@ -496,9 +512,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         target = pkg_targets[0]
-        version = self.run_function('pkg.latest_version',
-                                    [target],
-                                    refresh=False)
+        version = latest_version(self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
