@@ -2046,11 +2046,7 @@ def alias_function(fun, name, doc=None):
     if doc and isinstance(doc, six.string_types):
         alias_fun.__doc__ = doc
     else:
-        if six.PY3:
-            orig_name = fun.__name__
-        else:
-            orig_name = fun.func_name
-
+        orig_name = fun.__name__
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
         alias_fun.__doc__ = alias_msg + fun.__doc__
@@ -2843,7 +2839,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -2874,7 +2870,7 @@ def to_unicode(s, encoding=None):
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)
+        return unicode(s)  # pylint: disable=incompatible-py3-code
 
 
 def is_list(value):

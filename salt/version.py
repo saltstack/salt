@@ -9,15 +9,18 @@ import re
 import sys
 import platform
 
-# Don't rely on external packages in this module since it's used at install time
 # pylint: disable=invalid-name,redefined-builtin
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import map
+
+# Don't rely on external packages in this module since it's used at install time
 if sys.version_info[0] == 3:
     MAX_SIZE = sys.maxsize
     string_types = (str,)
 else:
     MAX_SIZE = sys.maxint
-    string_types = (basestring,)
-    from itertools import imap as map
+    string_types = (six.string_types,)
 # pylint: enable=invalid-name,redefined-builtin
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
