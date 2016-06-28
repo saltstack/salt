@@ -376,7 +376,7 @@ class PkgTest(integration.ModuleCase,
 
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_with_epoch_in_version(self, grains=None):
+    def test_pkg_008_epoch_in_version(self, grains=None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -403,7 +403,7 @@ class PkgTest(integration.ModuleCase,
             self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.is_windows(), 'minion is windows')
-    def test_pkg_008_latest_with_epoch(self):
+    def test_pkg_009_latest_with_epoch(self):
         '''
         This tests for the following issue:
         https://github.com/saltstack/salt/issues/31014
@@ -417,8 +417,9 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='pkg_latest_epoch')
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_salt_modules('pkg.info_installed')
-    def test_pkg_009_latest_with_epoch_and_info_installed(self):
+    def test_pkg_010_latest_with_epoch_and_info_installed(self):
         '''
         Need to check to ensure the package has been
         installed after the pkg_latest_epoch sls
