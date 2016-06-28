@@ -24,6 +24,7 @@ import logging
 import salt.utils.network
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
 from salt.modules.inspectlib import EnvLoader
+from salt.modules.inspectlib.entities import (Package, PackageCfgFile)
 
 log = logging.getLogger(__name__)
 
@@ -190,15 +191,12 @@ class Query(EnvLoader):
         '''
 
         data = dict()
-        self.db.open()
-        self.db.cursor.execute("SELECT id, name FROM inspector_pkg")
-        for pkg_id, pkg_name in self.db.cursor.fetchall():
-            self.db.cursor.execute("SELECT id, path FROM inspector_pkg_cfg_files WHERE pkgid=?", (pkg_id,))
+        self.db._csv_db.open()
+        for pkg in self.db._csv_db.get(Package):
             configs = list()
-            for cnf_id, cnf_name in self.db.cursor.fetchall():
-                configs.append(cnf_name)
-            data[pkg_name] = configs
-        self.db.close()
+            for pkg_cfg in self.db._csv_db.get(PackageCfgFile, eq={'pkgid': pkg.id}):
+                configs.append(pkg_cfg.path)
+            data[pkg.name] = configs
 
         if not data:
             raise InspectorQueryException("No inspected configuration yet available.")
