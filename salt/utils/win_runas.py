@@ -19,6 +19,7 @@ try:
     import win32profile
     import msvcrt
     import ctypes
+    import winerror
     from ctypes import wintypes
     HAS_WIN32 = True
 except ImportError:
@@ -298,9 +299,17 @@ def runas_system(cmd, username, password):
                                     win32con.LOGON32_LOGON_INTERACTIVE,
                                     win32con.LOGON32_PROVIDER_DEFAULT)
 
-    # Get Unrestricted Token (UAC) if this is an Admin Account
-    elevated_token = win32security.GetTokenInformation(
-        token, win32security.TokenLinkedToken)
+    try:
+        # Get Unrestricted Token (UAC) if this is an Admin Account
+        elevated_token = win32security.GetTokenInformation(
+            token, win32security.TokenLinkedToken)
+    except win32security.error as exc:
+        # User doesn't have admin, use existing token
+        if exc[0] == winerror.ERROR_NO_SUCH_LOGON_SESSION \
+                or exc[0] == winerror.ERROR_PRIVILEGE_NOT_HELD:
+            elevated_token = token
+        else:
+            raise
 
     # Get Security Attributes
     security_attributes = win32security.SECURITY_ATTRIBUTES()
