@@ -676,7 +676,7 @@ class TestProgramSalt(TestSaltProgram):
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
 
-    pass
+    configs = {'minion':{'map':{'id':'{name}'}}}
 
 
 class TestProgramSaltRun(TestSaltProgram):
