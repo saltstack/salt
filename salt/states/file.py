@@ -4586,13 +4586,14 @@ def serialize(name,
         group = user
 
     serializer_name = '{0}.serialize'.format(formatter)
+    deserializer_name = '{0}.deserialize'.format(formatter)
     if serializer_name in __serializers__:
         serializer = __serializers__[serializer_name]
         if merge_if_exists:
             if os.path.isfile(name):
                 if '{0}.deserialize'.format(formatter) in __serializers__:
                     with salt.utils.fopen(name, 'r') as fhr:
-                        existing_data = serializer.deserialize(fhr)
+                        existing_data = __serializers__[deserializer_name](fhr)
                 else:
                     return {'changes': {},
                             'comment': ('{0} format is not supported for merging'
