@@ -16,10 +16,11 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from integration.utils import testprogram
 import salt.utils
 
 
-class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test the salt-run command
     '''
@@ -48,6 +49,7 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertNotIn('jobs.SaltException:', data)
 
+    # pylint: disable=invalid-name
     def test_salt_documentation_too_many_arguments(self):
         '''
         Test to see if passing additional arguments shows an error
@@ -98,7 +100,50 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-run.
+        '''
+
+        runner = testprogram.TestProgramSaltRun(
+            name='run-unknown_argument',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        runner.setup()
+        stdout, stderr, status = runner.run(
+            args=['--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_USAGE',
+            message='unknown argument',
+            stdout=stdout, stderr=stderr
+        )
+        # runner.shutdown() should be unnecessary since the start-up should fail
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-run starts correctly.
+        '''
+
+        runner = testprogram.TestProgramSaltRun(
+            name='run-correct_usage',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        runner.setup()
+        stdout, stderr, status = runner.run(
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout, stderr=stderr
+        )
+
 
 if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RunTest)
+    integration.run_tests(RunTest)

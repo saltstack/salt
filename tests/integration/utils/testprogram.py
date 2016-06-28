@@ -675,7 +675,12 @@ class TestProgramSaltCall(TestSaltProgram):
 class TestProgramSaltRun(TestSaltProgram):
     '''Class to manage salt-run'''
 
-    pass
+    configs = {'master':{}}
+
+    def __init__(self, *args, **kwargs):
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
+        super(TestProgramSaltRun, self).__init__(*args, **kwargs)
 
 
 class TestDaemon(TestProgram):
