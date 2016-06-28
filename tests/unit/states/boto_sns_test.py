@@ -74,17 +74,81 @@ class BotoSnsTestCase(TestCase):
                'changes': {},
                'comment': ''}
 
-        mock = MagicMock(side_effect=[False, True])
+        self.maxDiff = None
+
+        exists_mock = MagicMock(side_effect=[False, True, True, True, True, True, True])
         with patch.dict(boto_sns.__salt__,
-                        {'boto_sns.exists': mock}):
+                        {'boto_sns.exists': exists_mock}):
+            # tests topic already absent
             comt = ('AWS SNS topic {0} does not exist.'.format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(boto_sns.absent(name), ret)
 
             with patch.dict(boto_sns.__opts__, {'test': True}):
-                comt = ('AWS SNS topic {0} is set to be removed.'.format(name))
+                # tests topic present, test option, unsubscribe is False
+                comt = ('AWS SNS topic {0} is set to be removed.  '
+                        '0 subscription(s) will be removed.'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_sns.absent(name), ret)
+
+            subscriptions = [dict(
+                Endpoint='arn:aws:lambda:us-west-2:123456789:function:test',
+                Owner=123456789,
+                Protocol='Lambda',
+                TopicArn='arn:aws:sns:us-west-2:123456789:test',
+                SubscriptionArn='arn:aws:sns:us-west-2:123456789:test:some_uuid'
+            )]
+            with patch.dict(boto_sns.__opts__, {'test': True}):
+                subs_mock = MagicMock(return_value=subscriptions)
+                with patch.dict(boto_sns.__salt__,
+                                {'boto_sns.get_all_subscriptions_by_topic': subs_mock}):
+                    # tests topic present, 1 subscription, test option, unsubscribe is True
+                    comt = ('AWS SNS topic {0} is set to be removed.  '
+                            '1 subscription(s) will be removed.'.format(name))
+                    ret.update({'comment': comt, 'result': None})
+                    self.assertDictEqual(boto_sns.absent(name, unsubscribe=True), ret)
+
+            subs_mock = MagicMock(return_value=subscriptions)
+            unsubscribe_mock = MagicMock(side_effect=[True, False])
+            with patch.dict(boto_sns.__salt__,
+                            {'boto_sns.unsubscribe': unsubscribe_mock}):
+                with patch.dict(boto_sns.__salt__,
+                                {'boto_sns.get_all_subscriptions_by_topic': subs_mock}):
+                    delete_mock = MagicMock(side_effect=[True, True, True, False])
+                    with patch.dict(boto_sns.__salt__,
+                                    {'boto_sns.delete': delete_mock}):
+                        # tests topic present, unsubscribe flag True, unsubscribe succeeded,
+                        # delete succeeded
+                        comt = ('AWS SNS topic {0} deleted.'.format(name))
+                        ret.update({'changes': {'new': None,
+                                                'old': {'topic': name,
+                                                        'subscriptions': subscriptions}},
+                                    'result': True,
+                                    'comment': comt})
+                        self.assertDictEqual(boto_sns.absent(name, unsubscribe=True), ret)
+
+                        # tests topic present, unsubscribe flag True, unsubscribe fails,
+                        # delete succeeded
+                        ret.update({'changes': {'new': {'subscriptions': subscriptions},
+                                                'old': {'topic': name,
+                                                        'subscriptions': subscriptions}},
+                                    'result': True,
+                                    'comment': comt})
+                        self.assertDictEqual(boto_sns.absent(name, unsubscribe=True), ret)
+
+                        # tests topic present, unsubscribe flag False, delete succeeded
+                        ret.update({'changes': {'new': None,
+                                                'old': {'topic': name}},
+                                    'result': True,
+                                    'comment': comt})
+                        self.assertDictEqual(boto_sns.absent(name), ret)
+
+                        # tests topic present, unsubscribe flag False, delete failed
+                        comt = 'Failed to delete {0} AWS SNS topic.'.format(name)
+                        ret.update({'changes': {},
+                                    'result': False,
+                                    'comment': comt})
+                        self.assertDictEqual(boto_sns.absent(name), ret)
 
 
 if __name__ == '__main__':

@@ -209,7 +209,8 @@ def absent(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        unsubscribe=False):
     '''
     Ensure the named sns topic is deleted.
 
@@ -228,23 +229,45 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    unsubscribe
+        If True, unsubscribe all subcriptions to the SNS topic before
+        deleting the SNS topic
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sns.exists'](name, region, key, keyid, profile)
 
     if is_present:
-        if __opts__['test']:
-            ret['comment'] = 'AWS SNS topic {0} is set to be removed.'.format(
-                name)
+        subscriptions = __salt__['boto_sns.get_all_subscriptions_by_topic'](
+                            name, region, key, keyid, profile
+                        ) if unsubscribe else []
+        failed_unsubscribe_subscriptions = []
+
+        if __opts__.get('test'):
+            ret['comment'] = (
+                'AWS SNS topic {0} is set to be removed.  '
+                '{1} subscription(s) will be removed.'.format(name, len(subscriptions))
+            )
             ret['result'] = None
             return ret
+
+        for subscription in subscriptions:
+            unsubscribed = __salt__['boto_sns.unsubscribe'](name, subscription['SubscriptionArn'])
+            if unsubscribed is False:
+                failed_unsubscribe_subscriptions.append(subscription)
+
         deleted = __salt__['boto_sns.delete'](name, region, key, keyid,
                                               profile)
         if deleted:
-            ret['comment'] = 'AWS SNS topic {0} does not exist.'.format(name)
-            ret['changes']['old'] = {'topic': name}
+            ret['comment'] = 'AWS SNS topic {0} deleted.'.format(name)
             ret['changes']['new'] = None
+            if unsubscribe is False:
+                ret['changes']['old'] = {'topic': name}
+            else:
+                ret['changes']['old'] = {'topic': name, 'subscriptions': subscriptions}
+                if failed_unsubscribe_subscriptions:
+                    ret['changes']['new'] = {'subscriptions': failed_unsubscribe_subscriptions}
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to delete {0} AWS SNS topic.'.format(name)
