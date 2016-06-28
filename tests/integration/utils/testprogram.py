@@ -639,7 +639,12 @@ class TestProgramSaltCall(TestSaltProgram):
 class TestProgramSaltRun(TestSaltProgram):
     '''Class to manage salt-run'''
 
-    pass
+    configs = {'minion':{'map':{'id':'{name}'}}}
+
+    def __init__(self, *args, **kwargs):
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
+        super(TestProgramSaltRun, self).__init__(*args, **kwargs)
 
 
 class TestDaemon(TestProgram):
