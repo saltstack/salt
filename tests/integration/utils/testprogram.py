@@ -671,6 +671,7 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self._shutdown = False
+        self._daemon_pid = None
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
@@ -684,10 +685,10 @@ class TestDaemon(TestProgram):
     @property
     def daemon_pid(self):
         '''Return the daemon PID'''
-        pid = None
-        if salt.utils.process.check_pidfile(self.abs_path(self.pid_path)):
-            pid = salt.utils.process.get_pidfile(self.abs_path(self.pid_path))
-        return pid
+        if not self._daemon_pid:
+            if salt.utils.process.check_pidfile(self.abs_path(self.pid_path)):
+                self._daemon_pid = salt.utils.process.get_pidfile(self.abs_path(self.pid_path))
+        return self._daemon_pid
 
     def wait_for_daemon_pid(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
@@ -718,6 +719,7 @@ class TestDaemon(TestProgram):
         if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
             future = datetime.now() + timedelta(seconds=timeout)
             pid = self.wait_for_daemon_pid(timeout)
+            LOG.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
             while True:
                 try:
                     os.kill(pid, signum)
@@ -726,7 +728,19 @@ class TestDaemon(TestProgram):
                         break
                     raise
                 if datetime.now() > future:
-                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
+                    # One last attempt with a big hammer
+                    try:
+                        pgid = os.getpgid(pid)
+                        os.killpg(pgid, signum)
+                        time.sleep(0.1)
+                        LOG.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
+                        os.killpg(pgid, signal.SIGKILL)
+                        time.sleep(0.1)
+                        os.killpg(pgid, signal.SIGKILL)
+                    except OSError as err:
+                        if errno.ESRCH == err.errno:
+                            break
+                    raise TimeoutError('Timeout waiting for "{0}" pid {1} to shutdown'.format(self.name, pid))
                 time.sleep(0.1)
             self._shutdown = True
 
@@ -782,7 +796,7 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
 
     configs = {
-        'master':{},
+        'master':{'map':{'syndic_master':'localhost',},},
         'minion':{'map':{'id':'{name}',},},
     }
 
