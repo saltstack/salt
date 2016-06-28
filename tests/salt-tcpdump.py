@@ -124,7 +124,7 @@ class PCAPParser(object):
                            'tcp': {}
                           }
 
-            (header, packet) = cap.next()
+            (header, packet) = cap.next()  # pylint: disable=incompatible-py3-code
 
             eth_length, eth_protocol = self.parse_ether(packet)
 
