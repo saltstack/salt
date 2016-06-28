@@ -126,7 +126,7 @@ except Exception:
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import disable_warnings
+    from requests.packages.urllib3 import disable_warnings  # pylint: disable=no-name-in-module
     disable_warnings()
 except Exception:
     pass

@@ -342,7 +342,7 @@ def __is_long(token):
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])
+        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
     else:
         return int(token[0:-1])
 
