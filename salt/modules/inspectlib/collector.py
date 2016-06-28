@@ -193,23 +193,6 @@ class Inspector(EnvLoader):
 
             pkg_id += 1
 
-    def _save_cfg_pkgs(self, data):
-        '''
-        Save configuration packages.
-        '''
-        pkg_id = 0
-        pkg_cfg_id = 0
-        for pkg_name, pkg_configs in data.items():
-            self.db.cursor.execute("INSERT INTO inspector_pkg (id, name) VALUES (?, ?)",
-                                   (pkg_id, pkg_name))
-            for pkg_config in pkg_configs:
-                self.db.cursor.execute("INSERT INTO inspector_pkg_cfg_files (id, pkgid, path) VALUES (?, ?, ?)",
-                                       (pkg_cfg_id, pkg_id, pkg_config))
-                pkg_cfg_id += 1
-            pkg_id += 1
-
-        self.db.connection.commit()
-
     def _save_payload(self, files, directories, links):
         '''
         Save payload (unmanaged files)
@@ -240,23 +223,6 @@ class Inspector(EnvLoader):
                 idx += 1
                 self.db._csv_db.store(payload)
 
-
-    def _save_pld(self, files, directories, links):
-        '''
-        Save payload (unmanaged files)
-        '''
-        idx = 0
-        for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
-            for p_obj in p_list:
-                stats = os.stat(p_obj)
-                self.db.cursor.execute("INSERT INTO inspector_payload "
-                                       "(id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime)"
-                                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (idx, p_obj, p_type, stats.st_mode, stats.st_uid, stats.st_gid, stats.st_size,
-                                        stats.st_atime, stats.st_mtime, stats.st_ctime))
-                idx += 1
-
-        self.db.connection.commit()
 
     def _get_managed_files(self):
         '''
@@ -460,10 +426,6 @@ class Inspector(EnvLoader):
 
         payload = self._scan_payload()
         self._save_payload(*payload)
-
-        # Old stuff
-        self._save_cfg_pkgs(changed_cfg_pkgs)
-        self._save_pld(*payload)
 
     def request_snapshot(self, mode, priority=19, **kwargs):
         '''
