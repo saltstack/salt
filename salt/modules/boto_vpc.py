@@ -485,7 +485,7 @@ def _get_id(vpc_name=None, cidr=None, tags=None, region=None, key=None,
     vpc_ids = _find_vpcs(vpc_name=vpc_name, cidr=cidr, tags=tags, region=region,
                          key=key, keyid=keyid, profile=profile)
     if vpc_ids:
-        log.info("Matching VPC: {0}".format(" ".join(vpc_ids)))
+        log.debug("Matching VPC: {0}".format(" ".join(vpc_ids)))
         if len(vpc_ids) == 1:
             vpc_id = vpc_ids[0]
             if vpc_name:
