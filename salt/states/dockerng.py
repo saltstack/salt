@@ -23,7 +23,7 @@ option. This will give users a couple release cycles to modify their scripts,
 SLS files, etc. to use the new functionality, rather than forcing users to
 change everything immediately.
 
-In the **Carbon** release of Salt (due in 2016), this execution module will
+In the **Nitrogen** release of Salt (due in 2017), this execution module will
 take the place of the default Docker execution module, and backwards-compatible
 naming will be maintained for a couple releases after that to allow users time
 to replace references to ``dockerng`` with ``docker``.
@@ -2054,6 +2054,11 @@ def absent(name, force=False):
     if pre_state != 'stopped' and not force:
         ret['comment'] = ('Container is running, set force to True to '
                           'forcibly remove it')
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
         return ret
 
     try:

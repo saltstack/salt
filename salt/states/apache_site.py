@@ -9,12 +9,12 @@ Enable and disable apache sites.
 .. code-block:: yaml
 
     Enable default site:
-        apache_site.enabled:
-            - name: default
+      apache_site.enabled:
+        - name: default
 
     Disable default site:
-        apache_site.disabled:
-            - name: default
+      apache_site.disabled:
+        - name: default
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types

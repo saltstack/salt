@@ -137,7 +137,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                           verify=verify_ssl,
                                           stream=True)
         response = result.content
-    elif method == 'GET' and not return_bin:
+    elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,
                                   requesturl,
                                   headers=headers,

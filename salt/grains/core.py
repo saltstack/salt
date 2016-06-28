@@ -1037,6 +1037,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'Suse',
     'openSUSE Leap': 'Suse',
     'openSUSE Tumbleweed': 'Suse',
+    'SLES_SAP': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1264,6 +1265,14 @@ def os_data():
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                    if 'CPE_NAME' in os_release:
+                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                            grains['os'] = "SUSE"
+                            # openSUSE `osfullname` grain normalization
+                            if os_release.get("NAME") == "openSUSE Leap":
+                                grains['osfullname'] = "Leap"
+                            elif os_release.get("VERSION") == "Tumbleweed":
+                                grains['osfullname'] = os_release["VERSION"]
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     version = ''
@@ -1371,7 +1380,8 @@ def os_data():
         shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
         # traditional short names that Salt has used.
-        grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
+        if 'os' not in grains:
+            grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
@@ -1479,6 +1489,8 @@ def os_data():
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
     elif grains.get('osfullname') == 'Ubuntu':
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'])
@@ -1488,7 +1500,7 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac'):
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian'):
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
@@ -1593,9 +1605,8 @@ def fqdn_ip4():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip4': addrs}
@@ -1623,9 +1634,8 @@ def fqdn_ip6():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip6': addrs}

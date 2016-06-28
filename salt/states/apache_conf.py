@@ -9,12 +9,12 @@ Enable and disable apache confs.
 .. code-block:: yaml
 
     Enable security conf:
-        apache_conf.enabled:
-            - name: security
+      apache_conf.enabled:
+        - name: security
 
     Disable security conf:
-        apache_conf.disabled:
-            - name: security
+      apache_conf.disabled:
+        - name: security
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types

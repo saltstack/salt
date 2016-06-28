@@ -297,7 +297,14 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
-    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    try:
+        cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
+
     if any((pkgs, sources)):
         if pkgs:
             desired = _repack_pkgs(pkgs)
@@ -700,8 +707,22 @@ def installed(
                   - salt-minion: 2015.8.5-1.el6
 
     :param bool refresh:
-        Update the repo database of available packages prior to installing the
-        requested package.
+        This parameter controls whether or not the packge repo database is
+        updated prior to installing the requested package(s).
+
+        If ``True``, the package database will be refreshed (``apt-get
+        update`` or equivalent, depending on platform) before installing.
+
+        If ``False``, the package database will *not* be refreshed before
+        installing.
+
+        If unset, then Salt treats package database refreshes differently
+        depending on whether or not a ``pkg`` state has been executed already
+        during the current Salt run. Once a refresh has been performed in a
+        ``pkg`` state, for the remainder of that Salt run no other refreshes
+        will be performed for ``pkg`` states which do not explicitly set
+        ``refresh`` to ``True``. This prevents needless additional refreshes
+        from slowing down the Salt run.
 
     :param str fromrepo:
         Specify a repository from which to install
@@ -1050,7 +1071,13 @@ def installed(
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
-            version = __salt__['pkg.version'](name)
+            try:
+                version = __salt__['pkg.version'](name)
+            except CommandExecutionError as exc:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
@@ -1470,8 +1497,24 @@ def latest(
         Skip the GPG verification check for the package to be installed
 
     refresh
-        Update the repo database of available packages prior to installing the
-        requested package.
+        This parameter controls whether or not the packge repo database is
+        updated prior to checking for the latest available version of the
+        requested packages.
+
+        If ``True``, the package database will be refreshed (``apt-get update``
+        or equivalent, depending on platform) before checking for the latest
+        available version of the requested packages.
+
+        If ``False``, the package database will *not* be refreshed before
+        checking.
+
+        If unset, then Salt treats package database refreshes differently
+        depending on whether or not a ``pkg`` state has been executed already
+        during the current Salt run. Once a refresh has been performed in a
+        ``pkg`` state, for the remainder of that Salt run no other refreshes
+        will be performed for ``pkg`` states which do not explicitly set
+        ``refresh`` to ``True``. This prevents needless additional refreshes
+        from slowing down the Salt run.
 
 
     Multiple Package Installation Options:
@@ -1546,7 +1589,6 @@ def latest(
         else:
             desired_pkgs = [name]
 
-    cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                                fromrepo=fromrepo,
@@ -1559,6 +1601,14 @@ def latest(
                 'comment': 'An error was encountered while checking the '
                            'newest available version of package(s): {0}'
                            .format(exc)}
+
+    try:
+        cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
 
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)

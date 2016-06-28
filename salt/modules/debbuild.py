@@ -7,7 +7,7 @@ Debian Package builder system
 This system allows for all of the components to build debs safely in chrooted
 environments. This also provides a function to generate debian repositories
 
-This module impliments the pkgbuild interface
+This module implements the pkgbuild interface
 '''
 
 # import python libs
@@ -19,9 +19,9 @@ import tempfile
 import shutil
 
 # Import salt libs
-import salt.utils
-from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+import salt.utils
 
 HAS_LIBS = False
 
@@ -103,8 +103,8 @@ def _get_repo_options_env(env):
 
         .. code-block:: yaml
 
-                - env:
-                  - OPTIONS : 'ask-passphrase'
+            - env:
+                - OPTIONS : 'ask-passphrase'
 
         .. warning::
 
@@ -139,15 +139,15 @@ def _get_repo_dists_env(env):
 
         .. code-block:: yaml
 
-                - env:
-                  - ORIGIN : 'jessie'
-                  - LABEL : 'salt debian'
-                  - SUITE : 'main'
-                  - VERSION : '8.1'
-                  - CODENAME : 'jessie'
-                  - ARCHS : 'amd64 i386 source'
-                  - COMPONENTS : 'main'
-                  - DESCRIPTION : 'SaltStack Debian package repo'
+            - env:
+                - ORIGIN : 'jessie'
+                - LABEL : 'salt debian'
+                - SUITE : 'main'
+                - VERSION : '8.1'
+                - CODENAME : 'jessie'
+                - ARCHS : 'amd64 i386 source'
+                - COMPONENTS : 'main'
+                - DESCRIPTION : 'SaltStack Debian package repo'
 
         .. warning::
 
@@ -164,15 +164,15 @@ def _get_repo_dists_env(env):
     # 1 | 'text string for repo field'
     # 2 | 'default value'
     dflts_dict = {
-                'OPTIONS': ('I', '', 'processed by _get_repo_options_env'),
-                'ORIGIN': ('O', 'Origin', 'SaltStack'),
-                'LABEL': ('O', 'Label', 'salt_debian'),
-                'SUITE': ('O', 'Suite', 'stable'),
-                'VERSION': ('O', 'Version', '8.1'),
-                'CODENAME': ('M', 'Codename', 'jessie'),
-                'ARCHS': ('M', 'Architectures', 'i386 amd64 source'),
-                'COMPONENTS': ('M', 'Components', 'main'),
-                'DESCRIPTION': ('O', 'Description', 'SaltStack debian package repo'),
+        'OPTIONS': ('I', '', 'processed by _get_repo_options_env'),
+        'ORIGIN': ('O', 'Origin', 'SaltStack'),
+        'LABEL': ('O', 'Label', 'salt_debian'),
+        'SUITE': ('O', 'Suite', 'stable'),
+        'VERSION': ('O', 'Version', '8.1'),
+        'CODENAME': ('M', 'Codename', 'jessie'),
+        'ARCHS': ('M', 'Architectures', 'i386 amd64 source'),
+        'COMPONENTS': ('M', 'Components', 'main'),
+        'DESCRIPTION': ('O', 'Description', 'SaltStack debian package repo'),
     }
 
     env_dists = ''
@@ -224,8 +224,8 @@ def _create_pbuilders(env):
 
         .. code-block:: yaml
 
-                - env:
-                  - DEB_BUILD_OPTIONS: 'nocheck'
+            - env:
+                - DEB_BUILD_OPTIONS: 'nocheck'
 
         .. warning::
 
@@ -288,7 +288,10 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     CLI Example:
 
-    Debian
+    **Debian**
+
+    .. code-block:: bash
+
         salt '*' pkgbuild.make_src_pkg /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control.tar.xz https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl SOURCE package and place it in
@@ -315,10 +318,6 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
             trgt = os.path.join(dest_dir, efile)
             shutil.copy(full, trgt)
             ret.append(trgt)
-
-        trgt = os.path.join(dest_dir, os.path.basename(spec_pathfile))
-        shutil.copy(spec_pathfile, trgt)
-        ret.append(trgt)
 
         return ret
 
@@ -386,7 +385,10 @@ def build(runas,
 
     CLI Example:
 
-    Debian
+    **Debian**
+
+    .. code-block:: bash
+
         salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for Debian using pbuilder
@@ -406,6 +408,12 @@ def build(runas,
         log.error('Failed to make src package')
         return ret
 
+    cmd = 'pbuilder --create'
+    __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+
+    # use default /var/cache/pbuilder/result
+    results_dir = '/var/cache/pbuilder/result'
+
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
         afile = os.path.basename(dsc)
@@ -414,38 +422,50 @@ def build(runas,
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
-            results_dir = tempfile.mkdtemp()
             try:
                 __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
-                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
 
-                cmd = 'pbuilder --create'
-                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-                cmd = 'pbuilder --build --buildresult {1} {0}'.format(
-                    dsc, results_dir)
+                cmd = 'pbuilder --update --override-config'
                 __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
+                cmd = 'pbuilder --build {0}'.format(dsc)
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+
+                # ignore local deps generated package file
                 for bfile in os.listdir(results_dir):
-                    full = os.path.join(results_dir, bfile)
-                    bdist = os.path.join(dest_dir, bfile)
-                    shutil.copy(full, bdist)
-                    ret.setdefault('Packages', []).append(bdist)
+                    if bfile != 'Packages':
+                        full = os.path.join(results_dir, bfile)
+                        bdist = os.path.join(dest_dir, bfile)
+                        shutil.copy(full, bdist)
+                        ret.setdefault('Packages', []).append(bdist)
+
             except Exception as exc:
                 log.error('Error building from {0}: {1}'.format(dsc, exc))
-            finally:
-                shutil.rmtree(results_dir)
+
+    # remove any Packages file created for local dependency processing
+    for pkgzfile in os.listdir(dest_dir):
+        if pkgzfile == 'Packages':
+            pkgzabsfile = os.path.join(dest_dir, pkgzfile)
+            os.remove(pkgzabsfile)
 
     shutil.rmtree(dsc_dir)
     return ret
 
 
-def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='root'):
+def make_repo(repodir,
+              keyid=None,
+              env=None,
+              use_passphrase=False,
+              gnupghome='/etc/salt/gpgkeys',
+              runas='root'):
     '''
     Given the repodir (directory to create repository in), create a Debian
     repository and optionally sign it and packages present. This state is
     best used with onchanges linked to your package building states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgbuild.make_repo /var/www/html
 
