@@ -58,8 +58,8 @@ Examples:
 
 Default: ``warning``
 
-The level of log record messages to send to the console.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
+The level of log record messages to send to the console. One of ``all``,
+``garbage``, ``trace``, ``debug``, ``profile``, ``info``, ``warning``,
 ``error``, ``critical``, ``quiet``.
 
 .. code-block:: yaml
@@ -75,9 +75,9 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
-``error``, ``critical``, ``quiet``.
+The level of messages to send to the log file. One of ``all``, ``garbage``,
+``trace``, ``debug``, ``profile``, ``info``, ``warning``, ``error``,
+``critical``, ``quiet``.
 
 .. code-block:: yaml
 
