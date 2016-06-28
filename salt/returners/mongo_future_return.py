@@ -289,8 +289,16 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
 
 def event_return(events):
     """
+    Return events to Mongodb server
+    """
+    conn, mdb = _get_conn(ret=None)
+    
+    if isinstance(events, list):
+        events = events[0]
+
     if isinstance(events, dict):
         log.debug(events)
+
         if float(version) > 2.3:
             mdb.events.insert_one(events.copy())
         else:
