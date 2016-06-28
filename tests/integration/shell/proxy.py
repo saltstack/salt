@@ -57,7 +57,7 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_user',
-            config={'user': 'unknown'},
+            configs={'minion':{'map':{'user': 'unknown'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist

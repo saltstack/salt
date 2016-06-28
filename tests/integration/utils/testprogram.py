@@ -18,14 +18,13 @@ import subprocess
 import sys
 import tempfile
 import time
-import types
 
 import yaml
 
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
-from salt.defaults import exitcodes
-from salt.ext import six
+import salt.defaults.exitcodes as exitcodes
+import salt.ext.six as six
 
 from salttesting import TestCase
 
@@ -46,14 +45,22 @@ class TestProgramMeta(type):
     Stack all inherited config_attrs and dirtree dirs from the base classes.
     '''
     def __new__(mcs, name, bases, attrs):
-        config_attrs = {}
+        config_vals = {}
+        config_attrs = set()
         dirtree = set()
+
         for base in bases:
+            config_vals.update(getattr(base, 'config_vals', {}))
             config_attrs.update(getattr(base, 'config_attrs', {}))
             dirtree.update(getattr(base, 'dirtree', []))
+
+        config_vals.update(attrs.get('config_vals', {}))
+        attrs['config_vals'] = config_vals
+
         config_attrs.update(attrs.get('config_attrs', {}))
-        dirtree.update(attrs.get('dirtree', []))
         attrs['config_attrs'] = config_attrs
+
+        dirtree.update(attrs.get('dirtree', []))
         attrs['dirtree'] = dirtree
 
         return super(TestProgramMeta, mcs).__new__(mcs, name, bases, attrs)
@@ -70,11 +77,21 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
     empty_config = ''
     config_file = ''
 
+    config_attrs = set([
+        'name',
+        'test_dir',
+        'config_dirs',
+    ])
+    config_vals = {
+    }
+    config_base = ''
+    config_dir = os.path.join('etc')
+    configs = {}
     config_types = (str, six.string_types,)
     config_caster = lambda x: str(x)
 
     dirtree = [
-        '&config_dir',
+        '&config_dirs',
     ]
 
     def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True, **kwargs):
@@ -84,8 +101,31 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self.shell = shell
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
-        self._config = kwargs.pop('config', copy.copy(self.empty_config))
-        self.config_file = kwargs.pop('config_file', self.config_file)
+        self._root_dir = kwargs.pop('root_dir', self.name)
+        self.config_dir = kwargs.pop('config_dir', copy.copy(self.config_dir))
+
+        config_attrs = copy.copy(self.config_attrs)
+        config_attrs.update(kwargs.pop('config_attrs', set()))
+        self.config_attrs = config_attrs
+
+        config_vals = copy.copy(self.config_vals)
+        config_vals.update(kwargs.pop('config_vals', {}))
+        self.config_vals = config_vals
+
+        config_base = copy.deepcopy(self.config_base)
+        config_base = self.config_merge(config_base, kwargs.pop('config_base', self.config_types[0]()))
+        self.config_base = config_base
+
+        configs = copy.deepcopy(self.configs)
+        for cname, cinfo in kwargs.pop('configs', {}).items():
+            target = configs.setdefault(cname, {})
+            if 'path' in cinfo:
+                target['path'] = cinfo['path']
+            if 'map' in cinfo:
+                target_map = target.setdefault('map', self.config_types[0]())
+                target_map = self.config_merge(target_map, cinfo['map'])
+                target['map'] = target_map
+        self.configs = configs
 
         if not self.name:
             if not self.program:
@@ -106,9 +146,32 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         pass
 
     @property
-    def root_dir(self):
+    def test_dir(self):
         '''Directory that will contains all of the static and dynamic files for the daemon'''
-        return os.path.join(self.parent_dir, self.name)
+        return os.path.join(self.parent_dir, self._root_dir)
+
+    def config_file_get(self, config):
+        '''Get the filename (viz. path) to the configuration file'''
+        cfgf = self.configs[config].get('path')
+        if cfgf:
+            cfgf.format(**self.config_subs())
+        else:
+            cfgf = os.path.join(self.config_dir, config)
+        return cfgf
+
+    def config_dir_get(self, config):
+        '''Get the parent directory for the configuration file'''
+        return os.path.dirname(self.config_file_get(config))
+
+    @property
+    def config_dirs(self):
+        '''Return a list of configuration directories'''
+        cdirs = [self.config_dir_get(config) for config in self.configs.keys()]
+        return cdirs
+
+    def abs_path(self, path):
+        '''Absolute path of file including the test_dir'''
+        return os.path.join(self.test_dir, path)
 
     @property
     def start_pid(self):
@@ -117,7 +180,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     @property
     def parent_dir(self):
-        '''Directory that contains everything generated for running scripts - possibly for multiple scripts.'''
+        '''
+        Directory that contains everything generated for running scripts - possibly
+        for multiple scripts.
+        '''
         if self._parent_dir is None:
             self.created_parent_dir = True
             self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-XXXX')
@@ -130,27 +196,21 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 raise ValueError('Parent path "{0}" exists but is not a directory'.format(self._parent_dir))
         return self._parent_dir
 
-    @property
-    def config_dir(self):
-        '''Directory of the config file'''
-        return os.path.join(self.root_dir, os.path.dirname(self.config_file) if self.config_file else '')
-
-    @property
-    def config_path(self):
-        '''The full path of the configuration file.'''
-        return os.path.join(self.root_dir, self.config_file)
-
-    def config_write(self):
+    def config_write(self, config):
         '''Write out the config to a file'''
-        if not self.config_file:
+        if not config:
             return
-        with open(self.config_path, 'w') as cfo:
-            cfg = self.config_stringify()
-            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(
-                self.name, self.config_path, cfg
-            ))
+        cpath = self.abs_path(self.config_file_get(config))
+        with open(cpath, 'w') as cfo:
+            cfg = self.config_stringify(config)
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
             cfo.flush()
+
+    def configs_write(self):
+        '''Write all configuration files'''
+        for config in self.configs:
+            self.config_write(config)
 
     def config_type(self, config):
         '''Check if a configuration is an acceptable type.'''
@@ -162,9 +222,18 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
             config = self.config_caster(config)
         return config
 
-    def config_stringify(self):
+    def config_subs(self):
+        '''Get the substitution values for use to generate the config'''
+        subs = dict([(attr, getattr(self, attr, None)) for attr in self.config_attrs])
+        for key, val in self.config_vals.items():
+            subs[key] = val.format(**subs)
+        return subs
+
+    def config_stringify(self, config):
         '''Get the configuration as a string'''
-        return self.config
+        cfg = self.config_get(config)
+        cfg.format(**self.config_subs())
+        return cfg
 
     def config_merge(self, base, overrides):
         '''Merge two configuration hunks'''
@@ -172,43 +241,49 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         overrides = self.config_cast(overrides)
         return ''.join([base, overrides])
 
-    @property
-    def config(self):
+    def config_get(self, config):
         '''Get the configuration data'''
-        return self._config
+        return self.configs[config]
 
-    @config.setter
-    def config(self, val):
+    def config_set(self, config, val):
         '''Set the configuration data'''
-        if val is None:
-            val = ''
-        self._config = self.config_cast(val)
+        self.configs[config] = val
 
     def make_dirtree(self):
         '''Create directory structure.'''
+        subdirs = []
         for branch in self.dirtree:
-            if branch and isinstance(branch, six.string_types) and branch[0] == '&':
-                dirattr = getattr(self, branch[1:], None)
-                if not dirattr:
+            LOG.debug('checking dirtree: {0}'.format(branch))
+            if not branch:
+                continue
+            if isinstance(branch, six.string_types) and branch[0] == '&':
+                LOG.debug('Looking up dirtree branch "{0}"'.format(branch))
+                try:
+                    dirattr = getattr(self, branch[1:], None)
+                    LOG.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
+                except AttributeError:
                     raise ValueError(
-                        'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}"'.format(
-                            branch, self.__class__.__name__, self.name,
+                        'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}: {3}"'.format(
+                            branch, self.__class__.__name__, self.name, dir(self),
                         )
                     )
-                subdir = ''
+
+                if not dirattr:
+                    continue
+
                 if isinstance(dirattr, six.string_types):
-                    subdir = dirattr
-                elif isinstance(dirattr, types.FunctionType):
-                    subdir = dirattr(self)
+                    subdirs.append(dirattr)
+                elif hasattr(dirattr, '__iter__'):
+                    subdirs.extend(dirattr)
                 else:
                     raise TypeError("Branch type of {0} in dirtree is unhandled".format(branch))
-                if not subdir:
-                    continue
             elif isinstance(branch, six.string_types):
-                subdir = branch
+                subdirs.append(branch)
             else:
                 raise TypeError("Branch type of {0} in dirtree is unhandled".format(branch))
-            path = os.path.join(self.root_dir, subdir)
+
+        for subdir in subdirs:
+            path = self.abs_path(subdir)
             if not os.path.exists(path):
                 LOG.debug('make_dirtree: {0}'.format(path))
                 os.makedirs(path)
@@ -221,7 +296,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
         if not self._setup_done:
             self.make_dirtree()
-            self.config_write()
+            self.configs_write()
             self._setup_done = True
 
     def cleanup(self, *args, **kwargs):
@@ -235,8 +310,8 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 self.process.wait()
             except OSError:
                 pass
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
+        if os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
         if self.created_parent_dir and os.path.exists(self.parent_dir):
             shutil.rmtree(self.parent_dir)
 
@@ -469,8 +544,20 @@ class TestSaltProgramMeta(TestProgramMeta):
                 )
             attrs['script'] = script
 
-        if 'config_file' in attrs and os.path.sep not in attrs['config_file']:
-            attrs['config_file'] = os.path.join('etc', 'salt', attrs['config_file'])
+        config_base = {}
+        configs = {}
+
+        for base in bases:
+            if 'Salt' not in base.__name__:
+                continue
+            config_base.update(getattr(base, 'config_base', {}))
+            configs.update(getattr(base, 'configs', {}))
+
+        config_base.update(attrs.get('config_base', {}))
+        attrs['config_base'] = config_base
+
+        configs.update(attrs.get('configs', {}))
+        attrs['configs'] = configs
 
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
@@ -482,42 +569,34 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     '''
     config_types = (dict,)
     config_caster = lambda x: yaml.safe_load(x)
-    config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
+    config_attrs = set([
+        'log_dir',
+        'script_dir',
+    ])
+    config_base = {
+        'root_dir': '{test_dir}',
     }
-    empty_config = {}
+    configs = {}
+    config_dir = os.path.join('etc', 'salt')
+
+    log_dir = os.path.join('var', 'log', 'salt')
 
     dirtree = [
-        os.path.join('var', 'log', 'salt'),
+        '&log_dir',
         '&script_dir',
     ]
 
     script = ''
+    script_dir = 'bin'
 
     def __init__(self, *args, **kwargs):
         if len(args) < 2 and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
         super(TestSaltProgram, self).__init__(*args, **kwargs)
-        self.program = self.script_path
+        self.program = self.abs_path(os.path.join(self.script_dir, self.script))
         path = self.env.get('PATH', os.getenv('PATH'))
-        self.env['PATH'] = ':'.join([self.script_dir, path])
-
-    @property
-    def script_dir(self):
-        '''The directory where the script is written.'''
-        return os.path.join(self.parent_dir, 'bin')
-
-    @property
-    def script_path(self):
-        '''Full path of the run-time script.'''
-        return os.path.join(self.script_dir, self.script)
-
-    def config_cast(self, config):
-        if isinstance(config, six.string_types):
-            config = yaml.safe_load(config)
-        return config
+        self.env['PATH'] = ':'.join([self.abs_path(self.script_dir), path])
 
     def config_merge(self, base, overrides):
         _base = self.config_cast(copy.deepcopy(base))
@@ -526,14 +605,36 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         _base.update(copy.deepcopy(_overrides))
         return _base
 
-    @property
-    def config(self):
-        attr_vals = dict([(k, getattr(self, v if v else k)) for k, v in self.config_attrs.items()])
-        merged = self.config_merge(self._config, attr_vals)
-        return merged
+    def config_get(self, config):
+        cfg_base = {}
+        for key, val in self.config_base.items():
+            _val = val
+            if val and isinstance(val, six.string_types) and val[0] == '&':
+                _val = getattr(self, val[1:], None)
+                if _val is None:
+                    continue
+            cfg_base[key] = _val
+        if config in self.configs:
+            cfg = {}
+            for key, val in self.configs.get(config, {}).get('map', {}).items():
+                _val = val
+                if val and isinstance(val, six.string_types) and val[0] == '&':
+                    _val = getattr(self, val[1:], None)
+                    if _val is None:
+                        continue
+                cfg[key] = _val
+            cfg = self.config_merge(cfg_base, cfg)
+        LOG.debug('Generated config => {0}'.format(cfg))
+        return cfg
 
-    def config_stringify(self):
-        return yaml.safe_dump(self.config, default_flow_style=False)
+    def config_stringify(self, config):
+        '''Transform the configuration data into a string (suitable to write to a file)'''
+        subs = self.config_subs()
+        cfg = {}
+        for key, val in self.config_get(config).items():
+            cfg[key] = val.format(**subs)
+        scfg = yaml.safe_dump(cfg, default_flow_style=False)
+        return scfg
 
     def setup(self, *args, **kwargs):
         super(TestSaltProgram, self).setup(*args, **kwargs)
@@ -549,30 +650,32 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
             lines.pop(0)
         lines.insert(0, '#!{0}\n'.format(sys.executable))
 
-        with open(self.script_path, 'w') as sdo:
+        script_path = self.abs_path(os.path.join(self.script_dir, self.script))
+        LOG.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
+        with open(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 
-        os.chmod(self.script_path, 0o755)
+        os.chmod(script_path, 0o755)
 
     def run(self, **kwargs):
         if not kwargs.get('verbatim_args'):
             args = kwargs.setdefault('args', [])
             if '-c' not in args and '--config-dir' not in args:
-                args.extend(['--config-dir', self.config_dir])
+                args.extend(['--config-dir', self.abs_path(self.config_dir)])
         return super(TestSaltProgram, self).run(**kwargs)
 
 
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
 
-    config_file = 'minion'
+    pass
 
 
 class TestProgramSaltRun(TestSaltProgram):
     '''Class to manage salt-run'''
 
-    config_file = 'minion'
+    pass
 
 
 class TestDaemon(TestProgram):
@@ -582,10 +685,16 @@ class TestDaemon(TestProgram):
 
     script = None
     pid_file = None
+    pid_dir = os.path.join('var', 'run')
+
+    dirtree = [
+        '&pid_dir',
+    ]
 
     def __init__(self, *args, **kwargs):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
+        self.pid_dir = kwargs.pop('pid_dir', self.pid_dir)
         self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
@@ -594,16 +703,17 @@ class TestDaemon(TestProgram):
 
     @property
     def pid_path(self):
-        '''Full path of the PID file'''
-        return os.path.join(self.root_dir, 'var', 'run', self.pid_file)
+        '''Path to the pid file created by the daemon'''
+        return os.path.join(self.pid_dir, self.pid_file) if os.path.sep not in self.pid_file else self.pid_file
 
     @property
     def daemon_pid(self):
         '''Return the daemon PID'''
-        pid = None
-        if salt.utils.process.check_pidfile(self.pid_path):
-            pid = salt.utils.process.get_pidfile(self.pid_path)
-        return pid
+        daemon_pid = None
+        pid_path = self.abs_path(self.pid_path)
+        if salt.utils.process.check_pidfile(pid_path):
+            daemon_pid = salt.utils.process.get_pidfile(pid_path)
+        return daemon_pid
 
     def wait_for_daemon_pid(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
@@ -613,7 +723,9 @@ class TestDaemon(TestProgram):
             if pid:
                 return pid
             if endtime < time.time():
-                raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(self.name, self.pid_path))
+                raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(
+                    self.name, self.abs_path(self.pid_path)
+                ))
             time.sleep(0.2)
 
     def is_running(self):
@@ -662,11 +774,11 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    config_file = 'master'
+    configs = {'master':{}}
 
     def __init__(self, *args, **kwargs):
-        cfg = kwargs.setdefault('config', {})
-        _ = cfg.setdefault('user', getpass.getuser())
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
 
 
@@ -675,14 +787,11 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    config_attrs = {
-        'id': 'name',
-    }
-    config_file = 'minion'
+    configs = {'minion':{'map':{'id':'{name}'}}}
 
     def __init__(self, *args, **kwargs):
-        cfg = kwargs.setdefault('config', {})
-        _ = cfg.setdefault('user', getpass.getuser())
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltMinion, self).__init__(*args, **kwargs)
 
 
@@ -697,7 +806,16 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
     Manager for salt-syndic daemon.
     '''
-    config_file = 'master'
+
+    configs = {
+        'master':{},
+        'minion':{'map':{'id':'{name}',},},
+    }
+
+    def __init__(self, *args, **kwargs):
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltSyndic, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltProxy(TestSaltDaemon):
@@ -705,12 +823,12 @@ class TestDaemonSaltProxy(TestSaltDaemon):
     Manager for salt-proxy daemon.
     '''
 
-    config_file = 'proxy'
     pid_file = 'salt-minion.pid'
+    configs = {'proxy':{}}
 
     def __init__(self, *args, **kwargs):
-        cfg = kwargs.setdefault('config', {})
-        _ = cfg.setdefault('user', getpass.getuser())
+        cfgb = kwargs.setdefault('config_base', {})
+        _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
 
     def run(self, **kwargs):
@@ -756,7 +874,7 @@ class TestProgramCase(TestCase):
                 ex_val,
                 ex_status,
                 _message,
-                _stderr,
+                _stdout,
                 _stderr,
             )
         )
