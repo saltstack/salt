@@ -324,7 +324,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
         return False
 
 
-def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
+def convert_to_group_ids(groups, vpc_id=None, vpc_name=None, region=None, key=None,
                          keyid=None, profile=None):
     '''
     Given a list of security groups and a vpc_id, convert_to_group_ids will
@@ -338,8 +338,7 @@ def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
     group_ids = []
     for group in groups:
         if re.match('sg-.*', group):
-            log.debug('group {0} is a group id. get_group_id not called.'
-                      .format(group))
+            log.debug('group {0} is a group id. get_group_id not called.'.format(group))
             group_ids.append(group)
         else:
             log.debug('calling boto_secgroup.get_group_id for'
@@ -347,10 +346,12 @@ def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
             group_id = get_group_id(name=group, vpc_id=vpc_id,
                                     vpc_name=vpc_name, region=region,
                                     key=key, keyid=keyid, profile=profile)
-            log.debug('group name {0} has group id {1}'.format(
-                group, group_id)
-            )
-            group_ids.append(str(group_id))
+            if not group_id:
+                log.warning('group name {0} did not resolve to a group ID'.format(group))
+            else:
+                log.debug('group name {0} has group id {1}'.format(group, group_id))
+                group_ids.append(str(group_id))
+
     log.debug('security group contents {0} post-conversion'.format(group_ids))
     return group_ids
 
