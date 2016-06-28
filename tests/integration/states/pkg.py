@@ -477,6 +477,41 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_011_latest(self, grains=None):
+        '''
+        This tests pkg.latest with a package that doesn't have a nonzero epoch
+        '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
+        os_family = grains.get('os_family', '')
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+        version = self.run_function('pkg.latest_version',
+                                    [target],
+                                    refresh=False)
+
+        # If this assert fails, we need to find new targets, this test needs to
+        # be able to test successful installation of packages, so this package
+        # needs to not be installed before we run the states below
+        self.assertTrue(version)
+
+        # No need to refresh again, we would have done so above when getting
+        # the latest version
+        ret = self.run_state('pkg.latest', name=target, refresh=False)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('pkg.removed', name=target)
+        self.assertSaltTrueReturn(ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PkgTest)
