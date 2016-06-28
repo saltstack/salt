@@ -214,7 +214,7 @@ class PkgTest(integration.ModuleCase,
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        #self.assertFalse(any(version.values()))
+        self.assertFalse(any(version.values()))
 
         ret = self.run_state('pkg.installed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
