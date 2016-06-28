@@ -630,6 +630,13 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         return super(TestSaltProgram, self).run(**kwargs)
 
 
+class TestProgramSalt(TestSaltProgram):
+    '''Class to manage salt'''
+
+    configs = {'master':{}}
+    script = 'salt'
+
+
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
 
