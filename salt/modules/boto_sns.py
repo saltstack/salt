@@ -178,6 +178,30 @@ def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, prof
     return True
 
 
+def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, profile=None):
+    '''
+    Unsubscribe a specific SubscriptionArn of a topic.
+
+    CLI example to unsubscribe a subscription to a topic::
+
+        salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if subscription_arn.startswith('arn:aws:sns:') is False:
+        return False
+
+    try:
+        conn.unsubscribe(subscription_arn)
+        log.info('Unsubscribe {0} to {1} topic'.format(subscription_arn, topic))
+    except Exception as e:
+        log.error('Unsubscribe Error: {0}'.format(e))
+        return False
+    else:
+        __context__.pop(_subscriptions_cache_key(topic), None)
+        return True
+
+
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
     '''
     Returns the full ARN for a given topic name.
