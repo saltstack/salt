@@ -1,18 +1,15 @@
 # basic config
 master: localhost
 master_port: 64506
-tcp_pub_port: 64512
-tcp_pull_port: 64513
 interface: 127.0.0.1
-root_dir: /tmp/salttest
+tcp_pub_port: 64510
+tcp_pull_port: 64511
 id: minion
-#acceptance_wait_time: = 1
 open_mode: True
 log_file: minion.log
 log_level_logfile: debug
-#loop_interval: 0.05
-config_dir: /tmp/salt-tests-tmpdir
 pidfile: minion.pid
+sock_dir: minion_sock
 
 # module extension
 test.foo: baz
