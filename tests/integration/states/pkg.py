@@ -25,6 +25,8 @@ import salt.utils
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+__testcontext__ = {}
+
 _PKG_TARGETS = {
     'Arch': ['python2-django', 'libpng'],
     'Debian': ['python-plist', 'apg'],
@@ -116,6 +118,15 @@ class PkgTest(integration.ModuleCase,
     '''
     pkg.installed state tests
     '''
+    def setUp(self):
+        '''
+        Ensure that we only refresh the first time we run a test
+        '''
+        super(PkgTest, self).setUp()
+        if 'refresh' not in __testcontext__:
+            self.run_function('pkg.refresh_db')
+            __testcontext__['refresh'] = True
+
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_001_installed(self, grains=None):
@@ -142,7 +153,7 @@ class PkgTest(integration.ModuleCase,
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state('pkg.installed', name=target)
+        ret = self.run_state('pkg.installed', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
@@ -180,14 +191,19 @@ class PkgTest(integration.ModuleCase,
                 time.sleep(5)
 
         target = pkg_targets[0]
-        version = self.run_function('pkg.latest_version', [target])
+        version = self.run_function('pkg.latest_version',
+                                    [target],
+                                    refresh=False)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
-        ret = self.run_state('pkg.installed', name=target, version=version)
+        ret = self.run_state('pkg.installed',
+                             name=target,
+                             version=version,
+                             refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
@@ -216,7 +232,10 @@ class PkgTest(integration.ModuleCase,
         # packages need to not be installed before we run the states below
         self.assertFalse(any(version.values()))
 
-        ret = self.run_state('pkg.installed', name=None, pkgs=pkg_targets)
+        ret = self.run_state('pkg.installed',
+                             name=None,
+                             pkgs=pkg_targets,
+                             refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
@@ -253,7 +272,9 @@ class PkgTest(integration.ModuleCase,
                     break
                 time.sleep(5)
 
-        version = self.run_function('pkg.latest_version', [pkg_targets[0]])
+        version = self.run_function('pkg.latest_version',
+                                    [pkg_targets[0]],
+                                    refresh=False)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -262,7 +283,10 @@ class PkgTest(integration.ModuleCase,
 
         pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
 
-        ret = self.run_state('pkg.installed', name=None, pkgs=pkgs)
+        ret = self.run_state('pkg.installed',
+                             name=None,
+                             pkgs=pkgs,
+                             refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
@@ -297,7 +321,9 @@ class PkgTest(integration.ModuleCase,
             # below
             self.assertFalse(bool(version))
 
-            ret = self.run_state('pkg.installed', name=target)
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 refresh=False)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
@@ -333,7 +359,9 @@ class PkgTest(integration.ModuleCase,
                     and grains['osrelease'].startswith('5.'):
                 target = target.replace('.i686', '.i386')
 
-            version = self.run_function('pkg.latest_version', [target])
+            version = self.run_function('pkg.latest_version',
+                                        [target],
+                                        refresh=False)
 
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
@@ -341,7 +369,10 @@ class PkgTest(integration.ModuleCase,
             # below
             self.assertTrue(bool(version))
 
-            ret = self.run_state('pkg.installed', name=target, version=version)
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
@@ -363,13 +394,15 @@ class PkgTest(integration.ModuleCase,
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
         if target:
-            version = self.run_function('pkg.latest_version', [target])
+            version = self.run_function('pkg.latest_version',
+                                        [target],
+                                        refresh=False)
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
             # the target needs to not be installed before we run the
             # pkg.installed state below
             self.assertTrue(bool(version))
-            ret = self.run_state('pkg.installed', name=target)
+            ret = self.run_state('pkg.installed', name=target, refresh=False)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
@@ -391,13 +424,18 @@ class PkgTest(integration.ModuleCase,
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
         if target:
-            version = self.run_function('pkg.latest_version', [target])
+            version = self.run_function('pkg.latest_version',
+                                        [target],
+                                        refresh=False)
             # If this assert fails, we need to find a new target. This test
             # needs to be able to test successful installation of the package, so
             # the target needs to not be installed before we run the
             # pkg.installed state below
             self.assertTrue(bool(version))
-            ret = self.run_state('pkg.installed', name=target, version=version)
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
@@ -414,7 +452,9 @@ class PkgTest(integration.ModuleCase,
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
-        ret = self.run_state('pkg.installed', name='bash-completion')
+        ret = self.run_state('pkg.installed',
+                             name='bash-completion',
+                             refresh=False)
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.is_windows(), 'minion is windows')
