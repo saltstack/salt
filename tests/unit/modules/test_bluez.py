@@ -208,7 +208,3 @@ class BluezTestCase(TestCase):
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {'service.stop': mock}):
             self.assertEqual(bluez.stop(), "Ok")
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BluezTestCase, needs_daemon=False)
