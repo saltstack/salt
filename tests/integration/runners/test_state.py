@@ -6,12 +6,6 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import
 
-# Import Salt Testing Libs
-from salttesting.helpers import (
-    ensure_in_syspath,
-)
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import integration
 
@@ -48,8 +42,3 @@ class StateRunnerTest(integration.ShellCase):
         # Now test that some expected good sample output is present in the return.
         for item in good_out:
             self.assertIn(item, ret_output)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateRunnerTest)
