@@ -157,8 +157,3 @@ class PkgresTestCase(TestCase):
                              'A')
 
         self.assertTrue(pkg_resource.check_extra_requirements('a', False))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgresTestCase, needs_daemon=False)
