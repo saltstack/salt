@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import varnish
 
@@ -86,8 +82,3 @@ class VarnishTestCase(TestCase):
                           return_value={'retcode': False,
                                         'stdout': 'A .1\nB .2\n'}):
             self.assertEqual(varnish.param_show('param'), {'A': '.1'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VarnishTestCase, needs_daemon=False)
