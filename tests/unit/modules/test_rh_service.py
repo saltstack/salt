@@ -16,10 +16,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rh_service
 
@@ -352,8 +348,3 @@ class RhServiceTestCase(TestCase):
             with patch.object(rh_service, '_sysv_is_enabled',
                               self._m_bool(False)):
                 self.assertTrue(rh_service.disabled('salt-api'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RhServiceTestCase, needs_daemon=False)
