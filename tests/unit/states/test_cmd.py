@@ -14,10 +14,7 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import cmd
@@ -309,8 +306,3 @@ class CmdTestCase(TestCase):
                         ' please use cmd.wait or cmd.wait_script')
                 ret.update({'comment': comt})
                 self.assertDictEqual(cmd.mod_watch(name, sfun='salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CmdTestCase, needs_daemon=False)
