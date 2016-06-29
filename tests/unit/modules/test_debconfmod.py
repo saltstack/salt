@@ -89,8 +89,3 @@ class DebconfmodTestCase(TestCase):
             mock = MagicMock(return_value=None)
             with patch.object(debconfmod, '_set_file', mock):
                 self.assertFalse(debconfmod.set_file('path'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DebconfmodTestCase, needs_daemon=False)
