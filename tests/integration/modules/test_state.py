@@ -8,8 +8,6 @@ import textwrap
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -81,7 +79,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        ret = self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.request', mods='modules.test_state.requested')
         result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
         self.assertEqual(result, None)
 
@@ -91,7 +89,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.request', mods='modules.test_state.requested')
         ret = self.run_function('state.check_request')
         result = ret['default']['test_run']['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
         self.assertEqual(result, None)
@@ -102,7 +100,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.request', mods='modules.test_state.requested')
         ret = self.run_function('state.clear_request')
         self.assertTrue(ret)
 
@@ -112,7 +110,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.request', mods='modules.test_state.requested')
         ret = self.run_function('state.run_request')
         result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
         self.assertTrue(result)
@@ -123,7 +121,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.request', mods='modules.test_state.requested')
         self.run_function('state.clear_request')
         ret = self.run_function('state.run_request')
         self.assertEqual(ret, {})
@@ -1093,7 +1091,3 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn(bar_state, state_run)
         self.assertEqual(state_run[bar_state]['comment'],
                          'Command "echo bar" run')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateModuleTest)
