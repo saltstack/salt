@@ -10,10 +10,6 @@ import os
 import yaml
 import shutil
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 # Import salt libs
 import integration
 import salt.utils
@@ -81,7 +77,7 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             with_retcode=True
         )
         try:
-            self.assertIn("'doc.runner:'", ret[0])
+            self.assertIn("'doc.test_runner:'", ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:
@@ -97,8 +93,3 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RunTest)
