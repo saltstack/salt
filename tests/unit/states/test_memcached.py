@@ -13,10 +13,7 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import memcached
@@ -101,8 +98,3 @@ class MemcachedTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'key deleted': 'foo', 'value': True}})
                 self.assertDictEqual(memcached.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MemcachedTestCase, needs_daemon=False)
