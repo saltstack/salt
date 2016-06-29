@@ -5,15 +5,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
@@ -53,9 +50,3 @@ class PillarModuleTestCase(TestCase):
     @patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1))
     def test_ls(self):
         self.assertEqual(pillarmod.ls(), ['a', 'b'])
-
-
-# gracinet: not sure this is really useful, but other test modules have this as well
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PillarModuleTestCase, needs_daemon=False)
