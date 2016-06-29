@@ -8,9 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch
-ensure_in_syspath('../../')
 
 from salt.modules import disk
 #usage_size = {'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000}
@@ -129,8 +127,3 @@ class DiskTestCase(TestCase):
                     'blockdev --setra 512 --setfra 512 /dev/sda',
                     python_shell=False
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DiskTestCase, needs_daemon=False)
