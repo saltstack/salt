@@ -81,8 +81,3 @@ class DnsmasqTestCase(TestCase):
                                  {'A': 'B',
                                   'unparsed': ['line here',
                                                'second line']})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DnsmasqTestCase, needs_daemon=False)
