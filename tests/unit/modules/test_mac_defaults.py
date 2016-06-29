@@ -8,13 +8,10 @@ from salt.modules import mac_defaults as macdefaults
 
 # Import Salt Testing Libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 macdefaults.__salt__ = {}
 
@@ -86,8 +83,3 @@ class MacDefaultsTestCase(TestCase):
         with patch.dict(macdefaults.__salt__, {'cmd.run_all': mock}):
             macdefaults.delete('com.apple.CrashReporter', 'Crash', user="frank")
             mock.assert_called_once_with('defaults delete "com.apple.CrashReporter" "Crash"', output_loglevel='debug', runas="frank")
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacDefaultsTestCase, needs_daemon=False)
