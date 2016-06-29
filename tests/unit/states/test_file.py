@@ -7,10 +7,11 @@ from dateutil.relativedelta import relativedelta
 import json
 import pprint
 import tempfile
+import os
+import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -18,8 +19,6 @@ from salttesting.mock import (
     call,
     mock_open,
     patch)
-
-ensure_in_syspath('../../')
 
 # Import third party libs
 import yaml
@@ -32,8 +31,6 @@ import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
 import salt
 import salt.utils
-import os
-import shutil
 
 filestate.__env__ = 'base'
 filestate.__salt__ = {'file.manage_file': False}
@@ -1908,9 +1905,3 @@ class FileTestCase(TestCase):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileTestCase, needs_daemon=False)
-    run_tests(TestFileState, needs_daemon=False)
