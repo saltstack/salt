@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    unit.loader
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.integration.loader.test_loader
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader
 '''
@@ -16,14 +16,10 @@ import collections
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-import integration  # pylint: disable=import-error
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
+import integration
 import salt.ext.six as six
 from salt.ext.six.moves import range
 from salt.config import minion_config
