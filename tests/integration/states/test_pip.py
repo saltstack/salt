@@ -18,11 +18,9 @@ import shutil
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains,
     with_system_user
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -478,8 +476,3 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PipStateTest)
