@@ -5,14 +5,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
 
 # Import Salt Libs
-ensure_in_syspath('../../')
 from salt.modules import ssh
 from salt.exceptions import CommandExecutionError
 
@@ -49,8 +47,3 @@ class SSHAuthKeyTestCase(TestCase):
 
         path = '/home/%dude'
         self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHAuthKeyTestCase, needs_daemon=False)
