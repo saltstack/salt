@@ -12,10 +12,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 from salt.states import postgres_privileges
 
 
