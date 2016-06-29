@@ -4,14 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from mock import call
-
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    call
 )
 
 # Import Salt Libs
@@ -442,8 +441,3 @@ class GentooServicesTestCase(TestCase):
 
     def __services(self, services):
         return '\n'.join([' | '.join([svc, ' '.join(services[svc])]) for svc in services])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GentooServicesTestCase, needs_daemon=False)
