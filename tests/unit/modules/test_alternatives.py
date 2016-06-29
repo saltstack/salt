@@ -15,8 +15,6 @@ from salttesting import skipIf, TestCase
 from salttesting.helpers import TestsLoggingHandler
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
-ensure_in_syspath('../../')
-
 # Import salt libs
 from salt.modules import alternatives
 
