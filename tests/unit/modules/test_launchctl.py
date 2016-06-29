@@ -127,8 +127,3 @@ class LaunchctlTestCase(TestCase):
         with patch.object(launchctl, 'stop', return_value=None):
             with patch.object(launchctl, 'start', return_value=True):
                 self.assertTrue(launchctl.restart('job_label'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LaunchctlTestCase, needs_daemon=False)
