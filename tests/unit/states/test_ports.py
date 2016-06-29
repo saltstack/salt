@@ -13,10 +13,7 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import SaltInvocationError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import ports
@@ -139,8 +136,3 @@ class PortsTestCase(TestCase):
                     self.assertDictEqual(ports.installed(name,
                                                          [{'salt': 'salt'}]),
                                          ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PortsTestCase, needs_daemon=False)
