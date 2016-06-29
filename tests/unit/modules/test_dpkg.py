@@ -103,8 +103,3 @@ class DpkgTestCase(TestCase):
                                        'stdout': 'Salt'})
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(dpkg.file_dict('httpd'), 'Error:  error')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DpkgTestCase, needs_daemon=False)
