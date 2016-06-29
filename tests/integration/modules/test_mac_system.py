@@ -9,9 +9,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from salttesting.helpers import destructiveTest
 from salt.ext.six.moves import range
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -256,8 +255,3 @@ class MacSystemModuleTest(integration.ModuleCase):
         self.assertIn(
             'Invalid value passed for arch',
             self.run_function('system.set_boot_arch', ['spongebob']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacSystemModuleTest)
