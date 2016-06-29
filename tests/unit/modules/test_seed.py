@@ -19,10 +19,6 @@ from salttesting.mock import (
 # Import Salt Libs
 import salt.utils.odict
 from salt.modules import seed
-from salttesting.helpers import ensure_in_syspath
-
-
-ensure_in_syspath('../../')
 
 # Globals
 seed.__salt__ = {}
@@ -91,8 +87,3 @@ class SeedTestCase(TestCase):
                                                   return_value=None):
                                     self.assertFalse(seed.apply_('path',
                                                                  install=False))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SeedTestCase, needs_daemon=False)
