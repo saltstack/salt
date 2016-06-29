@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rabbitmq
 from salt.exceptions import CommandExecutionError
@@ -406,8 +402,3 @@ class RabbitmqTestCase(TestCase):
                                             'pkg.version': mock_pkg}):
             self.assertDictEqual(rabbitmq.disable_plugin('salt'),
                                  {'Disabled': 'saltstack'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqTestCase, needs_daemon=False)
