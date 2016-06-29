@@ -8,8 +8,7 @@ import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 from integration import ModuleCase, SaltReturnAssertsMixIn
@@ -698,8 +697,3 @@ class ServiceTest(ModuleCase,
         self.assertSaltTrueReturn(already_mod_watch_ret)
         self.assertInSaltComment('Service is already stopped', already_mod_watch_ret)
         self.assertSaltStateChangesEqual(already_mod_watch_ret, {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServiceTest)
