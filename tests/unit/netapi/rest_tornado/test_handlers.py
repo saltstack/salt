@@ -8,8 +8,6 @@ import os
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
 import integration  # pylint: disable=import-error
 
 # Import Salt libs
@@ -693,8 +691,3 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         ws = yield websocket_connect(request)
         ws.write_message('websocket client ready')
         ws.close()
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestBaseSaltAPIHandler, TestSaltAuthHandler, needs_daemon=False)
