@@ -13,10 +13,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import ini_manage
 
@@ -128,8 +124,3 @@ class IniManageTestCase(TestCase):
             comt = ('No anomaly detected')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.sections_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IniManageTestCase, needs_daemon=False)
