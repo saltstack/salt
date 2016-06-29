@@ -204,8 +204,3 @@ class ApacheTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open()):
             self.assertEqual(apache.config('/ports.conf',
                                            [{'Listen': '22'}]), 'Listen 22')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ApacheTestCase, needs_daemon=False)
