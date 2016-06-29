@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt.utils.s3
 from salt.modules import s3
@@ -83,8 +79,3 @@ class S3TestCase(TestCase):
                                         'role_arn')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.put('bucket'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(S3TestCase, needs_daemon=False)
