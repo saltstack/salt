@@ -7,8 +7,6 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -57,8 +55,3 @@ class VirtualenvModuleTest(integration.ModuleCase):
 
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtualenvModuleTest)
