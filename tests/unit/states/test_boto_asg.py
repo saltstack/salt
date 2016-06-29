@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_asg
 
@@ -117,8 +113,3 @@ class BotoAsgTestCase(TestCase):
                 comt = ('Autoscale group does not exist.')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(boto_asg.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoAsgTestCase, needs_daemon=False)
