@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     Mock,
@@ -16,8 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import dockerng as dockerng_mod
@@ -618,8 +615,3 @@ class DockerngTestCase(TestCase):
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
                                             'old': 'stopped'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DockerngTestCase, needs_daemon=False)
