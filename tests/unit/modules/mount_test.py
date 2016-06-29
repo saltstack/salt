@@ -89,35 +89,62 @@ class MountTestCase(TestCase):
             self.assertEqual(mount.fstab(), {})
 
         mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(os.path, 'isfile', mock):
+                file_data = '\n'.join(['#',
+                                       'A B C D,E,F G H'])
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=file_data),
+                           create=True) as m:
+                    m.return_value.__iter__.return_value = file_data.splitlines()
+                    self.assertEqual(mount.fstab(), {'B': {'device': 'A',
+                                                           'dump': 'G',
+                                                           'fstype': 'C',
+                                                           'opts': ['D', 'E', 'F'],
+                                                           'pass': 'H'}})
+
+    def test_vfstab(self):
+        '''
+        List the content of the vfstab
+        '''
+        mock = MagicMock(return_value=False)
         with patch.object(os.path, 'isfile', mock):
-            file_data = '\n'.join(['#',
-                                   'A B C D,E,F G H'])
-            with patch('salt.utils.fopen',
-                       mock_open(read_data=file_data),
-                       create=True) as m:
-                m.return_value.__iter__.return_value = file_data.splitlines()
-                self.assertEqual(mount.fstab(), {'B': {'device': 'A',
-                                                       'dump': 'G',
-                                                       'fstype': 'C',
-                                                       'opts': ['D', 'E', 'F'],
-                                                       'pass': 'H'}})
+            self.assertEqual(mount.vfstab(), {})
+
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'kernel': 'SunOS'}):
+            with patch.object(os.path, 'isfile', mock):
+                file_data = '\n'.join(['#',
+                                       'swap        -   /tmp                tmpfs    -   yes    size=2048m'])
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=file_data),
+                           create=True) as m:
+                    m.return_value.__iter__.return_value = file_data.splitlines()
+                    self.assertEqual(mount.fstab(), {'/tmp': {'device': 'swap',
+                                                              'device_fsck': '-',
+                                                              'fstype': 'tmpfs',
+                                                              'mount_at_boot': 'yes',
+                                                              'opts': ['size=2048m'],
+                                                              'pass_fsck': '-'}})
 
     def test_rm_fstab(self):
         '''
         Remove the mount point from the fstab
         '''
         mock_fstab = MagicMock(return_value={})
-        with patch.object(mount, 'fstab', mock_fstab):
-            with patch('salt.utils.fopen', mock_open()):
-                self.assertTrue(mount.rm_fstab('name', 'device'))
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'fstab', mock_fstab):
+                with patch('salt.utils.fopen', mock_open()):
+                    self.assertTrue(mount.rm_fstab('name', 'device'))
 
         mock_fstab = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'fstab', mock_fstab):
-            with patch('salt.utils.fopen', mock_open()) as m_open:
-                m_open.side_effect = IOError(13, 'Permission denied:', '/file')
-                self.assertRaises(CommandExecutionError,
-                                  mount.rm_fstab,
-                                  'name', 'device')
+        with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'fstab', mock_fstab):
+                with patch('salt.utils.fopen', mock_open()) as m_open:
+                    helper_open = m_open()
+                    helper_open.write.assertRaises(CommandExecutionError,
+                                                   mount.rm_fstab,
+                                                   config=None)
 
     def test_set_fstab(self):
         '''

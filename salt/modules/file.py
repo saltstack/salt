@@ -2871,6 +2871,13 @@ def copy(src, dst, recurse=False, remove_existing=False):
     remove_existing will remove all files in the target directory,
     and then copy files from the source.
 
+    .. note::
+        The copy function accepts paths that are local to the Salt minion.
+        This function does not support salt://, http://, or the other
+        additional file paths that are supported by :mod:`states.file.managed
+        <salt.states.file.managed>` and :mod:`states.file.recurse
+        <salt.states.file.recurse>`.
+
     CLI Example:
 
     .. code-block:: bash

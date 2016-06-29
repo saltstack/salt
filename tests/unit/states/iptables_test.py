@@ -353,8 +353,8 @@ class IptablesTestCase(TestCase):
                 with patch.dict(iptables.__salt__,
                                 {'iptables.flush': mock}):
                     ret.update({'changes': {'locale': 'salt'},
-                                'comment': 'Flush iptables rules in '
-                                'filter table  chain ipv4 family',
+                                'comment': 'Flush iptables rules in  '
+                                'table  chain ipv4 family',
                                 'result': True})
                     self.assertDictEqual(iptables.flush('salt',
                                                         table='', chain=''),
