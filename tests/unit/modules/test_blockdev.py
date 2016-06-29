@@ -5,9 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.modules.blockdev as blockdev
@@ -58,8 +56,3 @@ class TestBlockdevModule(TestCase):
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
         with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
             self.assertEqual(blockdev.fstype(device), fs_type)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestBlockdevModule, needs_daemon=False)
