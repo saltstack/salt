@@ -6,12 +6,7 @@ import os
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../../'))
-ensure_in_syspath(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../'))
 
 # Import salt libs
 from salt.modules import deb_postgres
@@ -124,8 +119,3 @@ class PostgresDeleteClusterTestCase(TestCase):
         cmd = SALT_STUB['cmd.run_all']
         self.assertEqual('/usr/bin/pg_dropcluster --stop 9.3 main',
                          cmd.call_args[0][0])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresClusterTestCase, PostgresLsClusterTestCase,
-              PostgresDeleteClusterTestCase, needs_daemon=False)
