@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    integration.loader.interfaces
+    integration.loader.test_interfaces
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader
@@ -11,9 +11,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.config import minion_config
@@ -37,7 +34,3 @@ class RawModTest(TestCase):
         self.opts = minion_config(None)
         testmod = salt.loader.raw_mod(self.opts, 'module_we_do_not_have', None)
         self.assertEqual(testmod, {})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RawModTest)
