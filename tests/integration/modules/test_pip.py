@@ -2,7 +2,7 @@
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
-    tests.integration.modules.pip
+    tests.integration.modules.test_pip
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -16,8 +16,6 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -36,9 +34,9 @@ class PipModuleTest(integration.ModuleCase):
         for key in os.environ.copy():
             if key.startswith('PIP_'):
                 os.environ.pop(key)
-        self.pip_temp = os.path.join(self.venv_test_dir, '.pip-temp')
-        if not os.path.isdir(self.pip_temp):
-            os.makedirs(self.pip_temp)
+        self.test_pip_temp = os.path.join(self.venv_test_dir, '.test_pip-temp')
+        if not os.path.isdir(self.test_pip_temp):
+            os.makedirs(self.test_pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
     def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
@@ -112,7 +110,7 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
 
-            found = self.pip_successful_install(ret['stdout'])
+            found = self.test_pip_successful_install(ret['stdout'])
 
             self.assertTrue(found)
         except (AssertionError, TypeError):
@@ -150,7 +148,7 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
 
-            found = self.pip_successful_install(ret['stdout'])
+            found = self.test_pip_successful_install(ret['stdout'])
 
             self.assertTrue(found)
 
@@ -179,7 +177,7 @@ class PipModuleTest(integration.ModuleCase):
             bin_env=self.venv_dir
         )
 
-        found = self.pip_successful_install(ret['stdout'])
+        found = self.test_pip_successful_install(ret['stdout'])
 
         try:
             self.assertEqual(ret['retcode'], 0)
@@ -218,7 +216,7 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
 
-            found = self.pip_successful_install(ret['stdout'])
+            found = self.test_pip_successful_install(ret['stdout'])
             self.assertTrue(found)
 
         except (AssertionError, TypeError):
@@ -419,10 +417,5 @@ class PipModuleTest(integration.ModuleCase):
         super(PipModuleTest, self).tearDown()
         if os.path.isdir(self.venv_test_dir):
             shutil.rmtree(self.venv_test_dir)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PipModuleTest)
+        if os.path.isdir(self.test_pip_temp):
+            shutil.rmtree(self.test_pip_temp)
