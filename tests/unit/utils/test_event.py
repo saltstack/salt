@@ -24,8 +24,6 @@ from multiprocessing import Process
 # Import Salt Testing libs
 from salttesting import (expectedFailure, skipIf)
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -368,7 +366,3 @@ class TestAsyncEventPublisher(AsyncTestCase):
         self.assertEqual(self.tag, 'evt1')
         self.data.pop('_stamp')  # drop the stamp
         self.assertEqual(self.data, {'data': 'foo1'})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestSaltEvent, needs_daemon=False)
