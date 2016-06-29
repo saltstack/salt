@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import postgres_cluster
 
@@ -129,8 +125,3 @@ class PostgresClusterTestCase(TestCase):
                         .format(version, name))
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
                 self.assertDictEqual(postgres_cluster.absent(version, name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresClusterTestCase, needs_daemon=False)
