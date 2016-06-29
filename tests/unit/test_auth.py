@@ -8,10 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
-
-ensure_in_syspath('../')
 
 # Import Salt libraries
 import salt.master
@@ -553,8 +550,3 @@ class AuthACLTestCase(integration.ModuleCase):
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(auth_check_mock.call_args[0][0],
                          [{'beta_minion': ['test.ping']}])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    tests = [LoadAuthTestCase, MasterACLTestCase]
-    run_tests(*tests, needs_daemon=False)
