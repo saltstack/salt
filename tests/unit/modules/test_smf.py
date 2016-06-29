@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import smf
 
@@ -178,8 +174,3 @@ class SmfTestCase(TestCase):
         '''
         with patch.object(smf, '_get_enabled_disabled', return_value=True):
             self.assertTrue(smf.get_disabled())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SmfTestCase, needs_daemon=False)
