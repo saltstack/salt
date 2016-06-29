@@ -14,10 +14,9 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-from salt.modules import servicenow
 
-ensure_in_syspath('../../')
+# Import salt libs
+from salt.modules import servicenow
 
 SERVICE_NAME = 'servicenow'
 servicenow.__salt__ = {}
@@ -73,7 +72,3 @@ class ServiceNowModuleTestCase(ModuleTestCase):
                                                  type='computer')
         self.assertFalse(result is None)
         self.assertEqual(result[0]['query_size'], 22)
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(ServiceNowModuleTestCase)
