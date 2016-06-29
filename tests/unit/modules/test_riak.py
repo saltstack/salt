@@ -12,10 +12,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import riak
 
@@ -118,7 +114,3 @@ class RiakTestCase(TestCase):
         '''
         with patch.object(riak, '__execute_cmd', return_value={'stdout': '[a,b,c]'}):
             self.assertEqual(riak.services(), ['a', 'b', 'c'])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RiakTestCase, needs_daemon=False)
