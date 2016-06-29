@@ -135,8 +135,3 @@ class CassandraTestCase(TestCase):
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
             self.assertEqual(cassandra.column_family_definition('A', 'a'), vars(object))
             self.assertEqual(cassandra.column_family_definition('B', 'a'), None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CassandraTestCase, needs_daemon=False)
