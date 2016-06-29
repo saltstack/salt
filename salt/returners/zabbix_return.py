@@ -55,10 +55,10 @@ def returner(ret):
 
     if type(ret['return']) is dict:
         for state, item in ret['return'].iteritems():
-            if not item['result']:
+            if 'comment' in item and 'name' in item and not item['result']:
                 errors = True
                 zabbix_send("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
-            if item['changes']:
+            if 'comment' in item and 'name' in item and item['changes']:
                 changes = True
                 zabbix_send("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
 
