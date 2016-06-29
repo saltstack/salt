@@ -15,8 +15,6 @@ import os
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cloud
@@ -117,7 +115,3 @@ class CloudUtilsTestCase(TestCase):
             'salt.cloud.provider.test_case_provider',
             'fake_username')
         self.assertEqual(pw_in_keyring, 'fake_password_c8231')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CloudUtilsTestCase, needs_daemon=False)
