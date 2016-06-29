@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import netscaler
 
@@ -1123,8 +1119,3 @@ class NetscalerTestCase(TestCase):
                               MagicMock(return_value=None)):
                 self.assertFalse(netscaler.vserver_sslcert_delete
                                  ('vserverName', 'serGroupName'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetscalerTestCase, needs_daemon=False)
