@@ -32,7 +32,3 @@ class HttpTestCase(TestCase):
         '''
         with patch.object(salt.utils.http, 'query', return_value='A'):
             self.assertEqual(http.query('url'), 'A')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HttpTestCase, needs_daemon=False)
