@@ -7,9 +7,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
@@ -41,7 +39,3 @@ class FileClientTest(integration.ModuleCase):
             with patch('salt.fileclient.RemoteClient', MagicMock(return_value='remote_client')):
                 ret = fileclient.get_file_client(self.minion_opts)
                 self.assertEqual('remote_client', ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileClientTest)
