@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import sysbench
 
@@ -120,8 +116,3 @@ class SysbenchTestCase(TestCase):
         Test to ping
         '''
         self.assertTrue(sysbench.ping())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysbenchTestCase, needs_daemon=False)
