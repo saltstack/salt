@@ -9,9 +9,6 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.mock import patch, MagicMock
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 import integration
@@ -152,8 +149,3 @@ class TopFileMergeTestCase(TestCase):
             highstate = HighState(config)
             ret = highstate.get_tops()
         self.assertEqual(ret, OrderedDict([('a', [{}]), ('c', [{}]), ('b', [{}])]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HighStateTestCase, needs_daemon=False)
