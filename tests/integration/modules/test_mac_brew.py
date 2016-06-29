@@ -11,9 +11,7 @@ import os
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
 )
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
@@ -207,8 +205,3 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
         if DEL_PKG in pkg_list:
             self.run_function('pkg.remove', [DEL_PKG])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BrewModuleTest)
