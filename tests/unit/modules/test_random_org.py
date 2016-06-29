@@ -13,10 +13,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt.utils.http
 from salt.modules import random_org
@@ -304,8 +300,3 @@ class RandomOrgTestCase(TestCase):
                                                       api_version='1',
                                                       number=5, size=8,
                                                       format='hex'), ret6)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RandomOrgTestCase, needs_daemon=False)
