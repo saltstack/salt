@@ -3,10 +3,6 @@
 # Import python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 # Import salt libs
 import integration
 
@@ -21,7 +17,7 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_cli(
                 'minion',
-                'test.kwarg',
+                'test.test_kwarg',
                 ['foo=bar', 'baz=quo'],
                 kwarg={'qux': 'quux'}
                 )
@@ -40,7 +36,7 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_iter(
                 'minion',
-                'test.kwarg',
+                'test.test_kwarg',
                 ['foo=bar', 'baz=quo'],
                 kwarg={'qux': 'quux'}
                 )
@@ -59,7 +55,7 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_iter_no_block(
                 'minion',
-                'test.kwarg',
+                'test.test_kwarg',
                 ['foo=bar', 'baz=quo'],
                 kwarg={'qux': 'quux'}
                 )
@@ -80,7 +76,7 @@ class StdTest(integration.ModuleCase):
         '''
         ret = self.client.cmd_full_return(
                 'minion',
-                'test.kwarg',
+                'test.test_kwarg',
                 ['foo=bar', 'baz=quo'],
                 kwarg={'qux': 'quux'}
                 )
@@ -109,8 +105,3 @@ class StdTest(integration.ModuleCase):
         self.assertIn('int', data['args'][1])
         self.assertIn('dict', data['kwargs']['outer'])
         self.assertIn('str', data['kwargs']['inner'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StdTest)
