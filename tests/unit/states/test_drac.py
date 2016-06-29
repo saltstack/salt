@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import drac
 
@@ -116,8 +112,3 @@ class DracTestCase(TestCase):
                 comt = ('unable to configure network')
                 ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(drac.network(ip_, netmask, gateway), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DracTestCase, needs_daemon=False)
