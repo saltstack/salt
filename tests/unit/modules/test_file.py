@@ -8,10 +8,7 @@ import textwrap
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.utils
@@ -570,11 +567,3 @@ class FileModuleTestCase(TestCase):
             defaults=defaults,
             saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileModuleTestCase,
-              FileReplaceTestCase,
-              FileBlockReplaceTestCase,
-              needs_daemon=False)
