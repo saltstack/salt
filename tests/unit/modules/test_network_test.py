@@ -18,10 +18,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
@@ -358,8 +354,3 @@ class NetworkTestCase(TestCase):
 
             with patch.dict(network.__grains__, {'kernel': 'Linux'}):
                 self.assertListEqual(network.default_route('inet'), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetworkTestCase, needs_daemon=False)
