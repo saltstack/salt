@@ -13,10 +13,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_autoruns
 
@@ -50,8 +46,3 @@ class WinAutorunsTestCase(TestCase):
             mock = MagicMock(return_value='SALT')
             with patch.dict(win_autoruns.__salt__, {'cmd.run': mock}):
                 self.assertDictEqual(win_autoruns.list_(), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinAutorunsTestCase, needs_daemon=False)
