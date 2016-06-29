@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import kmod
 
@@ -182,8 +178,3 @@ class KmodTestCase(TestCase):
                             'result': True,
                             'changes': {}})
                 self.assertDictEqual(kmod.absent(name, mods=mods), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KmodTestCase, needs_daemon=False)
