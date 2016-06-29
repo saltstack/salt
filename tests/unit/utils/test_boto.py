@@ -7,8 +7,6 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
@@ -266,8 +264,3 @@ class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
 
         # These should *not* be the same object!
         self.assertNotEqual(id(boto_ec2_conn), id(boto3_ec2_conn))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoUtilsGetConnTestCase, needs_daemon=False)
