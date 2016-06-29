@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch,
     mock_open)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import apache
 import salt.utils
@@ -71,8 +67,3 @@ class ApacheTestCase(TestCase):
                             'result': True})
                 with patch.dict(apache.__opts__, {'test': False}):
                     self.assertDictEqual(apache.configfile(name, config), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ApacheTestCase, needs_daemon=False)
