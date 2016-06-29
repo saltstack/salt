@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    integration.loader.ext_grains
+    integration.loader.test_ext_grains
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader regarding external grains
@@ -10,9 +10,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
 from salttesting.unit import skipIf
-ensure_in_syspath('../')
 
 # Import salt libs
 import integration
@@ -58,9 +56,3 @@ class LoaderGrainsMergeTest(integration.ModuleCase):
         self.assertIn('a_custom', __grain__)
         # Check that the grains are merged
         self.assertEqual({'k1': 'v1', 'k2': 'v2'}, __grain__['a_custom'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderGrainsTest)
-    run_tests(LoaderGrainsMergeTest)
