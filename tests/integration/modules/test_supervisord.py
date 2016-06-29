@@ -8,8 +8,6 @@ import subprocess
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -36,8 +34,8 @@ class SupervisordModuleTest(integration.ModuleCase):
             self.run_function(
                 'pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
 
-        self.supervisord = os.path.join(self.venv_dir, 'bin', 'supervisord')
-        if not os.path.exists(self.supervisord):
+        self.test_supervisord = os.path.join(self.venv_dir, 'bin', 'supervisord')
+        if not os.path.exists(self.test_supervisord):
             self.skipTest('Failed to install supervisor in test virtualenv')
         self.supervisor_conf = os.path.join(self.venv_dir, 'supervisor.conf')
 
@@ -54,7 +52,7 @@ class SupervisordModuleTest(integration.ModuleCase):
         if not os.path.exists(self.supervisor_conf):
             self.skipTest('failed to create supervisor config file')
         self.supervisor_proc = subprocess.Popen(
-            [self.supervisord, '-c', self.supervisor_conf]
+            [self.test_supervisord, '-c', self.supervisor_conf]
         )
         if self.supervisor_proc.poll() is not None:
             self.skipTest('failed to start supervisord')
@@ -225,8 +223,3 @@ class SupervisordModuleTest(integration.ModuleCase):
             'supervisord.status', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordModuleTest)
