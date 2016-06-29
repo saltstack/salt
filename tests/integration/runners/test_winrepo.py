@@ -9,10 +9,8 @@ import tempfile
 # Import Salt Testing Libs
 from salt.runners import winrepo
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-ensure_in_syspath('../../')
 # Import Salt Libs
 import integration
 
@@ -85,30 +83,25 @@ class WinrepoTest(integration.ShellCase):
     '''
     def setUp(self):
         super(WinrepoTest, self).setUp()
-        self.winrepo_dir = tempfile.mkdtemp(dir=integration.TMP)
-        self.addCleanup(shutil.rmtree, self.winrepo_dir, ignore_errors=True)
+        self.test_winrepo_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.addCleanup(shutil.rmtree, self.test_winrepo_dir, ignore_errors=True)
         self.extmods_dir = tempfile.mkdtemp(dir=integration.TMP)
         self.addCleanup(shutil.rmtree, self.extmods_dir, ignore_errors=True)
-        self.winrepo_sls_dir = os.path.join(self.winrepo_dir, 'repo_sls')
-        os.mkdir(self.winrepo_sls_dir)
+        self.test_winrepo_sls_dir = os.path.join(self.test_winrepo_dir, 'repo_sls')
+        os.mkdir(self.test_winrepo_sls_dir)
         self.maxDiff = None
 
     def test_genrepo(self):
         '''
         Test winrepo.genrepo runner
         '''
-        sls_file = os.path.join(self.winrepo_sls_dir, 'wireshark.sls')
+        sls_file = os.path.join(self.test_winrepo_sls_dir, 'wireshark.sls')
         # Add a winrepo SLS file
         with open(sls_file, 'w') as fp_:
             fp_.write(_WINREPO_SLS)
         with patch.dict(
                 winrepo.__opts__,
-                {'file_roots': {'base': [self.winrepo_dir]},
-                 'winrepo_dir': self.winrepo_dir,
+                {'file_roots': {'base': [self.test_winrepo_dir]},
+                 'winrepo_dir': self.test_winrepo_dir,
                  'extension_modules': self.extmods_dir}):
             self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinrepoTest)
