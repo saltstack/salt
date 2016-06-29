@@ -92,8 +92,3 @@ class DjangomodTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
             self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DjangomodTestCase, needs_daemon=False)
