@@ -4,6 +4,7 @@ Classes for starting/stopping/status salt daemons, auxiliary
 scripts, generic commands.
 '''
 
+from __future__ import absolute_import
 import atexit
 import copy
 from datetime import datetime, timedelta
@@ -20,10 +21,10 @@ import time
 
 import yaml
 
-import salt.ext.six as six
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 from salt.defaults import exitcodes
+from salt.ext import six
 
 from salttesting import TestCase
 
@@ -343,14 +344,11 @@ class TestSaltProgramMeta(type):
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
-class TestSaltProgram(TestProgram):
+class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     '''
     This is like TestProgram but with some functions to run a salt-specific
     auxiliary program.
     '''
-
-    __metaclass__ = TestSaltProgramMeta
-
     script = ''
 
     def __init__(self, *args, **kwargs):
@@ -391,7 +389,7 @@ class TestSaltProgram(TestProgram):
             sdo.write(''.join(lines))
             sdo.flush()
 
-        os.chmod(self.script_path, 0755)
+        os.chmod(self.script_path, 0o755)
 
 
 class TestProgramSaltCall(TestSaltProgram):
@@ -573,13 +571,10 @@ class TestSaltDaemonMeta(TestSaltProgramMeta, type):
         return super(TestSaltDaemonMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
-class TestSaltDaemon(TestDaemon, TestSaltProgram):
+class TestSaltDaemon(six.with_metaclass(TestSaltDaemonMeta, TestDaemon, TestSaltProgram)):
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-
-    __metaclass__ = TestSaltDaemonMeta
-
     config_types = (dict,)
     config_attrs = {
         'root_dir': None,
