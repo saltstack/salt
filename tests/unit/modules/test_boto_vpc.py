@@ -14,9 +14,6 @@ import string
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -1780,8 +1777,3 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         route_replacing_result = boto_vpc.replace_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_replacing_result)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoVpcTestCase, needs_daemon=False)
