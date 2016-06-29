@@ -14,13 +14,9 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import sysctl
+from salt.exceptions import CommandExecutionError
 
 sysctl.__opts__ = {}
 sysctl.__salt__ = {}
@@ -129,8 +125,3 @@ class SysctlTestCase(TestCase):
             with patch.dict(sysctl.__salt__, {'sysctl.persist': mock}):
                 ret.update({'comment': comt7, 'result': True})
                 self.assertDictEqual(sysctl.present(name, value), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysctlTestCase, needs_daemon=False)
