@@ -13,10 +13,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_shadow
 import salt.utils
@@ -54,8 +50,3 @@ class WinShadowTestCase(TestCase):
         mock_cmd = MagicMock(return_value={'retcode': False})
         with patch.dict(win_shadow.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(win_shadow.set_password('root', 'mysecretpassword'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinShadowTestCase, needs_daemon=False)
