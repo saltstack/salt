@@ -7,8 +7,7 @@ integration tests for mac_softwareupdate
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -183,8 +182,3 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('softwareupdate.reset_catalog'))
         self.assertEqual(self.run_function('softwareupdate.get_catalog'),
                          'Default')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacSoftwareUpdateModuleTest)
