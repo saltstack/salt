@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_dynamodb
 
@@ -116,8 +112,3 @@ class BotoDynamodbTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
                 self.assertDictEqual(boto_dynamodb.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoDynamodbTestCase, needs_daemon=False)
