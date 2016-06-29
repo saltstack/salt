@@ -5,7 +5,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-
 import os
 
 # Import Salt Testing Libs
@@ -17,10 +16,6 @@ from salttesting.mock import (
     MagicMock,
     patch
 )
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import augeas
@@ -240,8 +235,3 @@ class AugeasTestCase(TestCase):
                                         context=self.context,
                                         changes=self.changes),
                                         self.ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AugeasTestCase, needs_daemon=False)
