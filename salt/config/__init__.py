@@ -1376,12 +1376,12 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
+    'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': '/srv/spm/salt',
     'pillar_path': '/srv/spm/pillar',
     'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
-    'default_include': 'spm.d/*.conf',
+    'spm_default_include': 'spm.d/*.conf',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
@@ -3251,9 +3251,9 @@ def spm_config(path):
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
-    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['conf_file'])
-    default_include = overrides.get('default_include',
-                                    defaults['default_include'])
+    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['spm_conf_file'])
+    default_include = overrides.get('spm_default_include',
+                                    defaults['spm_default_include'])
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False))
