@@ -11,10 +11,8 @@ import os
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
@@ -126,8 +124,3 @@ class MacAssistiveTest(integration.ModuleCase):
         self.assertFalse(
             self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacAssistiveTest)
