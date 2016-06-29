@@ -14,9 +14,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import mac_desktop
@@ -128,8 +125,3 @@ class MacDesktopTestCase(TestCase):
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(CommandExecutionError,
                               mac_desktop.say)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacDesktopTestCase, needs_daemon=False)
