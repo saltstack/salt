@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
 '''
 The key Thorium State is used to apply changes to the accepted/rejected/pending keys
+
+.. versionadded:: Carbon
 '''
 # Import python libs
+from __future__ import absolute_import
 import time
 
 # Import salt libs

@@ -72,7 +72,7 @@ Remember to set up a top file so Thorium knows which sls files to use!!
 Thorium Links to Beacons
 ========================
 
-The above example as added in the Carbon release of Salt and makes use of the
+The above example was added in the Carbon release of Salt and makes use of the
 `status` beacon also added in the Carbon release. For the above Thorium state
 to function properly you will also need to enable the `status` beacon:
 

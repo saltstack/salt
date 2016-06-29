@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
 '''
 This thorium state is used to track the status beacon events and keep track of
 the active status of minions
+
+.. versionadded:: Carbon
 '''
 # Import python libs
+from __future__ import absolute_import
 import time
 import fnmatch
 
