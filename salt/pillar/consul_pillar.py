@@ -169,8 +169,7 @@ def ext_pillar(minion_id,
     try:
         pillar = fetch_tree(client, path)
     except KeyError:
-        log.error('No such key in consul profile {0}: {1}'
-                  .format(profile, path))
+        log.error('No such key in consul profile %s: %s', profile, path)
         pillar = {}
 
     return pillar
@@ -199,8 +198,8 @@ def fetch_tree(client, path):
         return ret
     for item in reversed(items):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
-        if key != "":
-            log.debug('key/path - {0}: {1}'.format(path, key))
+        if key != '':
+            log.debug('key/path - %s: %s', path, key)
             log.debug('has_children? %r', format(has_children.search(key)))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'])
@@ -282,20 +281,16 @@ def _resolve_datacenter(dc, pillarenv):
     If none patterns matched return ``None`` which meanse us datacenter of
     conencted Consul agent.
     '''
-    log.debug("Resolving Consul datacenter based on: {dc}".format(dc=dc))
+    log.debug('Resolving Consul datacenter based on: %s', dc)
 
     try:
         mappings = dc.items()  # is it a dict?
     except AttributeError:
-        log.debug('Using pre-defined DC: {dc!r}'.format(dc=dc))
+        log.debug('Using pre-defined DC: \'%s\'', dc)
         return dc
 
-    log.debug(
-        'Selecting DC based on pillarenv using {num} pattern(s)'.format(
-            num=len(mappings)
-        )
-    )
-    log.debug('Pillarenv set to {env!r}'.format(env=pillarenv))
+    log.debug('Selecting DC based on pillarenv using %d pattern(s)', len(mappings))
+    log.debug('Pillarenv set to \'%s\'', pillarenv)
 
     # sort in reverse based on pattern length
     # but use alphabetic order within groups of patterns of same length
@@ -304,13 +299,12 @@ def _resolve_datacenter(dc, pillarenv):
     for pattern, target in sorted_mappings:
         match = re.match(pattern, pillarenv)
         if match:
-            log.debug('Matched pattern: {pattern!r}'.format(pattern=pattern))
+            log.debug('Matched pattern: \'%s\'', pattern)
             result = target.format(**match.groupdict())
-            log.debug('Resolved datacenter: {result!r}'.format(result=result))
+            log.debug('Resolved datacenter: \'%s\'', result)
             return result
 
     log.debug(
-        'None of following patterns matched pillarenv={env}: {lst}'.format(
-            env=pillarenv, lst=', '.join(repr(x) for x in mappings)
-        )
+        'None of following patterns matched pillarenv=%s: %s',
+        pillarenv, ', '.join(repr(x) for x in mappings)
     )

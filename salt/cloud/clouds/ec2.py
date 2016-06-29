@@ -2426,7 +2426,7 @@ def create(vm_=None, call=None):
 
         if not os.path.exists(key_filename):
             raise SaltCloudSystemExit(
-                'The EC2 key file {0!r} does not exist.\n'.format(
+                'The EC2 key file \'{0}\' does not exist.\n'.format(
                     key_filename
                 )
             )
@@ -2436,7 +2436,7 @@ def create(vm_=None, call=None):
         )
         if key_mode not in ('0400', '0600'):
             raise SaltCloudSystemExit(
-                'The EC2 key file {0!r} needs to be set to mode 0400 or 0600.\n'.format(
+                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
                     key_filename
                 )
             )

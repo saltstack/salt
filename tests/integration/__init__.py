@@ -31,10 +31,6 @@ try:
     import pwd
 except ImportError:
     pass
-try:
-    import SocketServer as socketserver
-except ImportError:
-    import socketserver
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -83,6 +79,8 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
+import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
+
 if salt.utils.is_windows():
     import win32api
 

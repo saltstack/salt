@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 This module exposes the functionality of the TestInfra library
 for use with SaltStack in order to verify the state of your minions.
 In order to allow for the addition of new resource types in TestInfra this
 module dynamically generates wrappers for the various resources by iterating
 over the values in the ``__all__`` variable exposed by the testinfra.modules
 namespace.
-"""
+'''
+from __future__ import absolute_import
 import inspect
 import logging
 import operator
