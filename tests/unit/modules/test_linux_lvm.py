@@ -248,7 +248,3 @@ class LinuxLVMTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxLVMTestCase, needs_daemon=False)
