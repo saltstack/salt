@@ -8,15 +8,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import group
@@ -107,8 +104,3 @@ class GroupTestCase(TestCase):
             ret.update({'result': True,
                         'comment': 'Group not present'})
             self.assertDictEqual(group.absent('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GroupTestCase, needs_daemon=False)
