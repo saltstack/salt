@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import rdp
 
@@ -95,8 +91,3 @@ class RdpTestCase(TestCase):
                 comt = ('RDP is disabled')
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
                 self.assertDictEqual(rdp.disabled(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RdpTestCase, needs_daemon=False)
