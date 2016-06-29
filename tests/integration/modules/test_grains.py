@@ -10,9 +10,7 @@ import time
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -182,8 +180,3 @@ class GrainsAppendTestCase(integration.ModuleCase):
 
         # We should only have hit the grain key once.
         self.assertEqual(count, 1)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestModulesGrains)
