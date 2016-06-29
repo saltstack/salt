@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import influxdb_database
 
@@ -106,8 +102,3 @@ class InfluxdbDatabaseTestCase(TestCase):
                     .format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(influxdb_database.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(InfluxdbDatabaseTestCase, needs_daemon=False)
