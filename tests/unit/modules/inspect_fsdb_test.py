@@ -100,7 +100,7 @@ class InspectorFSDBTestCase(TestCase):
     @patch("gzip.open", mock_open("foo:int,bar:str"))
     def test_close(self):
         '''
-        Test opening the database.
+        Test closing the database.
         :return:
         '''
         csvdb = CsvDB('/foobar')
