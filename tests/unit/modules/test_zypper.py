@@ -22,10 +22,6 @@ import os
 from salt.ext.six.moves import configparser
 import StringIO
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 
 class ZyppCallMock(object):
     def __init__(self, return_value=None):
@@ -649,7 +645,3 @@ class ZypperTestCase(TestCase):
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZypperTestCase, needs_daemon=False)
