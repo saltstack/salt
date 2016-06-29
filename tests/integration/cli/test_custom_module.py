@@ -3,7 +3,7 @@
     :codeauthor: :email:`Daniel Mizyrycki (mzdaniel@glidelink.net)`
 
 
-    tests.integration.cli.custom_module
+    tests.integration.cli.test_custom_module
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test salt-ssh sls with a custom module work.
@@ -78,8 +78,3 @@ class SSHCustomModuleTest(integration.SSHCase):
                 raise AssertionError(cmd[key]['comment'])
             cmd_ret = cmd[key]['changes'].get('ret', None)
             self.assertEqual(cmd_ret, expected[key])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHCustomModuleTest)
