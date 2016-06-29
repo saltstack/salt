@@ -16,9 +16,7 @@ from salt.ext.six.moves import StringIO
 
 # Import Salt Testing libs
 from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
-
-ensure_in_syspath('../')
+from salttesting.helpers import TestsLoggingHandler
 
 # Import Salt libs
 from salt.log import setup as saltlog
@@ -177,8 +175,3 @@ class TestLog(TestCase):
         finally:
             log.removeHandler(handler1)
             log.removeHandler(handler2)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestLog, needs_daemon=False)
