@@ -7,8 +7,7 @@ Validate the virt module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
-ensure_in_syspath('../../')
+from salttesting.helpers import requires_salt_modules
 
 # Import salt libs
 import integration
@@ -45,8 +44,3 @@ class VirtTest(integration.ModuleCase):
         self.assertTrue(diskp[0]['system'].get('model', '') == 'scsi')
         self.assertTrue(diskp[0]['system'].get('format', '') == 'vmdk')
         self.assertTrue(diskp[0]['system'].get('size', '') == '8192')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtTest)
