@@ -9,7 +9,6 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salt.exceptions import SaltInvocationError
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     Mock,
@@ -17,8 +16,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -1198,8 +1195,3 @@ class DockerngTestCase(TestCase):
                                'changes': {},
                                'result': True,
                                })
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DockerngTestCase, needs_daemon=False)
