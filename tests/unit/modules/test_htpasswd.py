@@ -71,7 +71,3 @@ class HtpasswdTestCase(TestCase):
         '''
         self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd', 'larry'),
                          'Error: The specified htpasswd file does not exist')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HtpasswdTestCase, needs_daemon=False)
