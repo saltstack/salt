@@ -299,13 +299,18 @@ def list_nodes(conn=None, call=None):
             # so we hide the running vm from being seen as already installed
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
-            if (
-                (call in ['full'] or not hide) and (
-                    (lxcc in names and call in ['action']) or (
-                        call in ['full'])
-                )
-            ):
-                nodes[lxcc] = info
+            if (call in ['full'] or not hide) and ((lxcc in names and call in ['action']) or call in ['full']):
+                nodes[lxcc] = {
+                    'id': lxcc,
+                    'name': lxcc,  # required for cloud cache
+                    'image': None,
+                    'size': linfos['size'],
+                    'state': state.lower(),
+                    'public_ips': linfos['public_ips'],
+                    'private_ips': linfos['private_ips'],
+                }
+            else:
+                nodes[lxcc] = {'id': lxcc, 'state': state.lower()}
     return nodes
 
 
