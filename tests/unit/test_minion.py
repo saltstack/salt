@@ -9,7 +9,6 @@ import os
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import salt libs
@@ -17,8 +16,6 @@ from salt import minion
 from salt.utils import event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
-
-ensure_in_syspath('../')
 
 __opts__ = {}
 
@@ -51,8 +48,3 @@ class MinionTestCase(TestCase):
             except SaltSystemExit:
                 result = False
         self.assertTrue(result)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionTestCase, needs_daemon=False)
