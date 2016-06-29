@@ -19,8 +19,6 @@ import time
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import fopen, is_darwin, vt
@@ -203,8 +201,3 @@ class VTTestCase(TestCase):
             self.assertIsNone(stdout)
         finally:
             term.close(terminate=True, kill=True)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VTTestCase, needs_daemon=False)
