@@ -12,8 +12,6 @@ import time
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cache
@@ -45,8 +43,3 @@ class CacheDictTestCase(TestCase):
 
         # make sure that a get would get a regular old key error
         self.assertRaises(KeyError, cd.__getitem__, 'foo')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CacheDictTestCase, needs_daemon=False)
