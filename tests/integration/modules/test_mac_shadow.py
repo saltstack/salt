@@ -10,9 +10,8 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
+from salttesting.helpers import destructiveTest
 from salt.ext.six.moves import range
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -244,8 +243,3 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('shadow.set_password', [NO_USER, 'P@SSw0rd']),
             'ERROR: User not found: {0}'.format(NO_USER))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacShadowModuleTest)
