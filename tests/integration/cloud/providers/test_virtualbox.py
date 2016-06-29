@@ -13,13 +13,10 @@ import socket
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
 
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
     PROVIDER_NAME, \
     PROFILE_NAME, BASE_BOX_NAME, INSTANCE_NAME, BOOTABLE_BASE_BOX_NAME, DEPLOY_PROFILE_NAME
-
-ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
@@ -475,10 +472,3 @@ class XpcomConversionTests(unittest.TestCase):
 
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extras)
         self.assertDictEqual(ret, expected_extra_dict)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-
-    run_tests(VirtualboxProviderTest)
-    # unittest.main()
