@@ -72,7 +72,3 @@ class ExtfsTestCase(TestCase):
         Tests if specified group was added
         '''
         self.assertEqual({}, extfs.blocks('/dev/sda1'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ExtfsTestCase, needs_daemon=False)
