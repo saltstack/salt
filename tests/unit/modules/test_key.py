@@ -50,8 +50,3 @@ class KeyTestCase(TestCase):
                 with patch.dict(key.__opts__,
                         {'pki_dir': 'A', 'hash_type': 'sha256'}):
                     self.assertEqual(key.finger_master(), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyTestCase, needs_daemon=False)
