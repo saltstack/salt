@@ -14,10 +14,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import raet_publish
 import salt.transport
@@ -74,8 +70,3 @@ class RaetPublishTestCase(TestCase):
                               MagicMock(return_value=MockFactory())):
                 self.assertEqual(raet_publish.runner(1),
                                  '\'1\' runner publish timed out')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RaetPublishTestCase, needs_daemon=False)
