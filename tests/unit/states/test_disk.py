@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import disk
 
@@ -247,8 +243,3 @@ class DiskTestCase(TestCase):
             ret.update({'comment': comt, 'result': True,
                 'data': {'capacity': '15 %', 'used': '15'}})
             self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DiskTestCase, needs_daemon=False)
