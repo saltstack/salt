@@ -5,9 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import boto_secgroup
@@ -16,7 +13,7 @@ from salt.utils.odict import OrderedDict
 
 class Boto_SecgroupTestCase(TestCase):
     '''
-    TestCase for salt.states.boto_secgroup module
+    TestCase for salt.states.test_boto_secgroup module
     '''
     def test__get_rule_changes_no_rules_no_change(self):
         '''
@@ -47,7 +44,3 @@ class Boto_SecgroupTestCase(TestCase):
         # can also use: rules_to_delete = [rule for rule in present_rules if rule not in desired_rules]
         rules_to_delete = [OrderedDict([('ip_protocol', 'tcp'), ('from_port', 80), ('to_port', 80), ('cidr_ip', '0.0.0.0/0')])]
         self.assertEqual(boto_secgroup._get_rule_changes(desired_rules, present_rules), (rules_to_delete, []))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(Boto_SecgroupTestCase)
