@@ -94,8 +94,3 @@ class PwGroupTestCase(TestCase):
             mock = MagicMock(return_value=None)
             with patch.dict(pw_group.__salt__, {'cmd.run': mock}):
                 self.assertFalse(pw_group.chgid('name', 0))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PwGroupTestCase, needs_daemon=False)
