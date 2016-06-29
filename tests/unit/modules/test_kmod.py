@@ -132,8 +132,3 @@ class KmodTestCase(TestCase):
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
                     self.assertEqual('Error removing module {0}: {1}'.format(mod, err_msg),
                                      kmod.remove(mod, True))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KmodTestCase, needs_daemon=False)
