@@ -14,9 +14,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
@@ -391,8 +388,3 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
         self.assertTrue(result['error'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCloudTrailTestCase, needs_daemon=False)
