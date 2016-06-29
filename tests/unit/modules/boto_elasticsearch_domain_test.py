@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import copy
+import logging
 import random
 import string
 
@@ -19,11 +20,10 @@ import salt.config
 import salt.loader
 from salt.modules import boto_elasticsearch_domain
 
-# Import 3rd-party libs
-import logging
-
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+
+# Import 3rd-party libs
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -32,6 +32,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+from salt.ext.six.moves import range
 
 # pylint: enable=import-error,no-name-in-module
 
