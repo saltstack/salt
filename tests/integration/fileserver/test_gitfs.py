@@ -11,10 +11,7 @@ import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
@@ -131,6 +128,3 @@ class GitFSTest(integration.ModuleCase):
                                          '__role': self.master_opts['__role']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
-
-if __name__ == '__main__':
-    integration.run_tests(GitFSTest)
