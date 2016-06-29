@@ -134,8 +134,3 @@ class DataTestCase(TestCase):
         Test if it check and set a value in the minion datastore
         '''
         self.assertTrue(data.cas('salt', 'SALTSTACK', 'SALT'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DataTestCase, needs_daemon=False)
