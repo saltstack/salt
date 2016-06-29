@@ -14,10 +14,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../..')
-
 # Import Salt Libs
 from salt.modules import munin
 
@@ -64,8 +60,3 @@ class MuninTestCase(TestCase):
         Test if it list all the munin plugins
         '''
         self.assertListEqual(munin.list_plugins(), ['uptime'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MuninTestCase, needs_daemon=False)
