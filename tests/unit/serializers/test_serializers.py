@@ -2,15 +2,10 @@
 
 # Import python libs
 from __future__ import absolute_import
+from textwrap import dedent
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-
-# Import Python libs
-from textwrap import dedent
 
 # Import 3rd party libs
 import jinja2
@@ -336,7 +331,3 @@ class TestSerializers(TestCase):
 
         deserialized = configparser.deserialize(serialized)
         assert deserialized == data, deserialized
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestSerializers, needs_daemon=False)
