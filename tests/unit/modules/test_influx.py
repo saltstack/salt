@@ -284,7 +284,3 @@ class InfluxTestCase(TestCase):
             ))
             client.alter_retention_policy.assert_called_once_with(
                 'name', 'db', '30d', 1, False)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(InfluxTestCase, needs_daemon=False)
