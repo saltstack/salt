@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import rabbitmq_vhost
 
@@ -66,8 +62,3 @@ class RabbitmqVhostTestCase(TestCase):
         with patch.dict(rabbitmq_vhost.__salt__,
                         {'rabbitmq.vhost_exists': mock}):
             self.assertDictEqual(rabbitmq_vhost.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqVhostTestCase, needs_daemon=False)
