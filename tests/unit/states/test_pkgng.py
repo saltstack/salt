@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import pkgng
 
@@ -44,8 +40,3 @@ class PkgngTestCase(TestCase):
         mock_t = MagicMock(return_value=True)
         with patch.dict(pkgng.__salt__, {'pkgng.update_package_site': mock_t}):
             self.assertDictEqual(pkgng.update_packaging_site(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgngTestCase, needs_daemon=False)
