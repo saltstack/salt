@@ -12,9 +12,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -54,8 +51,3 @@ class ClientACLTestCase(TestCase):
 
         self.assertTrue(client_acl.cmd_is_blacklisted(['cmd.run', 'state.sls']))
         self.assertFalse(client_acl.cmd_is_blacklisted(['state.highstate', 'state.sls']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ClientACLTestCase, needs_daemon=False)
