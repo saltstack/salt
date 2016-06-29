@@ -12,8 +12,6 @@ import pprint
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.case import ModuleCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.loader
@@ -716,9 +714,3 @@ class TestDotNotationLookup(ModuleCase):
 
         ret = self.render(tmpl_str)
         self.assertEqual(ret, 'Hello, jerry.')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
-            TestDotNotationLookup,
-              needs_daemon=False)
