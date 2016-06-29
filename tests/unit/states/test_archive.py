@@ -10,15 +10,12 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import archive as archive
@@ -128,7 +125,3 @@ class ArchiveTestCase(TestCase):
                                            'file.source_list': mock_source_list}):
             ret = archive.extracted('/tmp/out', '/tmp/foo.tar.gz', 'tar', tar_options='xvzf', keep=True)
             self.assertEqual(ret['changes']['extracted_files'], 'stderr')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ArchiveTestCase, needs_daemon=False)
