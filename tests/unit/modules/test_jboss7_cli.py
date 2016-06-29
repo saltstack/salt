@@ -6,8 +6,6 @@ import re
 
 # Import salt testing libs
 from salttesting.unit import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 from salt.modules import jboss7_cli
 from salt.exceptions import CommandExecutionError
