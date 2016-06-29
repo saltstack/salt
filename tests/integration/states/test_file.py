@@ -26,11 +26,8 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     with_system_user_and_group
 )
-
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -2061,7 +2058,3 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             check_file = self.run_function('file.file_exists', [file])
             if check_file:
                 self.run_function('file.remove', [file])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileTest)
