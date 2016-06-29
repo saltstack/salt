@@ -204,8 +204,3 @@ class GroupAddTestCase(TestCase):
                                                     'cmd.run': mock}):
                     self.assertFalse(groupadd.members('test', 'foo'))
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GroupAddTestCase, needs_daemon=False)
