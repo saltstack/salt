@@ -233,6 +233,7 @@ def absent(
     unsubscribe
         If True, unsubscribe all subcriptions to the SNS topic before
         deleting the SNS topic
+        .. versionadded:: Carbon
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
