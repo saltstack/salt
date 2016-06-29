@@ -17,11 +17,9 @@ import socket
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import (
-    ensure_in_syspath,
     requires_network,
     TestsLoggingHandler
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
@@ -214,8 +212,3 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestVerify, needs_daemon=False)
