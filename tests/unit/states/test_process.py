@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import process
 
@@ -54,8 +50,3 @@ class ProcessTestCase(TestCase):
             with patch.dict(process.__opts__, {'test': False}):
                 ret.update({'result': True})
                 self.assertDictEqual(process.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ProcessTestCase, needs_daemon=False)
