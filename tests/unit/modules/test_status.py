@@ -9,13 +9,10 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
 )
-
-ensure_in_syspath('../../')
 
 # Globals
 status.__salt__ = {}
@@ -82,8 +79,3 @@ class StatusTestCase(TestCase):
         mock_return = 'cannot find /proc/uptime'
         with patch('os.path.exists', MagicMock(return_value=False)):
             self.assertEqual(status._uptime(human_readable=False), mock_return)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatusTestCase, needs_daemon=False)
