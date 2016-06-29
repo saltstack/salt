@@ -18,8 +18,6 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import path_join
@@ -121,8 +119,3 @@ class PathJoinTestCase(TestCase):
 
         for module in (posixpath, os, os.path, tempfile, platform):
             reload(module)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PathJoinTestCase, needs_daemon=False)
