@@ -16,10 +16,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import s6
 
@@ -135,8 +131,3 @@ class S6TestCase(TestCase):
         with patch.object(os, 'listdir',
                           MagicMock(return_value=['/etc/service'])):
             self.assertListEqual(s6.get_all(), ['/etc/service'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(S6TestCase, needs_daemon=False)
