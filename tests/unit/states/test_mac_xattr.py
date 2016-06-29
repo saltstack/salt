@@ -8,13 +8,10 @@ from salt.states import mac_xattr as xattr
 
 # Import Salt Testing Libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 xattr.__salt__ = {}
 
@@ -140,8 +137,3 @@ class XAttrTestCase(TestCase):
             list_mock.assert_called_once_with('/path/to/file')
             assert not delete_mock.called
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(XAttrTestCase, needs_daemon=False)
