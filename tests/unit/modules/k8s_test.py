@@ -20,6 +20,8 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.modules.k8s as k8s
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 TestCase.maxDiff = None
 
