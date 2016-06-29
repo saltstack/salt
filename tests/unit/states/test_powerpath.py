@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import powerpath
 
@@ -115,8 +111,3 @@ class PowerpathTestCase(TestCase):
 
                 ret.update({'result': False, 'changes': {}})
                 self.assertDictEqual(powerpath.license_absent('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PowerpathTestCase, needs_daemon=False)
