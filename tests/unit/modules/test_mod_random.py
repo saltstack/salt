@@ -13,9 +13,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import mod_random
@@ -84,8 +81,3 @@ class ModrandomTestCase(TestCase):
         with patch.object(salt.utils.pycrypto,
                           'gen_hash', return_value='A'):
             self.assertEqual(mod_random.shadow_hash(), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ModrandomTestCase, needs_daemon=False)
