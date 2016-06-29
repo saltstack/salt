@@ -14,10 +14,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import moosefs
 
@@ -69,8 +65,3 @@ class MoosefsTestCase(TestCase):
         mock = MagicMock(return_value={'stdout': 'Salt: salt'})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(moosefs.getgoal('/tmp/salt'), {'goal': 'salt'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MoosefsTestCase, needs_daemon=False)
