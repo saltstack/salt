@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.shell.syndic
+    tests.integration.shell.test_syndic
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -13,10 +13,6 @@ import os
 import yaml
 import signal
 import shutil
-
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -78,8 +74,3 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SyndicTest)
