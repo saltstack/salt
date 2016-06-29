@@ -15,10 +15,7 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import supervisord
@@ -186,8 +183,3 @@ class SupervisordTestCase(TestCase):
 
             MockConfig.flag = 0
             self.assertDictEqual(supervisord.options('salt'), {'salt': True})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordTestCase, needs_daemon=False)
