@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import postgres_schema
 
@@ -87,8 +83,3 @@ class PostgresSchemaTestCase(TestCase):
                     ' so it cannot be removed'.format(name, dbname))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresSchemaTestCase, needs_daemon=False)
