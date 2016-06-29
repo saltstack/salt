@@ -7,8 +7,7 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -230,8 +229,3 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function('power.set_sleep_on_power_button', ['off']))
         self.assertFalse(self.run_function('power.get_sleep_on_power_button'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPowerModuleTest)
