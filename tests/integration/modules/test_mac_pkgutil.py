@@ -8,8 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -88,8 +87,3 @@ class MacPkgutilModuleTest(integration.ModuleCase):
 
         # Test forget
         self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacPkgutilModuleTest)
