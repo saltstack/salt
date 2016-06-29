@@ -59,7 +59,6 @@ class Inspector(EnvLoader):
             self.db.open()
         except Exception as ex:
             log.error('Unable to [re]open db. Already opened?')
-        self.db._csv_db.open()
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
@@ -181,14 +180,14 @@ class Inspector(EnvLoader):
             pkg = Package()
             pkg.id = pkg_id
             pkg.name = pkg_name
-            self.db._csv_db.store(pkg)
+            self.db.store(pkg)
 
             for pkg_config in pkg_configs:
                 cfg = PackageCfgFile()
                 cfg.id = pkg_cfg_id
                 cfg.pkgid = pkg_id
                 cfg.path = pkg_config
-                self.db._csv_db.store(cfg)
+                self.db.store(cfg)
                 pkg_cfg_id += 1
 
             pkg_id += 1
@@ -221,7 +220,7 @@ class Inspector(EnvLoader):
                 payload.ctime = stats.st_ctime
 
                 idx += 1
-                self.db._csv_db.store(payload)
+                self.db.store(payload)
 
 
     def _get_managed_files(self):
@@ -335,13 +334,13 @@ class Inspector(EnvLoader):
         '''
         # Get ignored points
         allowed = list()
-        for allowed_dir in self.db._csv_db.get(AllowedDir):
+        for allowed_dir in self.db.get(AllowedDir):
             if os.path.exists(allowed_dir.path):
                 allowed.append(allowed_dir.path)
 
         ignored = list()
         if not allowed:
-            for ignored_dir in self.db._csv_db.get(IgnoredDir):
+            for ignored_dir in self.db.get(IgnoredDir):
                 if os.path.exists(ignored_dir.path):
                     ignored.append(ignored_dir.path)
 
@@ -393,16 +392,14 @@ class Inspector(EnvLoader):
         for ignored_dir in ignored_all:
             dir_obj = IgnoredDir()
             dir_obj.path = ignored_dir
-            self.db._csv_db.store(dir_obj)
+            self.db.store(dir_obj)
 
         # Add allowed filesystems (overrides all above at full scan)
         allowed = [elm for elm in kwargs.get("filter", "").split(",") if elm]
         for allowed_dir in allowed:
             dir_obj = AllowedDir()
             dir_obj.path = allowed_dir
-            self.db._csv_db.store(dir_obj)
-
-        self.db.connection.commit()
+            self.db.store(dir_obj)
 
         return ignored_all
 

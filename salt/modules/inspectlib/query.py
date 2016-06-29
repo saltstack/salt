@@ -191,10 +191,10 @@ class Query(EnvLoader):
         '''
 
         data = dict()
-        self.db._csv_db.open()
-        for pkg in self.db._csv_db.get(Package):
+        self.db.open()
+        for pkg in self.db.get(Package):
             configs = list()
-            for pkg_cfg in self.db._csv_db.get(PackageCfgFile, eq={'pkgid': pkg.id}):
+            for pkg_cfg in self.db.get(PackageCfgFile, eq={'pkgid': pkg.id}):
                 configs.append(pkg_cfg.path)
             data[pkg.name] = configs
 
@@ -456,11 +456,10 @@ class Query(EnvLoader):
                                               'Should be comma separated one or more of '
                                               'dir, file and/or link.'.format(", ".join(incl_type)))
         self.db.open()
-        self.db._csv_db.open()
 
         brief = kwargs.get("brief")
         pld_files = list() if brief else dict()
-        for pld_data in self.db._csv_db.get(PayloadFile):
+        for pld_data in self.db.get(PayloadFile):
             if brief:
                 pld_files.append(pld_data.path)
             else:
