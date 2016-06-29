@@ -13,10 +13,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_timezone
 
@@ -106,8 +102,3 @@ class WinTimezoneTestCase(TestCase):
         Test if it sets the hardware clock to be either UTC or localtime
         '''
         self.assertFalse(win_timezone.set_hwclock('UTC'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinTimezoneTestCase, needs_daemon=False)
