@@ -355,7 +355,3 @@ class MountTestCase(TestCase):
         mock = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'active', mock):
             self.assertTrue(mount.is_mounted('name'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MountTestCase, needs_daemon=False)
