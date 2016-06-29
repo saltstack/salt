@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.shell.master
+    tests.integration.shell.test_master
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -13,10 +13,6 @@ import os
 import yaml
 import signal
 import shutil
-
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -149,7 +145,3 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout, stderr=stderr
         )
         master.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(MasterTest)
