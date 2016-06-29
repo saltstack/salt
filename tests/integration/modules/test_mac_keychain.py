@@ -11,10 +11,8 @@ import os
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
@@ -125,8 +123,3 @@ class MacKeychainModuleTest(integration.ModuleCase):
         cert_default = 'com.apple.systemdefault'
         certs = self.run_function('keychain.list_certs')
         self.assertIn(cert_default, certs)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacKeychainModuleTest)
