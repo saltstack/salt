@@ -10,8 +10,6 @@ import stat
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -587,11 +585,3 @@ class TestFinder(TestCase):
 
         finder = salt.utils.find.Finder({'name': 'test_name'})
         self.assertEqual(list(finder.find('')), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        [TestFind, TestGrepOption, TestPrintOption, TestFinder],
-        needs_daemon=False
-    )
