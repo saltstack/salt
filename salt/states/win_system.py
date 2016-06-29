@@ -53,7 +53,7 @@ def computer_desc(name):
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Computer description already set to {0!r}'.format(name)}
+           'comment': 'Computer description already set to \'{0}\''.format(name)}
 
     before_desc = __salt__['system.get_computer_desc']()
 
@@ -62,19 +62,19 @@ def computer_desc(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('Computer description will be changed to {0!r}'
+        ret['comment'] = ('Computer description will be changed to \'{0}\''
                           .format(name))
         return ret
 
     result = __salt__['system.set_computer_desc'](name)
     if result['Computer Description'] == name:
-        ret['comment'] = ('Computer description successfully changed to {0!r}'
+        ret['comment'] = ('Computer description successfully changed to \'{0}\''
                           .format(name))
         ret['changes'] = {'old': before_desc, 'new': name}
     else:
         ret['result'] = False
         ret['comment'] = ('Unable to set computer description to '
-                          '{0!r}'.format(name))
+                          '\'{0}\''.format(name))
     return ret
 
 computer_description = salt.utils.alias_function(computer_desc, 'computer_description')
@@ -93,7 +93,7 @@ def computer_name(name):
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Computer name already set to {0!r}'.format(name)}
+           'comment': 'Computer name already set to \'{0}\''.format(name)}
 
     before_name = __salt__['system.get_computer_name']()
     pending_name = __salt__['system.get_pending_computer_name']()
@@ -101,14 +101,14 @@ def computer_name(name):
     if before_name == name and pending_name is None:
         return ret
     elif pending_name == name.upper():
-        ret['comment'] = ('The current computer name is {0!r}, but will be '
-                          'changed to {1!r} on the next reboot'
+        ret['comment'] = ('The current computer name is \'{0}\', but will be '
+                          'changed to \'{1}\' on the next reboot'
                           .format(before_name, name))
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Computer name will be changed to {0!r}'.format(name)
+        ret['comment'] = 'Computer name will be changed to \'{0}\''.format(name)
         return ret
 
     result = __salt__['system.set_computer_name'](name)
@@ -117,13 +117,13 @@ def computer_name(name):
         after_pending = result['Computer Name'].get('Pending')
         if ((after_pending is not None and after_pending == name) or
                 (after_pending is None and after_name == name)):
-            ret['comment'] = 'Computer name successfully set to {0!r}'.format(name)
+            ret['comment'] = 'Computer name successfully set to \'{0}\''.format(name)
             if after_pending is not None:
                 ret['comment'] += ' (reboot required for change to take effect)'
         ret['changes'] = {'old': before_name, 'new': name}
     else:
         ret['result'] = False
-        ret['comment'] = 'Unable to set computer name to {0!r}'.format(name)
+        ret['comment'] = 'Unable to set computer name to \'{0}\''.format(name)
     return ret
 
 
@@ -203,7 +203,7 @@ def join_domain(name, username=None, password=None, account_ou=None,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Computer already added to {0!r}'.format(name)}
+           'comment': 'Computer already added to \'{0}\''.format(name)}
 
     # Set name to domain, needed for the add to domain module.
     domain = name
@@ -217,20 +217,20 @@ def join_domain(name, username=None, password=None, account_ou=None,
         current_domain = None
 
     if domain == current_domain:
-        ret['comment'] = 'Computer already added to {0!r}'.format(name)
+        ret['comment'] = 'Computer already added to \'{0}\''.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Computer will be added to {0!r}'.format(name)
+        ret['comment'] = 'Computer will be added to \'{0}\''.format(name)
         return ret
 
     result = __salt__['system.join_domain'](domain, username, password,
                                             account_ou, account_exists,
                                             restart)
     if result is not False:
-        ret['comment'] = 'Computer added to {0!r}'.format(name)
+        ret['comment'] = 'Computer added to \'{0}\''.format(name)
     else:
-        ret['comment'] = 'Computer failed to join {0!r}'.format(name)
+        ret['comment'] = 'Computer failed to join \'{0}\''.format(name)
         ret['result'] = False
     return ret

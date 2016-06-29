@@ -428,7 +428,7 @@ def managed(name, ppa=None, **kwargs):
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -513,7 +513,7 @@ def absent(name, **kwargs):
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
         return ret
 
     if not repo:
@@ -522,7 +522,7 @@ def absent(name, **kwargs):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} will be removed. This may '
+        ret['comment'] = ('Package repo \'{0}\' will be removed. This may '
                           'cause pkg states to behave differently than stated '
                           'if this action is repeated without test=True, due '
                           'to the differences in the configured repositories.'
