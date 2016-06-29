@@ -45,6 +45,7 @@ Will produce the following Pillar values for a minion named "jerry":
         'env': 'prod',
     }
 '''
+from __future__ import absolute_import
 import csv
 
 import salt.utils
