@@ -280,6 +280,9 @@ class SSH(object):
                 'ssh_identities_only',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_identities_only']
             ),
+            'remote_port_forwards': self.opts.get(
+                'ssh_remote_port_forwards'
+            ),
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
@@ -666,6 +669,7 @@ class Single(object):
             mine=False,
             minion_opts=None,
             identities_only=False,
+            remote_port_forwards=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -720,7 +724,8 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods,
-                'identities_only': identities_only}
+                'identities_only': identities_only,
+                'remote_port_forwards': remote_port_forwards}
         # Pre apply changeable defaults
         self.minion_opts = {
                     'grains_cache': True,
