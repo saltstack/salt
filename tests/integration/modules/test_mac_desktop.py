@@ -11,11 +11,8 @@ import os
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
@@ -93,8 +90,3 @@ class MacDesktopTestCase(integration.ModuleCase):
         self.assertTrue(
             self.run_function('desktop.say', ['hello', 'world'])
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacDesktopTestCase)
