@@ -18,10 +18,8 @@ import grp
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
@@ -263,7 +261,3 @@ class UserTest(integration.ModuleCase,
             check_user = self.run_function('user.list_users')
             if USER in check_user:
                 del_user = self.run_function('user.delete', [USER], remove=True)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UserTest)
