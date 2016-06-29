@@ -4,7 +4,7 @@ Tests for git execution module
 
 NOTE: These tests may modify the global git config, and have been marked as
 destructive as a result. If no values are set for user.name or user.email in
-the user's global .gitconfig, then these tests will set one.
+the user's global .test_gitconfig, then these tests will set one.
 '''
 
 # Import Python Libs
@@ -24,10 +24,8 @@ from distutils.version import LooseVersion
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     skip_if_binaries_missing
 )
-ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
@@ -330,7 +328,7 @@ class GitModuleTest(integration.ModuleCase):
 
         WARNING: This test will modify and completely remove a config section
         'foo', both in the repo created in setUp() and in the user's global
-        .gitconfig.
+        .test_gitconfig.
         '''
         def _clear_config():
             cmds = (
@@ -584,7 +582,7 @@ class GitModuleTest(integration.ModuleCase):
         new_repo = tempfile.mkdtemp(dir=integration.TMP)
         self.assertEqual(
             self.run_function('git.init', [new_repo]),
-            'Initialized empty Git repository in {0}/.git/'.format(new_repo)
+            'Initialized empty Git repository in {0}/.test_git/'.format(new_repo)
         )
         shutil.rmtree(new_repo)
 
@@ -897,7 +895,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         This tests git.worktree_add, git.is_worktree, git.worktree_rm, and
         git.worktree_prune. Tests for 'git worktree list' are covered in
-        tests.unit.modules.git_test.
+        tests.unit.modules.test_git_test.
         '''
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
@@ -949,8 +947,3 @@ class GitModuleTest(integration.ModuleCase):
             self.run_function('git.worktree_prune', [self.repo]),
             prune_message
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitModuleTest)
