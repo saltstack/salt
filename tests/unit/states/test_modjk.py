@@ -11,10 +11,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import modjk
 import salt.ext.six as six
@@ -94,8 +90,3 @@ class ModjkTestCase(TestCase):
 
         ret.update({'comment': LIST_NOT_STR})
         self.assertDictEqual(modjk.worker_recover(name, 'app1'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ModjkTestCase, needs_daemon=False)
