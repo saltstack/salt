@@ -3529,6 +3529,43 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     Adds an ESXi host to a vSphere Distributed Virtual Switch and migrates
     the desired adapters to the DVS from the standard switch.
 
+    host
+        The location of the vCenter server.
+
+    username
+        The username used to login to the vCenter server.
+
+    password
+        The password used to login to the vCenter server.
+
+    vmknic_name
+        The name of the virtual NIC to migrate.
+
+    vmnic_name
+        The name of the physical NIC to migrate.
+
+    dvs_name
+        The name of the Distributed Virtual Switch.
+
+    target_portgroup_name
+        The name of the distributed portgroup in which to migrate the
+        virtual NIC.
+
+    uplink_portgroup_name
+        The name of the uplink portgroup in which to migrate the
+        physical NIC.
+
+    protocol
+        Optionally set to alternate protocol if the vCenter server or ESX/ESXi host is not
+        using the default protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the vCenter server or ESX/ESXi host is not
+        using the default port. Default port is ``443``.
+
+    host_names:
+        An array of VMware host names to migrate
+
     CLI Example:
 
     .. code-block:: bash
@@ -3699,7 +3736,6 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             ret['success'] = False
             continue
 
-
         dvs_hostmember_config = vim.dvs.HostMember.ConfigInfo(
             host=host_ref
         )
@@ -3764,7 +3800,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                 break
 
         if not source_portgroup:
-            ret[host_name].update({'message':'No matching portgroup on the vSwitch'})
+            ret[host_name].update({'message': 'No matching portgroup on the vSwitch'})
             ret['success'] = False
             continue
 
