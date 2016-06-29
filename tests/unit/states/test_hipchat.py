@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import hipchat
 
@@ -75,8 +71,3 @@ class HipchatTestCase(TestCase):
                 self.assertDictEqual(hipchat.send_message(name, room_id,
                                                           from_name, message),
                                      ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HipchatTestCase, needs_daemon=False)
