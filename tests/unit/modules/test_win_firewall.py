@@ -14,10 +14,6 @@ from salttesting.mock import (
     call
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_firewall
 
@@ -178,8 +174,3 @@ class WinFirewallTestCase(TestCase):
             mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
                                               'protocol=icmpv4:any,any', 'dir=in'],
                                              python_shell=False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinFirewallTestCase, needs_daemon=False)
