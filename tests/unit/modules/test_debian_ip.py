@@ -273,8 +273,3 @@ class DebianIpTestCase(TestCase):
                                   MagicMock(return_value=True)):
                     self.assertTrue(debian_ip.build_network_settings
                                     (test='True'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DebianIpTestCase, needs_daemon=False)
