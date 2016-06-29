@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import status
 
@@ -92,8 +88,3 @@ class StatusTestCase(TestCase):
             ret.update({'comment': comt, 'result': True,
                         'data': {name: 1}})
             self.assertDictEqual(status.process(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatusTestCase, needs_daemon=False)
