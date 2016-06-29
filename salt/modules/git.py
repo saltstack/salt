@@ -1372,7 +1372,7 @@ def describe(cwd, rev='HEAD', user=None, ignore_retcode=False):
     cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command = ['git', 'describe', rev]
+    command = ['git', 'describe', '--always', rev]
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
