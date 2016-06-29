@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import slack
 
@@ -76,8 +72,3 @@ class SlackTestCase(TestCase):
                 self.assertDictEqual(slack.post_message(name, channel,
                                                         from_name, message),
                                      ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SlackTestCase, needs_daemon=False)
