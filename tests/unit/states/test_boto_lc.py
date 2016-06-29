@@ -13,10 +13,7 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import SaltInvocationError
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import boto_lc
@@ -83,8 +80,3 @@ class BotoLcTestCase(TestCase):
                 comt = ('Launch configuration set to be deleted.')
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_lc.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoLcTestCase, needs_daemon=False)
