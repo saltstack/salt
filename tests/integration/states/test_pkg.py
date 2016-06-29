@@ -13,11 +13,9 @@ import time
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains,
     requires_salt_modules
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -588,7 +586,3 @@ class PkgTest(integration.ModuleCase,
                 ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'],
                 'Package {0} is already up-to-date'.format(target)
             )
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgTest)
