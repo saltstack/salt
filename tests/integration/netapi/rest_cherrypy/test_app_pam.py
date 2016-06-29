@@ -9,10 +9,7 @@ import os
 
 # Import salttesting libs
 from salttesting.unit import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest)
-ensure_in_syspath('../../../')
+from salttesting.helpers import destructiveTest
 
 from tests.utils import BaseRestCherryPyTest
 
