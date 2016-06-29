@@ -107,8 +107,3 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetapiClientTest, needs_daemon=True)
