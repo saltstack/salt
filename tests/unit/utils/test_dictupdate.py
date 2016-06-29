@@ -6,9 +6,6 @@ import copy
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.utils import dictupdate
@@ -173,8 +170,3 @@ class UtilDictMergeTestCase(TestCase):
         mdict1['A'] = ['B']
         ret = dictupdate.merge_list(mdict1, {'A': ['b', 'c']})
         self.assertEqual({'A': [['B'], ['b', 'c']], 'C': {'D': 'E', 'F': {'I': 'J', 'G': 'H'}}}, ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UtilDictupdateTestCase, needs_daemon=False)
