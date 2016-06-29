@@ -5,10 +5,6 @@ Tests for the fileserver runner
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 # Import salt libs
 import integration
 
@@ -118,7 +114,3 @@ class ManageTest(integration.ShellCase):
         ret = self.run_run_plus(fun='fileserver.update',
                                 args=['backend="[roots]"'])
         self.assertTrue(ret['fun'])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ManageTest)

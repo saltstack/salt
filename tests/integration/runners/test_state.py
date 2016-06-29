@@ -34,7 +34,7 @@ class StateRunnerTest(integration.ShellCase):
         '''
         ret = self.run_run_plus('state.orchestrate', '', 'orch.simple')
         bad_out = ['outputter:', '    highstate']
-        good_out = ['    Function: salt.state',
+        good_out = ['    Function: salt.test_state',
                     '      Result: True',
                     'Succeeded: 1 (changed=1)',
                     'Failed:    0',
