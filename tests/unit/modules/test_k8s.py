@@ -13,9 +13,7 @@ from subprocess import Popen, PIPE
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-
-ensure_in_syspath('../../')
+from salttesting.helpers import skip_if_binaries_missing
 
 # Import Salt libs
 import salt.modules.k8s as k8s
@@ -397,12 +395,3 @@ spec:
         kubectl_out = json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestK8SNamespace,
-              TestK8SSecrets,
-              TestK8SResourceQuotas,
-              TestK8SLimitRange,
-              needs_daemon=False)
