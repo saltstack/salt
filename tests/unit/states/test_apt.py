@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import aptpkg
 
@@ -45,8 +41,3 @@ class AptTestCase(TestCase):
         mock = MagicMock(return_value=False)
         with patch.dict(aptpkg.__salt__, {'pkg.get_selections': mock}):
             self.assertDictEqual(aptpkg.held(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AptTestCase, needs_daemon=False)
