@@ -8,9 +8,6 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 import salt.loader
@@ -337,8 +334,3 @@ formula/woot.sls:
 
         r = result['formula/woot.sls']['cmd.run'][0]['name']
         self.assertEqual(r, 'echo formula/woot')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateConfigRendererTestCase, needs_daemon=False)
