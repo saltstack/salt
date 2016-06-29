@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import mongodb_database
 
@@ -63,8 +59,3 @@ class MongodbDatabaseTestCase(TestCase):
                         .format(name))
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(mongodb_database.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MongodbDatabaseTestCase, needs_daemon=False)
