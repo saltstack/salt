@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -248,8 +244,3 @@ class WinShadowTestCase(TestCase):
         mock_cmd = MagicMock(return_value=ETHERNET_CONFIG)
         with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(win_ip.get_default_gateway(), '1.2.3.1')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinShadowTestCase, needs_daemon=False)
