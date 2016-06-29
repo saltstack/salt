@@ -36,6 +36,9 @@ def timeout(name, delete=0, reject=0):
            'comment': '',
            'result': True}
     now = time.time()
+    ktr = 'key_start_tracker'
+    if ktr not in __context__:
+        __context__[ktr] = {}
     remove = set()
     keyapi = _get_key_api()
     current = keyapi.list_status('acc')
@@ -47,7 +50,11 @@ def timeout(name, delete=0, reject=0):
         else:
             # No report from minion recorded, mark for change if thorium has
             # been running for longer than the timeout
-            pass
+            if id_ not in __context__[ktr]:
+                __context__[ktr][id_] = now
+            else:
+                if (now - __context__[ktr][id_]) > delete:
+                    remove.add(id_)
     for id_ in remove:
         keyapi.delete_key(id_)
     return ret
