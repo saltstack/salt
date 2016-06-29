@@ -19,9 +19,6 @@ from salt.exceptions import SaltCloudSystemExit
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
 
 # Global Variables
 dimensiondata.__active_provider_name__ = ''
@@ -164,8 +161,3 @@ class DimensionDataTestCase(ExtendedTestCase):
             locations,
             {}
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DimensionDataTestCase, needs_daemon=False)
