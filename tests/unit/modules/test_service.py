@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import service
 import os
@@ -111,8 +107,3 @@ class ServiceTestCase(TestCase):
 
             with patch.object(os, 'listdir', return_value=['A', 'B']):
                 self.assertListEqual(service.get_all(), ['A', 'B'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServiceTestCase, needs_daemon=False)
