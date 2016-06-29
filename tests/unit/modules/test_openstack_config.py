@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import openstack_config
 from salt.exceptions import CommandExecutionError
@@ -91,8 +87,3 @@ class OpenstackConfigTestCase(TestCase):
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(CommandExecutionError, openstack_config.delete,
                               '/etc/key/keystone.conf', 'sql', 'connection')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenstackConfigTestCase, needs_daemon=False)
