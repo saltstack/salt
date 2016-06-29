@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import lxc
 import salt.utils
@@ -318,8 +314,3 @@ class LxcTestCase(TestCase):
                 with patch.dict(lxc.__salt__, {'lxc.update_lxc_conf': mock}):
                     self.assertDictEqual(lxc.edited_conf(name),
                                          {'name': 'web01'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LxcTestCase, needs_daemon=False)
