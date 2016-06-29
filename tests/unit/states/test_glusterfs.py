@@ -14,10 +14,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import glusterfs
 import salt.utils.cloud
@@ -297,8 +293,3 @@ class GlusterfsTestCase(TestCase):
                         'changes': {'new': bricks + old_bricks,
                                     'old': old_bricks}})
             self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GlusterfsTestCase, needs_daemon=False)
