@@ -15,9 +15,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import iptables
@@ -469,8 +466,3 @@ class IptablesTestCase(TestCase):
             self.assertTrue(iptables.flush(table='filter',
                                                        chain='INPUT',
                                                        family='ipv4'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IptablesTestCase, needs_daemon=False)
