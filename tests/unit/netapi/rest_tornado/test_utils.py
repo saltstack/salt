@@ -7,8 +7,6 @@ import os
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
 from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -130,7 +128,3 @@ class TestEventListener(AsyncTestCase):
             self.assertTrue(event_future.done())
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestUtils, needs_daemon=False)
