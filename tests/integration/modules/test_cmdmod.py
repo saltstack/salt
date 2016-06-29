@@ -11,11 +11,9 @@ import tempfile
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     skip_if_binaries_missing
 )
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -284,7 +282,3 @@ class CMDModuleTest(integration.ModuleCase):
             pass
         else:
             raise RuntimeError
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CMDModuleTest)
