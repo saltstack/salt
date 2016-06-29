@@ -182,9 +182,13 @@ def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, prof
     '''
     Unsubscribe a specific SubscriptionArn of a topic.
 
-    CLI example to unsubscribe a subscription to a topic::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
+
+    .. versionadded:: Carbon
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
