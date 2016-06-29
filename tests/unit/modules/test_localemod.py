@@ -224,8 +224,3 @@ class LocalemodTestCase(TestCase):
         with patch.dict(localemod.__salt__, {'cmd.run': mock_cmd}):
             ret = localemod._parse_localectl()
             self.assertEqual({'LANG': 'en_US.UTF-8', 'LANGUAGE': 'en_US:en'}, ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocalemodTestCase, needs_daemon=False)
