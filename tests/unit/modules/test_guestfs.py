@@ -39,8 +39,3 @@ class GuestfsTestCase(TestCase):
         mock = MagicMock(return_value='')
         with patch.dict(guestfs.__salt__, {'cmd.run': mock}):
             self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GuestfsTestCase, needs_daemon=False)
