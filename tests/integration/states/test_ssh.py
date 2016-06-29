@@ -12,11 +12,9 @@ import shutil
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     with_system_user,
     skip_if_binaries_missing
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -242,8 +240,3 @@ class SSHAuthStateTests(integration.ModuleCase,
                 fhr.read(),
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([SSHKnownHostsStateTest, SSHAuthStateTests])
