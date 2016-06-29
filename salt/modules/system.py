@@ -193,7 +193,7 @@ def _try_parse_datetime(time_str, fmts):
         try:
             result = datetime.strptime(time_str, fmt)
             break
-        except ValueError, e:
+        except ValueError:
             pass
     return result
 
