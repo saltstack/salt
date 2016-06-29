@@ -3,10 +3,10 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.unit.utils.immutabletypes
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.unit.utils.test_immutabletypes
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test salt.utils.immutabletypes
+    Test salt.utils.test_immutabletypes
 '''
 
 # Import Python libs
@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import immutabletypes
@@ -83,8 +81,3 @@ class ImmutableTypesTestCase(TestCase):
         with self.assertRaises(TypeError):
             flist = frozen[4]
             flist[0] = 5
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ImmutableTypesTestCase, needs_daemon=False)
