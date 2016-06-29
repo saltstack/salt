@@ -10,15 +10,12 @@ import os
 # Import Salt Testing Libs
 from salt.exceptions import CommandExecutionError
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import systemd
@@ -207,7 +204,3 @@ class SystemdTestCase(TestCase):
             mock = MagicMock(return_value={'ExecStart': {'path': 'c'}})
             with patch.object(systemd, 'show', mock):
                 self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemdTestCase, needs_daemon=False)
