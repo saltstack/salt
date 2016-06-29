@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -39,8 +38,3 @@ class StateCompilerTestCase(TestCase):
                                          'new': 'something new'}},
                'result': True}
         state.format_log(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateCompilerTestCase, needs_daemon=False)
