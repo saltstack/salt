@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.integration.shell.minion
+    tests.integration.shell.test_minion
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -17,11 +17,6 @@ import yaml
 import signal
 import shutil
 import logging
-
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 
 # Import salt libs
 import integration
@@ -317,7 +312,3 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout, stderr=stderr
         )
         minion.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(MinionTest)
