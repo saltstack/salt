@@ -9,12 +9,10 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.helpers import (
-    ensure_in_syspath,
     skip_if_not_root,
     skip_if_binaries_missing
 )
 from salttesting import skipIf
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -104,7 +102,3 @@ class LXCModuleTest(integration.ModuleCase):
         self.run_function('cmd.run', ['truncate -s 0 {0}'.format(f)])
 
         self.assertEqual(conf.get('lxc.network.type'), 'macvlan')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LXCModuleTest)
