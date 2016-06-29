@@ -5,11 +5,6 @@ from __future__ import absolute_import
 import os
 import textwrap
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
-
 # Import Salt libs
 import integration
 import salt.utils
@@ -43,8 +38,3 @@ class PyDSLRendererIncludeTestCase(integration.ModuleCase):
 
         finally:
             os.remove('/tmp/output')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    tests = [PyDSLRendererIncludeTestCase]
-    run_tests(*tests, needs_daemon=True)
