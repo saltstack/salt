@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -14,7 +15,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-import os
 
 # Import Salt Libs
 from salt.modules import daemontools
@@ -130,8 +130,3 @@ class DaemontoolsTestCase(TestCase):
         mock = MagicMock(return_value='A')
         with patch.object(os, 'listdir', mock):
             self.assertEqual(daemontools.get_all(), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DaemontoolsTestCase, needs_daemon=False)
