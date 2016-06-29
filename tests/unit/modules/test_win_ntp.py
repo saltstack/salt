@@ -13,10 +13,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import win_ntp
 
@@ -72,8 +68,3 @@ class WinNtpTestCase(TestCase):
             self.assertListEqual(win_ntp.get_servers(), ['SALT'])
 
             self.assertFalse(win_ntp.get_servers())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinNtpTestCase, needs_daemon=False)
