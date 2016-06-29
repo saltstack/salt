@@ -9,11 +9,7 @@ import logging
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -498,8 +494,3 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_charset='utf8'
         )
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlDatabaseStateTest, MysqlGrantsStateTest)
