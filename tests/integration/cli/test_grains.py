@@ -3,7 +3,7 @@
     :codeauthor: :email:`Daniel Mizyrycki (mzdaniel@glidelink.net)`
 
 
-    tests.integration.cli.grains
+    tests.integration.cli.test_grains
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test salt-ssh grains id work for localhost. (gh #16129)
@@ -19,11 +19,6 @@ import os
 # Import Salt Libs
 import integration
 import salt.utils
-
-# Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 
 class GrainsTargetingTest(integration.ShellCase):
@@ -89,8 +84,3 @@ class SSHGrainsTest(integration.SSHCase):
         '''
         cmd = self.run_function('grains.get', ['id'])
         self.assertEqual(cmd, 'localhost')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHGrainsTest)
