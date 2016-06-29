@@ -10,9 +10,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import portage_config
@@ -31,7 +29,3 @@ class PortageConfigTestCase(TestCase):
 
         for (atom, expected) in pairs:
             self.assertEqual(portage_config._get_config_file('mask', atom), expected)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PortageConfigTestCase, needs_daemon=False)
