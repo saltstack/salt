@@ -17,6 +17,7 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import destructiveTest
 # Import Salt Libs
 from salt.modules import reg as win_mod_reg
+from salt.ext import six
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     NO_WINDOWS_MODULES = False
@@ -30,7 +31,7 @@ PY2 = sys.version_info[0] == 2
 TIMEINT = int(time.time())
 
 if PY2:
-    TIME_INT_UNICODE = unicode(TIMEINT)
+    TIME_INT_UNICODE = six.text_type(TIMEINT)
     TIMESTR = time.strftime('%X %x %Z').decode('utf-8')
 else:
     TIMESTR = time.strftime('%X %x %Z')
