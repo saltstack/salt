@@ -11,7 +11,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 
 # Import Mock libraries
 from salttesting.mock import (
@@ -20,8 +19,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Execution module to test
 from salt.modules import zfs
@@ -500,9 +497,4 @@ class ZfsTestCase(TestCase):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.get('myzpool', properties='compression', fields='value'), res)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZfsTestCase, needs_daemon=False)
-
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
