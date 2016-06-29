@@ -8,8 +8,7 @@ import json
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -74,8 +73,3 @@ class BowerStateTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('file.absent', name='/salt_test_bower_3')
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BowerStateTest)
