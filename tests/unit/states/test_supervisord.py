@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import supervisord
 
@@ -95,8 +91,3 @@ class SupervisordTestCase(TestCase):
                 ' Do you need to install supervisord?')
         ret.update({'comment': comt, 'result': False})
         self.assertDictEqual(supervisord.mod_watch(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordTestCase, needs_daemon=False)
