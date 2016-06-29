@@ -17,10 +17,8 @@ from salt.exceptions import CommandExecutionError
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Module Variables
 ASSIGN_CMD = 'net.inet.icmp.icmplim'
@@ -209,8 +207,3 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
         if self.has_conf is False and os.path.isfile(CONFIG):
             # remove sysctl.conf created by tests
             os.remove(CONFIG)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DarwinSysctlModuleTest)
