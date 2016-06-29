@@ -14,10 +14,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import blockdev
 import salt.utils
@@ -105,8 +101,3 @@ class BlockdevTestCase(TestCase):
                                   MagicMock(return_value=True)):
                     with patch.dict(blockdev.__opts__, {'test': False}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BlockdevTestCase, needs_daemon=False)
