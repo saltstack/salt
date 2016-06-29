@@ -8,7 +8,6 @@ from salt.modules import win_powercfg as powercfg
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -16,8 +15,6 @@ from salttesting.mock import (
     patch,
     call
 )
-
-ensure_in_syspath('../../')
 
 powercfg.__salt__ = {}
 powercfg.__grains__ = {'osrelease': 8}
@@ -160,7 +157,3 @@ class PowerCfgTestCase(TestCase):
                 mock.assert_has_calls(calls)
 
                 self.assertEqual({'ac': 30, 'dc': 15}, ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PowerCfgTestCase, needs_daemon=False)
