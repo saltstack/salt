@@ -2,7 +2,7 @@
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
-    tests.integration.modules.pw_user
+    tests.integration.modules.test_pw_user
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import python libs
@@ -13,8 +13,7 @@ import random
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -81,8 +80,3 @@ class PwUserModuleTest(integration.ModuleCase):
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])
             raise
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PwUserModuleTest)
