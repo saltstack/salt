@@ -100,8 +100,3 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
             'bar': 'Bar!',
         }
         self.runner.cmd_sync(low)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RunnerModuleTest, needs_daemon=True)
