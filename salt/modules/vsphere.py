@@ -3841,7 +3841,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             ret[host_name].update({'status': True})
         except Exception as e:
             if hasattr(e, 'msg'):
-                ret[host_name].update({'message':'Failed to migrate adapters ({0})'.format(e.msg)})
+                ret[host_name].update({'message': 'Failed to migrate adapters ({0})'.format(e.msg)})
                 continue
             else:
                 raise
