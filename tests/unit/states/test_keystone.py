@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import keystone
 
@@ -363,8 +359,3 @@ class KeystoneTestCase(TestCase):
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'endpoint': 'Will be deleted'}})
                 self.assertDictEqual(keystone.endpoint_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeystoneTestCase, needs_daemon=False)
