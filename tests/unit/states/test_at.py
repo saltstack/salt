@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import at
 
@@ -102,8 +98,3 @@ class AtTestCase(TestCase):
                 comt = "Remove job(rose) from queue but (['rose']) fail"
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(at.absent('all'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AtTestCase, needs_daemon=False)
