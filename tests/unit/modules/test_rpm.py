@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rpm
 
@@ -135,7 +131,3 @@ class RpmTestCase(TestCase):
         rpm.rpm = MagicMock(return_value=MagicMock)
         with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
             self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RpmTestCase, needs_daemon=False)
