@@ -26,12 +26,9 @@ import salt.exceptions
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
-
-import integration
 
 # Import Salt libs
+import integration
 from unit.transport.req_test import ReqChannelMixin
 from unit.transport.pub_test import PubChannelMixin
 
@@ -196,9 +193,3 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     def get_new_ioloop(self):
         return zmq.eventloop.ioloop.ZMQIOLoop()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ClearReqTestCases, needs_daemon=False)
-    run_tests(AESReqTestCases, needs_daemon=False)
