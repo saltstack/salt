@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import boto_iam_role
 
@@ -178,8 +174,3 @@ class BotoIAMRoleTestCase(TestCase):
                         'does not exist. Failed to delete myrole iam role.')
                 ret.update({'comment': comt, 'changes': {}})
                 self.assertDictEqual(boto_iam_role.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoIAMRoleTestCase, needs_daemon=False)
