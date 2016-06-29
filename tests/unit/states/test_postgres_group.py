@@ -14,10 +14,6 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import postgres_group
 
@@ -92,8 +88,3 @@ class PostgresGroupTestCase(TestCase):
                     .format(name))
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(postgres_group.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresGroupTestCase, needs_daemon=False)
