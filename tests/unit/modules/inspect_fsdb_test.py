@@ -79,6 +79,20 @@ class InspectorFSDBTestCase(TestCase):
         csvdb = CsvDB('/foobar')
         csvdb.open()
         assert csvdb.list_tables() == ['test_db']
+        assert csvdb.is_closed() == False
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.listdir", MagicMock(return_value=['test_db']))
+    @patch("gzip.open", mock_open("foo:int,bar:str"))
+    def test_close(self):
+        '''
+        Test opening the database.
+        :return:
+        '''
+        csvdb = CsvDB('/foobar')
+        csvdb.open()
+        csvdb.close()
+        assert csvdb.is_closed() == True
 
 
     @patch("os.makedirs", MagicMock())
