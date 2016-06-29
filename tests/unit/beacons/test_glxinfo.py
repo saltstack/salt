@@ -8,20 +8,16 @@ from salt.beacons import glxinfo
 
 # Salt testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
 
 # Globals
-
 glxinfo.__salt__ = {}
-
-ensure_in_syspath('../../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GLXInfoBeaconTestCase(TestCase):
     '''
-    Test case for salt.beacons.glxinfo
+    Test case for salt.beacons.test_glxinfo
     '''
     def setUp(self):
         glxinfo.last_state = {}
