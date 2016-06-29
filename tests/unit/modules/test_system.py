@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import system
 
@@ -78,8 +74,3 @@ class SystemTestCase(TestCase):
         with patch.dict(system.__salt__,
                         {'cmd.run': MagicMock(return_value='A')}):
             self.assertEqual(system.shutdown(), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemTestCase, needs_daemon=False)
