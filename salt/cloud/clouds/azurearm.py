@@ -1468,7 +1468,7 @@ def pages_to_list(items):
     objs = []
     while True:
         try:
-            page = items.next()
+            page = items.next()  # pylint: disable=incompatible-py3-code
             for item in page:
                 objs.append(item)
         except GeneratorExit:
