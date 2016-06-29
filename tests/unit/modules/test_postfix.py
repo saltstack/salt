@@ -14,10 +14,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import postfix
 
@@ -135,8 +131,3 @@ class PostfixTestCase(TestCase):
             self.assertDictEqual(postfix.requeue('ALL'),
                                  {'result': True, 'message':
                                   'Successfully requeued all messages'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostfixTestCase, needs_daemon=False)
