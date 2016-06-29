@@ -38,7 +38,3 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
             ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
         self.assertTrue(
             ret.get('priv', '').startswith('-----BEGIN RSA PRIVATE KEY-----'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyWheelModuleTest, needs_daemon=True)
