@@ -10,7 +10,6 @@ import platform
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
@@ -18,8 +17,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.utils
@@ -367,8 +364,3 @@ PATCHLEVEL = 3
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CoreGrainsTestCase, needs_daemon=False)
