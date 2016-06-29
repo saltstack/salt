@@ -25,11 +25,8 @@ from salt.ext.six.moves import range
 import integration
 
 from salttesting.mock import MagicMock
-from salttesting.helpers import ensure_in_syspath
 
 log = logging.getLogger(__name__)
-
-ensure_in_syspath('../')
 
 
 class BaseIPCReqCase(tornado.testing.AsyncTestCase):
@@ -139,8 +136,3 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel.send({'stop': True})
         self.wait()
         self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IPCMessageClient, needs_daemon=False)
