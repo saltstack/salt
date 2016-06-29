@@ -13,8 +13,6 @@ from salttesting.mock import (
     NO_MOCK_REASON,
 )
 
-ensure_in_syspath('../')
-
 # Import Salt libs
 from salt import state
 
