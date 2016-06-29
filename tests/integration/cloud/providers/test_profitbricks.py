@@ -11,9 +11,7 @@ import string
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, expensiveTest
-
-ensure_in_syspath('../../../')
+from salttesting.helpers import expensiveTest
 
 # Import Salt Libs
 import integration
@@ -124,8 +122,3 @@ class ProfitBricksTest(integration.ShellCase):
         # if test instance is still present, delete it
         if ret in query:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(ProfitBricksTest)
