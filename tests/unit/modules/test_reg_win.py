@@ -300,7 +300,3 @@ class RegWinTestCase(TestCase):
 
     # pylint: disable=W0511
     # TODO: Test other hives, other than HKEY_LOCAL_MACHINE and HKEY_CURRENT_USER
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=C0413
-    run_tests(RegWinTestCase, needs_daemon=False)
