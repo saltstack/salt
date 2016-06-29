@@ -16,10 +16,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import pam
 
@@ -42,8 +38,3 @@ class PamTestCase(TestCase):
             self.assertListEqual(pam.read_file('/etc/pam.d/login'),
                                  [{'arguments': [], 'control_flag': 'ok',
                                    'interface': 'ok', 'module': 'ignore'}])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PamTestCase, needs_daemon=False)
