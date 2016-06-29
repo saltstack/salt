@@ -10,7 +10,6 @@ Based on joint work with Paul Tonelli about hg_pillar integration.
 
 # Import python libs
 from __future__ import absolute_import
-
 import os
 import tempfile
 import shutil
@@ -176,8 +175,3 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
 
         self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
         self.assertTrue(orig_ext_pillar.count < 7)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitPillarTestCase, needs_daemon=False)
