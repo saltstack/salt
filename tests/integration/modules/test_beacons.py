@@ -14,9 +14,7 @@ import integration
 
 # Salttesting libs
 from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 beacons.__opts__ = {}
 
@@ -131,8 +129,3 @@ class BeaconsTest(integration.ModuleCase):
             self.assertEqual(ret, {'ps': {'apache2': 'stopped'}, 'enabled': True})
         else:
             self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([BeaconsAddDeleteTest, BeaconsTest])
