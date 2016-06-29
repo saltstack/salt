@@ -7,9 +7,7 @@ from salttesting.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
-    ensure_in_syspath
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -227,8 +225,3 @@ class PkgModuleTest(integration.ModuleCase,
             keys = ret.keys()
             self.assertIn('less', keys)
             self.assertIn('zypper', keys)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgModuleTest)
