@@ -6,11 +6,7 @@ import logging
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -1629,7 +1625,3 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             "GRANT USAGE ON *.* TO ''@'localhost'",
             "GRANT DELETE ON `test ``(:=salteeb)`.* TO ''@'localhost'"
         ])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlModuleDbTest, MysqlModuleUserTest)
