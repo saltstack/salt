@@ -798,7 +798,3 @@ class TLSAddTestCase(TestCase):
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TLSAddTestCase, needs_daemon=False)
