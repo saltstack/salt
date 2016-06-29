@@ -35,7 +35,7 @@ class DBHandleBase(object):
         '''
         self._path = path
         self.init_queries = list()
-        self._db = CsvDB("/tmp/salt.fsdb")  ## Replace with the self._path afterwards
+        self._db = CsvDB(self._path)
 
     def open(self, new=False):
         '''
