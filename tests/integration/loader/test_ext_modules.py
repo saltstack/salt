@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    integration.loader.ext_modules
+    integration.loader.test_ext_modules
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader regarding external overrides
@@ -11,10 +11,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
 
 # Import salt libs
 import integration
@@ -40,8 +36,3 @@ class LoaderOverridesTest(integration.ModuleCase):
             self.run_function('test.echo', arg=[text])[::-1],
             self.run_function('test.recho', arg=[text]),
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LoaderOverridesTest)
