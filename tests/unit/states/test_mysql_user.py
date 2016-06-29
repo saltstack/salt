@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import mysql_user
 import salt
@@ -157,8 +153,3 @@ class MysqlUserTestCase(TestCase):
                     ret.update({'comment': comt, 'result': True,
                                 'changes': {}})
                     self.assertDictEqual(mysql_user.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlUserTestCase, needs_daemon=False)
