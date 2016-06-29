@@ -5,6 +5,7 @@ tests for pkg state
 '''
 # Import python libs
 from __future__ import absolute_import
+import logging
 import os
 import time
 
@@ -24,6 +25,8 @@ import salt.utils
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+log = logging.getLogger(__name__)
 
 __testcontext__ = {}
 
@@ -497,7 +500,8 @@ class PkgTest(integration.ModuleCase,
     @requires_system_grains
     def test_pkg_011_latest(self, grains=None):
         '''
-        This tests pkg.latest with a package that doesn't have a nonzero epoch
+        This tests pkg.latest with a package that has no epoch (or a zero
+        epoch).
         '''
         # Skip test if package manager not available
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
@@ -519,12 +523,70 @@ class PkgTest(integration.ModuleCase,
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
-        # No need to refresh again, we would have done so above when getting
-        # the latest version
         ret = self.run_state('pkg.latest', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
+
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_012_latest_only_upgrade(self, grains=None):
+        '''
+        WARNING: This test will pick a package with an available upgrade (if
+        there is one) and upgrade it to the latest version.
+        '''
+        os_family = grains.get('os_family', '')
+        if os_family != 'Debian':
+            self.skipTest('Minion is not Debian/Ubuntu')
+
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+        version = latest_version(self.run_function, target)
+
+        # If this assert fails, we need to find new targets, this test needs to
+        # be able to test that the state fails when you try to run the state
+        # with only_upgrade=True on a package which is not already installed,
+        # so the targeted package needs to not be installed before we run the
+        # state below.
+        self.assertTrue(version)
+
+        ret = self.run_state('pkg.latest', name=target, refresh=False,
+                             only_upgrade=True)
+        self.assertSaltFalseReturn(ret)
+
+        # Now look for updates and try to run the state on a package which is
+        # already up-to-date.
+        updates = self.run_function('pkg.list_upgrades', refresh=False)
+        try:
+            target = next(iter(updates))
+        except StopIteration:
+            log.warning(
+                'No available upgrades, skipping only_upgrade=True test with '
+                'already-installed package. For best results run this test '
+                'on a machine with upgrades available.'
+            )
+        else:
+            ret = self.run_state('pkg.latest', name=target, refresh=False,
+                                 only_upgrade=True)
+            self.assertSaltTrueReturn(ret)
+            new_version = self.run_function('pkg.version', [target])
+            self.assertEqual(new_version, updates[target])
+            ret = self.run_state('pkg.latest', name=target, refresh=False,
+                                 only_upgrade=True)
+            self.assertEqual(
+                ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'],
+                'Package {0} is already up-to-date'.format(target)
+            )
 
 if __name__ == '__main__':
     from integration import run_tests
