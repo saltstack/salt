@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import smtp
 
@@ -299,8 +295,3 @@ class SmtpTestCase(TestCase):
             self.assertFalse(smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
                                            profile='my-smtp-account'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SmtpTestCase, needs_daemon=False)
