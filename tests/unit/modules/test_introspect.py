@@ -14,9 +14,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import introspect
@@ -80,8 +77,3 @@ class IntrospectTestCase(TestCase):
         Test if it return running and enabled services in a highstate structure.
         '''
         self.assertDictEqual(introspect.service_highstate(), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IntrospectTestCase, needs_daemon=False)
