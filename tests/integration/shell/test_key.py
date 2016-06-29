@@ -8,9 +8,7 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
 from salttesting import skipIf
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -184,7 +182,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
+                key_names = ('minibar.test_key',)
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
@@ -200,7 +198,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
+                key_names = ('minibar.test_key',)
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
@@ -257,8 +255,3 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyTest)
