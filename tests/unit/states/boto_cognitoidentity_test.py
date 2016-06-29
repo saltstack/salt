@@ -34,6 +34,8 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+from salt.ext.six.moves import range
+
 # pylint: enable=import-error,no-name-in-module
 
 # the boto_cognitoidentity module relies on the connect_to_region() method
