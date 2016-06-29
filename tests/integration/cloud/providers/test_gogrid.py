@@ -10,10 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath, expensiveTest
+from salttesting.helpers import expensiveTest
 from salttesting import skipIf
-
-ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
@@ -111,8 +109,3 @@ class GoGridTest(integration.ShellCase):
         # if test instance is still present, delete it
         if ret_str in query:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GoGridTest)
