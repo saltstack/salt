@@ -5,22 +5,19 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-import salt.config
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-import os
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.config
 from salt.states import winrepo
 
 # Globals
@@ -88,8 +85,3 @@ class WinrepoTestCase(TestCase):
                         ret.update({'changes': {'winrepo': []}})
                         self.assertDictEqual(winrepo.genrepo('salt', True),
                                              ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinrepoTestCase, needs_daemon=False)
