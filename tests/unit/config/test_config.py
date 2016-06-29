@@ -17,10 +17,8 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import TestsLoggingHandler
 from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../')
 
 # Import salt libs
 import salt.minion
@@ -894,7 +892,3 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertIn('ec2-test', config['profiles'])
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfigTestCase, needs_daemon=False)
