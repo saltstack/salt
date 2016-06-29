@@ -13,10 +13,8 @@ import string
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
@@ -216,8 +214,3 @@ class MacGroupModuleTest(integration.ModuleCase):
         change_info = self.run_function('group.info', [CHANGE_GROUP])
         if change_info:
             self.run_function('group.delete', [CHANGE_GROUP])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacGroupModuleTest)
