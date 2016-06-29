@@ -13,9 +13,6 @@ from copy import deepcopy
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
 
 # Import Salt Libs
 from salt.cloud.clouds import vmware
@@ -1096,8 +1093,3 @@ class VMwareTestCase(ExtendedTestCase):
             vmware.create_datastore_cluster,
             kwargs={'name': 'cCD2GgJGPG1DUnPeFBoPeqtdmUxIWxDoVFbA14vIG0BPoUECkgbRMnnY6gaUPBvIDCcsZ5HU48ubgQu5c'},
             call='function')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VMwareTestCase, needs_daemon=False)
