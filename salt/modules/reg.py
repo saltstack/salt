@@ -35,7 +35,8 @@ from __future__ import unicode_literals
 import sys
 import logging
 from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
-import salt.ext.six as six
+from salt.ext import six
+
 # Import third party libs
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
@@ -99,7 +100,7 @@ def _mbcs_to_unicode(instr):
     if instr is None or isinstance(instr, six.text_type):
         return instr
     else:
-        return unicode(instr, 'mbcs')
+        return six.text_type(instr, 'mbcs')
 
 
 def _mbcs_to_unicode_wrap(obj, vtype):
