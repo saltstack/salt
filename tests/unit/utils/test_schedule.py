@@ -11,13 +11,9 @@ import copy
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-import integration
 
 # Import Salt Libs
+import integration
 import salt.config
 from salt.utils.schedule import Schedule
 
@@ -263,8 +259,3 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': ''})
         self.assertRaises(ValueError, Schedule.eval, self.schedule)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScheduleTestCase, needs_daemon=False)
