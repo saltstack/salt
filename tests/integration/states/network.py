@@ -64,9 +64,13 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         network.routes
         '''
+        state_key = 'network_|-routes_|-dummy0_|-routes'
+        expected_changes = {'network_routes': 'Added interface dummy0 routes.'}
+
         ret = self.run_function('state.sls', mods='network.routes')
 
         self.assertSaltTrueReturn(ret)
+        self.assertEqual(ret[state_key]['changes'], expected_changes)
 
     def test_system(self):
         '''
