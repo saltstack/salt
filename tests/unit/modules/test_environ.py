@@ -4,6 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -16,7 +17,6 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import environ
-import os
 
 
 # Globals
@@ -129,8 +129,3 @@ class EnvironTestCase(TestCase):
         Return a dict of the entire environment set for the salt process
         '''
         self.assertNotEqual(list(environ.items()), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EnvironTestCase, needs_daemon=False)
