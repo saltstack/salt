@@ -14,10 +14,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import rbenv
 import os
@@ -129,8 +125,3 @@ class RbenvTestCase(TestCase):
         '''
         with patch.object(rbenv, 'do', return_value='A'):
             self.assertEqual(rbenv.do_with_ruby('ruby', 'cmdline'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RbenvTestCase, needs_daemon=False)
