@@ -4,6 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -14,14 +15,9 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import SaltInvocationError
-import json
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import grafana
+from salt.exceptions import SaltInvocationError
 
 grafana.__opts__ = {}
 grafana.__salt__ = {}
@@ -142,8 +138,3 @@ class GrafanaTestCase(TestCase):
             comt = ('Dashboard myservice does not exist.')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(grafana.dashboard_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GrafanaTestCase, needs_daemon=False)
