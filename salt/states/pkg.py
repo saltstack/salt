@@ -1004,6 +1004,10 @@ def installed(
               pkg.installed:
                 - only_upgrade: True
 
+        .. note::
+            If this parameter is set to True and the package is not already
+            installed, the state will fail.
+
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
@@ -1506,6 +1510,9 @@ def latest(
           pkg.latest:
             - only_upgrade: True
 
+    .. note::
+        If this parameter is set to True and the package is not already
+        installed, the state will fail.
     '''
     rtag = __gen_rtag()
     refresh = bool(
