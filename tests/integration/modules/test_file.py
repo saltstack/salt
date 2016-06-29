@@ -13,8 +13,6 @@ from salttesting.mock import patch, MagicMock
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -209,7 +207,7 @@ class FileModuleTest(integration.ModuleCase):
             [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
         self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
 
-    @patch('salt.modules.file.os.remove')
+    @patch('salt.modules.test_file.os.remove')
     def test_source_list_for_list_returns_file_from_dict_via_http(self, remove):
         remove.return_value = None
         filemod.__salt__ = {
@@ -255,7 +253,3 @@ class FileModuleTest(integration.ModuleCase):
         ret = filemod.source_list(
             [{'file://' + self.myfile: ''}], 'filehash', 'base')
         self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FileModuleTest)
