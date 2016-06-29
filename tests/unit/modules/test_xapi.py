@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     mock_open,
     MagicMock,
@@ -17,7 +16,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import xapi
 
@@ -460,8 +458,3 @@ class XapiTestCase(TestCase):
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertDictEqual(xapi.vm_diskstats(""), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(XapiTestCase, needs_daemon=False)
