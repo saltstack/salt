@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import zk_concurrency
 
@@ -98,8 +94,3 @@ class ZkConcurrencyTestCase(TestCase):
                 self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 2, True), ret)
                 ret.update({'comment': 'Currently 3 nodes, which is < 4', 'result': False})
                 self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 4), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZkConcurrencyTestCase, needs_daemon=False)
