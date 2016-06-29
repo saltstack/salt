@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import linux_acl
 
@@ -96,8 +92,3 @@ class LinuxAclTestCase(TestCase):
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name,
                                                   perms), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxAclTestCase, needs_daemon=False)
