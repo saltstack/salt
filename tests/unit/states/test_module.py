@@ -12,15 +12,12 @@ from salt.states import module
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
-
-ensure_in_syspath('../../')
 
 CMD = 'foo.bar'
 MOCK = MagicMock()
@@ -68,8 +65,3 @@ class ModuleStateTest(TestCase):
         ret = module.run(CMD)
         comment = 'The following arguments are missing: world hello'
         self.assertEqual(ret['comment'], comment)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ModuleStateTest, needs_daemon=False)
