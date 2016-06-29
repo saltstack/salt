@@ -7,12 +7,7 @@ import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -203,8 +198,11 @@ class SystemModuleTest(integration.ModuleCase):
                .format(time_now, cmp_time))
 
         self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        self.assertTrue(time_now.year == 2000 and
+                        time_now.day == 25 and
+                        time_now.month == 12 and
+                        time_now.hour == self._orig_time.hour and
+                        time_now.minute == self._orig_time.minute,
+                        msg=msg)
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemModuleTest)
+        self._restore_time()
