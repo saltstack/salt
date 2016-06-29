@@ -144,7 +144,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file {0!r} not found'.format(
+                'comment': 'pip requirements file \'{0}\' not found'.format(
                     requirements
                 )
             })

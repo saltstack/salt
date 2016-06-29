@@ -3,6 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
+from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs

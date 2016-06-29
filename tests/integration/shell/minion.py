@@ -22,10 +22,14 @@ import logging
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
+
 # Import salt libs
 import integration
 from integration.utils import testprogram
 import salt.utils
+
+# Import ext libs
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 

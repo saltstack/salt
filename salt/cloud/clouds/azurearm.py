@@ -1087,9 +1087,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -1468,7 +1468,7 @@ def pages_to_list(items):
     objs = []
     while True:
         try:
-            page = items.next()
+            page = items.next()  # pylint: disable=incompatible-py3-code
             for item in page:
                 objs.append(item)
         except GeneratorExit:

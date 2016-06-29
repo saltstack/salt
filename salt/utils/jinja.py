@@ -154,10 +154,10 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             if isinstance(value, six.string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
+                output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
+                output.append('{0!r}: {1!s}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
     def __repr__(self):  # pylint: disable=W0221
@@ -165,7 +165,7 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             # Raw string formatter required here because this is a repr
             # function.
-            output.append('{0!r}: {1!r}'.format(key, value))
+            output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
 
