@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import ntp
 
@@ -58,8 +54,3 @@ class NtpTestCase(TestCase):
                 comt = ('Failed to update NTP servers')
                 ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(ntp.managed(name, [name]), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NtpTestCase, needs_daemon=False)
