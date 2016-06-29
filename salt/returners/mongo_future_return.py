@@ -287,12 +287,13 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
+
 def event_return(events):
-    """
+    '''
     Return events to Mongodb server
-    """
+    '''
     conn, mdb = _get_conn(ret=None)
-    
+
     if isinstance(events, list):
         events = events[0]
 
