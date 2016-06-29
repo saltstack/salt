@@ -32,8 +32,3 @@ class SaltifyTestCase(TestCase):
               'name': 'dummy'
              }
         self.assertTrue(saltify.create(vm)['Error']['No Deploy'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltifyTestCase, needs_daemon=False)
