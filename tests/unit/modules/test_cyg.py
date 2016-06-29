@@ -5,9 +5,7 @@
 
 # # Import Salt Testing libs
 # from salttesting import skipIf, TestCase
-# from salttesting.helpers import ensure_in_syspath
 # from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-# ensure_in_syspath('../../')
 
 # # Import salt libs
 # import salt.modules.cyg as cyg
@@ -94,8 +92,3 @@
 #         with patch.object(cyg, '_cyg', new=mock):
 #             self.assertEqual(
 #                 ['http://rubycygs.org/'], cyg.sources_list())
-
-
-# if __name__ == '__main__':
-#     from integration import run_tests
-#     run_tests(TestcygModule, needs_daemon=False)
