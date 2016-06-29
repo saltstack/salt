@@ -9,9 +9,6 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
 
 # Import Salt Libs
 from salt.cloud.clouds import opennebula
@@ -1627,8 +1624,3 @@ class OpenNebulaTestCase(TestCase):
                           opennebula.vn_reserve,
                           call='function',
                           kwargs={'vn_id': '0'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenNebulaTestCase, needs_daemon=False)
