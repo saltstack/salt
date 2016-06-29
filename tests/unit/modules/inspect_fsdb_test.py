@@ -33,6 +33,8 @@ from salttesting.mock import (
 
 from salttesting.helpers import ensure_in_syspath
 from salt.modules.inspectlib.fsdb import CsvDB
+from salt.modules.inspectlib.entities import CsvDBEntity
+
 from StringIO import StringIO
 
 ensure_in_syspath('../../')
@@ -53,6 +55,18 @@ def mock_open(data=None):
     mock.return_value = handle
 
     return mock
+
+
+class TestEntity(CsvDBEntity):
+    '''
+    Entity for test purposes.
+    '''
+    _TABLE = 'some_table'
+
+    def __init__(self):
+        self.foo = 0
+        self.bar = ''
+        self.spam = 0.
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -93,6 +107,33 @@ class InspectorFSDBTestCase(TestCase):
         csvdb.open()
         csvdb.close()
         assert csvdb.is_closed() == True
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.path.exists", MagicMock(return_value=False))
+    @patch("os.listdir", MagicMock(return_value=['some_table']))
+    def test_create_table(self):
+        '''
+        Test creating table.
+        :return:
+        '''
+        class Writer(StringIO):
+            data = []
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                return self
+            def __enter__(self):
+                return self
+            def read(self, n = -1):
+                return ""
+            def write(self, s):
+                self.data.append(s)
+
+        writer = Writer()
+        with patch("gzip.open", MagicMock(return_value=writer)):
+            csvdb = CsvDB('/foobar')
+            csvdb.open()
+            csvdb.create_table_from_object(TestEntity())
+
+        assert writer.data[0].strip() == "foo:int,bar:str,spam:float"
 
 
     @patch("os.makedirs", MagicMock())
