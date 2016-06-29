@@ -537,8 +537,6 @@ def mod_watch(name,
                 func = __salt__['service.restart']
                 verb = 'restart'
         else:
-            if 'service.stop' in __salt__:
-                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
         if not past_participle:
@@ -552,6 +550,10 @@ def mod_watch(name,
         ret['result'] = None
         ret['comment'] = 'Service is set to be {0}'.format(past_participle)
         return ret
+
+    if verb == 'start' and 'service.stop' in __salt__:
+        # stop service before start
+        __salt__['service.stop'](name)
 
     result = func(name)
     if init_delay:
