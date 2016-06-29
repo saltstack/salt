@@ -76,9 +76,12 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         network.system
         '''
+        state_key = 'network_|-system_|-system_|-system'
+
         ret = self.run_function('state.sls', mods='network.system')
 
         self.assertSaltTrueReturn(ret)
+        self.assertIn('network_settings', ret[state_key]['changes'])
 
 
 if __name__ == '__main__':
