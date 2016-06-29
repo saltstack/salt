@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -15,13 +16,8 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-import os
 import integration
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import schedule
@@ -354,8 +350,3 @@ class ScheduleTestCase(TestCase):
                                                      {'comment': comm3,
                                                       'minions': ['minion1'],
                                                       'result': True})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScheduleTestCase, needs_daemon=False)
