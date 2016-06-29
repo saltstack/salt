@@ -46,21 +46,20 @@ looks exactly like the Salt Configuration Management state tree, it is just
 located in the `thorium_roots_dir` instead of the `file_roots_dir`. The default
 location for the `thorium_roots_dir` is `/srv/thorium`.
 
-This VERY simple example maintains a file on the master with all minion logins:
+This example uses thorium to detect when a minion has disappeared and then
+deletes the key from the master when the minion has been gone for 60 seconds:
 
 
 .. code-block:: yaml
 
-    failed_logins:
-      reg.list:
-        - add:
-            - user
-            - id
-        - match: /salt/beacon/\*/btmp*
+    startreg:
+      status.reg
 
-    save_reg:
-      file.save:
-        - reg: failed_logins
+    keydel:
+      key.timeout:
+        - require:
+          - status: statreg
+        - delete: 60
 
 Remember to set up a top file so Thorium knows which sls files to use!!
 
@@ -68,9 +67,16 @@ Remember to set up a top file so Thorium knows which sls files to use!!
 
     base:
       '*':
-        - logins
+        - key_clean
 
-The Reg/Check/Act Pattern
-=========================
+Thorium Links to Beacons
+========================
 
+The above example as added in the Carbon release of Salt and makes use of the
+`status` beacon also added in the Carbon release. For the above Thorium state
+to function properly you will also need to enable the `status` beacon:
 
+.. code-block:: yaml
+
+    beacons:
+      status: {}
