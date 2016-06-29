@@ -148,7 +148,7 @@ def _check_apt():
     '''
     if not HAS_APT:
         raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
+            "Error: 'python-apt' package not installed"
         )
 
 
@@ -197,7 +197,7 @@ def _warn_software_properties(repo):
     '''
     Warn of missing python-software-properties package.
     '''
-    log.warning('The \'python-software-properties\' package is not installed. '
+    log.warning("The 'python-software-properties' package is not installed. "
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
     log.warning('Best guess at ppa format: {0}'.format(repo))
@@ -229,8 +229,8 @@ def latest_version(*names, **kwargs):
         # Remember to kill _get_repo() too when removing this warning.
         salt.utils.warn_until(
             'Hydrogen',
-            'The \'repo\' argument to apt.latest_version is deprecated, and '
-            'will be removed in Salt {version}. Please use \'fromrepo\' '
+            "The 'repo' argument to apt.latest_version is deprecated, and "
+            "will be removed in Salt {version}. Please use 'fromrepo' "
             'instead.'
         )
     fromrepo = _get_repo(**kwargs)
@@ -640,7 +640,7 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if fromrepo and not sources:
-        log.info('Targeting repo \'{0}\''.format(fromrepo))
+        log.info("Targeting repo '{0}'".format(fromrepo))
 
     cmds = []
     all_pkgs = []
@@ -1368,7 +1368,7 @@ def _consolidate_repo_sources(sources):
     '''
     if not isinstance(sources, sourceslist.SourcesList):
         raise TypeError(
-            '\'{0}\' not a \'{1}\''.format(
+            "'{0}' not a '{1}'".format(
                 type(sources),
                 sourceslist.SourcesList
             )
@@ -1490,7 +1490,7 @@ def get_repo(repo, **kwargs):
                                                        uri_match.group(2))
         except SyntaxError:
             raise CommandExecutionError(
-                'Error: repo \'{0}\' is not a well formatted definition'
+                "Error: repo '{0}' is not a well formatted definition"
                 .format(repo)
             )
 
@@ -1556,7 +1556,7 @@ def del_repo(repo, **kwargs):
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
-                'Error: repo \'{0}\' not a well formatted definition'
+                "Error: repo '{0}' not a well formatted definition"
                 .format(repo)
             )
 
@@ -1597,10 +1597,10 @@ def del_repo(repo, **kwargs):
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, count in six.iteritems(deleted_from):
-                msg = 'Repo \'{0}\' has been removed from {1}.\n'
+                msg = "Repo '{0}' has been removed from {1}.\n"
                 if count == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = ('File {1} containing repo \'{0}\' has been '
+                        msg = ("File {1} containing repo '{0}' has been "
                                'removed.')
                         try:
                             os.remove(repo_file)
@@ -1612,7 +1612,7 @@ def del_repo(repo, **kwargs):
             return ret
 
     raise CommandExecutionError(
-        'Repo {0} doesn\'t exist in the sources.list(s)'.format(repo)
+        "Repo {0} doesn't exist in the sources.list(s)".format(repo)
     )
 
 
@@ -1741,8 +1741,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
                                                   **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
-                            'Unable to add PPA \'{0}\'. \'{1}\' exited with '
-                            'status {2!s}: \'{3}\' '.format(
+                            "Unable to add PPA '{0}'. '{1}' exited with "
+                            "status {2!s}: '{3}' ".format(
                                 repo[4:],
                                 cmd,
                                 out['retcode'],
@@ -1767,7 +1767,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         'Unable to get PPA info from argument. '
                         'Expected format "<PPA_OWNER>/<PPA_NAME>" '
                         '(e.g. saltstack/salt) not found.  Received '
-                        '\'{0}\' instead.'.format(repo[4:])
+                        "'{0}' instead.".format(repo[4:])
                     )
                 dist = __grains__['lsb_distrib_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
@@ -1847,7 +1847,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(
-            'Error: repo \'{0}\' not a well formatted definition'.format(repo)
+            "Error: repo '{0}' not a well formatted definition".format(repo)
         )
 
     full_comp_list = set(repo_comps)
@@ -2011,7 +2011,7 @@ def expand_repo_def(**kwargs):
     being called on the CLI.
     '''
     if 'repo' not in kwargs:
-        raise SaltInvocationError('missing \'repo\' argument')
+        raise SaltInvocationError("missing 'repo' argument")
 
     _check_apt()
 
@@ -2160,7 +2160,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
     if not path and not selection:
         return ret
     if path and selection:
-        err = ('The \'selection\' and \'path\' arguments to '
+        err = ("The 'selection' and 'path' arguments to "
                'pkg.set_selections are mutually exclusive, and cannot be '
                'specified together')
         raise SaltInvocationError(err)

@@ -105,14 +105,14 @@ class StdTest(integration.ModuleCase):
             self.assertEqual(
                 {
                     'out': 'nested',
-                    'ret': '\'test.pong\' is not available.',
+                    'ret': "'test.pong' is not available.",
                     'success': False
                 },
                 ret['minion']
             )
         elif self.master_opts['transport'] == 'raet':
             self.assertEqual(
-                {'success': False, 'ret': '\'test.pong\' is not available.'},
+                {'success': False, 'ret': "'test.pong' is not available."},
                 ret['minion']
             )
 

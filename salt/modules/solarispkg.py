@@ -316,7 +316,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         ``sources`` parameter.
     '''
     if salt.utils.is_true(kwargs.get('refresh')):
-        log.warning('\'refresh\' argument not implemented for solarispkg '
+        log.warning("'refresh' argument not implemented for solarispkg "
                     'module')
 
     # pkgs is not supported, but must be passed here for API compatibility

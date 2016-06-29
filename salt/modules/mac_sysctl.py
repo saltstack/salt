@@ -170,8 +170,8 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
                 key, rest = line.split('=', 1)
                 if rest.startswith('"'):
                     _, rest_v, rest = rest.split('"', 2)
-                elif rest.startswith('\''):
-                    _, rest_v, rest = rest.split('\'', 2)
+                elif rest.startswith("'"):
+                    _, rest_v, rest = rest.split("'", 2)
                 else:
                     rest_v = rest.split()[0]
                     rest = rest[len(rest_v):]

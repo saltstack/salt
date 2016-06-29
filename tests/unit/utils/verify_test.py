@@ -122,16 +122,16 @@ class TestVerify(TestCase):
             logmsg_chk = (
                 '{0}:The number of accepted minion keys({1}) should be lower '
                 'than 1/4 of the max open files soft setting({2}). According '
-                'to the system\'s hard limit, there\'s still a margin of {3} '
-                'to raise the salt\'s max_open_files setting. Please consider '
+                "to the system's hard limit, there's still a margin of {3} "
+                "to raise the salt's max_open_files setting. Please consider "
                 'raising this value.'
             )
             logmsg_crash = (
                 '{0}:The number of accepted minion keys({1}) should be lower '
                 'than 1/4 of the max open files soft setting({2}). '
                 'salt-master will crash pretty soon! According to the '
-                'system\'s hard limit, there\'s still a margin of {3} to '
-                'raise the salt\'s max_open_files setting. Please consider '
+                "system's hard limit, there's still a margin of {3} to "
+                "raise the salt's max_open_files setting. Please consider "
                 'raising this value.'
             )
 
@@ -209,7 +209,7 @@ class TestVerify(TestCase):
             except IOError as err:
                 if err.errno == 24:
                     # Too many open files
-                    self.skipTest('We\'ve hit the max open files setting')
+                    self.skipTest("We've hit the max open files setting")
                 raise
             finally:
                 shutil.rmtree(tempdir)

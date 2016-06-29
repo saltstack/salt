@@ -206,7 +206,7 @@ def _get_repo_options(**kwargs):
 
     ret = []
     if fromrepo:
-        log.info('Restricting to repo \'%s\'', fromrepo)
+        log.info("Restricting to repo '%s'", fromrepo)
         ret.extend(['--disablerepo=*', '--enablerepo=' + fromrepo])
     else:
         if disablerepo:
@@ -234,7 +234,7 @@ def _get_excludes_option(**kwargs):
     disable_excludes = kwargs.get('disableexcludes', '')
     ret = []
     if disable_excludes:
-        log.info('Disabling excludes for \'%s\'', disable_excludes)
+        log.info("Disabling excludes for '%s'", disable_excludes)
         ret.append('--disableexcludes={0}'.format(disable_excludes))
     return ret
 
@@ -247,8 +247,8 @@ def _get_branch_option(**kwargs):
     branch = kwargs.get('branch', '')
     ret = []
     if branch:
-        log.info('Adding branch \'%s\'', branch)
-        ret.append('--branch=\'{0}\''.format(branch))
+        log.info("Adding branch '%s'", branch)
+        ret.append("--branch='{0}'".format(branch))
     return ret
 
 
@@ -1305,7 +1305,7 @@ def install(name=None,
     if unhold_prevented:
         errors.append(
             'The following package(s) could not be updated because they are '
-            'being held: {0}. Set \'update_holds\' to True to temporarily '
+            "being held: {0}. Set 'update_holds' to True to temporarily "
             'unhold these packages so that they can be updated.'.format(
                 ', '.join(unhold_prevented)
             )
@@ -1927,7 +1927,7 @@ def group_info(name, expand=False):
     ret['group'] = g_info.get('environment group') or g_info.get('group')
     ret['id'] = g_info.get('environment-id') or g_info.get('group-id')
     if not ret['group'] and not ret['id']:
-        raise CommandExecutionError('Group \'{0}\' not found'.format(name))
+        raise CommandExecutionError("Group '{0}' not found".format(name))
 
     ret['description'] = g_info.get('description', '')
 
@@ -2058,18 +2058,18 @@ def group_install(name,
     if not groups:
         raise SaltInvocationError('no groups specified')
     elif not isinstance(groups, list):
-        raise SaltInvocationError('\'groups\' must be a list')
+        raise SaltInvocationError("'groups' must be a list")
 
     # pylint: disable=maybe-no-member
     if isinstance(skip, six.string_types):
         skip = skip.split(',')
     if not isinstance(skip, (list, tuple)):
-        raise SaltInvocationError('\'skip\' must be a list')
+        raise SaltInvocationError("'skip' must be a list")
 
     if isinstance(include, six.string_types):
         include = include.split(',')
     if not isinstance(include, (list, tuple)):
-        raise SaltInvocationError('\'include\' must be a list')
+        raise SaltInvocationError("'include' must be a list")
     # pylint: enable=maybe-no-member
 
     targets = []
@@ -2252,7 +2252,7 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):
         raise SaltInvocationError(
-            'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
+            "Only one of 'mirrorlist' and 'baseurl' can be specified"
         )
 
     # Build a list of keys to be deleted
@@ -2391,7 +2391,7 @@ def _parse_repo_file(filename):
                 except KeyError:
                     log.error(
                         'Failed to parse line in %s, offending line was '
-                        '\'%s\'', filename, line.rstrip()
+                        "'%s'", filename, line.rstrip()
                     )
                 if comps[0].strip() == 'enabled':
                     repos[repo]['disabled'] = comps[1] != "1"

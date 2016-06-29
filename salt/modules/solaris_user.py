@@ -110,7 +110,7 @@ def add(name,
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
     if salt.utils.is_true(kwargs.pop('system', False)):
-        log.warning('solaris_user module does not support the \'system\' '
+        log.warning("solaris_user module does not support the 'system' "
                     'argument')
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
@@ -211,7 +211,7 @@ def chuid(name, uid):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if uid == pre_info['uid']:
         return True
@@ -233,7 +233,7 @@ def chgid(name, gid):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if gid == pre_info['gid']:
         return True
@@ -255,7 +255,7 @@ def chshell(name, shell):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if shell == pre_info['shell']:
         return True
@@ -288,7 +288,7 @@ def chhome(name, home, persist=False):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if home == pre_info['home']:
         return True
@@ -454,11 +454,11 @@ def rename(name, new_name):
     '''
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError(
-            'User \'{0}\' already exists'.format(new_name)
+            "User '{0}' already exists".format(new_name)
         )
     cmd = ['usermod', '-l', new_name, name]
     __salt__['cmd.run'](cmd, python_shell=False)

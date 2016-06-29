@@ -920,8 +920,8 @@ def create(name,
     if 'binpath' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'binpath\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'bin_path\' '
+            "The 'binpath' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'bin_path' "
             'instead.'
         )
         if bin_path is None:
@@ -930,8 +930,8 @@ def create(name,
     if 'DisplayName' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'DisplayName\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'display_name\' '
+            "The 'DisplayName' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'display_name' "
             'instead.'
         )
         if display_name is None:
@@ -940,8 +940,8 @@ def create(name,
     if 'type' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'type\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'service_type\' '
+            "The 'type' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'service_type' "
             'instead.'
         )
         if service_type is None:
@@ -950,8 +950,8 @@ def create(name,
     if 'start' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'start\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'start_type\' '
+            "The 'start' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'start_type' "
             'instead.'
         )
         if start_type is None:
@@ -960,8 +960,8 @@ def create(name,
     if 'error' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'error\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'error_control\' '
+            "The 'error' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'error_control' "
             'instead.'
         )
         if error_control is None:
@@ -970,9 +970,9 @@ def create(name,
     if 'group' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'group\' argument to service.create is deprecated, and '
+            "The 'group' argument to service.create is deprecated, and "
             'will be removed in Salt {version}. Please use '
-            '\'load_order_group\' instead.'
+            "'load_order_group' instead."
         )
         if load_order_group is None:
             load_order_group = kwargs.pop('group')
@@ -980,8 +980,8 @@ def create(name,
     if 'depend' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'depend\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'dependencies\' '
+            "The 'depend' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'dependencies' "
             'instead.'
         )
         if dependencies is None:
@@ -990,8 +990,8 @@ def create(name,
     if 'obj' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'obj\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'account_name\' '
+            "The 'obj' argument to service.create is deprecated, and "
+            "will be removed in Salt {version}. Please use 'account_name' "
             'instead.'
         )
         if account_name is None:
@@ -1000,9 +1000,9 @@ def create(name,
     if 'password' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'password\' argument to service.create is deprecated, and '
+            "The 'password' argument to service.create is deprecated, and "
             'will be removed in Salt {version}. Please use '
-            '\'account_password\' instead.'
+            "'account_password' instead."
         )
         if account_password is None:
             account_password = kwargs.pop('password')
@@ -1166,8 +1166,8 @@ def config(name,
     '''
     salt.utils.warn_until(
         'Nitrogen',
-        'The \'service.change\' function is deprecated, and will be removed in '
-        'Salt {version}. Please use \'service.modify\' instead.')
+        "The 'service.change' function is deprecated, and will be removed in "
+        "Salt {version}. Please use 'service.modify' instead.")
 
     return modify(name=name,
                   bin_path=bin_path,

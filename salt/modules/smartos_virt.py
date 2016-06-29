@@ -234,7 +234,7 @@ def get_macs(domain):
     macs = []
     ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='nics')
     if len(ret) < 1:
-        raise CommandExecutionError('We can\'t find the MAC address of this VM')
+        raise CommandExecutionError("We can't find the MAC address of this VM")
     else:
         for nic in ret[0]['nics']:
             macs.append(nic['mac'])

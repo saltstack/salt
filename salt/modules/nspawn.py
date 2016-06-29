@@ -82,7 +82,7 @@ def _ensure_exists(wrapped):
     def check_exists(name, *args, **kwargs):
         if not exists(name):
             raise CommandExecutionError(
-                'Container \'{0}\' does not exist'.format(name)
+                "Container '{0}' does not exist".format(name)
             )
         return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
     return check_exists
@@ -229,7 +229,7 @@ def _clear_context():
     Clear any lxc variables set in __context__
     '''
     for var in [x for x in __context__ if x.startswith('nspawn.')]:
-        log.trace('Clearing __context__[\'{0}\']'.format(var))
+        log.trace("Clearing __context__['{0}']".format(var))
         __context__.pop(var, None)
 
 
@@ -251,7 +251,7 @@ def _ensure_systemd(version):
     try:
         version = int(version)
     except ValueError:
-        raise CommandExecutionError('Invalid version \'{0}\''.format(version))
+        raise CommandExecutionError("Invalid version '{0}'".format(version))
 
     try:
         installed = _sd_version()
@@ -345,7 +345,7 @@ def pid(name):
         return int(info(name).get('PID'))
     except (TypeError, ValueError) as exc:
         raise CommandExecutionError(
-            'Unable to get PID for container \'{0}\': {1}'.format(name, exc)
+            "Unable to get PID for container '{0}': {1}".format(name, exc)
         )
 
 
@@ -683,7 +683,7 @@ def bootstrap_container(name, dist=None, version=None):
     if not dist:
         dist = __grains__['os'].lower()
         log.debug(
-            'nspawn.bootstrap: no dist provided, defaulting to \'{0}\''
+            "nspawn.bootstrap: no dist provided, defaulting to '{0}'"
             .format(dist)
         )
     try:
@@ -763,7 +763,7 @@ def bootstrap_salt(name,
         needs_install = _needs_install(name)
     else:
         needs_install = True
-    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    seeded = retcode(name, "test -e '{0}'".format(SEED_MARKER)) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -808,7 +808,7 @@ def bootstrap_salt(name,
                                dest_dir))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
-                log.info('Running {0} in LXC container \'{1}\''
+                log.info("Running {0} in LXC container '{1}'"
                          .format(cmd, name))
                 ret = retcode(name, cmd, output_loglevel='info',
                                   use_vt=True) == 0
@@ -830,7 +830,7 @@ def bootstrap_salt(name,
         # mark seeded upon successful install
         if ret:
             run(name,
-                    'touch \'{0}\''.format(SEED_MARKER),
+                    "touch '{0}'".format(SEED_MARKER),
                     python_shell=False)
     return ret
 
@@ -976,7 +976,7 @@ def info(name, **kwargs):
     c_info = _machinectl('status {0}'.format(name))
     if c_info['retcode'] != 0:
         raise CommandExecutionError(
-            'Unable to get info for container \'{0}\''.format(name)
+            "Unable to get info for container '{0}'".format(name)
         )
     # Better human-readable names. False means key should be ignored.
     key_name_map = {
@@ -1239,12 +1239,12 @@ def remove(name, stop=False):
     '''
     if not stop and state(name) != 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' is not stopped'.format(name)
+            "Container '{0}' is not stopped".format(name)
         )
 
     def _failed_remove(name, exc):
         raise CommandExecutionError(
-            'Unable to remove container \'{0}\': {1}'.format(name, exc)
+            "Unable to remove container '{0}': {1}".format(name, exc)
         )
 
     if _sd_version() >= 219:
@@ -1330,7 +1330,7 @@ def _pull_image(pull_type, image, name, **kwargs):
     _ensure_systemd(219)
     if exists(name):
         raise SaltInvocationError(
-            'Container \'{0}\' already exists'.format(name)
+            "Container '{0}' already exists".format(name)
         )
     if pull_type in ('raw', 'tar'):
         valid_kwargs = ('verify',)
@@ -1338,7 +1338,7 @@ def _pull_image(pull_type, image, name, **kwargs):
         valid_kwargs = ('index',)
     else:
         raise SaltInvocationError(
-            'Unsupported image type \'{0}\''.format(pull_type)
+            "Unsupported image type '{0}'".format(pull_type)
         )
 
     kwargs = salt.utils.clean_kwargs(**kwargs)
@@ -1359,7 +1359,7 @@ def _pull_image(pull_type, image, name, **kwargs):
         else:
             def _bad_verify():
                 raise SaltInvocationError(
-                    '\'verify\' must be one of the following: '
+                    "'verify' must be one of the following: "
                     'signature, checksum'
                 )
             try:

@@ -70,7 +70,7 @@ def _run_all(cmd):
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
-            'Unable to run command \'{0}\' with the context \'{1}\', '
+            "Unable to run command '{0}' with the context '{1}', "
             'reason: {2}'.format(cmd, kwargs, exc)
         )
 
@@ -186,7 +186,7 @@ def validate_enabled(enabled):
     if isinstance(enabled, str):
         if enabled.lower() not in ['on', 'off', 'yes', 'no']:
             msg = '\nMac Power: Invalid String Value for Enabled.\n' \
-                  'String values must be \'on\' or \'off\'/\'yes\' or \'no\'.\n' \
+                  "String values must be 'on' or 'off'/'yes' or 'no'.\n" \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
 

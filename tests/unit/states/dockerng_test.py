@@ -609,7 +609,7 @@ class DockerngTestCase(TestCase):
                 self.assertEqual(ret,
                                  {'changes': {},
                                   'comment': 'Environment values must'
-                                  ' be strings KEY=\'{0}\''.format(wrong_value),
+                                  " be strings KEY='{0}'".format(wrong_value),
                                   'name': 'cont',
                                   'result': False})
 

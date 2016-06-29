@@ -158,8 +158,8 @@ def file_hash(load, fnd):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')
@@ -228,8 +228,8 @@ def file_list(load):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')
@@ -256,7 +256,7 @@ def file_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID \'{0}\''
+                "No files found in minionfs cache for minion ID '{0}'"
                 .format(tgt_minion)
             )
             return []
@@ -312,8 +312,8 @@ def dir_list(load):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')
@@ -340,7 +340,7 @@ def dir_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID \'{0}\''
+                "No files found in minionfs cache for minion ID '{0}'"
                 .format(tgt_minion)
             )
             return []

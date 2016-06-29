@@ -264,8 +264,8 @@ def ext_pillar(minion_id,
     if raw_data is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'raw_data\' argument for the file_tree ext_pillar has been '
-            'deprecated, please use \'keep_newline\' instead'
+            "The 'raw_data' argument for the file_tree ext_pillar has been "
+            "deprecated, please use 'keep_newline' instead"
         )
         keep_newline = raw_data
 

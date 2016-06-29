@@ -89,7 +89,7 @@ class FileclientTest(integration.ModuleCase):
             path = os.path.join(saltenv_root, 'foo.txt')
             with salt.utils.fopen(path, 'w') as fp_:
                 fp_.write(
-                    'This is a test file in the \'{0}\' saltenv.\n'
+                    "This is a test file in the '{0}' saltenv.\n"
                     .format(saltenv)
                 )
 
@@ -99,8 +99,8 @@ class FileclientTest(integration.ModuleCase):
                 path = os.path.join(subdir_abspath, subdir_file)
                 with salt.utils.fopen(path, 'w') as fp_:
                     fp_.write(
-                        'This is file \'{0}\' in subdir \'{1} from saltenv '
-                        '\'{2}\''.format(subdir_file, SUBDIR, saltenv)
+                        "This is file '{0}' in subdir '{1} from saltenv "
+                        "'{2}'".format(subdir_file, SUBDIR, saltenv)
                     )
 
         # Create the CACHE_ROOT

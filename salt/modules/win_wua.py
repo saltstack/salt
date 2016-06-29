@@ -67,11 +67,11 @@ def _wua_search(skip_hidden=True,
         search_string += '{0} and '.format(i)
 
     if software_updates and driver_updates:
-        search_string += 'Type=\'Software\' or Type=\'Driver\''
+        search_string += "Type='Software' or Type='Driver'"
     elif software_updates:
-        search_string += 'Type=\'Software\''
+        search_string += "Type='Software'"
     elif driver_updates:
-        search_string += 'Type=\'Driver\''
+        search_string += "Type='Driver'"
     else:
         log.debug('Neither Software nor Drivers included in search. Results will be empty.')
         return False
@@ -345,7 +345,7 @@ def list_update(name=None,
     wua_found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
     # Try searching for the GUID first
-    search_string = 'UpdateID=\'{0}\''.format(name)
+    search_string = "UpdateID='{0}'".format(name)
 
     log.debug('Searching for update: {0}'.format(search_string.lower()))
     try:
@@ -357,7 +357,7 @@ def list_update(name=None,
             return "No update found"
     except Exception:
         log.debug('GUID not found, searching Title: {0}'.format(name))
-        search_string = 'Type=\'Software\' or Type=\'Driver\''
+        search_string = "Type='Software' or Type='Driver'"
         wua_search_result = wua_searcher.Search(search_string)
 
     # Populate wua_found
@@ -611,10 +611,10 @@ def download_updates(guid=None):
     for ident in guid:
         log.debug('{0}'.format(ident))
         if search_string == '':
-            search_string = 'UpdateID=\'{0}\''.format(ident.lower())
+            search_string = "UpdateID='{0}'".format(ident.lower())
             search_list = '{0}'.format(ident.lower())
         else:
-            search_string += ' or UpdateID=\'{0}\''.format(ident.lower())
+            search_string += " or UpdateID='{0}'".format(ident.lower())
             search_list += '\n{0}'.format(ident.lower())
 
     try:
@@ -782,10 +782,10 @@ def install_updates(guid=None):
     for ident in guid:
         log.debug('{0}'.format(ident))
         if search_string == '':
-            search_string = 'UpdateID=\'{0}\''.format(ident.lower())
+            search_string = "UpdateID='{0}'".format(ident.lower())
             search_list = '{0}'.format(ident.lower())
         else:
-            search_string += ' or UpdateID=\'{0}\''.format(ident.lower())
+            search_string += " or UpdateID='{0}'".format(ident.lower())
             search_list += '\n{0}'.format(ident.lower())
 
     try:

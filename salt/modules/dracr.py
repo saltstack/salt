@@ -96,7 +96,7 @@ def __execute_cmd(command, host=None,
         output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
+        log.warning("racadm return an exit code '{0}'."
                     .format(cmd['retcode']))
         return False
 
@@ -130,7 +130,7 @@ def __execute_ret(command, host=None,
         output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
+        log.warning("racadm return an exit code '{0}'."
                     .format(cmd['retcode']))
     else:
         fmtlines = []
@@ -194,7 +194,7 @@ def system_info(host=None,
                         module=module)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
+        log.warning("racadm return an exit code '{0}'."
                     .format(cmd['retcode']))
         return cmd
 
@@ -273,7 +273,7 @@ def network_info(host=None,
                         module=module)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
+        log.warning("racadm return an exit code '{0}'."
                     .format(cmd['retcode']))
 
     cmd['stdout'] = 'Network:\n' + 'Device = ' + module + '\n' + \
@@ -396,7 +396,7 @@ def list_users(host=None,
                             admin_password=admin_password)
 
         if cmd['retcode'] != 0:
-            log.warning('racadm return an exit code \'{0}\'.'
+            log.warning("racadm return an exit code '{0}'."
                         .format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
@@ -445,7 +445,7 @@ def delete_user(username,
                              admin_password=admin_password)
 
     else:
-        log.warning('\'{0}\' does not exist'.format(username))
+        log.warning("'{0}' does not exist".format(username))
         return False
 
 
@@ -486,7 +486,7 @@ def change_password(username, password, uid=None, host=None,
                              host=host, admin_username=admin_username,
                              admin_password=admin_password, module=module)
     else:
-        log.warning('\'{0}\' does not exist'.format(username))
+        log.warning("'{0}' does not exist".format(username))
         return False
 
 
@@ -568,7 +568,7 @@ def create_user(username, password, permissions,
         users = list_users()
 
     if username in users:
-        log.warning('\'{0}\' already exists'.format(username))
+        log.warning("'{0}' already exists".format(username))
         return False
 
     for idx in six.iterkeys(users):

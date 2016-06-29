@@ -46,7 +46,7 @@ def _validate(wrapped):
         }
         if container_type not in valid_driver:
             raise SaltInvocationError(
-                'Invalid container type \'{0}\'. Valid types are: {1}'
+                "Invalid container type '{0}'. Valid types are: {1}"
                 .format(container_type, ', '.join(sorted(valid_driver)))
             )
         if exec_driver not in valid_driver[container_type]:
@@ -56,7 +56,7 @@ def _validate(wrapped):
             )
         if exec_driver == 'lxc-attach' and not salt.utils.which('lxc-attach'):
             raise SaltInvocationError(
-                'The \'lxc-attach\' execution driver has been chosen, but '
+                "The 'lxc-attach' execution driver has been chosen, but "
                 'lxc-attach is not available. LXC may not be installed.'
             )
         return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
@@ -145,7 +145,7 @@ def run(name,
         cmd_func = 'cmd.run'
     elif output not in valid_output:
         raise SaltInvocationError(
-            '\'output\' param must be one of the following: {0}'
+            "'output' param must be one of the following: {0}"
             .format(', '.join(valid_output))
         )
     else:
@@ -312,7 +312,7 @@ def copy_to(name,
     c_state = _state(name)
     if c_state != 'running':
         raise CommandExecutionError(
-            'Container \'{0}\' is not running'.format(name)
+            "Container '{0}' is not running".format(name)
         )
 
     local_file = cache_file(source)
@@ -351,13 +351,13 @@ def copy_to(name,
                                  **cmd_kwargs)
                 if result['retcode'] != 0:
                     error = ('Unable to create destination directory {0} in '
-                             'container \'{1}\''.format(dest_dir, name))
+                             "container '{1}'".format(dest_dir, name))
                     if result['stderr']:
                         error += ': {0}'.format(result['stderr'])
                     raise CommandExecutionError(error)
             else:
                 raise SaltInvocationError(
-                    'Directory {0} does not exist on {1} container \'{2}\''
+                    "Directory {0} does not exist on {1} container '{2}'"
                     .format(dest_dir, container_type, name)
                 )
     if not overwrite and run_all(name,
@@ -375,7 +375,7 @@ def copy_to(name,
                   .format(source, name, dest))
         return True
 
-    log.debug('Copying {0} to {1} container \'{2}\' as {3}'
+    log.debug("Copying {0} to {1} container '{2}' as {3}"
               .format(source, container_type, name, dest))
 
     # Using cat here instead of opening the file, reading it into memory,

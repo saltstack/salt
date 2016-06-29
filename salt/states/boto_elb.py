@@ -405,7 +405,7 @@ def present(
             security_groups = security_groups.split(',')
         elif not isinstance(security_groups, list):
             ret['result'] = False
-            ret['comment'] = 'The \'security_group\' parameter must either be a list or ' \
+            ret['comment'] = "The 'security_group' parameter must either be a list or " \
                              'a comma-separated string.'
             return ret
 

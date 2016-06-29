@@ -58,8 +58,8 @@ def _get_local_repo_dir(saltenv='base'):
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo_source_dir\' config option is deprecated, please '
-            'use \'winrepo_source_dir\' instead.'
+            "The 'win_repo_source_dir' config option is deprecated, please "
+            "use 'winrepo_source_dir' instead."
         )
         winrepo_source_dir = __opts__['win_repo_source_dir']
     else:

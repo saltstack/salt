@@ -78,7 +78,7 @@ class TestModulesGrains(integration.ModuleCase):
             self.assertTrue(grain_name in lsgrains)
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
-            'Travis environment can\'t keep up with salt refresh')
+            "Travis environment can't keep up with salt refresh")
     def test_set_val(self):
         '''
         test grains.set_val

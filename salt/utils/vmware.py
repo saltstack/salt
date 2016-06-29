@@ -136,7 +136,7 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
         # Then we are connecting directly to an ESXi server,
         # 'host' points at that server, and esxi_host is a reference to the
         # ESXi instance we are manipulating
-        esx_cmd += ' -s {0} -u {1} -p \'{2}\' ' \
+        esx_cmd += " -s {0} -u {1} -p '{2}' " \
                    '--protocol={3} --portnumber={4} {5}'.format(host,
                                                                 user,
                                                                 pwd,
@@ -144,7 +144,7 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
                                                                 port,
                                                                 cmd)
     else:
-        esx_cmd += ' -s {0} -h {1} -u {2} -p \'{3}\' ' \
+        esx_cmd += " -s {0} -h {1} -u {2} -p '{3}' " \
                    '--protocol={4} --portnumber={5} {6}'.format(host,
                                                                 esxi_host,
                                                                 user,
@@ -201,7 +201,7 @@ def get_service_instance(host, username, password, protocol=None, port=None):
             port=port
         )
     except Exception as exc:
-        default_msg = 'Could not connect to host \'{0}\'. ' \
+        default_msg = "Could not connect to host '{0}'. " \
                       'Please check the debug log for more information.'.format(host)
         try:
             if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
@@ -216,7 +216,7 @@ def get_service_instance(host, username, password, protocol=None, port=None):
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            elif (isinstance(exc, vim.fault.HostConnectFault) and 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in exc.msg) or 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in str(exc):
+            elif (isinstance(exc, vim.fault.HostConnectFault) and "SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed" in exc.msg) or "SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed" in str(exc):
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context

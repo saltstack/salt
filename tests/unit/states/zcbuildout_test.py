@@ -44,7 +44,7 @@ buildout.__salt__ = {
 
 
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 class BuildoutTestCase(Base):
 
     @requires_network()

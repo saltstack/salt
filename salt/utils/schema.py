@@ -401,7 +401,7 @@ of a field to null.
 
 # make sure nobody creates another Null value
 def _failing_new(*args, **kwargs):
-    raise TypeError('Can\'t create another NullSentinel instance')
+    raise TypeError("Can't create another NullSentinel instance")
 
 NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
@@ -720,7 +720,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         '''
         if self.required not in (True, False):
             raise RuntimeError(
-                '\'required\' can only be True/False'
+                "'required' can only be True/False"
             )
 
     def _get_argname_value(self, argname):
@@ -801,20 +801,20 @@ class BaseSchemaItem(SchemaItem):
         if self.enum is not None:
             if not isinstance(self.enum, (list, tuple, set)):
                 raise RuntimeError(
-                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
-                    'to define \'enum\''
+                    "Only the 'list', 'tuple' and 'set' python types can be used "
+                    "to define 'enum'"
                 )
             if not isinstance(self.enum, list):
                 self.enum = list(self.enum)
         if self.enumNames is not None:
             if not isinstance(self.enumNames, (list, tuple, set)):
                 raise RuntimeError(
-                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
-                    'to define \'enumNames\''
+                    "Only the 'list', 'tuple' and 'set' python types can be used "
+                    "to define 'enumNames'"
                 )
             if len(self.enum) != len(self.enumNames):
                 raise RuntimeError(
-                    'The size of \'enumNames\' must match the size of \'enum\''
+                    "The size of 'enumNames' must match the size of 'enum'"
                 )
             if not isinstance(self.enumNames, list):
                 self.enumNames = list(self.enumNames)
@@ -1247,34 +1247,34 @@ class DictItem(BaseSchemaItem):
             if not isinstance(self.properties, (Schema, dict)):
                 raise RuntimeError(
                     'The passed properties must be passed as a dict or '
-                    ' a Schema not \'{0}\''.format(type(self.properties))
+                    " a Schema not '{0}'".format(type(self.properties))
                 )
             if not isinstance(self.properties, Schema):
                 for key, prop in self.properties.items():
                     if not isinstance(prop, (Schema, SchemaItem)):
                         raise RuntimeError(
-                            'The passed property who\'s key is \'{0}\' must be of type '
+                            "The passed property who's key is '{0}' must be of type "
                             'Schema, SchemaItem or BaseSchemaItem, not '
-                            '\'{1}\''.format(key, type(prop))
+                            "'{1}'".format(key, type(prop))
                         )
         if self.pattern_properties is not None:
             if not isinstance(self.pattern_properties, dict):
                 raise RuntimeError(
                     'The passed pattern_properties must be passed as a dict '
-                    'not \'{0}\''.format(type(self.pattern_properties))
+                    "not '{0}'".format(type(self.pattern_properties))
                 )
             for key, prop in self.pattern_properties.items():
                 if not isinstance(prop, (Schema, SchemaItem)):
                     raise RuntimeError(
-                        'The passed pattern_property who\'s key is \'{0}\' must '
+                        "The passed pattern_property who's key is '{0}' must "
                         'be of type Schema, SchemaItem or BaseSchemaItem, '
-                        'not \'{1}\''.format(key, type(prop))
+                        "not '{1}'".format(key, type(prop))
                     )
         if self.additional_properties is not None:
             if not isinstance(self.additional_properties, (bool, Schema, SchemaItem)):
                 raise RuntimeError(
                     'The passed additional_properties must be of type bool, '
-                    'Schema, SchemaItem or BaseSchemaItem, not \'{0}\''.format(
+                    "Schema, SchemaItem or BaseSchemaItem, not '{0}'".format(
                         type(self.pattern_properties)
                     )
                 )
@@ -1343,7 +1343,7 @@ class RequirementsItem(SchemaItem):
         if not isinstance(self.requirements, (SchemaItem, list, tuple, set)):
             raise RuntimeError(
                 'The passed requirements must be passed as a list, tuple, '
-                'set SchemaItem or BaseSchemaItem, not \'{0}\''.format(self.requirements)
+                "set SchemaItem or BaseSchemaItem, not '{0}'".format(self.requirements)
             )
 
         if not isinstance(self.requirements, SchemaItem):
@@ -1354,7 +1354,7 @@ class RequirementsItem(SchemaItem):
                 if not isinstance(item, (six.string_types, SchemaItem)):
                     raise RuntimeError(
                         'The passed requirement at the {0} index must be of type '
-                        'str or SchemaItem, not \'{1}\''.format(idx, type(item))
+                        "str or SchemaItem, not '{1}'".format(idx, type(item))
                     )
 
     def serialize(self):
@@ -1389,14 +1389,14 @@ class OneOfItem(SchemaItem):
         if not isinstance(self.items, (list, tuple)):
             raise RuntimeError(
                 'The passed items must be passed as a list/tuple not '
-                '\'{0}\''.format(type(self.items))
+                "'{0}'".format(type(self.items))
             )
         for idx, item in enumerate(self.items):
             if not isinstance(item, (Schema, SchemaItem)):
                 raise RuntimeError(
                     'The passed item at the {0} index must be of type '
                     'Schema, SchemaItem or BaseSchemaItem, not '
-                    '\'{1}\''.format(idx, type(item))
+                    "'{1}'".format(idx, type(item))
                 )
         if not isinstance(self.items, list):
             self.items = list(self.items)
@@ -1438,7 +1438,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The passed item be of type Schema, SchemaItem or '
-                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
+                "BaseSchemaItem, not '{1}'".format(type(self.item))
             )
 
     def serialize(self):

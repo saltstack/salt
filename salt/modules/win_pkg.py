@@ -360,8 +360,8 @@ def refresh_db(saltenv='base'):
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo_source_dir\' config option is deprecated, please '
-            'use \'winrepo_source_dir\' instead.'
+            "The 'win_repo_source_dir' config option is deprecated, please "
+            "use 'winrepo_source_dir' instead."
         )
         winrepo_source_dir = __opts__['win_repo_source_dir']
     else:
@@ -387,8 +387,8 @@ def _get_local_repo_dir(saltenv='base'):
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo_source_dir\' config option is deprecated, please '
-            'use \'winrepo_source_dir\' instead.'
+            "The 'win_repo_source_dir' config option is deprecated, please "
+            "use 'winrepo_source_dir' instead."
         )
         winrepo_source_dir = __opts__['win_repo_source_dir']
     else:
@@ -1171,7 +1171,7 @@ def get_repo_data(saltenv='base'):
         if exc.errno == errno.ENOENT:
             # File doesn't exist
             raise CommandExecutionError(
-                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
+                "Windows repo cache doesn't exist, pkg.refresh_db likely "
                 'needed'
             )
         log.error('Not able to read repo file')

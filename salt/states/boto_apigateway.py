@@ -505,7 +505,7 @@ class _Swagger(object):
 
     # AWS integration templates for normal and options methods
     REQUEST_TEMPLATE = {'application/json':
-                        '#set($inputRoot = $input.path(\'$\'))\n'
+                        "#set($inputRoot = $input.path('$'))\n"
                         '{\n'
                         '"header_params" : {\n'
                         '#set ($map = $input.params().header)\n'
@@ -561,7 +561,7 @@ class _Swagger(object):
     # an array of non-uniform types, to it is not possible to create error model to match
     # exactly what comes out of lambda functions in case of error.
     RESPONSE_TEMPLATE = {'application/json':
-                         '#set($inputRoot = $input.path(\'$\'))\n'
+                         "#set($inputRoot = $input.path('$'))\n"
                          '{\n'
                          '  "errorMessage" : "$inputRoot.errorMessage",\n'
                          '  "errorType" : "$inputRoot.errorType",\n'

@@ -80,7 +80,7 @@ def present(name,
         if __opts__['test']:
             ret['comment'] = 'Policy {0} {1} is set to be created'.format(vhost, name)
         else:
-            log.debug('Policy doesn\'t exist - Creating')
+            log.debug("Policy doesn't exist - Creating")
             result = __salt__['rabbitmq.set_policy'](vhost,
                                                      name,
                                                      pattern,
@@ -104,7 +104,7 @@ def present(name,
         ret['result'] = False
         ret['comment'] = result['Error']
     elif ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
+        ret['comment'] = "'{0}' is already in the desired state.".format(name)
     elif __opts__['test']:
         ret['result'] = None
     elif 'Set' in result:
@@ -132,7 +132,7 @@ def absent(name,
         vhost, name, runas=runas)
 
     if not policy_exists:
-        ret['comment'] = 'Policy \'{0} {1}\' is not present.'.format(vhost, name)
+        ret['comment'] = "Policy '{0} {1}' is not present.".format(vhost, name)
         return ret
 
     if not __opts__['test']:
@@ -149,6 +149,6 @@ def absent(name,
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Policy \'{0} {1}\' will be removed.'.format(vhost, name)
+        ret['comment'] = "Policy '{0} {1}' will be removed.".format(vhost, name)
 
     return ret

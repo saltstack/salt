@@ -179,13 +179,13 @@ def state(
         allow_fail = int(allow_fail)
     except ValueError:
         state_ret['result'] = False
-        state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
+        state_ret['comment'] = "Passed invalid value for 'allow_fail', must be an int"
         return state_ret
 
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
+            "Please only use 'tgt_type' or 'expr_form' not both. "
+            "Preferring 'tgt_type' over 'expr_form'"
         )
         expr_form = None
     elif expr_form and not tgt_type:
@@ -223,7 +223,7 @@ def state(
     if isinstance(concurrent, bool):
         cmd_kw['kwarg']['concurrent'] = concurrent
     else:
-        state_ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
+        state_ret['comment'] = ("Must pass in boolean for value of 'concurrent'")
         state_ret['result'] = False
         return state_ret
 
@@ -257,7 +257,7 @@ def state(
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault('warnings', []).append(
-            '\'fail_minions\' needs to be a list or a comma separated '
+            "'fail_minions' needs to be a list or a comma separated "
             'string. Ignored.'
         )
         fail_minions = ()
@@ -383,7 +383,7 @@ def function(
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, str):
-        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+        func_ret['warnings'] = ["Please specify 'arg' as a list, not a string. "
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']
         arg = arg.split()
@@ -392,8 +392,8 @@ def function(
 
     if expr_form and tgt_type:
         func_ret['warnings'] = [
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
+            "Please only use 'tgt_type' or 'expr_form' not both. "
+            "Preferring 'tgt_type' over 'expr_form'"
         ]
         expr_form = None
     elif expr_form and not tgt_type:
@@ -432,7 +432,7 @@ def function(
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault('warnings', []).append(
-            '\'fail_minions\' needs to be a list or a comma separated '
+            "'fail_minions' needs to be a list or a comma separated "
             'string. Ignored.'
         )
         fail_minions = ()

@@ -158,7 +158,7 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
+            log.warning("pkg.check_db: Duplicate package name '{0}' "
                         'submitted'.format(name))
             continue
         if '/' not in name:

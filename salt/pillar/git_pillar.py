@@ -292,7 +292,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             log.debug(
                 'git_pillar is processing pillar SLS from {0} for pillar '
-                'env \'{1}\''.format(pillar_dir, env)
+                "env '{1}'".format(pillar_dir, env)
             )
             all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
                         if env == e]
@@ -441,7 +441,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
         DELIM = '='
         if DELIM not in extraopt:
             log.error('Incorrectly formatted extra parameter. '
-                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
+                      "Missing '{0}': {1}".format(DELIM, extraopt))
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val

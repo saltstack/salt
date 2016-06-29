@@ -297,13 +297,13 @@ def init(opts):
     the protocol and port are cached.
     '''
     if 'host' not in opts['proxy']:
-        log.critical('No \'host\' key found in pillar for this proxy.')
+        log.critical("No 'host' key found in pillar for this proxy.")
         return False
     if 'username' not in opts['proxy']:
-        log.critical('No \'username\' key found in pillar for this proxy.')
+        log.critical("No 'username' key found in pillar for this proxy.")
         return False
     if 'passwords' not in opts['proxy']:
-        log.critical('No \'passwords\' key found in pillar for this proxy.')
+        log.critical("No 'passwords' key found in pillar for this proxy.")
         return False
 
     host = opts['proxy']['host']

@@ -66,7 +66,7 @@ def _execute_command(cmd, at_time=None):
     Returns: bool
     '''
     if at_time:
-        cmd = 'echo \'{0}\' | at {1}'.format(cmd, _cmd_quote(at_time))
+        cmd = "echo '{0}' | at {1}".format(cmd, _cmd_quote(at_time))
     return not bool(__salt__['cmd.retcode'](cmd, python_shell=True))
 
 

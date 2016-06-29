@@ -166,13 +166,13 @@ def present(
             new_key = result['new']['key']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
-                    comment='{0}\'s key saved to {1} (key: {2})'.format(
+                    comment="{0}'s key saved to {1} (key: {2})".format(
                              name, config, new_key))
         else:
             fingerprint = result['new']['fingerprint']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
-                    comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
+                    comment="{0}'s key saved to {1} (fingerprint: {2})".format(
                              name, config, fingerprint))
 
 

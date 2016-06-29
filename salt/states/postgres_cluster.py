@@ -67,7 +67,7 @@ def present(version,
         if any((port != info['port'] if port else False,
                 datadir != info['datadir'] if datadir else False,)):
             ret['comment'] = 'Cluster {0}/{1} has wrong parameters ' \
-                             'which couldn\'t be changed on fly.' \
+                             "which couldn't be changed on fly." \
                                  .format(version, name)
             ret['result'] = False
         return ret

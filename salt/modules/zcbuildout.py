@@ -319,9 +319,9 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
     try:
         cmd = [python,
                '-c',
-               '\'import pkg_resources;'
+               "'import pkg_resources;"
                'print pkg_resources.'
-               'get_distribution(\"distribute\").location\'']
+               'get_distribution("distribute").location\'']
         #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
@@ -336,7 +336,7 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
     try:
         cmd = [python,
                '-c',
-               '\'import pkg_resources;'
+               "'import pkg_resources;"
                'print not pkg_resources.'
                'get_distribution("setuptools").version.startswith("0.6")\'']
         #LOG.debug('Run %s' % ' '.join(cmd))

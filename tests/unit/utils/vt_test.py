@@ -65,7 +65,7 @@ class VTTestCase(TestCase):
                         return int(fh_.read().strip())
 
                 proc = subprocess.Popen(
-                    'sysctl -a 2> /dev/null | grep pty.nr | awk \'{print $3}\'',
+                    "sysctl -a 2> /dev/null | grep pty.nr | awk '{print $3}'",
                     shell=True,
                     stdout=subprocess.PIPE
                 )
@@ -75,10 +75,10 @@ class VTTestCase(TestCase):
                 if is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
-                        'Unable to find out how many PTY\'s are open on Darwin - '
+                        "Unable to find out how many PTY's are open on Darwin - "
                         'Skipping for now'
                     )
-                self.fail('Unable to find out how many PTY\'s are open')
+                self.fail("Unable to find out how many PTY's are open")
 
         nr_ptys = current_pty_count()
 
@@ -92,9 +92,9 @@ class VTTestCase(TestCase):
                     terminal.wait()
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions/2)):
-                        self.fail('VT is not cleaning up PTY\'s')
+                        self.fail("VT is not cleaning up PTY's")
                 except (ValueError, OSError, IOError):
-                    self.fail('Unable to find out how many PTY\'s are open')
+                    self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:
                 if 'out of pty devices' in exc:
                     # We're not cleaning up
@@ -112,9 +112,9 @@ class VTTestCase(TestCase):
                 terminal.wait()
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions/2)):
-                        self.fail('VT is not cleaning up PTY\'s')
+                        self.fail("VT is not cleaning up PTY's")
                 except (ValueError, OSError, IOError):
-                    self.fail('Unable to find out how many PTY\'s are open')
+                    self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:
                 if 'out of pty devices' in exc:
                     # We're not cleaning up

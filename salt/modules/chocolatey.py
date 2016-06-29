@@ -194,7 +194,7 @@ def bootstrap(force=False):
     cmd = (
         '{0} -NoProfile -ExecutionPolicy unrestricted '
         '-Command "iex ((new-object net.webclient).'
-        'DownloadString(\'https://chocolatey.org/install.ps1\'))" '
+        "DownloadString('https://chocolatey.org/install.ps1'))\" "
         '&& SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin'
         .format(ps_path)
     )

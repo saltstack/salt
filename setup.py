@@ -100,7 +100,7 @@ if WITH_SETUPTOOLS is False:
     # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(extras_require|tests_require|install_requires|zip_safe)\'',
+        "Unknown distribution option: '(extras_require|tests_require|install_requires|zip_safe)'",
         UserWarning,
         'distutils.dist'
     )
@@ -162,7 +162,7 @@ def _parse_requirements_file(requirements_file):
 # ----- Custom Distutils/Setuptools Commands ------------------------------------------------------------------------>
 class WriteSaltVersion(Command):
 
-    description = 'Write salt\'s hardcoded version file'
+    description = "Write salt's hardcoded version file"
     user_options = []
 
     def initialize_options(self):
@@ -179,7 +179,7 @@ class WriteSaltVersion(Command):
         if not os.path.exists(SALT_VERSION_HARDCODED):
             # Write the version file
             if getattr(self.distribution, 'salt_version_hardcoded_path', None) is None:
-                print('This command is not meant to be called on it\'s own')
+                print("This command is not meant to be called on it's own")
                 exit(1)
 
             # pylint: disable=E0602
@@ -194,7 +194,7 @@ class WriteSaltVersion(Command):
 
 class GenerateSaltSyspaths(Command):
 
-    description = 'Generate salt\'s hardcoded syspaths file'
+    description = "Generate salt's hardcoded syspaths file"
 
     def initialize_options(self):
         pass
@@ -205,7 +205,7 @@ class GenerateSaltSyspaths(Command):
     def run(self):
         # Write the syspaths file
         if getattr(self.distribution, 'salt_syspaths_hardcoded_path', None) is None:
-            print('This command is not meant to be called on it\'s own')
+            print("This command is not meant to be called on it's own")
             exit(1)
 
         # Write the system paths file
@@ -232,7 +232,7 @@ class GenerateSaltSyspaths(Command):
 
 class WriteSaltSshPackagingFile(Command):
 
-    description = 'Write salt\'s ssh packaging file'
+    description = "Write salt's ssh packaging file"
     user_options = []
 
     def initialize_options(self):
@@ -249,7 +249,7 @@ class WriteSaltSshPackagingFile(Command):
         if not os.path.exists(PACKAGED_FOR_SALT_SSH_FILE):
             # Write the salt-ssh packaging file
             if getattr(self.distribution, 'salt_ssh_packaging_file', None) is None:
-                print('This command is not meant to be called on it\'s own')
+                print("This command is not meant to be called on it's own")
                 exit(1)
 
             # pylint: disable=E0602
@@ -261,19 +261,19 @@ if WITH_SETUPTOOLS:
     class Develop(develop):
         user_options = develop.user_options + [
             ('write-salt-version', None,
-             'Generate Salt\'s _version.py file which allows proper version '
+             "Generate Salt's _version.py file which allows proper version "
              'reporting. This defaults to False on develop/editable setups. '
              'If WRITE_SALT_VERSION is found in the environment this flag is '
              'switched to True.'),
             ('generate-salt-syspaths', None,
-             'Generate Salt\'s _syspaths.py file which allows tweaking some '
+             "Generate Salt's _syspaths.py file which allows tweaking some "
              'common paths that salt uses. This defaults to False on '
              'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
              'the environment this flag is switched to True.'),
             ('mimic-salt-install', None,
              'Mimmic the install command when running the develop command. '
-             'This will generate salt\'s _version.py and _syspaths.py files. '
-             'Generate Salt\'s _syspaths.py file which allows tweaking some '
+             "This will generate salt's _version.py and _syspaths.py files. "
+             "Generate Salt's _syspaths.py file which allows tweaking some "
              'This defaults to False on develop/editable setups. '
              'If MIMIC_INSTALL is found in the environment this flag is '
              'switched to True.')
@@ -346,7 +346,7 @@ class InstallM2CryptoWindows(Command):
 
     def run(self):
         if getattr(self.distribution, 'salt_installing_m2crypto_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
+            print("This command is not meant to be called on it's own")
             exit(1)
         import platform
         from pip.utils import call_subprocess
@@ -370,7 +370,7 @@ class InstallPyCryptoWindowsWheel(Command):
 
     def run(self):
         if getattr(self.distribution, 'salt_installing_pycrypto_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
+            print("This command is not meant to be called on it's own")
             exit(1)
         import platform
         from pip.utils import call_subprocess
@@ -391,7 +391,7 @@ class InstallPyCryptoWindowsWheel(Command):
 
 class DownloadWindowsDlls(Command):
 
-    description = 'Download required DLL\'s for windows'
+    description = "Download required DLL's for windows"
 
     def initialize_options(self):
         pass
@@ -401,7 +401,7 @@ class DownloadWindowsDlls(Command):
 
     def run(self):
         if getattr(self.distribution, 'salt_download_windows_dlls', None) is None:
-            print('This command is not meant to be called on it\'s own')
+            print("This command is not meant to be called on it's own")
             exit(1)
         import platform
         from pip.utils.logging import indent_log
@@ -500,8 +500,8 @@ class CloudSdist(Sdist):
     def finalize_options(self):
         Sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
-                '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
+            log("Please stop using 'SKIP_BOOTSTRAP_DOWNLOAD' and use "
+                "'DOWNLOAD_BOOTSTRAP_SCRIPT' instead")
 
         if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
             download_bootstrap_script = os.environ.get(
@@ -676,28 +676,28 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
-        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
+        ('salt-transport=', None, "The transport to prepare salt for. Choices are 'zeromq' "
+                                  "'raet' or 'both'. Defaults to 'zeromq'", 'zeromq'),
         ('salt-root-dir=', None,
-         'Salt\'s pre-configured root directory'),
+         "Salt's pre-configured root directory"),
         ('salt-config-dir=', None,
-         'Salt\'s pre-configured configuration directory'),
+         "Salt's pre-configured configuration directory"),
         ('salt-cache-dir=', None,
-         'Salt\'s pre-configured cache directory'),
+         "Salt's pre-configured cache directory"),
         ('salt-sock-dir=', None,
-         'Salt\'s pre-configured socket directory'),
+         "Salt's pre-configured socket directory"),
         ('salt-srv-root-dir=', None,
-         'Salt\'s pre-configured service directory'),
+         "Salt's pre-configured service directory"),
         ('salt-base-file-roots-dir=', None,
-         'Salt\'s pre-configured file roots directory'),
+         "Salt's pre-configured file roots directory"),
         ('salt-base-pillar-roots-dir=', None,
-         'Salt\'s pre-configured pillar roots directory'),
+         "Salt's pre-configured pillar roots directory"),
         ('salt-base-master-roots-dir=', None,
-         'Salt\'s pre-configured master roots directory'),
+         "Salt's pre-configured master roots directory"),
         ('salt-logs-dir=', None,
-         'Salt\'s pre-configured logs directory'),
+         "Salt's pre-configured logs directory"),
         ('salt-pidfile-dir=', None,
-         'Salt\'s pre-configured pidfiles directory'),
+         "Salt's pre-configured pidfiles directory"),
     ]
 
     def initialize_options(self):
@@ -783,35 +783,35 @@ class SaltDistribution(distutils.dist.Distribution):
     '''
     global_options = distutils.dist.Distribution.global_options + [
         ('ssh-packaging', None, 'Run in SSH packaging mode'),
-        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')] + [
+        ('salt-transport=', None, "The transport to prepare salt for. Choices are 'zeromq' "
+                                  "'raet' or 'both'. Defaults to 'zeromq'", 'zeromq')] + [
         # Salt's Paths Configuration Settings
         ('salt-root-dir=', None,
-         'Salt\'s pre-configured root directory'),
+         "Salt's pre-configured root directory"),
         ('salt-config-dir=', None,
-         'Salt\'s pre-configured configuration directory'),
+         "Salt's pre-configured configuration directory"),
         ('salt-cache-dir=', None,
-         'Salt\'s pre-configured cache directory'),
+         "Salt's pre-configured cache directory"),
         ('salt-sock-dir=', None,
-         'Salt\'s pre-configured socket directory'),
+         "Salt's pre-configured socket directory"),
         ('salt-srv-root-dir=', None,
-         'Salt\'s pre-configured service directory'),
+         "Salt's pre-configured service directory"),
         ('salt-base-file-roots-dir=', None,
-         'Salt\'s pre-configured file roots directory'),
+         "Salt's pre-configured file roots directory"),
         ('salt-base-pillar-roots-dir=', None,
-         'Salt\'s pre-configured pillar roots directory'),
+         "Salt's pre-configured pillar roots directory"),
         ('salt-base-master-roots-dir=', None,
-         'Salt\'s pre-configured master roots directory'),
+         "Salt's pre-configured master roots directory"),
         ('salt-logs-dir=', None,
-         'Salt\'s pre-configured logs directory'),
+         "Salt's pre-configured logs directory"),
         ('salt-pidfile-dir=', None,
-         'Salt\'s pre-configured pidfiles directory'),
+         "Salt's pre-configured pidfiles directory"),
         ('salt-spm-formula-dir=', None,
-         'Salt\'s pre-configured SPM formulas directory'),
+         "Salt's pre-configured SPM formulas directory"),
         ('salt-spm-pillar-dir=', None,
-         'Salt\'s pre-configured SPM pillar directory'),
+         "Salt's pre-configured SPM pillar directory"),
         ('salt-spm-reactor-dir=', None,
-         'Salt\'s pre-configured SPM reactor directory'),
+         "Salt's pre-configured SPM reactor directory"),
     ]
 
     def __init__(self, attrs=None):
@@ -1192,8 +1192,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
-                'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
+                "The value of --salt-transport needs be 'zeromq', "
+                "'raet', 'both', 'ssh' or 'none' not '{0}'".format(
                     self.salt_transport
                 )
             )

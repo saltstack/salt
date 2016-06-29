@@ -56,14 +56,14 @@ class PillarTestCase(TestCase):
         compile_template.return_value = 'BAHHH'
         self.assertEqual(
             pillar.render_pillar({'base': ['foo.sls']}),
-            ({}, ['SLS \'foo.sls\' does not render to a dictionary'])
+            ({}, ["SLS 'foo.sls' does not render to a dictionary"])
         )
 
         # Template compilation returned a list
         compile_template.return_value = ['BAHHH']
         self.assertEqual(
             pillar.render_pillar({'base': ['foo.sls']}),
-            ({}, ['SLS \'foo.sls\' does not render to a dictionary'])
+            ({}, ["SLS 'foo.sls' does not render to a dictionary"])
         )
 
         # Template compilation returned a dictionary, which is what's expected

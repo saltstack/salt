@@ -38,7 +38,7 @@ class BatchTest(integration.ShellCase):
                '    0',
                '    batch testing']
         ret = sorted(ret)
-        cmd = sorted(self.run_salt('\'*\' test.echo \'batch testing\' -b 50%'))
+        cmd = sorted(self.run_salt("'*' test.echo 'batch testing' -b 50%"))
         self.assertListEqual(cmd, ret)
 
     def test_batch_run_number(self):
@@ -57,7 +57,7 @@ class BatchTest(integration.ShellCase):
                '    True',
                'retcode:',
                '    0']
-        cmd = sorted(self.run_salt('\'*\' test.ping --batch-size 2'))
+        cmd = sorted(self.run_salt("'*' test.ping --batch-size 2"))
         self.assertListEqual(cmd, sorted(ret))
 
     def test_batch_run_grains_targeting(self):
@@ -86,7 +86,7 @@ class BatchTest(integration.ShellCase):
                 os_grain = item
 
         os_grain = os_grain.strip()
-        cmd = sorted(self.run_salt('-G \'os:{0}\' -b 25% test.ping'.format(os_grain)))
+        cmd = sorted(self.run_salt("-G 'os:{0}' -b 25% test.ping".format(os_grain)))
         self.assertListEqual(cmd, sorted(ret))
 
 

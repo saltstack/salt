@@ -570,7 +570,7 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
+        log.trace("'{0}' could not be found in the following search path: '{1}'".format(exe, search_path))
     else:
         log.error('No executable was passed to be searched by salt.utils.which()')
 
@@ -743,13 +743,13 @@ def dns_check(addr, safe=False, ipv6=False):
             if not addr:
                 error = True
     except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
+        err = ("Attempt to resolve address '{0}' failed. Invalid or unresolveable address").format(addr)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        err = ("DNS lookup of '{0}' failed.").format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -787,7 +787,7 @@ def required_modules_error(name, docstring):
     if not modules:
         return ''
     filename = os.path.basename(name).split('.')[0]
-    msg = '\'{0}\' requires these python modules: {1}'
+    msg = "'{0}' requires these python modules: {1}"
     return msg.format(filename, ', '.join(modules))
 
 
@@ -812,10 +812,10 @@ def check_or_die(command):
     dependencies.
     '''
     if command is None:
-        raise CommandNotFoundError('\'None\' is not a valid command.')
+        raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError('\'{0}\' is not in the path'.format(command))
+        raise CommandNotFoundError("'{0}' is not in the path".format(command))
 
 
 def backup_minion(path, bkroot):
@@ -936,10 +936,10 @@ def build_whitespace_split_regex(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '\'' in text:
+        if "'" in text:
             lexer.quotes = '"'
         elif '"' in text:
-            lexer.quotes = '\''
+            lexer.quotes = "'"
         return list(lexer)
 
     regex = r''
@@ -1035,7 +1035,7 @@ def format_call(fun,
     # which, errors will be raised instead.
     warn_until(
         'Carbon',
-        'It\'s time to start raising `SaltInvocationError` instead of '
+        "It's time to start raising `SaltInvocationError` instead of "
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
         # need.
@@ -1045,7 +1045,7 @@ def format_call(fun,
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
-            msg = '\'{0[0]}\' is an invalid keyword argument for \'{1}\''.format(
+            msg = "'{0[0]}' is an invalid keyword argument for '{1}'".format(
                 list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
@@ -1055,8 +1055,8 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and \'{1}\' are invalid keyword arguments for \'{2}\''.format(
-                ', '.join(['\'{0}\''.format(e) for e in extra][:-1]),
+            msg = "{0} and '{1}' are invalid keyword arguments for '{2}'".format(
+                ', '.join(["'{0}'".format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
@@ -1069,8 +1069,8 @@ def format_call(fun,
         # Return a warning to the user explaining what's going on
         ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
-            'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until Salt '
+            "in a template context, please populate 'context' with "
+            "'key: value' pairs. Your approach will work until Salt "
             'Carbon is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
@@ -1394,7 +1394,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error("Invalid regex '{0}' in match".format(pattern))
                 return False
         elif exact_match:
             return str(target).lower() == pattern.lower()
@@ -1443,8 +1443,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delimiter))
+        log.debug("Attempting to match '{0}' in '{1}' using delimiter "
+                  "'{2}'".format(matchstr, key, delimiter))
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -2200,8 +2200,8 @@ def warn_until(version,
                                 six.string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version\' argument should be passed as a tuple, string or '
-            'an instance of \'salt.version.SaltStackVersion\'.'
+            "The 'version' argument should be passed as a tuple, string or "
+            "an instance of 'salt.version.SaltStackVersion'."
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
@@ -2221,7 +2221,7 @@ def warn_until(version,
         import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
-            'The warning triggered on filename \'{filename}\', line number '
+            "The warning triggered on filename '{filename}', line number "
             '{lineno}, is supposed to be shown until version '
             '{until_version} is released. Current version is now '
             '{salt_version}. Please remove the warning.'.format(
@@ -2293,8 +2293,8 @@ def kwargs_warn_until(kwargs,
                                 six.string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
-            'The \'version\' argument should be passed as a tuple, string or '
-            'an instance of \'salt.version.SaltStackVersion\'.'
+            "The 'version' argument should be passed as a tuple, string or "
+            "an instance of 'salt.version.SaltStackVersion'."
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
@@ -2312,11 +2312,11 @@ def kwargs_warn_until(kwargs,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
+        arg_names = ', '.join("'{0}'".format(key) for key in kwargs)
         warn_until(
             version,
             message='The following parameter(s) have been deprecated and '
-                    'will be removed in \'{0}\': {1}.'.format(version.string,
+                    "will be removed in '{0}': {1}.".format(version.string,
                                                             arg_names),
             category=category,
             stacklevel=stacklevel,
@@ -2673,7 +2673,7 @@ def get_group_list(user=None, include_default=True):
         raise Exception
     if hasattr(os, 'getgrouplist'):
         # Try os.getgrouplist, available in python >= 3.3
-        log.trace('Trying os.getgrouplist for \'{0}\''.format(user))
+        log.trace("Trying os.getgrouplist for '{0}'".format(user))
         try:
             group_names = [
                 grp.getgrgid(grpid).gr_name for grpid in
@@ -2683,7 +2683,7 @@ def get_group_list(user=None, include_default=True):
             pass
     else:
         # Try pysss.getgrouplist
-        log.trace('Trying pysss.getgrouplist for \'{0}\''.format(user))
+        log.trace("Trying pysss.getgrouplist for '{0}'".format(user))
         try:
             import pysss  # pylint: disable=import-error
             group_names = list(pysss.getgrouplist(user))
@@ -2693,7 +2693,7 @@ def get_group_list(user=None, include_default=True):
         # Fall back to generic code
         # Include the user's default group to behave like
         # os.getgrouplist() and pysss.getgrouplist() do
-        log.trace('Trying generic group list for \'{0}\''.format(user))
+        log.trace("Trying generic group list for '{0}'".format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
@@ -2714,7 +2714,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user \'{0}\': \'{1}\''.format(user, sorted(ugroups)))
+    log.trace("Group list for user '{0}': '{1}'".format(user, sorted(ugroups)))
     return sorted(ugroups)
 
 

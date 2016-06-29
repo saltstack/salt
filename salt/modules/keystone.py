@@ -713,7 +713,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
     try:
         user = kstone.users.get(user_id)
     except keystoneclient.exceptions.NotFound:
-        msg = 'Could not find user \'{0}\''.format(user_id)
+        msg = "Could not find user '{0}'".format(user_id)
         log.error(msg)
         return {'Error': msg}
 

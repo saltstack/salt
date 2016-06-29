@@ -254,7 +254,7 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
     .. versionadded:: 2016.3.0
     '''
     if domain and domain != 'vpc':
-        raise SaltInvocationError('The only permitted value for the \'domain\' param is \'vpc\'.')
+        raise SaltInvocationError("The only permitted value for the 'domain' param is 'vpc'.")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -837,7 +837,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                  region=region, key=key,
                                                  keyid=keyid, profile=profile)
         if 'id' not in r:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(subnet_name)
+            log.warning("Couldn't resolve subnet name {0}.").format(subnet_name)
             return False
         subnet_id = r['id']
 
@@ -851,7 +851,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                        region=region, key=key,
                                                        keyid=keyid, profile=profile)
             if not r:
-                log.warning('Couldn\'t resolve security group name ' + str(sgn))
+                log.warning("Couldn't resolve security group name " + str(sgn))
                 return False
             security_group_ids += [r]
 
@@ -1289,7 +1289,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
                                                         keyid=keyid,
                                                         profile=profile)
         if 'id' not in resource:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(
+            log.warning("Couldn't resolve subnet name {0}.").format(
                 subnet_name)
             return False
         subnet_id = resource['id']

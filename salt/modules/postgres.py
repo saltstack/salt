@@ -228,7 +228,7 @@ def version(user=None, host=None, port=None, maintenance_db=None,
         salt '*' postgres.version
     '''
     query = 'SELECT setting FROM pg_catalog.pg_settings ' \
-            'WHERE name = \'server_version\''
+            "WHERE name = 'server_version'"
     cmd = _psql_cmd('-c', query,
                     '-t',
                     host=host,
@@ -859,7 +859,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             '      on (pg_user.usesysid=pg_auth_members.member)'
             ' join pg_roles '
             '      on (pg_roles.oid=pg_auth_members.roleid)'
-            ' where pg_user.usename=\'{0}\''
+            " where pg_user.usename='{0}'"
         ).format(role)
         try:
             rows = psql_query(query,
@@ -1008,9 +1008,9 @@ def _role_cmd_args(name,
     ):
         skip_passwd = True
     if isinstance(rolepassword, six.string_types) and bool(rolepassword):
-        escaped_password = '\'{0}\''.format(
+        escaped_password = "'{0}'".format(
             _maybe_encrypt_password(name,
-                                    rolepassword.replace('\'', '\'\''),
+                                    rolepassword.replace("'", "''"),
                                     encrypted=encrypted))
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role['superuser']):
@@ -1075,7 +1075,7 @@ def _role_create(name,
     # check if role exists
     if user_exists(name, user, host, port, maintenance_db,
                    password=password, runas=runas):
-        log.info('{0} \'{1}\' already exists'.format(typ_.capitalize(), name))
+        log.info("{0} '{1}' already exists".format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
@@ -1186,7 +1186,7 @@ def _role_update(name,
     # check if user exists
     if not bool(role):
         log.info(
-            '{0} \'{1}\' could not be found'.format(typ_.capitalize(), name)
+            "{0} '{1}' could not be found".format(typ_.capitalize(), name)
         )
         return False
 
@@ -1273,7 +1273,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db,
                        password=password, runas=runas):
-        log.info('User \'{0}\' does not exist'.format(name))
+        log.info("User '{0}' does not exist".format(name))
         return False
 
     # user exists, proceed
@@ -1287,7 +1287,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
                        password=password, runas=runas):
         return True
     else:
-        log.info('Failed to delete user \'{0}\'.'.format(name))
+        log.info("Failed to delete user '{0}'.".format(name))
         return False
 
 
@@ -1848,24 +1848,24 @@ def owner_to(dbname,
          'information_schema.schemata;'),
         # tables and views
         ('alter table {n} owner to {owner};',
-         'select quote_ident(table_schema)||\'.\'||quote_ident(table_name) as '
+         "select quote_ident(table_schema)||'.'||quote_ident(table_name) as "
          'n from information_schema.tables where table_schema not in '
-         '(\'pg_catalog\', \'information_schema\');'),
+         "('pg_catalog', 'information_schema');"),
         # functions
         ('alter function {n} owner to {owner};',
          'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
          'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
-         'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
+         "ns.nspname not in ('pg_catalog', 'information_schema') "
          ' and not p.proisagg;'),
         # aggregate functions
         ('alter aggregate {n} owner to {owner};',
          'select p.oid::regprocedure::text as n from pg_catalog.pg_proc p '
          'join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where '
-         'ns.nspname not in (\'pg_catalog\', \'information_schema\') '
+         "ns.nspname not in ('pg_catalog', 'information_schema') "
          'and p.proisagg;'),
         # sequences
         ('alter sequence {n} owner to {owner};',
-         'select quote_ident(sequence_schema)||\'.\'||'
+         "select quote_ident(sequence_schema)||'.'||"
          'quote_ident(sequence_name) as n from information_schema.sequences;')
     )
 
@@ -1913,7 +1913,7 @@ def schema_create(dbname, name, owner=None,
     if schema_exists(dbname, name,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
-        log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
+        log.info("'{0}' already exists in '{1}'".format(name, dbname))
         return False
 
     sub_cmd = 'CREATE SCHEMA "{0}"'.format(name)
@@ -1968,7 +1968,7 @@ def schema_remove(dbname, name,
     if not schema_exists(dbname, name,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
-        log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
+        log.info("Schema '{0}' does not exist in '{1}'".format(name, dbname))
         return False
 
     # schema exists, proceed
@@ -1984,7 +1984,7 @@ def schema_remove(dbname, name,
                          db_host=db_host, db_port=db_port):
         return True
     else:
-        log.info('Failed to delete schema \'{0}\'.'.format(name))
+        log.info("Failed to delete schema '{0}'.".format(name))
         return False
 
 

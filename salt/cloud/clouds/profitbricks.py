@@ -255,7 +255,7 @@ def get_size(vm_):
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
             return sizes[size]
     raise SaltCloudNotFound(
-        'The specified size, \'{0}\', could not be found.'.format(vm_size)
+        "The specified size, '{0}', could not be found.".format(vm_size)
     )
 
 
@@ -282,7 +282,7 @@ def get_datacenter(conn):
             return item
 
     raise SaltCloudNotFound(
-        'The specified datacenter \'{0}\' could not be found.'.format(
+        "The specified datacenter '{0}' could not be found.".format(
             datacenter_id
         )
     )
@@ -322,7 +322,7 @@ def get_image(vm_):
             return images[key]
 
     raise SaltCloudNotFound(
-        'The specified image, \'{0}\', could not be found.'.format(vm_image)
+        "The specified image, '{0}', could not be found.".format(vm_image)
     )
 
 
@@ -547,7 +547,7 @@ def get_public_keys(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                'The defined ssh_public_key \'{0}\' does not exist'.format(
+                "The defined ssh_public_key '{0}' does not exist".format(
                     key_filename
                 )
             )
@@ -569,7 +569,7 @@ def get_key_filename(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                'The defined ssh_private_key \'{0}\' does not exist'.format(
+                "The defined ssh_private_key '{0}' does not exist".format(
                     key_filename
                 )
             )
@@ -706,9 +706,9 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info("Created Cloud VM '{0[name]}'".format(vm_))
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        "'{0[name]}' VM creation details:\n{1}".format(
             vm_, pprint.pformat(data)
         )
     )

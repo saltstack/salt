@@ -61,7 +61,7 @@ def returner(ret):
     signaled = dispatch.Signal(providing_args=['ret']).send(sender='returner', ret=ret)
 
     for signal in signaled:
-        log.debug('Django returner function \'returner\' signaled {0} '
+        log.debug("Django returner function 'returner' signaled {0} "
                   'which responded with {1}'.format(signal[0], signal[1]))
 
 
@@ -74,7 +74,7 @@ def save_load(jid, load, minions=None):
             sender='save_load', jid=jid, load=load)
 
     for signal in signaled:
-        log.debug('Django returner function \'save_load\' signaled {0} '
+        log.debug("Django returner function 'save_load' signaled {0} "
                   'which responded with {1}'.format(signal[0], signal[1]))
 
 

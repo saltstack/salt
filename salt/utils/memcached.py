@@ -128,9 +128,9 @@ def set_(conn,
     Set a key on the memcached server, overwriting the value if it exists.
     '''
     if not isinstance(time, integer_types):
-        raise SaltInvocationError('\'time\' must be an integer')
+        raise SaltInvocationError("'time' must be an integer")
     if not isinstance(min_compress_len, integer_types):
-        raise SaltInvocationError('\'min_compress_len\' must be an integer')
+        raise SaltInvocationError("'min_compress_len' must be an integer")
     _check_stats(conn)
     return conn.set(key, value, time, min_compress_len)
 

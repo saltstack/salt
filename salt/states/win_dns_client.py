@@ -159,7 +159,7 @@ def primary_suffix(name,
 
     if not isinstance(updates, bool):
         ret['result'] = False
-        ret['comment'] = '\'updates\' must be a boolean value'
+        ret['comment'] = "'updates' must be a boolean value"
         return ret
 
     # TODO: waiting for an implementation of

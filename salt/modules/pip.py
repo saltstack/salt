@@ -245,7 +245,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 )
                 if not cached_requirements:
                     ret = {'result': False,
-                           'comment': 'pip requirements file \'{0}\' not found'
+                           'comment': "pip requirements file '{0}' not found"
                                       .format(requirement)}
                     return None, ret
                 requirement = cached_requirements
@@ -312,8 +312,8 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__['file.copy'](source_path, target_path)
 
                     logger.debug(
-                        'Changing ownership of requirements file \'{0}\' to '
-                        'user \'{1}\''.format(target_path, user)
+                        "Changing ownership of requirements file '{0}' to "
+                        "user '{1}'".format(target_path, user)
                     )
 
                     __salt__['file.chown'](target_path, user, None)
@@ -571,7 +571,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if env and not bin_env:
         salt.utils.warn_until(
             'Carbon',
-            'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
+            "Passing 'env' to the pip module is deprecated. Use bin_env instead. "
             'This functionality will be removed in Salt Carbon.'
         )
         bin_env = env
@@ -579,7 +579,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if activate:
         salt.utils.warn_until(
             'Carbon',
-            'Passing \'activate\' to the pip module is deprecated. If '
+            "Passing 'activate' to the pip module is deprecated. If "
             'bin_env refers to a virtualenv, there is no need to activate '
             'that virtualenv before using pip to install packages in it.'
         )
@@ -628,9 +628,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if log:
         if os.path.isdir(log):
             raise IOError(
-                '\'{0}\' is a directory. Use --log path_to_file'.format(log))
+                "'{0}' is a directory. Use --log path_to_file".format(log))
         elif not os.access(log, os.W_OK):
-            raise IOError('\'{0}\' is not writeable'.format(log))
+            raise IOError("'{0}' is not writeable".format(log))
 
         cmd.extend(['--log', log])
 
@@ -646,7 +646,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             int(timeout)
         except ValueError:
             raise ValueError(
-                '\'{0}\' is not a valid timeout, must be an integer'
+                "'{0}' is not a valid timeout, must be an integer"
                 .format(timeout)
             )
         cmd.extend(['--timeout', timeout])
@@ -658,27 +658,27 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for link in find_links:
             if not (salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
-                    '\'{0}\' is not a valid URL or path'.format(link)
+                    "'{0}' is not a valid URL or path".format(link)
                 )
             cmd.extend(['--find-links', link])
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
-            '\'no_index\' and (\'index_url\' or \'extra_index_url\') are '
+            "'no_index' and ('index_url' or 'extra_index_url') are "
             'mutually exclusive.'
         )
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '\'{0}\' is not a valid URL'.format(index_url)
+                "'{0}' is not a valid URL".format(index_url)
             )
         cmd.extend(['--index-url', index_url])
 
     if extra_index_url:
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '\'{0}\' is not a valid URL'.format(extra_index_url)
+                "'{0}' is not a valid URL".format(extra_index_url)
             )
         cmd.extend(['--extra-index-url', extra_index_url])
 
@@ -701,7 +701,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for mirror in mirrors:
             if not mirror.startswith('http://'):
                 raise CommandExecutionError(
-                    '\'{0}\' is not a valid URL'.format(mirror)
+                    "'{0}' is not a valid URL".format(mirror)
                 )
             cmd.extend(['--mirrors', mirror])
 
@@ -733,7 +733,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if exists_action.lower() not in ('s', 'i', 'w', 'b'):
             raise CommandExecutionError(
                 'The exists_action pip option only supports the values '
-                's, i, w, and b. \'{0}\' is not valid.'.format(exists_action)
+                "s, i, w, and b. '{0}' is not valid.".format(exists_action)
             )
         cmd.extend(['--exists-action', exists_action])
 
@@ -932,7 +932,7 @@ def uninstall(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('\'{0}\' is not writeable'.format(log))
+            raise IOError("'{0}' is not writeable".format(log))
 
         cmd.extend(['--log', log])
 
@@ -948,7 +948,7 @@ def uninstall(pkgs=None,
             int(timeout)
         except ValueError:
             raise ValueError(
-                '\'{0}\' is not a valid timeout, must be an integer'
+                "'{0}' is not a valid timeout, must be an integer"
                 .format(timeout)
             )
         cmd.extend(['--timeout', timeout])
@@ -1069,7 +1069,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error("Can't parse line '{0}'".format(line))
             continue
 
         if prefix:
@@ -1136,7 +1136,7 @@ def list_upgrades(bin_env=None,
         if match:
             name, version_ = match.groups()
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error("Can't parse line '{0}'".format(line))
             continue
         packages[name] = version_
     return packages

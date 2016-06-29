@@ -52,17 +52,17 @@ PER_SALTENV_PARAMS = ('mountpoint', 'root', 'ref')
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set {0}_provider to '
-    '\'gitpython\' to use GitPython for {0} support.'
+    "'gitpython' to use GitPython for {0} support."
 )
 
 _RECOMMEND_PYGIT2 = (
     'pygit2 is installed, you may wish to set {0}_provider to '
-    '\'pygit2\' to use pygit2 for for {0} support.'
+    "'pygit2' to use pygit2 for for {0} support."
 )
 
 _RECOMMEND_DULWICH = (
     'Dulwich is installed, you may wish to set {0}_provider to '
-    '\'dulwich\' to use Dulwich for {0} support.'
+    "'dulwich' to use Dulwich for {0} support."
 )
 
 _INVALID_REPO = (
@@ -191,7 +191,7 @@ class GitProvider(object):
 
             if not per_remote_conf:
                 log.critical(
-                    'Invalid per-remote configuration for %s remote \'%s\'. '
+                    "Invalid per-remote configuration for %s remote '%s'. "
                     'If no per-remote parameters are being specified, there '
                     'may be a trailing colon after the URL, which should be '
                     'removed. Check the master configuration file.',
@@ -206,9 +206,9 @@ class GitProvider(object):
                 if param in AUTH_PARAMS \
                         and self.provider not in AUTH_PROVIDERS:
                     msg = (
-                        '{0} authentication parameter \'{1}\' (from remote '
-                        '\'{2}\') is only supported by the following '
-                        'provider(s): {3}. Current {0}_provider is \'{4}\'.'
+                        "{0} authentication parameter '{1}' (from remote "
+                        "'{2}') is only supported by the following "
+                        "provider(s): {3}. Current {0}_provider is '{4}'."
                         .format(
                             self.role,
                             param,
@@ -225,7 +225,7 @@ class GitProvider(object):
                     log.critical(msg)
                 else:
                     msg = (
-                        'Invalid {0} configuration parameter \'{1}\' in '
+                        "Invalid {0} configuration parameter '{1}' in "
                         'remote {2}. Valid parameters are: {3}.'.format(
                             self.role,
                             param,
@@ -296,7 +296,7 @@ class GitProvider(object):
 
         if not isinstance(self.url, six.string_types):
             log.critical(
-                'Invalid {0} remote \'{1}\'. Remotes must be strings, you '
+                "Invalid {0} remote '{1}'. Remotes must be strings, you "
                 'may need to enclose the URL in quotes'.format(
                     self.role,
                     self.id
@@ -314,7 +314,7 @@ class GitProvider(object):
         try:
             self.new = self.init_remote()
         except Exception as exc:
-            msg = ('Exception caught while initializing {0} remote \'{1}\': '
+            msg = ("Exception caught while initializing {0} remote '{1}': "
                    '{2}'.format(self.role, self.id, exc))
             if isinstance(self, GitPython):
                 msg += ' Perhaps git is not available.'
@@ -406,7 +406,7 @@ class GitProvider(object):
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
-            'Root path \'{0}\' not present in {1} remote \'{2}\', '
+            "Root path '{0}' not present in {1} remote '{2}', "
             'skipping.'.format(self.root(), self.role, self.id)
         )
         return None
@@ -450,7 +450,7 @@ class GitProvider(object):
             else:
                 _add_error(failed, exc)
         else:
-            msg = 'Removed {0} lock for {1} remote \'{2}\''.format(
+            msg = "Removed {0} lock for {1} remote '{2}'".format(
                 lock_type,
                 self.role,
                 self.id
@@ -469,17 +469,17 @@ class GitProvider(object):
         '''
         try:
             with self.gen_lock(lock_type='update'):
-                log.debug('Fetching %s remote \'%s\'', self.role, self.id)
+                log.debug("Fetching %s remote '%s'", self.role, self.id)
                 # Run provider-specific fetch code
                 return self._fetch()
         except GitLockError as exc:
             if exc.errno == errno.EEXIST:
                 log.warning(
-                    'Update lock file is present for %s remote \'%s\', '
+                    "Update lock file is present for %s remote '%s', "
                     'skipping. If this warning persists, it is possible that '
                     'the update process was interrupted, but the lock could '
                     'also have been manually set. Removing %s or running '
-                    '\'salt-run cache.clear_git_lock %s type=update\' will '
+                    "'salt-run cache.clear_git_lock %s type=update' will "
                     'allow updates to continue for this remote.',
                     self.role,
                     self.id,
@@ -512,7 +512,7 @@ class GitProvider(object):
                 if self.opts[global_lock_key]:
                     msg = (
                         '{0} is enabled and {1} lockfile {2} is present for '
-                        '{3} remote \'{4}\'.'.format(
+                        "{3} remote '{4}'.".format(
                             global_lock_key,
                             lock_type,
                             lock_file,
@@ -561,7 +561,7 @@ class GitProvider(object):
                 )
                 log.error(msg)
                 raise GitLockError(exc.errno, msg)
-        msg = 'Set {0} lock for {1} remote \'{2}\''.format(
+        msg = "Set {0} lock for {1} remote '{2}'".format(
             lock_type,
             self.role,
             self.id
@@ -737,7 +737,7 @@ class GitPython(GitProvider):
                 with self.gen_lock(lock_type='checkout'):
                     self.repo.git.checkout(checkout_ref)
                     log.debug(
-                        '%s remote \'%s\' has been checked out to %s',
+                        "%s remote '%s' has been checked out to %s",
                         self.role,
                         self.id,
                         checkout_ref
@@ -749,13 +749,13 @@ class GitPython(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        'Checkout lock exists for {0} remote \'{1}\''
+                        "Checkout lock exists for {0} remote '{1}'"
                         .format(self.role, self.id)
                     )
                 else:
                     log.error(
                         'Error %d encountered obtaining checkout lock '
-                        'for %s remote \'%s\'',
+                        "for %s remote '%s'",
                         exc.errno,
                         self.role,
                         self.id
@@ -765,7 +765,7 @@ class GitPython(GitProvider):
                 continue
             return self.check_root()
         log.error(
-            'Failed to checkout %s from %s remote \'%s\': remote ref does '
+            "Failed to checkout %s from %s remote '%s': remote ref does "
             'not exist', self.branch, self.role, self.id
         )
         return None
@@ -873,7 +873,7 @@ class GitPython(GitProvider):
         for fetchinfo in fetch_results:
             if fetchinfo.old_commit is not None:
                 log.debug(
-                    '{0} has updated \'{1}\' for remote \'{2}\' '
+                    "{0} has updated '{1}' for remote '{2}' "
                     'from {3} to {4}'.format(
                         self.role,
                         fetchinfo.name,
@@ -886,7 +886,7 @@ class GitPython(GitProvider):
             elif fetchinfo.flags in (fetchinfo.NEW_TAG,
                                      fetchinfo.NEW_HEAD):
                 log.debug(
-                    '{0} has fetched new {1} \'{2}\' for remote \'{3}\' '
+                    "{0} has fetched new {1} '{2}' for remote '{3}' "
                     .format(
                         self.role,
                         'tag' if fetchinfo.flags == fetchinfo.NEW_TAG
@@ -1025,7 +1025,7 @@ class Pygit2(GitProvider):
             local_head = self.repo.lookup_reference('HEAD')
         except KeyError:
             log.warning(
-                'HEAD not present in %s remote \'%s\'', self.role, self.id
+                "HEAD not present in %s remote '%s'", self.role, self.id
             )
             return None
 
@@ -1035,7 +1035,7 @@ class Pygit2(GitProvider):
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
             log.error(
-                'Unable to get SHA of HEAD for %s remote \'%s\'',
+                "Unable to get SHA of HEAD for %s remote '%s'",
                 self.role, self.id
             )
             return None
@@ -1063,13 +1063,13 @@ class Pygit2(GitProvider):
                     # function.
                     raise GitLockError(
                         exc.errno,
-                        'Checkout lock exists for {0} remote \'{1}\''
+                        "Checkout lock exists for {0} remote '{1}'"
                         .format(self.role, self.id)
                     )
                 else:
                     log.error(
                         'Error %d encountered obtaining checkout lock '
-                        'for %s remote \'%s\'',
+                        "for %s remote '%s'",
                         exc.errno,
                         self.role,
                         self.id
@@ -1091,7 +1091,7 @@ class Pygit2(GitProvider):
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
-                        '\'%s\'', local_ref, self.role, self.id
+                        "'%s'", local_ref, self.role, self.id
                     )
                     return None
 
@@ -1123,7 +1123,7 @@ class Pygit2(GitProvider):
                             # Shouldn't happen, but log an error if it does
                             log.error(
                                 'pygit2 was unable to resolve branch name from '
-                                'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
+                                "HEAD ref '{0}' in {1} remote '{2}'".format(
                                     head_ref, self.role, self.id
                                 )
                             )
@@ -1167,7 +1167,7 @@ class Pygit2(GitProvider):
                             # Shouldn't happen, but could if a future pygit2
                             # API change breaks things.
                             log.error(
-                                'Unable to resolve %s from %s remote \'%s\' '
+                                "Unable to resolve %s from %s remote '%s' "
                                 'to either an annotated or non-annotated tag',
                                 tag_ref, self.role, self.id
                             )
@@ -1183,7 +1183,7 @@ class Pygit2(GitProvider):
             raise
         except Exception as exc:
             log.error(
-                'Failed to checkout {0} from {1} remote \'{2}\': {3}'.format(
+                "Failed to checkout {0} from {1} remote '{2}': {3}".format(
                     self.branch,
                     self.role,
                     self.id,
@@ -1193,7 +1193,7 @@ class Pygit2(GitProvider):
             )
             return None
         log.error(
-            'Failed to checkout {0} from {1} remote \'{2}\': remote ref '
+            "Failed to checkout {0} from {1} remote '{2}': remote ref "
             'does not exist'.format(self.branch, self.role, self.id)
         )
         return None
@@ -1206,7 +1206,7 @@ class Pygit2(GitProvider):
             log.debug(
                 'pygit2 does not support detecting stale refs for '
                 'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'{0}\''
+                "branches/tags removed from remote '{0}'"
                 .format(self.id)
             )
             return []
@@ -1223,8 +1223,8 @@ class Pygit2(GitProvider):
         output = cmd.communicate()[0]
         if cmd.returncode != 0:
             log.warning(
-                'Failed to list remote references for {0} remote \'{1}\'. '
-                'Output from \'{2}\' follows:\n{3}'.format(
+                "Failed to list remote references for {0} remote '{1}'. "
+                "Output from '{2}' follows:\n{3}".format(
                     self.role,
                     self.id,
                     cmd_str,
@@ -1384,19 +1384,19 @@ class Pygit2(GitProvider):
             if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
-                    'Unable to fetch SSH-based {0} remote \'{1}\'. '
+                    "Unable to fetch SSH-based {0} remote '{1}'. "
                     'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
             elif 'authentication required but no callback set' in exc_str:
                 log.error(
-                    '{0} remote \'{1}\' requires authentication, but no '
+                    "{0} remote '{1}' requires authentication, but no "
                     'authentication configured'.format(self.role, self.id)
                 )
             else:
                 log.error(
-                    'Error occured fetching {0} remote \'{1}\': {2}'.format(
+                    "Error occured fetching {0} remote '{1}': {2}".format(
                         self.role, self.id, exc
                     )
                 )
@@ -1410,12 +1410,12 @@ class Pygit2(GitProvider):
             received_objects = fetch_results.received_objects
         if received_objects != 0:
             log.debug(
-                '{0} received {1} objects for remote \'{2}\''
+                "{0} received {1} objects for remote '{2}'"
                 .format(self.role, received_objects, self.id)
             )
         else:
             log.debug(
-                '{0} remote \'{1}\' is up-to-date'.format(self.role, self.id)
+                "{0} remote '{1}' is up-to-date".format(self.role, self.id)
             )
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
@@ -1554,7 +1554,7 @@ class Pygit2(GitProvider):
             '''
             log.critical(
                 'Incomplete authentication information for {0} remote '
-                '\'{1}\'. Missing parameters: {2}'.format(
+                "'{1}'. Missing parameters: {2}".format(
                     self.role,
                     self.id,
                     ', '.join(missing)
@@ -1580,7 +1580,7 @@ class Pygit2(GitProvider):
             if user == address:
                 # No '@' sign == no user. This is a problem.
                 log.critical(
-                    'Keypair specified for {0} remote \'{1}\', but remote URL '
+                    "Keypair specified for {0} remote '{1}', but remote URL "
                     'is missing a username'.format(self.role, self.id)
                 )
                 failhard(self.role)
@@ -1611,11 +1611,11 @@ class Pygit2(GitProvider):
             if password_ok:
                 if transport == 'http' and not self.insecure_auth:
                     log.critical(
-                        'Invalid configuration for {0} remote \'{1}\'. '
+                        "Invalid configuration for {0} remote '{1}'. "
                         'Authentication is disabled by default on http '
                         'remotes. Either set {0}_insecure_auth to True in the '
                         'master configuration file, set a per-remote config '
-                        'option named \'insecure_auth\' to True, or use https '
+                        "option named 'insecure_auth' to True, or use https "
                         'or ssh-based authentication.'.format(
                             self.role,
                             self.id
@@ -1630,8 +1630,8 @@ class Pygit2(GitProvider):
                 _incomplete_auth(missing_auth)
         else:
             log.critical(
-                'Invalid configuration for {0} remote \'{1}\'. Unsupported '
-                'transport \'{2}\'.'.format(self.role, self.id, transport)
+                "Invalid configuration for {0} remote '{1}'. Unsupported "
+                "transport '{2}'.".format(self.role, self.id, transport)
             )
             failhard(self.role)
 
@@ -1722,14 +1722,14 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         except dulwich.errors.NotGitRepository:
             log.error(
                 'Dulwich does not recognize {0} as a valid remote '
-                'remote URL. Perhaps it is missing \'.git\' at the '
+                "remote URL. Perhaps it is missing '.git' at the "
                 'end.'.format(self.id)
             )
             return False
         except KeyError:
             log.error(
-                'Local repository cachedir \'{0}\' (corresponding '
-                'remote: \'{1}\') has been corrupted. Salt will now '
+                "Local repository cachedir '{0}' (corresponding "
+                "remote: '{1}') has been corrupted. Salt will now "
                 'attempt to remove the local checkout to allow it to '
                 'be re-initialized in the next fileserver cache '
                 'update.'
@@ -1760,7 +1760,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         if refs_post is None:
             # Empty repository
             log.warning(
-                '{0} remote \'{1}\' is an empty repository and will '
+                "{0} remote '{1}' is an empty repository and will "
                 'be skipped.'.format(self.role, self.id)
             )
             return False
@@ -1904,7 +1904,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                         commit = tag
                     else:
                         log.error(
-                            'Unhandled object type \'{0}\' in '
+                            "Unhandled object type '{0}' in "
                             'Dulwich get_tree. This is a bug, please '
                             'report it.'.format(tag.type_name)
                         )
@@ -1934,7 +1934,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     if isinstance(x, dulwich.objects.Commit)
                 ])
                 if len(matches) > 1:
-                    log.warning('Ambiguous commit ID \'{0}\''.format(tgt_ref))
+                    log.warning("Ambiguous commit ID '{0}'".format(tgt_ref))
                     return None
                 try:
                     sha_commit = matches.pop()
@@ -2066,7 +2066,7 @@ class GitBase(object):
             override_params += AUTH_PARAMS
         elif global_auth_params:
             msg = (
-                '{0} authentication was configured, but the \'{1}\' '
+                "{0} authentication was configured, but the '{1}' "
                 '{0}_provider does not support authentication. The '
                 'providers for which authentication is supported in {0} '
                 'are: {2}.'.format(
@@ -2086,7 +2086,7 @@ class GitBase(object):
             key = '{0}_{1}'.format(self.role, param)
             if key not in self.opts:
                 log.critical(
-                    'Key \'%s\' not present in global configuration. This is '
+                    "Key '%s' not present in global configuration. This is "
                     'a bug, please report it.', key
                 )
                 failhard(self.role)
@@ -2125,11 +2125,11 @@ class GitBase(object):
                             repo_obj.saltenv[saltenv].pop('ref')
                             if ref != repo_obj.base:
                                 log.warning(
-                                    'The \'base\' environment has been '
-                                    'defined in the \'saltenv\' param for %s '
+                                    "The 'base' environment has been "
+                                    "defined in the 'saltenv' param for %s "
                                     'remote %s and will override the '
                                     'branch/tag specified by %s_base (or a '
-                                    'per-remote \'base\' parameter).',
+                                    "per-remote 'base' parameter).",
                                     self.role, repo_obj.id, self.role
                                 )
                                 # Rewrite 'base' config param
@@ -2165,7 +2165,7 @@ class GitBase(object):
                 log.critical(
                     'The following {0} remotes have conflicting cachedirs: '
                     '{1}. Resolve this using a per-remote parameter called '
-                    '\'name\'.'.format(
+                    "'name'.".format(
                         self.role,
                         ', '.join(cachedir_map[dirname])
                     )
@@ -2272,8 +2272,8 @@ class GitBase(object):
                     changed = True
             except Exception as exc:
                 log.error(
-                    'Exception \'{0}\' caught while fetching {1} remote '
-                    '\'{2}\''.format(exc, self.role, repo.id),
+                    "Exception '{0}' caught while fetching {1} remote "
+                    "'{2}'".format(exc, self.role, repo.id),
                     exc_info_on_loglevel=logging.DEBUG
                 )
         return changed
@@ -2369,7 +2369,7 @@ class GitBase(object):
                     desired_provider = str(desired_provider).lower()
                 if desired_provider not in self.valid_providers:
                     log.critical(
-                        'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
+                        "Invalid {0}_provider '{1}'. Valid choices are: {2}"
                         .format(self.role,
                                 desired_provider,
                                 ', '.join(self.valid_providers))
@@ -2432,7 +2432,7 @@ class GitBase(object):
         if not salt.utils.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
-                '\'gitpython\' {0}_provider.'.format(self.role)
+                "'gitpython' {0}_provider.".format(self.role)
             )
 
         if errors:
@@ -2498,7 +2498,7 @@ class GitBase(object):
         if not salt.utils.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
-                '\'pygit2\' {0}_provider.'.format(self.role)
+                "'pygit2' {0}_provider.".format(self.role)
             )
 
         if errors:
@@ -2604,7 +2604,7 @@ class GitBase(object):
                 else:
                     log.error(
                         'Error %d encountered while obtaining checkout '
-                        'lock for %s remote \'%s\': %s',
+                        "lock for %s remote '%s': %s",
                         exc.errno,
                         repo.role,
                         repo.id,
@@ -2614,8 +2614,8 @@ class GitBase(object):
         else:
             log.error(
                 'Timed out waiting for checkout lock to be released for '
-                '%s remote \'%s\'. If this error persists, run \'salt-run '
-                'cache.clear_git_lock %s type=checkout\' to clear it.',
+                "%s remote '%s'. If this error persists, run 'salt-run "
+                "cache.clear_git_lock %s type=checkout' to clear it.",
                 self.role, repo.id, self.role
             )
         return None
@@ -2739,8 +2739,8 @@ class GitFS(GitBase):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -2776,8 +2776,8 @@ class GitFS(GitBase):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -2810,8 +2810,8 @@ class GitFS(GitBase):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -2884,8 +2884,8 @@ class GitFS(GitBase):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')

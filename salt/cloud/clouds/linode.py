@@ -225,7 +225,7 @@ def boot(name=None, kwargs=None, call=None):
     '''
     if name is None and call == 'action':
         raise SaltCloudSystemExit(
-            'The boot action requires a \'name\'.'
+            "The boot action requires a 'name'."
         )
 
     if kwargs is None:
@@ -240,12 +240,12 @@ def boot(name=None, kwargs=None, call=None):
 
     if name is None and linode_id is None:
         raise SaltCloudSystemExit(
-            'The boot function requires either a \'name\' or a \'linode_id\'.'
+            "The boot function requires either a 'name' or a 'linode_id'."
         )
 
     if config_id is None:
         raise SaltCloudSystemExit(
-            'The boot function requires a \'config_id\'.'
+            "The boot function requires a 'config_id'."
         )
 
     if linode_id is None:
@@ -311,8 +311,8 @@ def clone(kwargs=None, call=None):
     for item in required_params:
         if item is None:
             raise SaltCloudSystemExit(
-                'The clone function requires a \'linode_id\', \'datacenter_id\', '
-                'and \'plan_id\' to be provided.'
+                "The clone function requires a 'linode_id', 'datacenter_id', "
+                "and 'plan_id' to be provided."
             )
 
     clone_args = {
@@ -406,7 +406,7 @@ def create(vm_):
                                    'plan_id': plan_id})
         except Exception as err:
             log.error(
-                'Error cloning \'{0}\' on Linode.\n\n'
+                "Error cloning '{0}' on Linode.\n\n"
                 'The following exception was thrown by Linode when trying to '
                 'clone the specified machine:\n'
                 '{1}'.format(
@@ -518,9 +518,9 @@ def create(vm_):
 
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0}\''.format(name))
+    log.info("Created Cloud VM '{0}'".format(name))
     log.debug(
-        '\'{0}\' VM creation details:\n{1}'.format(
+        "'{0}' VM creation details:\n{1}".format(
             name, pprint.pformat(data)
         )
     )
@@ -587,8 +587,8 @@ def create_config(kwargs=None, call=None):
     for item in required_params:
         if item is None:
             raise SaltCloudSystemExit(
-                'The create_config functions requires a \'name\', \'linode_id\', '
-                '\'root_disk_id\', and \'swap_disk_id\'.'
+                "The create_config functions requires a 'name', 'linode_id', "
+                "'root_disk_id', and 'swap_disk_id'."
             )
 
     disklist = '{0},{1}'.format(root_disk_id, swap_disk_id)
@@ -795,7 +795,7 @@ def get_config_id(kwargs=None, call=None):
     linode_id = kwargs.get('linode_id', None)
     if name is None and linode_id is None:
         raise SaltCloudSystemExit(
-            'The get_config_id function requires either a \'name\' or a \'linode_id\' '
+            "The get_config_id function requires either a 'name' or a 'linode_id' "
             'to be provided.'
         )
     if linode_id is None:
@@ -863,8 +863,8 @@ def get_distribution_id(vm_):
 
     if not distro_id:
         raise SaltCloudNotFound(
-            'The DistributionID for the \'{0}\' profile could not be found.\n'
-            'The \'{1}\' instance could not be provisioned.'.format(
+            "The DistributionID for the '{0}' profile could not be found.\n"
+            "The '{1}' instance could not be provisioned.".format(
                 vm_image_name,
                 vm_['name']
             )
@@ -943,7 +943,7 @@ def get_linode(kwargs=None, call=None):
     linode_id = kwargs.get('linode_id', None)
     if name is None and linode_id is None:
         raise SaltCloudSystemExit(
-            'The get_linode function requires either a \'name\' or a \'linode_id\'.'
+            "The get_linode function requires either a 'name' or a 'linode_id'."
         )
 
     if linode_id is None:
@@ -1016,7 +1016,7 @@ def get_plan_id(kwargs=None, call=None):
     label = kwargs.get('label', None)
     if label is None:
         raise SaltCloudException(
-            'The get_plan_id function requires a \'label\'.'
+            "The get_plan_id function requires a 'label'."
         )
 
     return avail_sizes()[label]['PLANID']
@@ -1029,9 +1029,9 @@ def get_private_ip(vm_):
     if 'private_ip' in vm_:
         warn_until(
             'Carbon',
-            'The \'private_ip\' option is being deprecated in favor of the '
-            '\'assign_private_ip\' option. Please convert your Linode configuration '
-            'files to use \'assign_private_ip\'.'
+            "The 'private_ip' option is being deprecated in favor of the "
+            "'assign_private_ip' option. Please convert your Linode configuration "
+            "files to use 'assign_private_ip'."
         )
         vm_['assign_private_ip'] = vm_['private_ip']
         vm_.pop('private_ip')
@@ -1593,13 +1593,13 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
 
         time.sleep(interval)
         if quiet:
-            log.info('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+            log.info("Status for Linode {0} is '{1}', waiting for '{2}'.".format(
                 linode_id,
                 status_desc_result,
                 status_desc_waiting)
             )
         else:
-            log.debug('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+            log.debug("Status for Linode {0} is '{1}', waiting for '{2}'.".format(
                 linode_id,
                 status_desc_result,
                 status_desc_waiting)

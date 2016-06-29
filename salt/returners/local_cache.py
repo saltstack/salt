@@ -251,7 +251,7 @@ def save_minions(jid, minions, syndic_id=None):
     log.debug(
         'Adding minions for job %s%s: %s',
         jid,
-        ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
+        " from syndic master '{0}'".format(syndic_id) if syndic_id else '',
         minions
     )
     serial = salt.payload.Serial(__opts__)

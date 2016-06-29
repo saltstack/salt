@@ -422,7 +422,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             log.debug('YAML: basedir={0}, path={1}'.format(basedir, path))
             obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
             if not isinstance(obj, dict):
-                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
+                log.info("Ignoring pillar stack template '{0}': Can't parse "
                          'as a valid yaml dictionary'.format(path))
                 continue
             stack = _merge_dict(stack, obj)
@@ -433,7 +433,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                          'by stack template "{2}"'.format(
                              e.name, basedir, path))
             else:
-                log.info('Ignoring pillar stack template "{0}": can\'t find from '
+                log.info("Ignoring pillar stack template '{0}': can't find from "
                          'root dir "{1}"'.format(path, basedir))
             continue
     return stack
@@ -472,7 +472,7 @@ def _merge_dict(stack, obj):
                     v = stack_k
                 if type(stack[k]) != type(v):
                     log.debug('Force overwrite, types differ: '
-                              '\'{0}\' != \'{1}\''.format(stack[k], v))
+                              "'{0}' != '{1}'".format(stack[k], v))
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)

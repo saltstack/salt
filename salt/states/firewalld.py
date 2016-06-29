@@ -175,15 +175,15 @@ def present(name,
 
     ret['result'] = True
     if ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
+        ret['comment'] = "'{0}' is already in the desired state.".format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        ret['comment'] = "Configuration for '{0}' will change.".format(name)
         return ret
 
-    ret['comment'] = '\'{0}\' was configured.'.format(name)
+    ret['comment'] = "'{0}' was configured.".format(name)
     return ret
 
 
@@ -273,16 +273,16 @@ def service(name,
 
     ret['result'] = True
     if ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(
+        ret['comment'] = "'{0}' is already in the desired state.".format(
             name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        ret['comment'] = "Configuration for '{0}' will change.".format(name)
         return ret
 
-    ret['comment'] = '\'{0}\' was configured.'.format(name)
+    ret['comment'] = "'{0}' was configured.".format(name)
     return ret
 
 
@@ -639,13 +639,13 @@ def _present(name,
 
     ret['result'] = True
     if ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
+        ret['comment'] = "'{0}' is already in the desired state.".format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        ret['comment'] = "Configuration for '{0}' will change.".format(name)
         return ret
 
-    ret['comment'] = '\'{0}\' was configured.'.format(name)
+    ret['comment'] = "'{0}' was configured.".format(name)
     return ret

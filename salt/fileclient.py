@@ -216,7 +216,7 @@ class Client(object):
             path = path + '/'
 
         log.info(
-            'Caching directory \'{0}\' for environment \'{1}\''.format(
+            "Caching directory '{0}' for environment '{1}'".format(
                 path, saltenv
             )
         )
@@ -342,7 +342,7 @@ class Client(object):
         if limit_traversal:
             if saltenv not in self.opts['file_roots']:
                 log.warning(
-                    'During an attempt to list states for saltenv \'{0}\', '
+                    "During an attempt to list states for saltenv '{0}', "
                     'the environment could not be found in the configured '
                     'file roots'.format(saltenv)
                 )
@@ -467,7 +467,7 @@ class Client(object):
             # Local filesystem
             if not os.path.isabs(url_data.path):
                 raise CommandExecutionError(
-                    'Path \'{0}\' is not absolute'.format(url_data.path)
+                    "Path '{0}' is not absolute".format(url_data.path)
                 )
             return url_data.path
 
@@ -641,8 +641,8 @@ class Client(object):
         if 'env' in kwargs:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             kwargs.pop('env')
@@ -911,7 +911,7 @@ class RemoteClient(Client):
         hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
+                "Could not find file from saltenv '{0}', '{1}'".format(
                     saltenv, path
                 )
             )
@@ -924,32 +924,32 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
-                '\'{2}\''.format(saltenv, rel_path, path)
+                "In saltenv '{0}', looking at rel_path '{1}' to resolve "
+                "'{2}'".format(saltenv, rel_path, path)
             )
             with self._cache_loc(
                     rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
-            '\'{2}\''.format(saltenv, dest2check, path)
+            "In saltenv '{0}', ** considering ** path '{1}' to resolve "
+            "'{2}'".format(saltenv, dest2check, path)
         )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file from saltenv \'{0}\', ** skipped ** '
-                    'latest already in cache \'{1}\''.format(
+                    "Fetching file from saltenv '{0}', ** skipped ** "
+                    "latest already in cache '{1}'".format(
                         saltenv, path
                     )
                 )
                 return dest2check
 
         log.debug(
-            'Fetching file from saltenv \'{0}\', ** attempting ** '
-            '\'{1}\''.format(saltenv, path)
+            "Fetching file from saltenv '{0}', ** attempting ** "
+            "'{1}'".format(saltenv, path)
         )
         d_tries = 0
         transport_tries = 0
@@ -1041,13 +1041,13 @@ class RemoteClient(Client):
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv \'{0}\', ** done ** '
-                '\'{1}\''.format(saltenv, path)
+                "Fetching file from saltenv '{0}', ** done ** "
+                "'{1}'".format(saltenv, path)
             )
         else:
             log.debug(
-                'In saltenv \'{0}\', we are ** missing ** the file '
-                '\'{1}\''.format(saltenv, path)
+                "In saltenv '{0}', we are ** missing ** the file "
+                "'{1}'".format(saltenv, path)
             )
 
         return dest

@@ -241,7 +241,7 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
@@ -309,7 +309,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -384,7 +384,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -472,7 +472,7 @@ def set_coredump_network_config(host,
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -544,7 +544,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -630,7 +630,7 @@ def enable_firewall_ruleset(host,
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -690,7 +690,7 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -785,7 +785,7 @@ def set_syslog_config(host,
     if firewall and syslog_config == 'loghost':
         if esxi_hosts:
             if not isinstance(esxi_hosts, list):
-                raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+                raise CommandExecutionError("'esxi_hosts' must be a list.")
 
             for esxi_host in esxi_hosts:
                 response = enable_firewall_ruleset(host, username, password,
@@ -811,7 +811,7 @@ def set_syslog_config(host,
     # Set the config value on each esxi_host, if provided.
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = _set_syslog_config_helper(host, username, password, syslog_config,
@@ -881,7 +881,7 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
@@ -957,8 +957,8 @@ def reset_syslog_config(host,
             syslog_config='logdir,loghost' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
     if not syslog_config:
-        raise CommandExecutionError('The \'reset_syslog_config\' function requires a '
-                                    '\'syslog_config\' setting.')
+        raise CommandExecutionError("The 'reset_syslog_config' function requires a "
+                                    "'syslog_config' setting.")
 
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
@@ -973,7 +973,7 @@ def reset_syslog_config(host,
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
-            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+            raise CommandExecutionError("'esxi_hosts' must be a list.")
 
         for esxi_host in esxi_hosts:
             response_dict = _reset_syslog_config_params(host, username, password,
@@ -1323,13 +1323,13 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
                 # Updated host_name value with an error message.
                 break
             else:
-                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
+                msg = "Could not find service '{0}' for host '{1}'.".format(service_name,
                                                                                 host_name)
                 ret.update({host_name: {'Error': msg}})
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = '\'vsphere.get_service_policy\' failed for host {0}.'.format(host_name)
+            msg = "'vsphere.get_service_policy' failed for host {0}.".format(host_name)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
 
@@ -1428,13 +1428,13 @@ def get_service_running(host, username, password, service_name, protocol=None, p
                 # Updated host_name value with an error message.
                 break
             else:
-                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
+                msg = "Could not find service '{0}' for host '{1}'.".format(service_name,
                                                                                 host_name)
                 ret.update({host_name: {'Error': msg}})
 
         # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
-            msg = '\'vsphere.get_service_running\' failed for host {0}.'.format(host_name)
+            msg = "'vsphere.get_service_running' failed for host {0}.".format(host_name)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
 
@@ -1557,7 +1557,7 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
 
         # We must have a VSAN Config in place get information about VSAN state.
         if vsan_config is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'.'.format(host_name)
+            msg = "VSAN System Config Manager is unset for host '{0}'.".format(host_name)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
         else:
@@ -2217,7 +2217,7 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
                                                               protocol=protocol,
                                                               port=port)
     if not isinstance(ntp_servers, list):
-        raise CommandExecutionError('\'ntp_servers\' must be a list.')
+        raise CommandExecutionError("'ntp_servers' must be a list.")
 
     # Get NTP Config Object from ntp_servers
     ntp_config = vim.HostNtpConfig(server=ntp_servers)
@@ -2230,7 +2230,7 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
-        log.debug('Configuring NTP Servers \'{0}\' for host \'{1}\'.'.format(ntp_servers, host_name))
+        log.debug("Configuring NTP Servers '{0}' for host '{1}'.".format(ntp_servers, host_name))
 
         try:
             date_time_manager.UpdateDateTimeConfig(config=date_config)
@@ -2332,13 +2332,13 @@ def service_start(host,
 
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
-        log.debug('Starting the \'{0}\' service on {1}.'.format(service_name, host_name))
+        log.debug("Starting the '{0}' service on {1}.".format(service_name, host_name))
 
         # Start the service
         try:
             service_manager.StartService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.service_start\' failed for host {0}: {1}'.format(host_name, err)
+            msg = "'vsphere.service_start' failed for host {0}: {1}".format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
@@ -2441,13 +2441,13 @@ def service_stop(host,
 
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
-        log.debug('Stopping the \'{0}\' service on {1}.'.format(service_name, host_name))
+        log.debug("Stopping the '{0}' service on {1}.".format(service_name, host_name))
 
         # Stop the service.
         try:
             service_manager.StopService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.service_stop\' failed for host {0}: {1}'.format(host_name, err)
+            msg = "'vsphere.service_stop' failed for host {0}: {1}".format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
@@ -2550,13 +2550,13 @@ def service_restart(host,
 
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
-        log.debug('Restarting the \'{0}\' service on {1}.'.format(service_name, host_name))
+        log.debug("Restarting the '{0}' service on {1}.".format(service_name, host_name))
 
         # Restart the service.
         try:
             service_manager.RestartService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.service_restart\' failed for host {0}: {1}'.format(host_name, err)
+            msg = "'vsphere.service_restart' failed for host {0}: {1}".format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
@@ -2676,13 +2676,13 @@ def set_service_policy(host,
                 try:
                     service_manager.UpdateServicePolicy(id=service_key, policy=service_policy)
                 except vim.fault.NotFound:
-                    msg = 'The service name \'{0}\' was not found.'.format(service_name)
+                    msg = "The service name '{0}' was not found.".format(service_name)
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
                     continue
                 # Some services are restricted by the vSphere License Level.
                 except vim.fault.HostConfigFault as err:
-                    msg = '\'vsphere.set_service_policy\' failed for host {0}: {1}'.format(host_name, err)
+                    msg = "'vsphere.set_service_policy' failed for host {0}: {1}".format(host_name, err)
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
                     continue
@@ -2691,7 +2691,7 @@ def set_service_policy(host,
 
             # If we made it this far, something else has gone wrong.
             if ret.get(host_name) is None:
-                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name, host_name)
+                msg = "Could not find service '{0}' for host '{1}'.".format(service_name, host_name)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
 
@@ -2753,7 +2753,7 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
         try:
             date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
         except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.update_date_time\' failed for host {0}: {1}'.format(host_name, err)
+            msg = "'vsphere.update_date_time' failed for host {0}: {1}".format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
@@ -2815,7 +2815,7 @@ def update_host_password(host, username, password, new_password, protocol=None, 
     except vmodl.fault.SystemError as err:
         raise CommandExecutionError(err.msg)
     except vim.fault.UserNotFound:
-        raise CommandExecutionError('\'vsphere.update_host_password\' failed for host {0}: '
+        raise CommandExecutionError("'vsphere.update_host_password' failed for host {0}: "
                                     'User was not found.'.format(host))
     # If the username and password already exist, we don't need to do anything.
     except vim.fault.AlreadyExists:
@@ -3019,7 +3019,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
 
         # We must have a VSAN Config in place before we can manipulate it.
         if vsan_system is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+            msg = "VSAN System Config Manager is unset for host '{0}'. " \
                   'VSAN configuration cannot be changed without a configured ' \
                   'VSAN System.'.format(host_name)
             log.debug(msg)
@@ -3038,12 +3038,12 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                     ret.update({host_name: {'Error': err.msg}})
                     continue
                 except Exception as err:
-                    msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
+                    msg = "'vsphere.vsan_add_disks' failed for host {0}: {1}".format(host_name, err)
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
                     continue
 
-                log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
+                log.debug("Successfully added disks to the VSAN system for host '{0}'.".format(host_name))
                 # We need to return ONLY the disk names, otherwise Message Pack can't deserialize the disk objects.
                 disk_names = []
                 for disk in eligible:
@@ -3122,7 +3122,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
 
         # We must have a VSAN Config in place before we can manipulate it.
         if vsan_system is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+            msg = "VSAN System Config Manager is unset for host '{0}'. " \
                   'VSAN configuration cannot be changed without a configured ' \
                   'VSAN System.'.format(host_name)
             log.debug(msg)
@@ -3137,7 +3137,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
                 ret.update({host_name: {'Error': err.msg}})
                 continue
             except Exception as err:
-                msg = '\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(host_name, err)
+                msg = "'vsphere.vsan_disable' failed for host {0}: {1}".format(host_name, err)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
                 continue
@@ -3205,7 +3205,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
 
         # We must have a VSAN Config in place before we can manipulate it.
         if vsan_system is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+            msg = "VSAN System Config Manager is unset for host '{0}'. " \
                   'VSAN configuration cannot be changed without a configured ' \
                   'VSAN System.'.format(host_name)
             log.debug(msg)
@@ -3220,7 +3220,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
                 ret.update({host_name: {'Error': err.msg}})
                 continue
             except vim.fault.VsanFault as err:
-                msg = '\'vsphere.vsan_enable\' failed for host {0}: {1}'.format(host_name, err)
+                msg = "'vsphere.vsan_enable' failed for host {0}: {1}".format(host_name, err)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
                 continue
@@ -3245,10 +3245,10 @@ def _check_hosts(service_instance, host, host_names):
             host_names = [host]
         else:
             raise CommandExecutionError('No host reference found. If connecting to a '
-                                        'vCenter Server, a list of \'host_names\' must be '
+                                        "vCenter Server, a list of 'host_names' must be "
                                         'provided.')
     elif not isinstance(host_names, list):
-        raise CommandExecutionError('\'host_names\' must be a list.')
+        raise CommandExecutionError("'host_names' must be a list.")
 
     return host_names
 
@@ -3416,7 +3416,7 @@ def _get_vsan_eligible_disks(service_instance, host, host_names):
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
         if vsan_system is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+            msg = "VSAN System Config Manager is unset for host '{0}'. " \
                   'VSAN configuration cannot be changed without a configured ' \
                   'VSAN System.'.format(host_name)
             log.debug(msg)
@@ -3433,7 +3433,7 @@ def _get_vsan_eligible_disks(service_instance, host, host_names):
         # No suitable disks were found to add. Warn and move on.
         # This isn't an error as the state may run repeatedly after all eligible disks are added.
         if not suitable_disks:
-            msg = 'The host \'{0}\' does not have any VSAN eligible disks.'.format(host_name)
+            msg = "The host '{0}' does not have any VSAN eligible disks.".format(host_name)
             log.warning(msg)
             ret.update({host_name: {'Eligible': msg}})
             continue
@@ -3498,7 +3498,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
                     'default-size', 'default-timeout', 'logdir-unique']
     if syslog_config not in valid_resets:
         ret_dict.update({'success': False,
-                         'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+                         'message': "'{0}' is not a valid config variable.".format(syslog_config)})
         return ret_dict
 
     response = salt.utils.vmware.esxcli(host, username, password, cmd,

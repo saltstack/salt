@@ -229,8 +229,8 @@ def clear_git_lock(role, remote=None, **kwargs):
         if 'win_repo' in __opts__:
             salt.utils.warn_until(
                 'Nitrogen',
-                'The \'win_repo\' config option is deprecated, please use '
-                '\'winrepo_dir\' instead.'
+                "The 'win_repo' config option is deprecated, please use "
+                "'winrepo_dir' instead."
             )
             winrepo_dir = __opts__['win_repo']
         else:
@@ -239,8 +239,8 @@ def clear_git_lock(role, remote=None, **kwargs):
         if 'win_gitrepos' in __opts__:
             salt.utils.warn_until(
                 'Nitrogen',
-                'The \'win_gitrepos\' config option is deprecated, please use '
-                '\'winrepo_remotes\' instead.'
+                "The 'win_gitrepos' config option is deprecated, please use "
+                "'winrepo_remotes' instead."
             )
             winrepo_remotes = __opts__['win_gitrepos']
         else:
@@ -255,7 +255,7 @@ def clear_git_lock(role, remote=None, **kwargs):
             obj.init_remotes(remotes, __WINREPO_OVERRIDES)
             git_objects.append(obj)
     else:
-        raise SaltInvocationError('Invalid role \'{0}\''.format(role))
+        raise SaltInvocationError("Invalid role '{0}'".format(role))
 
     ret = {}
     for obj in git_objects:

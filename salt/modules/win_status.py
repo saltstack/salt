@@ -257,7 +257,7 @@ def _get_process_owner(process):
         owner['user'] = 'SYSTEM'
         owner['user_domain'] = 'NT AUTHORITY'
     else:
-        log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
+        log.warning("Error getting owner of process; PID='{0}'; Error: {1}"
                     .format(process.ProcessId, error_code))
     return owner
 

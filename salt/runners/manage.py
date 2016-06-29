@@ -782,10 +782,10 @@ def bootstrap(version='develop',
                 ret = subprocess.call([
                     'ssh',
                     ('root@' if root_user else '') + host,
-                    'python -c \'import urllib; '
+                    "python -c 'import urllib; "
                     'print urllib.urlopen('
                     '"' + script + '"'
-                    ').read()\' | sh -s -- git ' + version
+                    ").read()' | sh -s -- git " + version
                 ])
                 return ret
             else:

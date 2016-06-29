@@ -562,7 +562,7 @@ def check_hash(path, file_hash):
         # Support "=" for backward compatibility.
         hash_parts = file_hash.split('=', 1)
         if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
+            raise ValueError("Bad hash format: '{0}'".format(file_hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -2297,7 +2297,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     patchpath = salt.utils.which('patch')
     if not patchpath:
         raise CommandExecutionError(
-            'patch executable not found. Is the distribution\'s patch '
+            "patch executable not found. Is the distribution's patch "
             'package installed?'
         )
 
@@ -2789,7 +2789,7 @@ def link(src, path):
         os.link(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+        raise CommandExecutionError("Could not create '{0}'".format(path))
     return False
 
 
@@ -2830,7 +2830,7 @@ def symlink(src, path):
         os.symlink(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+        raise CommandExecutionError("Could not create '{0}'".format(path))
     return False
 
 
@@ -2855,7 +2855,7 @@ def rename(src, dst):
         return True
     except OSError:
         raise CommandExecutionError(
-            'Could not rename \'{0}\' to \'{1}\''.format(src, dst)
+            "Could not rename '{0}' to '{1}'".format(src, dst)
         )
     return False
 
@@ -2894,7 +2894,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
         raise SaltInvocationError('File path must be absolute.')
 
     if not os.path.exists(src):
-        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
+        raise CommandExecutionError("No such file or directory '{0}'".format(src))
 
     if not salt.utils.is_windows():
         pre_user = get_user(src)
@@ -2916,7 +2916,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
             shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
-            'Could not copy \'{0}\' to \'{1}\''.format(src, dst)
+            "Could not copy '{0}' to '{1}'".format(src, dst)
         )
 
     if not salt.utils.is_windows():
@@ -3064,7 +3064,7 @@ def statvfs(path):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
     except (OSError, IOError):
-        raise CommandExecutionError('Could not statvfs \'{0}\''.format(path))
+        raise CommandExecutionError("Could not statvfs '{0}'".format(path))
     return False
 
 
@@ -3177,7 +3177,7 @@ def remove(path):
             return True
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
-            'Could not remove \'{0}\': {1}'.format(path, exc)
+            "Could not remove '{0}': {1}".format(path, exc)
         )
     return False
 
@@ -3593,7 +3593,7 @@ def get_managed(
         # If cache failed, sfn will be False, so do a truth check on sfn first
         # as invoking os.path.exists() on a bool raises a TypeError.
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file \'{0}\' not found'.format(source)
+            return sfn, {}, "Source file '{0}' not found".format(source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -4226,7 +4226,7 @@ def manage_file(name,
         sfn = __salt__['cp.cache_file'](source, saltenv)
         if not sfn:
             return _error(
-                ret, 'Source file \'{0}\' not found'.format(source))
+                ret, "Source file '{0}' not found".format(source))
         htype = source_sum.get('hash_type', __opts__.get('hash_type', 'md5'))
         # Recalculate source sum now that file has been cached
         source_sum = {
@@ -4253,7 +4253,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file \'{0}\' not found'.format(source))
+                    ret, "Source file '{0}' not found".format(source))
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
@@ -4352,7 +4352,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file \'{0}\' not found'.format(source))
+                    ret, "Source file '{0}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if not skip_verify and _urlparse(source).scheme != 'salt':
@@ -4425,7 +4425,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file \'{0}\' not found'.format(source))
+                    ret, "Source file '{0}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if not skip_verify \
@@ -4584,12 +4584,12 @@ def makedirs_(path,
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        msg = 'Directory \'{0}\' already exists'.format(dirname)
+        msg = "Directory '{0}' already exists".format(dirname)
         log.debug(msg)
         return msg
 
     if os.path.exists(dirname):
-        msg = 'The path \'{0}\' already exists and is not a directory'.format(
+        msg = "The path '{0}' already exists and is not a directory".format(
             dirname
         )
         log.debug(msg)
@@ -4919,8 +4919,8 @@ def mknod(name,
         ret = mknod_fifo(name, user, group, mode)
     else:
         raise SaltInvocationError(
-            'Node type unavailable: \'{0}\'. Available node types are '
-            'character (\'c\'), block (\'b\'), and pipe (\'p\').'.format(ntype)
+            "Node type unavailable: '{0}'. Available node types are "
+            "character ('c'), block ('b'), and pipe ('p').".format(ntype)
         )
     return ret
 
@@ -4950,7 +4950,7 @@ def list_backups(path, limit=None):
     except TypeError:
         pass
     except ValueError:
-        log.error('file.list_backups: \'limit\' value must be numeric')
+        log.error("file.list_backups: 'limit' value must be numeric")
         limit = None
 
     bkroot = _get_bkroot()
@@ -5021,7 +5021,7 @@ def list_backups_dir(path, limit=None):
     except TypeError:
         pass
     except ValueError:
-        log.error('file.list_backups_dir: \'limit\' value must be numeric')
+        log.error("file.list_backups_dir: 'limit' value must be numeric")
         limit = None
 
     bkroot = _get_bkroot()
@@ -5083,7 +5083,7 @@ def restore_backup(path, backup_id):
     # Note: This only supports minion backups, so this function will need to be
     # modified if/when master backups are implemented.
     ret = {'result': False,
-           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+           'comment': "Invalid backup_id '{0}'".format(backup_id)}
     try:
         if len(str(backup_id)) == len(str(int(backup_id))):
             backup = list_backups(path)[int(backup_id)]
@@ -5092,7 +5092,7 @@ def restore_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+        ret['comment'] = "backup_id '{0}' does not exist for " \
                          '{1}'.format(backup_id, path)
         return ret
 
@@ -5143,7 +5143,7 @@ def delete_backup(path, backup_id):
     path = os.path.expanduser(path)
 
     ret = {'result': False,
-           'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
+           'comment': "Invalid backup_id '{0}'".format(backup_id)}
     try:
         if len(str(backup_id)) == len(str(int(backup_id))):
             backup = list_backups(path)[int(backup_id)]
@@ -5152,7 +5152,7 @@ def delete_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
+        ret['comment'] = "backup_id '{0}' does not exist for " \
                          '{1}'.format(backup_id, path)
         return ret
 

@@ -252,15 +252,15 @@ def image_create(name, location=None, profile=None, visibility=None,
     # Glance API v2. For now we have to use v1 for now (see below)
     # but this modules interface will change in Carbon.
     if copy_from is not None or is_public is not None:
-        warn_until('Carbon', 'The parameters \'copy_from\' and '
-            '\'is_public\' are deprecated and will be removed. '
-            'Use \'location\' and \'visibility\' instead.')
+        warn_until('Carbon', "The parameters 'copy_from' and "
+            "'is_public' are deprecated and will be removed. "
+            "Use 'location' and 'visibility' instead.")
     if is_public is not None and visibility is not None:
         raise SaltInvocationError('Must only specify one of '
-            '\'is_public\' and \'visibility\'')
+            "'is_public' and 'visibility'")
     if copy_from is not None and location is not None:
         raise SaltInvocationError('Must only specify one of '
-            '\'copy_from\' and \'location\'')
+            "'copy_from' and 'location'")
     if copy_from is not None:
         kwargs['copy_from'] = copy_from
     else:
@@ -340,7 +340,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
             }
     return {
         'result': True,
-        'comment': 'Deleted image \'{0}\' ({1}).'.format(name, id),
+        'comment': "Deleted image '{0}' ({1}).".format(name, id),
         }
 
 
@@ -366,7 +366,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
             'result': False,
             'comment':
                 'Unable to resolve image ID '
-                'for name \'{0}\''.format(name)
+                "for name '{0}'".format(name)
             }
     try:
         image = g_client.images.get(id)
@@ -382,7 +382,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     # I may want to use this code on Beryllium
     # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'2016.3.0\' image_show() '
+    warn_until('Carbon', "Starting with '2016.3.0' image_show() "
             'will stop wrapping the returned image in another '
             'dictionary.')
     if CUR_VER < BORON:
@@ -416,9 +416,9 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
     # I may want to use this code on Beryllium
     # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting in \'2016.3.0\' image_list() '
+    warn_until('Carbon', "Starting in '2016.3.0' image_list() "
         'will return a list of images instead of a dictionary '
-        'keyed with the images\' names.')
+        "keyed with the images' names.")
     if CUR_VER < BORON:
         ret = {}
     else:
@@ -487,7 +487,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
             return {
                 'result': False,
                 'comment':
-                    'No image with name \'{0}\' '
+                    "No image with name '{0}' "
                     'found.'.format(name)
                 }
         elif len(img_list) == 1:
@@ -510,7 +510,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     # I may want to use this code on Beryllium
     # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'2016.3.0\' image_update() '
+    warn_until('Carbon', "Starting with '2016.3.0' image_update() "
             'will stop wrapping the returned, updated image in '
             'another dictionary.')
     if CUR_VER < BORON:

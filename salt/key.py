@@ -128,7 +128,7 @@ class KeyCLI(object):
             keys[self.key.DEN] = matches[self.key.DEN]
         if not keys:
             msg = (
-                'The key glob \'{0}\' does not match any unaccepted{1} keys.'
+                "The key glob '{0}' does not match any unaccepted{1} keys."
                 .format(match, (('', ' or denied'),
                                 (' or rejected', ', rejected or denied')
                                )[include_rejected][include_denied])
@@ -198,7 +198,7 @@ class KeyCLI(object):
         matches = self.key.name_match(match)
         if not matches:
             print(
-                'The key glob \'{0}\' does not match any accepted, unaccepted '
+                "The key glob '{0}' does not match any accepted, unaccepted "
                 'or rejected keys.'.format(match)
             )
             raise salt.exceptions.SaltSystemExit(code=1)
@@ -263,7 +263,7 @@ class KeyCLI(object):
         if include_denied and bool(matches.get(self.key.DEN)):
             keys[self.key.DEN] = matches[self.key.DEN]
         if not keys:
-            msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(
+            msg = "The key glob '{0}' does not match any {1} keys.".format(
                 match,
                 (('unaccepted', 'unaccepted or denied'),
                  ('accepted or unaccepted', 'accepted, unaccepted or denied')
@@ -878,7 +878,7 @@ class Key(object):
                                 print('Cannot contact Salt master. '
                                       'Connection for {0} will remain up until '
                                       'master AES key is rotated or auth is revoked '
-                                      'with \'saltutil.revoke_auth\'.'.format(key))
+                                      "with 'saltutil.revoke_auth'.".format(key))
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
@@ -1347,7 +1347,7 @@ class RaetKey(Key):
                             print('Cannot contact Salt master. '
                                   'Connection for {0} will remain up until '
                                   'master AES key is rotated or auth is revoked '
-                                  'with \'saltutil.revoke_auth\'.'.format(key))
+                                  "with 'saltutil.revoke_auth'.".format(key))
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):

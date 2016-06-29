@@ -85,8 +85,8 @@ def update(branch=None, repo=None):
                     result = remote.fetch()
                 except Exception as exc:
                     log.error(
-                        'Exception \'{0}\' caught while fetching git_pillar '
-                        'remote \'{1}\''.format(exc, remote.id),
+                        "Exception '{0}' caught while fetching git_pillar "
+                        "remote '{1}'".format(exc, remote.id),
                         exc_info_on_loglevel=logging.DEBUG
                     )
                     result = False

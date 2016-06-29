@@ -84,7 +84,7 @@ class GitFSTest(integration.ModuleCase):
                 os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
             except AttributeError:
                 log.error('Unable to get effective username, falling back to '
-                          '\'root\'.')
+                          "'root'.")
                 os.environ['USERNAME'] = 'root'
 
         repo.index.add([x for x in os.listdir(self.tmp_repo_dir)

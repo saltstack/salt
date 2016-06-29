@@ -155,7 +155,7 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
     return None.
     '''
     if vpc_name and vpc_id:
-        raise SaltInvocationError('The params \'vpc_id\' and \'vpc_name\' '
+        raise SaltInvocationError("The params 'vpc_id' and 'vpc_name' "
                                   'are mutually exclusive.')
     if vpc_name:
         try:

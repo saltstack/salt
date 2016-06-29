@@ -2293,7 +2293,7 @@ def create(vm_):
         log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
-    # If not specified when cloning, the existing VM/template\'s parent folder is used.
+    # If not specified when cloning, the existing VM/template's parent folder is used.
     if folder:
         folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref=container_ref)
         if not folder_ref:
@@ -3371,7 +3371,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             msg = "reverted to snapshot {0}".format(snapshot_name)
             snapshot_ref = _get_snapshot_ref_by_name(vm_ref, snapshot_name)
             if snapshot_ref is None:
-                return 'specified snapshot \'{0}\' does not exist'.format(snapshot_name)
+                return "specified snapshot '{0}' does not exist".format(snapshot_name)
             task = snapshot_ref.snapshot.Revert(suppressPowerOn=suppress_power_on)
 
         salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
@@ -3567,7 +3567,7 @@ def add_host(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'add host system', 5, 'info')
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
-            log.error('Authenticity of the host\'s SSL certificate is not verified')
+            log.error("Authenticity of the host's SSL certificate is not verified")
             log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
         log.error(
             'Error while adding host {0}: {1}'.format(
@@ -3769,7 +3769,7 @@ def reboot_host(kwargs=None, call=None):
 
     if host_ref.runtime.connectionState == 'notResponding':
         raise SaltCloudSystemExit(
-            'Specified host system cannot be rebooted in it\'s current state (not responding).'
+            "Specified host system cannot be rebooted in it's current state (not responding)."
         )
 
     if not host_ref.capability.rebootSupported:

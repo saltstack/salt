@@ -71,7 +71,7 @@ def _config_getter(get_opt,
     if cwd is None:
         if not global_:
             raise SaltInvocationError(
-                '\'cwd\' argument required unless global=True'
+                "'cwd' argument required unless global=True"
             )
     else:
         cwd = _expand_path(cwd, user)
@@ -288,7 +288,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 gitcommand = ' '.join(command) \
                     if isinstance(command, list) \
                     else command
-                msg = 'Command \'{0}\' failed'.format(
+                msg = "Command '{0}' failed".format(
                     salt.utils.url.redact_http_basic_auth(gitcommand)
                 )
                 err = result['stdout' if redirect_stderr else 'stderr']
@@ -510,8 +510,8 @@ def archive(cwd,
     if fmt:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'fmt\' argument to git.archive has been deprecated, please '
-            'use \'format\' instead.'
+            "The 'fmt' argument to git.archive has been deprecated, please "
+            "use 'format' instead."
         )
         format_ = fmt
 
@@ -661,7 +661,7 @@ def checkout(cwd,
     if rev is None:
         if not checkout_branch:
             raise SaltInvocationError(
-                '\'rev\' argument is required unless -b or -B in opts'
+                "'rev' argument is required unless -b or -B in opts"
             )
     else:
         if not isinstance(rev, six.string_types):
@@ -773,13 +773,13 @@ def clone(cwd,
     if repository is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'repository\' argument to git.clone has been '
-            'deprecated, please use \'url\' instead.'
+            "The 'repository' argument to git.clone has been "
+            "deprecated, please use 'url' instead."
         )
         url = repository
 
     if not url:
-        raise SaltInvocationError('Missing \'url\' argument')
+        raise SaltInvocationError("Missing 'url' argument")
 
     try:
         url = salt.utils.url.add_http_basic_auth(url,
@@ -1125,8 +1125,8 @@ def config_set(key,
     if is_global:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'is_global\' argument to git.config_set has been '
-            'deprecated, please set the \'cwd\' argument to \'global\' '
+            "The 'is_global' argument to git.config_set has been "
+            "deprecated, please set the 'cwd' argument to 'global' "
             'instead.'
         )
         global_ = True
@@ -1134,14 +1134,14 @@ def config_set(key,
     if cwd is None:
         if not global_:
             raise SaltInvocationError(
-                '\'cwd\' argument required unless global=True'
+                "'cwd' argument required unless global=True"
             )
     else:
         cwd = _expand_path(cwd, user)
 
     if all(x is not None for x in (value, multivar)):
         raise SaltInvocationError(
-            'Only one of \'value\' and \'multivar\' is permitted'
+            "Only one of 'value' and 'multivar' is permitted"
         )
 
     if value is not None:
@@ -1251,7 +1251,7 @@ def config_unset(key,
     if cwd is None:
         if not global_:
             raise SaltInvocationError(
-                '\'cwd\' argument required unless global=True'
+                "'cwd' argument required unless global=True"
             )
     else:
         cwd = _expand_path(cwd, user)
@@ -1286,10 +1286,10 @@ def config_unset(key,
                       user=user,
                       ignore_retcode=ignore_retcode) is None:
             raise CommandExecutionError(
-                'Key \'{0}\' does not exist'.format(key)
+                "Key '{0}' does not exist".format(key)
             )
         else:
-            msg = 'Multiple values exist for key \'{0}\''.format(key)
+            msg = "Multiple values exist for key '{0}'".format(key)
             if value_regex is not None:
                 msg += ' and value_regex matches multiple values'
             raise CommandExecutionError(msg)
@@ -1297,7 +1297,7 @@ def config_unset(key,
         raise CommandExecutionError('The value_regex is invalid')
     else:
         msg = (
-            'Failed to unset key \'{0}\', git config returned exit code {1}'
+            "Failed to unset key '{0}', git config returned exit code {1}"
             .format(key, retcode)
         )
         if ret['stderr']:
@@ -1812,7 +1812,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
 
     if all_ and stale:
         raise CommandExecutionError(
-            '\'all\' and \'stale\' cannot both be set to True'
+            "'all' and 'stale' cannot both be set to True"
         )
 
     def _git_tag_points_at(cwd, rev, user=None):
@@ -1869,7 +1869,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
             Log a warning
             '''
             log.warning(
-                'git.worktree: Untracked line item \'{0}\''.format(line)
+                "git.worktree: Untracked line item '{0}'".format(line)
             )
 
         for individual_worktree in \
@@ -1895,7 +1895,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
                 if worktree_data[type_]:
                     log.error(
                         'git.worktree: Unexpected duplicate {0} entry '
-                        '\'{1}\', skipping'.format(type_, line)
+                        "'{1}', skipping".format(type_, line)
                     )
                     continue
 
@@ -2227,8 +2227,8 @@ def merge(cwd,
     if branch_:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'branch\' argument to git.merge has been deprecated, please '
-            'use \'rev\' instead.'
+            "The 'branch' argument to git.merge has been deprecated, please "
+            "use 'rev' instead."
         )
         rev = branch_
     command = ['git', 'merge']
@@ -2344,8 +2344,8 @@ def merge_base(cwd,
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
-            'The \'all\' argument is not compatible with \'independent\', '
-            '\'is_ancestor\', or \'fork_point\''
+            "The 'all' argument is not compatible with 'independent', "
+            "'is_ancestor', or 'fork_point'"
         )
 
     if refs is None:
@@ -2357,18 +2357,18 @@ def merge_base(cwd,
     )
     if mutually_exclusive_count > 1:
         raise SaltInvocationError(
-            'Only one of \'octopus\', \'independent\', \'is_ancestor\', and '
-            '\'fork_point\' is permitted'
+            "Only one of 'octopus', 'independent', 'is_ancestor', and "
+            "'fork_point' is permitted"
         )
     elif is_ancestor:
         if len(refs) != 2:
             raise SaltInvocationError(
-                'Two refs/commits are required if \'is_ancestor\' is True'
+                "Two refs/commits are required if 'is_ancestor' is True"
             )
     elif fork_point:
         if len(refs) > 1:
             raise SaltInvocationError(
-                'At most one ref/commit can be passed if \'fork_point\' is '
+                "At most one ref/commit can be passed if 'fork_point' is "
                 'specified'
             )
         elif not refs:
@@ -2663,8 +2663,8 @@ def push(cwd,
     if branch_:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'branch\' argument to git.push has been deprecated, please '
-            'use \'ref\' instead.'
+            "The 'branch' argument to git.push has been deprecated, please "
+            "use 'ref' instead."
         )
         ref = branch_
     command = ['git', 'push']
@@ -2787,7 +2787,7 @@ def remote_get(cwd,
                           ignore_retcode=ignore_retcode)
     if remote not in all_remotes:
         raise CommandExecutionError(
-            'Remote \'{0}\' not present in git checkout located at {1}'
+            "Remote '{0}' not present in git checkout located at {1}"
             .format(remote, cwd)
         )
     return all_remotes[remote]
@@ -2960,7 +2960,7 @@ def remote_set(cwd,
     # Check if remote exists
     if remote in remotes(cwd, user=user):
         log.debug(
-            'Remote \'{0}\' already exists in git checkout located at {1}, '
+            "Remote '{0}' already exists in git checkout located at {1}, "
             'removing so it can be re-added'.format(remote, cwd)
         )
         command = ['git', 'remote', 'rm', remote]
@@ -3054,7 +3054,7 @@ def remotes(cwd, user=None, redact_auth=True, ignore_retcode=False):
         action = action.lstrip('(').rstrip(')').lower()
         if action not in ('fetch', 'push'):
             log.warning(
-                'Unknown action \'{0}\' for remote \'{1}\' in git checkout '
+                "Unknown action '{0}' for remote '{1}' in git checkout "
                 'located in {2}'.format(action, remote, cwd)
             )
             continue
@@ -3472,9 +3472,9 @@ def submodule(cwd,
     cwd = _expand_path(cwd, user)
     if init_:
         raise SaltInvocationError(
-            'The \'init\' argument is no longer supported. Either set '
-            '\'command\' to \'init\', or include \'--init\' in the \'opts\' '
-            'argument and set \'command\' to \'update\'.'
+            "The 'init' argument is no longer supported. Either set "
+            "'command' to 'init', or include '--init' in the 'opts' "
+            "argument and set 'command' to 'update'."
         )
     if not isinstance(command, six.string_types):
         command = str(command)
@@ -3592,7 +3592,7 @@ def version(versioninfo=False):
             # Somehow git --version returned no stdout while not raising an
             # error. Should never happen but we should still account for this
             # possible edge case.
-            log.error('Running \'git --version\' returned no stdout')
+            log.error("Running 'git --version' returned no stdout")
             __context__[contextkey] = 'unknown'
     if not versioninfo:
         return __context__[contextkey]
@@ -3695,14 +3695,14 @@ def worktree_add(cwd,
     cwd = _expand_path(cwd, user)
     if branch_ and detach:
         raise SaltInvocationError(
-            'Only one of \'branch\' and \'detach\' is allowed'
+            "Only one of 'branch' and 'detach' is allowed"
         )
 
     command = ['git', 'worktree', 'add']
     if detach:
         if force:
             log.warning(
-                '\'force\' argument to git.worktree_add is ignored when '
+                "'force' argument to git.worktree_add is ignored when "
                 'detach=True'
             )
         command.append('--detach')

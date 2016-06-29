@@ -144,7 +144,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file \'{0}\' not found'.format(
+                'comment': "pip requirements file '{0}' not found".format(
                     requirements
                 )
             })
@@ -215,7 +215,7 @@ def managed(name,
         if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
-            ret['comment'] = ('The \'use_wheel\' option is only supported in '
+            ret['comment'] = ("The 'use_wheel' option is only supported in "
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -226,7 +226,7 @@ def managed(name,
         if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
-            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+            ret['comment'] = ("The 'no_use_wheel' option is only supported "
                               'in pip {0} and newer. The version of pip '
                               'detected was {1}.').format(min_version,
                                                           cur_version)

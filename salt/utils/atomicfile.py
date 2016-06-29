@@ -148,7 +148,7 @@ def atomic_open(filename, mode='w'):
     closed.  The file returned behaves as if it was a regular Python
     '''
     if mode in ('r', 'rb', 'r+', 'rb+', 'a', 'ab'):
-        raise TypeError('Read or append modes don\'t work with atomic_open')
+        raise TypeError("Read or append modes don't work with atomic_open")
     ntf = tempfile.NamedTemporaryFile(mode, prefix='.___atomic_write',
                                       dir=os.path.dirname(filename),
                                       delete=False)

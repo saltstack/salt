@@ -144,7 +144,7 @@ def returner(ret):
                 )
             except KeyError as missing_key:
                 logger.error(
-                    'Sentry returner needs key \'%s\' in pillar',
+                    "Sentry returner needs key '%s' in pillar",
                     missing_key
                 )
                 return
@@ -154,7 +154,7 @@ def returner(ret):
             logger.info('Message id %s written to sentry', msgid)
         except Exception as exc:
             logger.error(
-                'Can\'t send message to sentry: {0}'.format(exc),
+                "Can't send message to sentry: {0}".format(exc),
                 exc_info=True
             )
 
@@ -162,7 +162,7 @@ def returner(ret):
         connect_sentry(get_message(), ret)
     except Exception as err:
         logger.error(
-            'Can\'t run connect_sentry: {0}'.format(err),
+            "Can't run connect_sentry: {0}".format(err),
             exc_info=True
         )
 

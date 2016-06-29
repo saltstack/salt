@@ -1019,7 +1019,7 @@ def get_ssh_gateway_config(vm_):
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_gateway_private_key \'{0}\' does not exist'
+            "The defined ssh_gateway_private_key '{0}' does not exist"
             .format(key_filename)
         )
     elif (
@@ -1097,7 +1097,7 @@ def get_availability_zone(vm_):
     # Validate user-specified AZ
     if avz not in zones:
         raise SaltCloudException(
-            'The specified availability zone isn\'t valid in this region: '
+            "The specified availability zone isn't valid in this region: "
             '{0}\n'.format(
                 avz
             )
@@ -1106,7 +1106,7 @@ def get_availability_zone(vm_):
     # check specified AZ is available
     elif zones[avz] != 'available':
         raise SaltCloudException(
-            'The specified availability zone isn\'t currently available: '
+            "The specified availability zone isn't currently available: "
             '{0}\n'.format(
                 avz
             )
@@ -1456,7 +1456,7 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
 
     raise SaltCloudException(
         'Could not change interface <{0}> attributes '
-        '<\'{1}\'> after 5 retries'.format(
+        "<'{1}'> after 5 retries".format(
             eni_id, properties
         )
     )
@@ -1737,7 +1737,7 @@ def request_instance(vm_=None, call=None):
                 ] = ex_iam_profile
         except AttributeError:
             raise SaltCloudConfigError(
-                '\'iam_profile\' should be a string value.'
+                "'iam_profile' should be a string value."
             )
 
     az_ = get_availability_zone(vm_)
@@ -1799,7 +1799,7 @@ def request_instance(vm_=None, call=None):
     if set_ebs_optimized is not None:
         if not isinstance(set_ebs_optimized, bool):
             raise SaltCloudConfigError(
-                '\'ebs_optimized\' should be a boolean value.'
+                "'ebs_optimized' should be a boolean value."
             )
         params[spot_prefix + 'EbsOptimized'] = set_ebs_optimized
 
@@ -1809,7 +1809,7 @@ def request_instance(vm_=None, call=None):
 
     if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(
-            '\'del_root_vol_on_destroy\' should be a boolean value.'
+            "'del_root_vol_on_destroy' should be a boolean value."
         )
 
     vm_['set_del_root_vol_on_destroy'] = set_del_root_vol_on_destroy
@@ -1834,7 +1834,7 @@ def request_instance(vm_=None, call=None):
                                 sigver='4')
             if 'error' in rd_data:
                 return rd_data['error']
-            log.debug('EC2 Response: \'{0}\''.format(rd_data))
+            log.debug("EC2 Response: '{0}'".format(rd_data))
         except Exception as exc:
             log.error(
                 'Error getting root device name for image id {0} for '
@@ -1901,7 +1901,7 @@ def request_instance(vm_=None, call=None):
 
     if set_del_all_vols_on_destroy and not isinstance(set_del_all_vols_on_destroy, bool):
         raise SaltCloudConfigError(
-            '\'del_all_vols_on_destroy\' should be a boolean value.'
+            "'del_all_vols_on_destroy' should be a boolean value."
         )
 
     salt.utils.cloud.fire_event(
@@ -1979,7 +1979,7 @@ def request_instance(vm_=None, call=None):
 
             if state in ['cancelled', 'failed', 'closed']:
                 # Request will never be active, fail
-                log.error('Spot instance request resulted in state \'{0}\'. '
+                log.error("Spot instance request resulted in state '{0}'. "
                           'Nothing else we can do here.')
                 return False
 
@@ -2420,13 +2420,13 @@ def create(vm_=None, call=None):
         # and deploy is also True.
         if key_filename is None:
             raise SaltCloudSystemExit(
-                'The required \'private_key\' configuration setting is missing from the '
-                '\'ec2\' driver.'
+                "The required 'private_key' configuration setting is missing from the "
+                "'ec2' driver."
             )
 
         if not os.path.exists(key_filename):
             raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' does not exist.\n'.format(
+                "The EC2 key file '{0}' does not exist.\n".format(
                     key_filename
                 )
             )
@@ -2436,7 +2436,7 @@ def create(vm_=None, call=None):
         )
         if key_mode not in ('0400', '0600'):
             raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
+                "The EC2 key file '{0}' needs to be set to mode 0400 or 0600.\n".format(
                     key_filename
                 )
             )
@@ -2481,7 +2481,7 @@ def create(vm_=None, call=None):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
+            log.debug("Generating minion keys for '{0[name]}'".format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -2494,8 +2494,8 @@ def create(vm_=None, call=None):
         # and then fire off the request for it
         if keyname(vm_) is None:
             raise SaltCloudSystemExit(
-                'The required \'keyname\' configuration setting is missing from the '
-                '\'ec2\' driver.'
+                "The required 'keyname' configuration setting is missing from the "
+                "'ec2' driver."
             )
 
         data, vm_ = request_instance(vm_, location)
@@ -2530,13 +2530,13 @@ def create(vm_=None, call=None):
                                          search_global=False)
     if not isinstance(tags, dict):
         raise SaltCloudConfigError(
-            '\'tag\' should be a dict.'
+            "'tag' should be a dict."
         )
 
     for value in six.itervalues(tags):
         if not isinstance(value, str):
             raise SaltCloudConfigError(
-                '\'tag\' values must be strings. Try quoting the values. '
+                "'tag' values must be strings. Try quoting the values. "
                 'e.g. "2013-09-19T20:09:46Z".'
             )
 
@@ -2653,9 +2653,9 @@ def create(vm_=None, call=None):
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info("Created Cloud VM '{0[name]}'".format(vm_))
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        "'{0[name]}' VM creation details:\n{1}".format(
             vm_, pprint.pformat(instance)
         )
     )
@@ -2742,8 +2742,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['size'] = volume['size']
         else:
             raise SaltCloudConfigError(
-                'Cannot create volume.  Please define one of \'volume_id\', '
-                '\'snapshot\', or \'size\''
+                "Cannot create volume.  Please define one of 'volume_id', "
+                "'snapshot', or 'size'"
             )
 
         if 'tags' in volume:
@@ -3291,7 +3291,7 @@ def _get_node(name=None, instance_id=None, location=None):
         except IndexError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
+                "Failed to get the data for node '{0}'. Remaining "
                 'attempts: {1}'.format(
                     instance_id or name, attempts
                 )

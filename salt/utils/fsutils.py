@@ -28,7 +28,7 @@ def _verify_run(out, cmd=None):
     '''
     if out.get('retcode', 0) and out['stderr']:
         if cmd:
-            log.debug('Command: \'{0}\''.format(cmd))
+            log.debug("Command: '{0}'".format(cmd))
 
         log.debug('Return code: {0}'.format(out.get('retcode')))
         log.debug('Error output:\n{0}'.format(out.get('stderr', 'N/A')))

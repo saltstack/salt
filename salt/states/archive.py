@@ -416,10 +416,10 @@ def extracted(name,
                             _cleanup_destdir(name)
                         ret['result'] = False
                         ret['comment'] = (
-                            'Failed to read from tar archive using Python\'s '
+                            "Failed to read from tar archive using Python's "
                             'native tar file support. If archive is '
                             'compressed using something other than gzip or '
-                            'bzip2, the \'tar_options\' parameter may be '
+                            "bzip2, the 'tar_options' parameter may be "
                             'required to pass the correct options to the tar '
                             'command in order to extract the archive.'
                         )
@@ -503,5 +503,5 @@ def extracted(name,
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
-        ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
+        ret['comment'] = "Can't extract content of {0}".format(source_match)
     return ret

@@ -474,7 +474,7 @@ def addgroup(name, group):
         salt '*' user.addgroup jsnuffy 'Power Users'
     '''
     name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+    group = _cmd_quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
     if not user:
@@ -509,7 +509,7 @@ def removegroup(name, group):
         salt '*' user.removegroup jsnuffy 'Power Users'
     '''
     name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+    group = _cmd_quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
 
@@ -656,7 +656,7 @@ def chgroups(name, groups, append=True):
 
     if not append:
         for group in ugrps:
-            group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+            group = _cmd_quote(group).lstrip("'").rstrip("'")
             if group not in groups:
                 cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
                 __salt__['cmd.run_all'](cmd, python_shell=True)
@@ -664,7 +664,7 @@ def chgroups(name, groups, append=True):
     for group in groups:
         if group in ugrps:
             continue
-        group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+        group = _cmd_quote(group).lstrip("'").rstrip("'")
         cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
         __salt__['cmd.run_all'](cmd, python_shell=True)
 
@@ -919,13 +919,13 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError(
-            'User \'{0}\' already exists'.format(new_name)
+            "User '{0}' already exists".format(new_name)
         )
 
     # Rename the user account
@@ -937,7 +937,7 @@ def rename(name, new_name):
     try:
         user = c.Win32_UserAccount(Name=name)[0]
     except IndexError:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
 
     # Rename the user
     result = user.Rename(new_name)[0]
@@ -957,7 +957,7 @@ def rename(name, new_name):
                       9: 'Other API error',
                       10: 'Internal error'}
         raise CommandExecutionError(
-            'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
+            "There was an error renaming '{0}' to '{1}'. Error: {2}"
             .format(name, new_name, error_dict[result])
         )
 

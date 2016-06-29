@@ -103,7 +103,7 @@ def manage_mode(mode):
         # Make it a string in case it's not
         mode = str(mode)
     # Strip any quotes and initial 0, though zero-pad it up to 4
-    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
+    ret = mode.strip('"').strip("'").lstrip('0').zfill(4)
     if ret[0] != '0':
         # Always include a leading zero
         return '0{0}'.format(ret)
@@ -354,8 +354,8 @@ def get(key, default='', delimiter=':', merge=None):
             return sdb.sdb_get(ret, __opts__)
     else:
         if merge not in ('recurse', 'overwrite'):
-            log.warning('Unsupported merge strategy \'{0}\'. Falling back '
-                        'to \'recurse\'.'.format(merge))
+            log.warning("Unsupported merge strategy '{0}'. Falling back "
+                        "to 'recurse'.".format(merge))
             merge = 'recurse'
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')

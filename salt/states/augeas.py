@@ -244,12 +244,12 @@ def change(name, context=None, changes=None, lens=None,
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 
     if not changes or not isinstance(changes, list):
-        ret['comment'] = '\'changes\' must be specified as a list'
+        ret['comment'] = "'changes' must be specified as a list"
         return ret
 
     if load_path is not None:
         if not isinstance(load_path, list):
-            ret['comment'] = '\'load_path\' must be specified as a list'
+            ret['comment'] = "'load_path' must be specified as a list"
             return ret
         else:
             load_path = ':'.join(load_path)

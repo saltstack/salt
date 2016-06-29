@@ -110,7 +110,7 @@ def __virtual__():
 
 def setup_handlers():
     if 'sentry_handler' not in __opts__:
-        log.debug('No \'sentry_handler\' key was found in the configuration')
+        log.debug("No 'sentry_handler' key was found in the configuration")
         return False
     options = {}
     dsn = get_config_value('dsn')
@@ -145,8 +145,8 @@ def setup_handlers():
         config_value = get_config_value(key)
         if config_value is None and key not in options:
             log.debug(
-                'The required \'sentry_handler\' configuration key, '
-                '\'{0}\', is not properly configured. Not configuring '
+                "The required 'sentry_handler' configuration key, "
+                "'{0}', is not properly configured. Not configuring "
                 'the sentry logging handler.'.format(key)
             )
             return

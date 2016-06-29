@@ -55,7 +55,7 @@ def install(app_id, enable=True):
     client_type = _client_type(app_id)
     enable_str = '1' if enable else '0'
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
-          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL{3})"'.\
+          "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{0}',{1},{2},1,NULL{3})\"".\
         format(app_id, client_type, enable_str, ',NULL' if ge_el_capitan else '')
 
     call = __salt__['cmd.run_all'](
@@ -118,7 +118,7 @@ def enable(app_id, enabled=True):
     for a in _get_assistive_access():
         if app_id == a[0]:
             cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
-                  '"UPDATE access SET allowed=\'{0}\' WHERE client=\'{1}\'"'.format(enable_str, app_id)
+                  "\"UPDATE access SET allowed='{0}' WHERE client='{1}'\"".format(enable_str, app_id)
 
             call = __salt__['cmd.run_all'](
                 cmd,

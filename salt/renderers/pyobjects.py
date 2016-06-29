@@ -417,7 +417,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 state_file = client.cache_file(import_file, saltenv)
                 if not state_file:
                     raise ImportError(
-                        'Could not find the file \'{0}\''.format(import_file)
+                        "Could not find the file '{0}'".format(import_file)
                     )
 
                 state_locals = {}
@@ -442,7 +442,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
                         if name not in state_locals:
                             raise ImportError(
-                                '\'{0}\' was not found in \'{1}\''.format(
+                                "'{0}' was not found in '{1}'".format(
                                     name,
                                     import_file
                                 )

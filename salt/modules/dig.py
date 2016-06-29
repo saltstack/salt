@@ -92,7 +92,7 @@ def A(host, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
+            "dig returned exit code '{0}'. Returning empty list as "
             'fallback.'.format(
                 cmd['retcode']
             )
@@ -124,7 +124,7 @@ def AAAA(host, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
+            "dig returned exit code '{0}'. Returning empty list as "
             'fallback.'.format(
                 cmd['retcode']
             )
@@ -156,7 +156,7 @@ def NS(domain, resolve=True, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
+            "dig returned exit code '{0}'. Returning empty list as "
             'fallback.'.format(
                 cmd['retcode']
             )
@@ -197,7 +197,7 @@ def SPF(domain, record='SPF', nameserver=None):
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
+            "dig returned exit code '{0}'. Returning empty list as fallback."
             .format(result['retcode'])
         )
         return []
@@ -254,7 +254,7 @@ def MX(domain, resolve=False, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
+            "dig returned exit code '{0}'. Returning empty list as "
             'fallback.'.format(
                 cmd['retcode']
             )
@@ -292,7 +292,7 @@ def TXT(host, nameserver=None):
 
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
+            "dig returned exit code '{0}'. Returning empty list as "
             'fallback.'.format(
                 cmd['retcode']
             )

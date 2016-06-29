@@ -42,9 +42,9 @@ def envs(backend=None, sources=False, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the fileserver.envs runner has '
+            "The 'outputter' argument to the fileserver.envs runner has "
             'been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': output}
     else:
@@ -85,9 +85,9 @@ def file_list(saltenv='base', backend=None, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the fileserver.file_list runner '
+            "The 'outputter' argument to the fileserver.file_list runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': output}
     else:
@@ -128,9 +128,9 @@ def symlink_list(saltenv='base', backend=None, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the fileserver.symlink_list '
+            "The 'outputter' argument to the fileserver.symlink_list "
             'runner has been deprecated. Please specify an outputter using '
-            '--out. See the output of \'salt-run -h\' for more information.'
+            "--out. See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': output}
     else:
@@ -171,9 +171,9 @@ def dir_list(saltenv='base', backend=None, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the fileserver.dir_list runner '
+            "The 'outputter' argument to the fileserver.dir_list runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': output}
     else:
@@ -219,9 +219,9 @@ def empty_dir_list(saltenv='base', backend=None, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the fileserver.empty_dir_list '
+            "The 'outputter' argument to the fileserver.empty_dir_list "
             'runner has been deprecated. Please specify an outputter using '
-            '--out. See the output of \'salt-run -h\' for more information.'
+            "--out. See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': output}
     else:

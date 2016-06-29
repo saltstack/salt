@@ -590,7 +590,7 @@ def set_fstab(
                     lines.append(line)
 
     except (IOError, OSError) as exc:
-        msg = 'Couldn\'t read from {0}: {1}'
+        msg = "Couldn't read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     # add line if not present or changed
@@ -718,7 +718,7 @@ def set_vfstab(
                     lines.append(line)
 
     except (IOError, OSError) as exc:
-        msg = 'Couldn\'t read from {0}: {1}'
+        msg = "Couldn't read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     # add line if not present or changed
@@ -878,7 +878,7 @@ def set_automaster(
                 else:
                     lines.append(line)
     except (IOError, OSError) as exc:
-        msg = 'Couldn\'t read from {0}: {1}'
+        msg = "Couldn't read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     if change:

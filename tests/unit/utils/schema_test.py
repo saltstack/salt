@@ -443,7 +443,7 @@ class ConfigTestCase(TestCase):
         }
         self.assertDictContainsSubset(expected, Requirements4.serialize())
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
             driver = schema.StringItem(default='digital_ocean', format='hidden')
@@ -545,7 +545,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_boolean_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.BooleanItem(title='Hungry', description='Are you hungry?')
@@ -642,7 +642,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_string_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item')
@@ -721,7 +721,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_email_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.EMailItem(title='Item', description='Item description')
@@ -748,7 +748,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_ipv4_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv4Item(title='Item', description='Item description')
@@ -775,7 +775,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_ipv6_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv6Item(title='Item', description='Item description')
@@ -802,7 +802,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_hostname_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.HostnameItem(title='Item', description='Item description')
@@ -829,8 +829,8 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
-    @skipIf(any([HAS_ISODATE, HAS_STRICT_RFC3339]) is False, 'The \'strict_rfc3339\' or \'isodate\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(any([HAS_ISODATE, HAS_STRICT_RFC3339]) is False, "The 'strict_rfc3339' or 'isodate' library is missing")
     def test_datetime_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DateTimeItem(title='Item', description='Item description')
@@ -868,8 +868,8 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
-    @skipIf(HAS_RFC3987 is False, 'The \'rfc3987\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(HAS_RFC3987 is False, "The 'rfc3987' library is missing")
     def test_uri_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.UriItem(title='Item', description='Item description')
@@ -973,7 +973,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_number_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='How many dogs', description='Question')
@@ -1144,7 +1144,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_integer_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='How many dogs', description='Question')
@@ -1335,7 +1335,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_array_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
@@ -1637,7 +1637,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_dict_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1777,7 +1777,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': {'color': 'blue',
                                           'rugged_surface': False,
                                           'opaque': True}}, TestConf.serialize())
-        self.assertIn('\'sides\' is a required property', excinfo.exception.message)
+        self.assertIn("'sides' is a required property", excinfo.exception.message)
 
         class Props(schema.Schema):
             sides = schema.IntegerItem(required=True)
@@ -1795,7 +1795,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': {'color': 'blue',
                                           'rugged_surface': False,
                                           'opaque': True}}, TestConf.serialize())
-        self.assertIn('\'sides\' is a required property', excinfo.exception.message)
+        self.assertIn("'sides' is a required property", excinfo.exception.message)
 
     def test_oneof_config(self):
         item = schema.OneOfItem(
@@ -1808,7 +1808,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_oneof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1844,7 +1844,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_anyof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1896,7 +1896,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_allof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1938,7 +1938,7 @@ class ConfigTestCase(TestCase):
             }
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_not_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2144,7 +2144,7 @@ class ComplexSchemaTestCase(TestCase):
                             'description': 'Are you thirsty?'}}}}}
         self.assertDictEqual(serialized, expected)
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_schema_item_thirsty_valid(self):
         serialized = self.schema.serialize()
 
@@ -2154,17 +2154,17 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_schema_item_thirsty_invalid(self):
         serialized = self.schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
             jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
+        self.assertIn("'Foo' is not of type 'boolean'",
                       excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_complex_schema_item_hungry_valid(self):
         serialized = self.complex_schema.serialize()
 
@@ -2174,7 +2174,7 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_both_complex_complex_schema_all_items_valid(self):
         serialized = self.complex_schema.serialize()
         try:
@@ -2185,17 +2185,17 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_complex_schema_item_hungry_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
             jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
+        self.assertIn("'Foo' is not of type 'boolean'",
                       excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) \
@@ -2205,10 +2205,10 @@ class ComplexSchemaTestCase(TestCase):
                 {'complex_complex_item': {'hungry': True,
                                           'complex_item': {'thirsty': 'Bar'}}},
                 serialized)
-        self.assertIn('\'Bar\' is not of type \'boolean\'',
+        self.assertIn("'Bar' is not of type 'boolean'",
                       excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_complex_schema_item_missing_required_hungry(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) \
@@ -2217,7 +2217,7 @@ class ComplexSchemaTestCase(TestCase):
             jsonschema.validate(
                 {'complex_complex_item': {'complex_item': {'thirsty': 'Bar'}}},
                 serialized)
-        self.assertIn('\'hungry\' is a required property',
+        self.assertIn("'hungry' is a required property",
                       excinfo.exception.message)
 
 

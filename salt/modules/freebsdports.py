@@ -61,12 +61,12 @@ def _check_portname(name):
     '''
     if not isinstance(name, string_types) or '/' not in name:
         raise SaltInvocationError(
-            'Invalid port name \'{0}\' (category required)'.format(name)
+            "Invalid port name '{0}' (category required)".format(name)
         )
 
     path = os.path.join('/usr/ports', name)
     if not os.path.isdir(path):
-        raise SaltInvocationError('Path \'{0}\' does not exist'.format(path))
+        raise SaltInvocationError("Path '{0}' does not exist".format(path))
 
     return path
 
@@ -284,7 +284,7 @@ def showconfig(name, default=False, dict_return=False):
         error = result
 
     if error:
-        msg = ('Error running \'make showconfig\' for {0}: {1}'
+        msg = ("Error running 'make showconfig' for {0}: {1}"
                .format(name, error))
         log.error(msg)
         raise SaltInvocationError(msg)
@@ -347,7 +347,7 @@ def config(name, reset=False, **kwargs):
 
     if not configuration:
         raise CommandExecutionError(
-            'Unable to get port configuration for \'{0}\''.format(name)
+            "Unable to get port configuration for '{0}'".format(name)
         )
 
     # Get top-level key for later reference
@@ -499,7 +499,7 @@ def search(name):
     if '/' in name:
         if name.count('/') > 1:
             raise SaltInvocationError(
-                'Invalid search string \'{0}\'. Port names cannot have more '
+                "Invalid search string '{0}'. Port names cannot have more "
                 'than one slash'
             )
         else:

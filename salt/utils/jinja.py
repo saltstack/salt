@@ -96,7 +96,7 @@ class SaltCacheLoader(BaseLoader):
         # checks for relative '..' paths
         if '..' in template:
             log.warning(
-                'Discarded template path \'{0}\', relative paths are '
+                "Discarded template path '{0}', relative paths are "
                 'prohibited'.format(template)
             )
             raise TemplateNotFound(template)

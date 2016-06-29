@@ -34,7 +34,7 @@ def __virtual__():
     Only return if all the modules are available
     '''
     if not HAS_JUNOS:
-        return False, 'Missing dependency: The junos proxy minion requires the \'jnpr\' Python module.'
+        return False, "Missing dependency: The junos proxy minion requires the 'jnpr' Python module."
 
     return __virtualname__
 

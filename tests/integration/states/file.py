@@ -986,7 +986,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     pattern='^# en_US.UTF-8$',
                     repl='en_US.UTF-8',
                     append_if_not_found=True,
-                    not_found_content='THIS LINE WASN\'T FOUND! SO WE\'RE APPENDING IT HERE!'
+                    not_found_content="THIS LINE WASN'T FOUND! SO WE'RE APPENDING IT HERE!"
             ))
 
         try:
@@ -1564,13 +1564,13 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                '\'mode\' is not allowed in \'file.recurse\'. Please use '
-                '\'file_mode\' and \'dir_mode\'.',
+                "'mode' is not allowed in 'file.recurse'. Please use "
+                "'file_mode' and 'dir_mode'.",
                 ret
             )
             self.assertNotInSaltComment(
                 'TypeError: managed() got multiple values for keyword '
-                'argument \'mode\'',
+                "argument 'mode'",
                 ret
             )
         finally:
@@ -1702,7 +1702,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - name: {0}',
             '    - marker_start: "#-- start managed zone PLEASE, DO NOT EDIT"',
             '    - marker_end: "#-- end managed zone"',
-            '    - content: \'\'',
+            "    - content: ''",
             '    - append_if_not_found: True',
             '    - show_changes: True'
         ]

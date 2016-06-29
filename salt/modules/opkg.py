@@ -854,9 +854,9 @@ def del_repo(alias):
                 if source['file'] in deleted_from:
                     deleted_from[source['file']] += 1
             for repo_file, count in six.iteritems(deleted_from):
-                msg = 'Repo \'{0}\' has been removed from {1}.\n'
+                msg = "Repo '{0}' has been removed from {1}.\n"
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = ('File {1} containing repo \'{0}\' has been '
+                    msg = ("File {1} containing repo '{0}' has been "
                            'removed.\n')
                     try:
                         os.remove(repo_file)
@@ -918,13 +918,13 @@ def mod_repo(alias, **kwargs):
             _mod_repo_in_file(alias, repostr, source['file'])
         elif uri and source['uri'] == uri:
             raise CommandExecutionError(
-                'Repository \'{0}\' already exists as \'{1}\'.'.format(uri, source['name']))
+                "Repository '{0}' already exists as '{1}'.".format(uri, source['name']))
 
     if not found:
         # Need to add a new repo
         if 'uri' not in kwargs:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URI passed to create one.'.format(alias))
+                "Repository '{0}' not found and no URI passed to create one.".format(alias))
         # If compressed is not defined, assume True
         compressed = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True

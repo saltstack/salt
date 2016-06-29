@@ -121,9 +121,9 @@ def set_(key,
         salt '*' memcached.set <key> <value>
     '''
     if not isinstance(time, integer_types):
-        raise SaltInvocationError('\'time\' must be an integer')
+        raise SaltInvocationError("'time' must be an integer")
     if not isinstance(min_compress_len, integer_types):
-        raise SaltInvocationError('\'min_compress_len\' must be an integer')
+        raise SaltInvocationError("'min_compress_len' must be an integer")
     conn = _connect(host, port)
     _check_stats(conn)
     return conn.set(key, value, time, min_compress_len)
@@ -143,7 +143,7 @@ def delete(key,
         salt '*' memcached.delete <key>
     '''
     if not isinstance(time, integer_types):
-        raise SaltInvocationError('\'time\' must be an integer')
+        raise SaltInvocationError("'time' must be an integer")
     conn = _connect(host, port)
     _check_stats(conn)
     return bool(conn.delete(key, time))
@@ -166,9 +166,9 @@ def add(key,
         salt '*' memcached.add <key> <value>
     '''
     if not isinstance(time, integer_types):
-        raise SaltInvocationError('\'time\' must be an integer')
+        raise SaltInvocationError("'time' must be an integer")
     if not isinstance(min_compress_len, integer_types):
-        raise SaltInvocationError('\'min_compress_len\' must be an integer')
+        raise SaltInvocationError("'min_compress_len' must be an integer")
     conn = _connect(host, port)
     _check_stats(conn)
     return conn.add(
@@ -197,9 +197,9 @@ def replace(key,
         salt '*' memcached.replace <key> <value>
     '''
     if not isinstance(time, integer_types):
-        raise SaltInvocationError('\'time\' must be an integer')
+        raise SaltInvocationError("'time' must be an integer")
     if not isinstance(min_compress_len, integer_types):
-        raise SaltInvocationError('\'min_compress_len\' must be an integer')
+        raise SaltInvocationError("'min_compress_len' must be an integer")
     conn = _connect(host, port)
     stats = conn.get_stats()
     return conn.replace(
@@ -226,10 +226,10 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     cur = get(key)
 
     if cur is None:
-        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
+        raise CommandExecutionError("Key '{0}' does not exist".format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key \'{0}\' must be an integer to be '
+            "Value for key '{0}' must be an integer to be "
             'incremented'.format(key)
         )
 
@@ -257,10 +257,10 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     cur = get(key)
     if cur is None:
-        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
+        raise CommandExecutionError("Key '{0}' does not exist".format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key \'{0}\' must be an integer to be '
+            "Value for key '{0}' must be an integer to be "
             'decremented'.format(key)
         )
 

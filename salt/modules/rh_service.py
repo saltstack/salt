@@ -80,14 +80,14 @@ def __virtual__():
                 return (
                     False,
                     'Fedora >= 15 uses systemd, will not load rh_service.py '
-                    'as virtual \'service\''
+                    "as virtual 'service'"
                 )
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'):
             if osrelease_major >= 7:
                 return (
                     False,
                     'RedHat-based distros >= version 7 use systemd, will not '
-                    'load rh_service.py as virtual \'service\''
+                    "load rh_service.py as virtual 'service'"
                 )
         return __virtualname__
     return (False, 'Cannot load rh_service module: OS not in {0}'.format(enable))

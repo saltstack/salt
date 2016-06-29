@@ -660,7 +660,7 @@ def create_ca(ca_name,
         return 'Certificate for CA named "{0}" already exists'.format(ca_name)
 
     if fixmode and not os.path.exists(certp):
-        raise ValueError('{0} does not exists, can\'t fix'.format(certp))
+        raise ValueError("{0} does not exists, can't fix".format(certp))
 
     if not os.path.exists('{0}/{1}'.format(
         cert_base_path(), ca_name)

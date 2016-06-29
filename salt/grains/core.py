@@ -191,7 +191,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+                log.debug("Unexpected lspci output: '{0}'".format(line))
 
         if error:
             log.warning(
@@ -488,8 +488,8 @@ def _virtual(osdata):
             _cmds = ['virt-what']
         else:
             log.debug(
-                'Please install \'virt-what\' to improve results of the '
-                '\'virtual\' grain.'
+                "Please install 'virt-what' to improve results of the "
+                "'virtual' grain."
             )
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is False:
@@ -2058,7 +2058,7 @@ def _smartos_zone_data():
         grains['pkgsrcpath'] = 'Unknown'
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
+    grains['zoneid'] = __salt__['cmd.run']("zoneadm list -p | awk -F: '{ print $1 }'", python_shell=True)
     grains.update(_mdata())
 
     return grains

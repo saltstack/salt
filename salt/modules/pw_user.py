@@ -74,7 +74,7 @@ def _get_gecos(name):
         gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
     except KeyError:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if not gecos_field:
         return {}
@@ -143,7 +143,7 @@ def add(name,
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if salt.utils.is_true(kwargs.pop('system', False)):
-        log.warning('pw_user module does not support the \'system\' argument')
+        log.warning("pw_user module does not support the 'system' argument")
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
 
@@ -228,7 +228,7 @@ def chuid(name, uid):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if uid == pre_info['uid']:
         return True
@@ -250,7 +250,7 @@ def chgid(name, gid):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if gid == pre_info['gid']:
         return True
@@ -272,7 +272,7 @@ def chshell(name, shell):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if shell == pre_info['shell']:
         return True
@@ -305,7 +305,7 @@ def chhome(name, home, persist=False):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'User \'{0}\' does not exist'.format(name)
+            "User '{0}' does not exist".format(name)
         )
     if home == pre_info['home']:
         return True
@@ -493,11 +493,11 @@ def rename(name, new_name):
     '''
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError(
-            'User \'{0}\' already exists'.format(new_name)
+            "User '{0}' already exists".format(new_name)
         )
     cmd = ['pw', 'usermod', '-l', new_name, '-n', name]
     __salt__['cmd.run'](cmd)

@@ -248,7 +248,7 @@ class SSH(object):
                         'salt-ssh could not be run because it could not generate keys.\n\n'
                         'You can probably resolve this by executing this script with '
                         'increased permissions via sudo or by running as root.\n'
-                        'You could also use the \'-c\' option to supply a configuration '
+                        "You could also use the '-c' option to supply a configuration "
                         'directory that you have permissions to read and write to.'
                     )
         self.defaults = {
@@ -480,7 +480,7 @@ class SSH(object):
                             pass
 
                         if host not in returned:
-                            error = ('Target \'{0}\' did not return any data, '
+                            error = ("Target '{0}' did not return any data, "
                                      'probably due to an error.').format(host)
                             ret = {'id': host,
                                    'ret': error}
@@ -684,8 +684,8 @@ class Single(object):
             if self.opts.get('wipe_ssh'):
                 salt.utils.warn_until(
                     'Nitrogen',
-                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
-                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
+                    "Support for 'wipe_ssh' has been deprecated in Saltfile and will be removed "
+                    "in Salt Nitrogen. Please use 'ssh_wipe' instead."
                 )
                 self.wipe = 'True'
             self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
@@ -1041,10 +1041,10 @@ ARGS = {10}\n'''.format(self.minion_config,
             pass
 
         # Execute shim
-        ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
+        ret = self.shell.exec_cmd("/bin/sh '$HOME/{0}'".format(target_shim_file))
 
         # Remove shim from target system
-        self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
+        self.shell.exec_cmd("rm '$HOME/{0}'".format(target_shim_file))
 
         return ret
 

@@ -274,7 +274,7 @@ method_integration_ret = dict(cacheKeyParameters={},
                               httpMethod='POST',
                               integrationResponses={'200': method_integration_response_200_ret},
                               requestParameters={},
-                              requestTemplates={'application/json': ('#set($inputRoot = $input.path(\'$\'))'
+                              requestTemplates={'application/json': ("#set($inputRoot = $input.path('$'))"
                                                                      '{'
                                                                      '"header-params" : {#set ($map = $input.params().header)#foreach( $param in $map.entrySet() )"$param.key" : "$param.value" #if( $foreach.hasNext ), #end#end},'
                                                                      '"query-params" : {#set ($map = $input.params().querystring)#foreach( $param in $map.entrySet() )"$param.key" : "$param.value" #if( $foreach.hasNext ), #end#end},'

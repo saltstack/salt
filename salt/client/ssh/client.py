@@ -29,7 +29,7 @@ class SSHClient(object):
             if os.path.isdir(c_path):
                 log.warning(
                     '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
+                    "it's 'c_path' keyword argument".format(
                         self.__class__.__name__, c_path
                     )
                 )

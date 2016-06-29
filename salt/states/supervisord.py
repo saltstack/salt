@@ -121,7 +121,7 @@ def running(name,
                     # Process group
                     if len(to_start) == len(matches):
                         ret['comment'] = (
-                            'All services in group \'{0}\' will be started'
+                            "All services in group '{0}' will be started"
                             .format(name)
                         )
                     else:
@@ -136,7 +136,7 @@ def running(name,
                 if name.endswith(':'):
                     # Process group
                     ret['comment'] = (
-                        'All services in group \'{0}\' are already running'
+                        "All services in group '{0}' are already running"
                         .format(name)
                     )
                 else:
@@ -146,7 +146,7 @@ def running(name,
             ret['result'] = None
             # Process/group needs to be added
             if name.endswith(':'):
-                _type = 'Group \'{0}\''.format(name)
+                _type = "Group '{0}'".format(name)
             else:
                 _type = 'Service {0}'.format(name)
             ret['comment'] = '{0} will be added and started'.format(_type)

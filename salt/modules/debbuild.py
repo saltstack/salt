@@ -62,7 +62,7 @@ def _check_repo_sign_utils_support():
         return True
     else:
         raise CommandExecutionError(
-            'utility \'{0}\' needs to be installed'.format(util_name)
+            "utility '{0}' needs to be installed".format(util_name)
         )
 
 
@@ -72,7 +72,7 @@ def _check_repo_gpg_phrase_utils_support():
         return True
     else:
         raise CommandExecutionError(
-            'utility \'{0}\' needs to be installed'.format(util_name)
+            "utility '{0}' needs to be installed".format(util_name)
         )
 
 
@@ -85,7 +85,7 @@ def _get_build_env(env):
         return env_override
     if not isinstance(env, dict):
         raise SaltInvocationError(
-            '\'env\' must be a Python dictionary'
+            "'env' must be a Python dictionary"
         )
     for key, value in env.items():
         env_override += '{0}={1}\n'.format(key, value)
@@ -121,7 +121,7 @@ def _get_repo_options_env(env):
         return env_options
     if not isinstance(env, dict):
         raise SaltInvocationError(
-            '\'env\' must be a Python dictionary'
+            "'env' must be a Python dictionary"
         )
     for key, value in env.items():
         if key == 'OPTIONS':
@@ -188,7 +188,7 @@ def _get_repo_dists_env(env):
 
     if not isinstance(env, dict):
         raise SaltInvocationError(
-            '\'env\' must be a Python dictionary'
+            "'env' must be a Python dictionary"
         )
 
     env_man_seen = []
@@ -559,7 +559,7 @@ def make_repo(repodir,
 
         if pkg_pub_key_file is None or pkg_priv_key_file is None:
             raise SaltInvocationError(
-                'Pillar data should contain Public and Private keys associated with \'keyid\''
+                "Pillar data should contain Public and Private keys associated with 'keyid'"
             )
         try:
             __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
@@ -567,7 +567,7 @@ def make_repo(repodir,
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                "Public and Private key files associated with Pillar data and 'keyid' {0} could not be found"
                 .format(keyid)
             )
 
@@ -582,7 +582,7 @@ def make_repo(repodir,
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                "'keyid' was not found in gpg keyring"
             )
 
         _check_repo_sign_utils_support()

@@ -93,8 +93,8 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         if 'env' in kws:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             kws.pop('env')
@@ -298,7 +298,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
+                "The temporary directory '{0}' was not created".format(
                     dirpath
                 )
             )
@@ -359,7 +359,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
+                "The temporary directory '{0}' was not created".format(
                     dirpath
                 )
             )
@@ -391,7 +391,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
+                "The temporary directory '{0}' was not created".format(
                     dirpath
                 )
             )
@@ -423,7 +423,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
+                "The temporary directory '{0}' was not created".format(
                     dirpath
                 )
             )

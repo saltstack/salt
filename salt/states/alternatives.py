@@ -128,13 +128,13 @@ def remove(name, path):
     if current:
         ret['result'] = True
         ret['comment'] = (
-            'Alternative for {0} is set to it\'s default path {1}'
+            "Alternative for {0} is set to it's default path {1}"
         ).format(name, current)
         return ret
 
     ret['result'] = False
     ret['comment'] = (
-        'Alternative for {0} doesn\'t exist'
+        "Alternative for {0} doesn't exist"
     ).format(name)
 
     return ret
@@ -227,7 +227,7 @@ def set_(name, path):
     else:
         ret['result'] = False
         ret['comment'] = (
-            'Alternative {0} for {1} doesn\'t exist'
+            "Alternative {0} for {1} doesn't exist"
             ).format(path, name)
 
     return ret

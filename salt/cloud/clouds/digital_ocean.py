@@ -218,7 +218,7 @@ def get_image(vm_):
                 return images[image]['slug']
             return int(images[image]['id'])
     raise SaltCloudNotFound(
-        'The specified image, \'{0}\', could not be found.'.format(vm_image)
+        "The specified image, '{0}', could not be found.".format(vm_image)
     )
 
 
@@ -234,7 +234,7 @@ def get_size(vm_):
         if vm_size.lower() == sizes[size]['slug']:
             return sizes[size]['slug']
     raise SaltCloudNotFound(
-        'The specified size, \'{0}\', could not be found.'.format(vm_size)
+        "The specified size, '{0}', could not be found.".format(vm_size)
     )
 
 
@@ -252,7 +252,7 @@ def get_location(vm_):
                            locations[location]['slug']):
             return locations[location]['slug']
     raise SaltCloudNotFound(
-        'The specified location, \'{0}\', could not be found.'.format(
+        "The specified location, '{0}', could not be found.".format(
             vm_location
         )
     )
@@ -329,7 +329,7 @@ def create(vm_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename \'{0}\' does not exist'.format(
+            "The defined key_filename '{0}' does not exist".format(
                 key_filename
             )
         )
@@ -480,9 +480,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info("Created Cloud VM '{0[name]}'".format(vm_))
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        "'{0[name]}' VM creation details:\n{1}".format(
             vm_, pprint.pformat(data)
         )
     )
@@ -536,7 +536,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
     if request.status_code > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
-            'Error: \'{1}\''.format(
+            "Error: '{1}'".format(
                 request.status_code,
                 # request.read()
                 request.text
@@ -596,7 +596,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
+                "Failed to get the data for node '{0}'. Remaining "
                 'attempts: {1}'.format(
                     name, attempts
                 )
@@ -623,9 +623,9 @@ def list_keypairs(call=None):
         name = key_pair['name']
         if name in ret:
             raise SaltCloudSystemExit(
-                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                "A duplicate key pair name, '{0}', was found in DigitalOcean's "
                 'key pair list. Please change the key name stored by DigitalOcean. '
-                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                "Be sure to adjust the value of 'ssh_key_file' in your cloud "
                 'profile or provider configuration, if necessary.'.format(
                     name
                 )
@@ -786,7 +786,7 @@ def destroy(name, call=None):
 
     if not isinstance(delete_dns_record, bool):
         raise SaltCloudConfigError(
-            '\'delete_dns_record\' should be a boolean value.'
+            "'delete_dns_record' should be a boolean value."
         )
     # When the "to do" a few lines up is resolved, remove these lines and use the if/else logic below.
     log.debug('Deleting DNS records for {0}.'.format(name))

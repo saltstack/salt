@@ -518,9 +518,9 @@ class UtilsTestCase(TestCase):
             self.assertEqual(ret, expected_ret)
         except RuntimeError:
             # Unparseable without timelib installed
-            self.skipTest('\'timelib\' is not installed')
+            self.skipTest("'timelib' is not installed")
 
-    @skipIf(not HAS_TIMELIB, '\'timelib\' is not installed')
+    @skipIf(not HAS_TIMELIB, "'timelib' is not installed")
     def test_date_format(self):
 
         # Taken from doctests

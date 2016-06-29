@@ -133,7 +133,7 @@ def _get_comparison_spec(pkgver):
     match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
     if not match:
         raise CommandExecutionError(
-            'Invalid version specification \'{0}\'.'.format(pkgver)
+            "Invalid version specification '{0}'.".format(pkgver)
         )
     gt_lt, eq, verstr = match.groups()
     oper = gt_lt or ''
@@ -331,7 +331,7 @@ def _find_install_targets(name=None,
             return {'name': name,
                     'changes': {},
                     'result': False,
-                    'comment': 'Invalidly formatted \'{0}\' parameter. See '
+                    'comment': "Invalidly formatted '{0}' parameter. See "
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
         to_unpurge = _find_unpurge_targets(desired)
@@ -373,7 +373,7 @@ def _find_install_targets(name=None,
                 return {'name': name,
                         'changes': {},
                         'result': True,
-                        'comment': 'Version {0} of package \'{1}\' is already '
+                        'comment': "Version {0} of package '{1}' is already "
                                    'installed'.format(version, name)}
 
             # if cver is not an empty string, the package is already installed
@@ -417,7 +417,7 @@ def _find_install_targets(name=None,
                         for pkgname, suggestions in \
                                 six.iteritems(problems['suggest']):
                             comments.append(
-                                'Package \'{0}\' not found (possible matches: '
+                                "Package '{0}' not found (possible matches: "
                                 '{1})'.format(pkgname, ', '.join(suggestions))
                             )
                     if comments:
@@ -1273,7 +1273,7 @@ def installed(
         if to_unpurge:
             comment.append(
                 'The following packages would have their selection status '
-                'changed from \'purge\' to \'install\': {0}'
+                "changed from 'purge' to 'install': {0}"
                 .format(', '.join(to_unpurge))
             )
         if to_reinstall:
@@ -1298,7 +1298,7 @@ def installed(
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
                     comment.append(
-                        'Package \'{0}\' would be reinstalled because the '
+                        "Package '{0}' would be reinstalled because the "
                         'following files have been altered:'.format(pkgstr)
                     )
                     comment.append(
@@ -1761,7 +1761,7 @@ def latest(
     if minion_os == 'Gentoo' and watch_flags:
         for pkg in desired_pkgs:
             if not avail[pkg] and not cur[pkg]:
-                msg = 'No information found for \'{0}\'.'.format(pkg)
+                msg = "No information found for '{0}'.".format(pkg)
                 log.error(msg)
                 problems.append(msg)
             else:
@@ -1774,7 +1774,7 @@ def latest(
         for pkg in desired_pkgs:
             if pkg not in avail:
                 if not cur.get(pkg):
-                    msg = 'No information found for \'{0}\'.'.format(pkg)
+                    msg = "No information found for '{0}'.".format(pkg)
                     log.error(msg)
                     problems.append(msg)
             elif not cur.get(pkg) \
@@ -1932,7 +1932,7 @@ def _uninstall(
         return {'name': name,
                 'changes': {},
                 'result': False,
-                'comment': 'Invalid action \'{0}\'. '
+                'comment': "Invalid action '{0}'. "
                            'This is probably a bug.'.format(action)}
 
     try:
@@ -2252,7 +2252,7 @@ def uptodate(name, refresh=False, **kwargs):
 
     # emerge --update doesn't appear to support repo notation
     if 'fromrepo' in kwargs and __grains__['os'] == 'Gentoo':
-        ret['comment'] = '\'fromrepo\' argument not supported on this platform'
+        ret['comment'] = "'fromrepo' argument not supported on this platform"
         return ret
 
     if isinstance(refresh, bool):
@@ -2391,7 +2391,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
 
     if not targets:
         ret['result'] = True
-        ret['comment'] = 'Group \'{0}\' is already installed'.format(name)
+        ret['comment'] = "Group '{0}' is already installed".format(name)
         return ret
 
     partially_installed = diff['mandatory']['installed'] \
@@ -2402,11 +2402,11 @@ def group_installed(name, skip=None, include=None, **kwargs):
         ret['result'] = None
         if partially_installed:
             ret['comment'] = (
-                'Group \'{0}\' is partially installed and will be updated'
+                "Group '{0}' is partially installed and will be updated"
                 .format(name)
             )
         else:
-            ret['comment'] = 'Group \'{0}\' will be installed'.format(name)
+            ret['comment'] = "Group '{0}' will be installed".format(name)
         return ret
 
     try:
@@ -2420,7 +2420,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
         else:
             ret['changes'] = {}
             ret['comment'] = ('An error was encountered while '
-                              'installing/updating group \'{0}\': {1}'
+                              "installing/updating group '{0}': {1}"
                               .format(name, exc))
         return ret
 
@@ -2433,7 +2433,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
         return ret
 
     ret['result'] = True
-    ret['comment'] = 'Group \'{0}\' was {1}'.format(
+    ret['comment'] = "Group '{0}' was {1}".format(
         name,
         'updated' if partially_installed else 'installed'
     )

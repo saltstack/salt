@@ -119,7 +119,7 @@ def summary(svc_name=''):
         elif not line or svc_name not in line or 'The Monit daemon' in line:
             continue
         else:
-            parts = line.split('\'')
+            parts = line.split("'")
             if len(parts) == 3:
                 resource, name, status_ = (
                     parts[0].strip(), parts[1], parts[2].strip()

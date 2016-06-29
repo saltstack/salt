@@ -60,7 +60,7 @@ def parse():
         '-t',
         '--transport',
         default='zeromq',
-        help=('Transport to use. (Default: \'zeromq\'')
+        help=("Transport to use. (Default: 'zeromq'")
     )
 
     options, args = parser.parse_args()

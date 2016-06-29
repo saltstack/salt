@@ -101,9 +101,9 @@ def __virtual__():
         if 'providers' in __opts__:
             providers = __opts__['providers']
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
-            log.debug('Configuration option \'providers:pkg\' is set to '
-                    '\'pkgng\', won\'t load old provider \'freebsdpkg\'.')
-            return (False, 'The freebsdpkg execution module cannot be loaded: the configuration option \'providers:pkg\' is set to \'pkgng\'')
+            log.debug("Configuration option 'providers:pkg' is set to "
+                    "'pkgng', won't load old provider 'freebsdpkg'.")
+            return (False, "The freebsdpkg execution module cannot be loaded: the configuration option 'providers:pkg' is set to 'pkgng'")
         return __virtualname__
     return (False, 'The freebsdpkg execution module cannot be loaded: either the os is not FreeBSD or the version of FreeBSD is >= 10.')
 
@@ -166,7 +166,7 @@ def _match(names):
             else:
                 ambiguous.append(name)
                 errors.append(
-                    'Ambiguous package \'{0}\'. Full name/version required. '
+                    "Ambiguous package '{0}'. Full name/version required. "
                     'Possible matches: {1}'.format(
                         name,
                         ', '.join(['{0}-{1}'.format(name, x) for x in cver])
@@ -177,7 +177,7 @@ def _match(names):
     not_matched = \
         set(names) - set(matches) - set(full_matches) - set(ambiguous)
     for name in not_matched:
-        errors.append('Package \'{0}\' not found'.format(name))
+        errors.append("Package '{0}' not found".format(name))
 
     return matches + full_matches, errors
 
@@ -551,7 +551,7 @@ def file_dict(*packages):
     files = {}
 
     if packages:
-        match_pattern = '\'{0}-[0-9]*\''
+        match_pattern = "'{0}-[0-9]*'"
         cmd = ['pkg_info', '-QL'] + [match_pattern.format(p) for p in packages]
     else:
         cmd = ['pkg_info', '-QLa']

@@ -743,7 +743,7 @@ def in_subnet(cidr, addr=None):
     try:
         cidr = ipaddress.ip_network(cidr)
     except ValueError:
-        log.error('Invalid CIDR \'{0}\''.format(cidr))
+        log.error("Invalid CIDR '{0}'".format(cidr))
         return False
 
     if addr is None:
@@ -767,8 +767,8 @@ def ip_in_subnet(addr, cidr):
     '''
     salt.utils.warn_until(
         'Carbon',
-        'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Carbon. Please use \'in_subnet\' instead.'
+        "Support for 'ip_in_subnet' has been deprecated and will be removed "
+        "in Salt Carbon. Please use 'in_subnet' instead."
     )
 
     return in_subnet(cidr, addr)

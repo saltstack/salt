@@ -143,7 +143,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
         return deps_list
     if not isinstance(deps, list):
         raise SaltInvocationError(
-            '\'deps\' must be a Python list or comma-separated string'
+            "'deps' must be a Python list or comma-separated string"
         )
     for deprpm in deps:
         parsed = _urlparse(deprpm)
@@ -385,7 +385,7 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
 
         if pkg_pub_key_file is None or pkg_priv_key_file is None:
             raise SaltInvocationError(
-                'Pillar data should contain Public and Private keys associated with \'keyid\''
+                "Pillar data should contain Public and Private keys associated with 'keyid'"
             )
         try:
             __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
@@ -393,7 +393,7 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                "Public and Private key files associated with Pillar data and 'keyid' {0} could not be found"
                 .format(keyid)
             )
 
@@ -408,14 +408,14 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                "'keyid' was not found in gpg keyring"
             )
 
         if use_passphrase:
             phrase = __salt__['pillar.get']('gpg_passphrase')
 
         if local_uids:
-            define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(local_uids[0])
+            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(local_uids[0])
 
         # need to update rpm with public key
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)

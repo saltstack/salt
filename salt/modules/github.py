@@ -80,13 +80,13 @@ def _get_config_value(profile, config_name):
     if not config:
         raise CommandExecutionError(
             'Authentication information could not be found for the '
-            '\'{0}\' profile.'.format(profile)
+            "'{0}' profile.".format(profile)
         )
 
     config_value = config.get(config_name)
     if not config_value:
         raise CommandExecutionError(
-            'The \'{0}\' parameter was not found in the \'{1}\' '
+            "The '{0}' parameter was not found in the '{1}' "
             'profile.'.format(
                 config_name,
                 profile
@@ -682,7 +682,7 @@ def get_milestone(number=None,
 
     if not any([number, name]):
         raise CommandExecutionError(
-            'Either a milestone \'name\' or \'number\' must be provided.'
+            "Either a milestone 'name' or 'number' must be provided."
         )
 
     org_name = _get_config_value(profile, 'org_name')
@@ -746,7 +746,7 @@ def get_repo_info(repo_name, profile='github'):
             ret['id'] = repo.id
         except github.UnknownObjectException:
             raise CommandExecutionError(
-                'The \'{0}\' repository under the \'{1}\' organization could not '
+                "The '{0}' repository under the '{1}' organization could not "
                 'be found.'.format(
                     repo_name,
                     org_name

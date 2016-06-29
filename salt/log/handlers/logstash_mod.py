@@ -184,7 +184,7 @@ def __virtual__():
                 'logstash_zmq_handler' in __opts__]):
         log.trace(
             'None of the required configuration sections, '
-            '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
+            "'logstash_udp_handler' and 'logstash_zmq_handler', "
             'were found in the configuration. Not loading the Logstash '
             'logging handlers module.'
         )
@@ -202,8 +202,8 @@ def setup_handlers():
 
         if host is None and port is None:
             log.debug(
-                'The required \'logstash_udp_handler\' configuration keys, '
-                '\'host\' and/or \'port\', are not properly configured. Not '
+                "The required 'logstash_udp_handler' configuration keys, "
+                "'host' and/or 'port', are not properly configured. Not "
                 'configuring the logstash UDP logging handler.'
             )
         else:
@@ -233,8 +233,8 @@ def setup_handlers():
 
         if address is None:
             log.debug(
-                'The required \'logstash_zmq_handler\' configuration key, '
-                '\'address\', is not properly configured. Not '
+                "The required 'logstash_zmq_handler' configuration key, "
+                "'address', is not properly configured. Not "
                 'configuring the logstash ZMQ logging handler.'
             )
         else:

@@ -552,7 +552,7 @@ def image_present(name,
            'comment': ''}
 
     if build is not None and load is not None:
-        ret['comment'] = 'Only one of \'build\' or \'load\' is permitted.'
+        ret['comment'] = "Only one of 'build' or 'load' is permitted."
         return ret
 
     # Ensure that we have repo:tag notation
@@ -562,14 +562,14 @@ def image_present(name,
     if image in all_tags:
         if not force:
             ret['result'] = True
-            ret['comment'] = 'Image \'{0}\' already present'.format(name)
+            ret['comment'] = "Image '{0}' already present".format(name)
             return ret
         else:
             try:
                 image_info = __salt__['dockerng.inspect_image'](name)
             except Exception as exc:
                 ret['comment'] = \
-                    'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+                    "Unable to get info for image '{0}': {1}".format(name, exc)
                 return ret
     else:
         image_info = None
@@ -584,7 +584,7 @@ def image_present(name,
     if __opts__['test']:
         ret['result'] = None
         if (image in all_tags and force) or image not in all_tags:
-            ret['comment'] = 'Image \'{0}\' will be {1}'.format(name, action)
+            ret['comment'] = "Image '{0}' will be {1}".format(name, action)
             return ret
 
     if build:
@@ -640,14 +640,14 @@ def image_present(name,
 
     if not ret['result']:
         # This shouldn't happen, failure to pull should be caught above
-        ret['comment'] = 'Image \'{0}\' could not be {1}'.format(name, action)
+        ret['comment'] = "Image '{0}' could not be {1}".format(name, action)
     elif not ret['changes']:
         ret['comment'] = (
-            'Image \'{0}\' was {1}, but there were no changes'
+            "Image '{0}' was {1}, but there were no changes"
             .format(name, action)
         )
     else:
-        ret['comment'] = 'Image \'{0}\' was {1}'.format(name, action)
+        ret['comment'] = "Image '{0}' was {1}".format(name, action)
     return ret
 
 
@@ -711,7 +711,7 @@ def image_absent(name=None, images=None, force=False):
            'comment': ''}
 
     if not name and not images:
-        ret['comment'] = 'One of \'name\' and \'images\' must be provided'
+        ret['comment'] = "One of 'name' and 'images' must be provided"
         return ret
     elif images is not None:
         targets = []
@@ -737,7 +737,7 @@ def image_absent(name=None, images=None, force=False):
     if not to_delete:
         ret['result'] = True
         if len(targets) == 1:
-            ret['comment'] = 'Image \'{0}\' is not present'.format(name)
+            ret['comment'] = "Image '{0}' is not present".format(name)
         else:
             ret['comment'] = 'All specified images are not present'
         return ret
@@ -745,7 +745,7 @@ def image_absent(name=None, images=None, force=False):
     if __opts__['test']:
         ret['result'] = None
         if len(to_delete) == 1:
-            ret['comment'] = ('Image \'{0}\' will be removed'
+            ret['comment'] = ("Image '{0}' will be removed"
                               .format(to_delete[0]))
         else:
             ret['comment'] = ('The following images will be removed: {0}'
@@ -773,7 +773,7 @@ def image_absent(name=None, images=None, force=False):
     else:
         ret['changes'] = result
         if len(to_delete) == 1:
-            ret['comment'] = 'Image \'{0}\' was removed'.format(to_delete[0])
+            ret['comment'] = "Image '{0}' was removed".format(to_delete[0])
         else:
             ret['comment'] = (
                 'The following images were removed: {0}'
@@ -1545,13 +1545,13 @@ def running(name,
            'comment': ''}
 
     if image is None:
-        ret['comment'] = 'The \'image\' argument is required'
+        ret['comment'] = "The 'image' argument is required"
         return ret
 
     if 'cmd' in kwargs:
         if 'command' in kwargs:
             ret['comment'] = (
-                'Only one of \'command\' and \'cmd\' can be used. Both '
+                "Only one of 'command' and 'cmd' can be used. Both "
                 'arguments are equivalent.'
             )
             ret['result'] = False
@@ -1588,14 +1588,14 @@ def running(name,
                 current_image_id = pre_config['Image']
             except KeyError:
                 ret['comment'] = (
-                    'Unable to detect current image for container \'{0}\'. '
+                    "Unable to detect current image for container '{0}'. "
                     'This might be due to a change in the Docker API.'
                     .format(name)
                 )
                 return ret
         except CommandExecutionError as exc:
             ret['comment'] = ('Error occurred checking for existence of '
-                              'container \'{0}\': {1}'.format(name, exc))
+                              "container '{0}': {1}".format(name, exc))
             return ret
 
     # Don't allow conflicting options to be set
@@ -1678,13 +1678,13 @@ def running(name,
                                               defaults_from_image)
                     if changes_needed:
                         log.debug(
-                            'dockerng.running: Analysis of container \'{0}\' '
+                            "dockerng.running: Analysis of container '{0}' "
                             'reveals the following changes need to be made: '
                             '{1}'.format(name, changes_needed)
                         )
                     else:
                         log.debug(
-                            'dockerng.running: Container \'{0}\' already '
+                            "dockerng.running: Container '{0}' already "
                             'matches the desired configuration'.format(name)
                         )
                 except Exception as exc:
@@ -1704,12 +1704,12 @@ def running(name,
         if not new_container:
             ret['result'] = True
             ret['comment'] = (
-                'Container \'{0}\' is already configured as specified'
+                "Container '{0}' is already configured as specified"
                 .format(name)
             )
         else:
             ret['result'] = None
-            ret['comment'] = 'Container \'{0}\' will be '.format(name)
+            ret['comment'] = "Container '{0}' will be ".format(name)
             if pre_config and force:
                 ret['comment'] += 'forcibly replaced'
             else:
@@ -1790,7 +1790,7 @@ def running(name,
             )
         except Exception as exc:
             comments.append(
-                'Failed to start new container \'{0}\': {1}'
+                "Failed to start new container '{0}': {1}"
                 .format(name, exc)
             )
             ret['comment'] = _format_comments(comments)
@@ -1801,7 +1801,7 @@ def running(name,
             # If the container changed states at all, note this change in the
             # return dict.
             comments.append(
-                 'Container \'{0}\' changed state.'.format(name)
+                 "Container '{0}' changed state.".format(name)
             )
             ret['changes']['state'] = {'old': pre_state, 'new': post_state}
 
@@ -1813,20 +1813,20 @@ def running(name,
                                             defaults_from_image)
             if changes_still_needed:
                 log.debug(
-                    'dockerng.running: Analysis of container \'{0}\' after '
+                    "dockerng.running: Analysis of container '{0}' after "
                     'creation/replacement reveals the following changes still '
                     'need to be made: {1}'.format(name, changes_still_needed)
                 )
             else:
                 log.debug(
                     'dockerng.running: Changes successfully applied to '
-                    'container \'{0}\''.format(name)
+                    "container '{0}'".format(name)
                 )
         except Exception as exc:
             exc_info = ''.join(traceback.format_tb(sys.exc_info()[2]))
             msg = (
                 'Uncaught exception "{0}" encountered while comparing '
-                'new container\'s configuration against desired configuration'
+                "new container's configuration against desired configuration"
                 .format(exc)
             )
             log.error(msg + '. Exception info follows:\n' + exc_info)
@@ -1859,7 +1859,7 @@ def running(name,
             # check. The diffs will be the original changeset detected in
             # pre-flight check.
             ret['changes']['diff'] = changes_needed
-            comments.append('Container \'{0}\' was replaced'.format(name))
+            comments.append("Container '{0}' was replaced".format(name))
     else:
         if not new_container:
             if send_signal:
@@ -1880,19 +1880,19 @@ def running(name,
                 if not comments:
                     log.warning(
                         'dockerng.running: we detected changes without '
-                        'a specific comment for container \'{0}\'.'.format(
+                        "a specific comment for container '{0}'.".format(
                             name)
                     )
-                    comments.append('Container \'{0}\' changed.'.format(name))
+                    comments.append("Container '{0}' changed.".format(name))
             else:
                 # Container was not replaced, no necessary changes detected
                 # in pre-flight check, and no signal sent to container
                 comments.append(
-                    'Container \'{0}\' is already configured as specified'
+                    "Container '{0}' is already configured as specified"
                     .format(name)
                 )
         else:
-            msg = 'Container \'{0}\' was '.format(name)
+            msg = "Container '{0}' was ".format(name)
             if pre_config and force:
                 msg += 'forcibly replaced'
             else:
@@ -1904,7 +1904,7 @@ def running(name,
                 diff['image'] = {'old': pre_config['Config']['Image'],
                                  'new': image}
                 comments.append(
-                    'Image changed from \'{0}\' to \'{1}\''
+                    "Image changed from '{0}' to '{1}'"
                     .format(pre_config['Config']['Image'], image)
                 )
 
@@ -1968,7 +1968,7 @@ def stopped(name=None,
            'comment': ''}
 
     if not name and not containers:
-        ret['comment'] = 'One of \'name\' and \'containers\' must be provided'
+        ret['comment'] = "One of 'name' and 'containers' must be provided"
         return ret
     if containers is not None:
         if not isinstance(containers, list):
@@ -2020,7 +2020,7 @@ def stopped(name=None,
     if not to_stop:
         ret['result'] = True
         if len(targets) == 1:
-            ret['comment'] = 'Container \'{0}\' is '.format(targets[0])
+            ret['comment'] = "Container '{0}' is ".format(targets[0])
         else:
             ret['comment'] = 'All specified containers are '
         if 'absent' in containers:
@@ -2048,7 +2048,7 @@ def stopped(name=None,
                 stop_errors.append(changes['comment'])
             else:
                 stop_errors.append(
-                    'Failed to stop container \'{0}\''.format(target)
+                    "Failed to stop container '{0}'".format(target)
                 )
 
     if stop_errors:
@@ -2094,7 +2094,7 @@ def absent(name, force=False):
 
     if name not in __salt__['dockerng.list_containers'](all=True):
         ret['result'] = True
-        ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
+        ret['comment'] = "Container '{0}' does not exist".format(name)
         return ret
 
     pre_state = __salt__['dockerng.state'](name)
@@ -2105,24 +2105,24 @@ def absent(name, force=False):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
+        ret['comment'] = ("Container '{0}' will be removed".format(name))
         return ret
 
     try:
         ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
     except Exception as exc:
-        ret['comment'] = ('Failed to remove container \'{0}\': {1}'
+        ret['comment'] = ("Failed to remove container '{0}': {1}"
                           .format(name, exc))
         return ret
 
     if name in __salt__['dockerng.list_containers'](all=True):
-        ret['comment'] = 'Failed to remove container \'{0}\''.format(name)
+        ret['comment'] = "Failed to remove container '{0}'".format(name)
     else:
         if force and pre_state != 'stopped':
             method = 'Forcibly'
         else:
             method = 'Successfully'
-        ret['comment'] = '{0} removed container \'{1}\''.format(method, name)
+        ret['comment'] = "{0} removed container '{1}'".format(method, name)
         ret['result'] = True
     return ret
 
@@ -2170,7 +2170,7 @@ def network_present(name, driver=None, containers=None):
         network = networks[0]  # we expect network's name to be unique
         if all(c in network['Containers'] for c in containers):
             ret['result'] = True
-            ret['comment'] = 'Network \'{0}\' already exists.'.format(name)
+            ret['comment'] = "Network '{0}' already exists.".format(name)
             return ret
         result = True
         for container in containers:
@@ -2179,7 +2179,7 @@ def network_present(name, driver=None, containers=None):
                     ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
                         container, name)
                 except Exception as exc:
-                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                    ret['comment'] = ("Failed to connect container '{0}' to network '{1}' {2}".format(
                         container, name, exc))
                     result = False
             ret['result'] = result
@@ -2189,7 +2189,7 @@ def network_present(name, driver=None, containers=None):
             ret['changes']['created'] = __salt__['dockerng.create_network'](
                 name, driver=driver)
         except Exception as exc:
-            ret['comment'] = ('Failed to create network \'{0}\': {1}'
+            ret['comment'] = ("Failed to create network '{0}': {1}"
                               .format(name, exc))
         else:
             result = True
@@ -2198,7 +2198,7 @@ def network_present(name, driver=None, containers=None):
                     ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
                         container, name)
                 except Exception as exc:
-                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                    ret['comment'] = ("Failed to connect container '{0}' to network '{1}' {2}".format(
                         container, name, exc))
                     result = False
             ret['result'] = result
@@ -2228,20 +2228,20 @@ def network_absent(name, driver=None):
     networks = __salt__['dockerng.networks'](names=[name])
     if not networks:
         ret['result'] = True
-        ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        ret['comment'] = "Network '{0}' already absent".format(name)
         return ret
 
     for container in networks[0]['Containers']:
         try:
             ret['changes']['disconnected'] = __salt__['dockerng.disconnect_container_from_network'](container, name)
         except Exception as exc:
-            ret['comment'] = ('Failed to disconnect container \'{0}\' to network \'{1}\' {2}'.format(
+            ret['comment'] = ("Failed to disconnect container '{0}' to network '{1}' {2}".format(
                 container, name, exc))
     try:
         ret['changes']['removed'] = __salt__['dockerng.remove_network'](name)
         ret['result'] = True
     except Exception as exc:
-        ret['comment'] = ('Failed to remove network \'{0}\': {1}'
+        ret['comment'] = ("Failed to remove network '{0}': {1}"
                           .format(name, exc))
     return ret
 
@@ -2319,13 +2319,13 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
     if not volume:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+            ret['comment'] = ("The volume '{0}' will be created".format(name))
             return ret
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
         except Exception as exc:
-            ret['comment'] = ('Failed to create volume \'{0}\': {1}'
+            ret['comment'] = ("Failed to create volume '{0}': {1}"
                               .format(name, exc))
             return ret
         else:
@@ -2350,7 +2350,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
         except Exception as exc:
-            ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
+            ret['comment'] = ("Failed to remove volume '{0}': {1}"
                               .format(name, exc))
             return ret
         else:
@@ -2358,7 +2358,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['changes']['created'] = __salt__['dockerng.create_volume'](
                     name, driver=driver, driver_opts=driver_opts)
             except Exception as exc:
-                ret['comment'] = ('Failed to create volume \'{0}\': {1}'
+                ret['comment'] = ("Failed to create volume '{0}': {1}"
                                   .format(name, exc))
                 return ret
             else:
@@ -2367,7 +2367,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 return ret
 
     ret['result'] = None if __opts__['test'] else True
-    ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
+    ret['comment'] = "Volume '{0}' already exists.".format(name)
     return ret
 
 
@@ -2396,14 +2396,14 @@ def volume_absent(name, driver=None):
     volume = _find_volume(name)
     if not volume:
         ret['result'] = True
-        ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
+        ret['comment'] = "Volume '{0}' already absent".format(name)
         return ret
 
     try:
         ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
         ret['result'] = True
     except Exception as exc:
-        ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
+        ret['comment'] = ("Failed to remove volume '{0}': {1}"
                           .format(name, exc))
     return ret
 

@@ -46,7 +46,7 @@ def add(name, gid=None, **kwargs):
     ### function for compatibility with the group.present state
     if info(name):
         raise CommandExecutionError(
-            'Group \'{0}\' already exists'.format(name)
+            "Group '{0}' already exists".format(name)
         )
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Group name cannot contain whitespace')
@@ -60,7 +60,7 @@ def add(name, gid=None, **kwargs):
     gid_list = _list_gids()
     if str(gid) in gid_list:
         raise CommandExecutionError(
-            'gid \'{0}\' already exists'.format(gid)
+            "gid '{0}' already exists".format(gid)
         )
 
     cmd = ['dseditgroup', '-o', 'create']
@@ -241,7 +241,7 @@ def chgid(name, gid):
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError(
-            'Group \'{0}\' does not exist'.format(name)
+            "Group '{0}' does not exist".format(name)
         )
     if gid == pre_info['gid']:
         return True

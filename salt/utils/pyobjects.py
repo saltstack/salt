@@ -170,8 +170,8 @@ class StateFactory(object):
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
-            raise InvalidFunction('The function \'{0}\' does not exist in the '
-                                  'StateFactory for \'{1}\''.format(
+            raise InvalidFunction("The function '{0}' does not exist in the "
+                                  "StateFactory for '{1}'".format(
                                       func,
                                       self.module
                                   ))

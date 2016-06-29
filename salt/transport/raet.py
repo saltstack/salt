@@ -87,7 +87,7 @@ class RAETReqChannel(ReqChannel):
         '''
         role = self.opts.get('id')
         if not role:
-            emsg = ("Missing role(\'id\') required to setup RAETReqChannel.")
+            emsg = ("Missing role('id') required to setup RAETReqChannel.")
             log.error(emsg + "\n")
             raise ValueError(emsg)
 

@@ -91,7 +91,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
 
     if not isinstance(reqver, (list, tuple)):
         raise RuntimeError(
-            '\'reqver\' needs to passed as a tuple or list, i.e., (0, 14, 0)'
+            "'reqver' needs to passed as a tuple or list, i.e., (0, 14, 0)"
         )
     try:
         import libcloud  # pylint: disable=redefined-outer-name
@@ -264,7 +264,7 @@ def get_location(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        'The specified location, \'{0}\', could not be found.'.format(
+        "The specified location, '{0}', could not be found.".format(
             vm_location
         )
     )
@@ -295,7 +295,7 @@ def get_image(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        'The specified image, \'{0}\', could not be found.'.format(vm_image)
+        "The specified image, '{0}', could not be found.".format(vm_image)
     )
 
 
@@ -312,7 +312,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
     raise SaltCloudNotFound(
-        'The specified size, \'{0}\', could not be found.'.format(vm_size)
+        "The specified size, '{0}', could not be found.".format(vm_size)
     )
 
 
@@ -521,7 +521,7 @@ def conn_has_method(conn, method_name):
         return True
 
     log.error(
-        'Method \'{0}\' not yet supported!'.format(
+        "Method '{0}' not yet supported!".format(
             method_name
         )
     )

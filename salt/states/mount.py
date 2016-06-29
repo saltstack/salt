@@ -486,7 +486,7 @@ def mounted(name,
                     ret['result'] = False
                     comment = ('Unable to detect fstab status for '
                                       'mount point {0} due to unexpected '
-                                      'output \'{1}\' from call to '
+                                      "output '{1}' from call to "
                                       'mount.set_fstab. This is most likely '
                                       'a bug.').format(name, out)
                 if 'comment' in ret:

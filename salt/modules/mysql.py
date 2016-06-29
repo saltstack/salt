@@ -369,7 +369,7 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
-    log.debug('_grant_to_tokens entry \'{0}\''.format(grant))
+    log.debug("_grant_to_tokens entry '{0}'".format(grant))
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
@@ -403,7 +403,7 @@ def _grant_to_tokens(grant):
     # ['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
     #  '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
-    lex.quotes = '\'`'
+    lex.quotes = "'`"
     lex.whitespace_split = False
     lex.commenters = ''
     lex.wordchars += '\"'
@@ -413,7 +413,7 @@ def _grant_to_tokens(grant):
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ''
     phrase = 'grants'
-    #log.debug('_grant_to_tokens lex analysis \'{0}\''.format(exploded_grant))
+    #log.debug("_grant_to_tokens lex analysis '{0}'".format(exploded_grant))
 
     for token in exploded_grant[position_tracker:]:
 
@@ -483,7 +483,7 @@ def _grant_to_tokens(grant):
             user = user.strip("'")
             host = host.strip("'")
         log.debug(
-            'grant to token \'{0}\'::\'{1}\'::\'{2}\'::\'{3}\''.format(
+            "grant to token '{0}'::'{1}'::'{2}'::'{3}'".format(
                 user,
                 host,
                 grant_tokens,
@@ -920,7 +920,7 @@ def db_tables(name, **connection_args):
         salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name, **connection_args):
-        log.info('Database \'{0}\' does not exist'.format(name))
+        log.info("Database '{0}' does not exist".format(name))
         return False
 
     dbc = _connect(**connection_args)
@@ -998,7 +998,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     '''
     # check if db exists
     if db_exists(name, **connection_args):
-        log.info('DB \'{0}\' already exists'.format(name))
+        log.info("DB '{0}' already exists".format(name))
         return False
 
     # db doesn't exist, proceed
@@ -1020,7 +1020,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
 
     try:
         if _execute(cur, qry, args):
-            log.info('DB \'{0}\' created'.format(name))
+            log.info("DB '{0}' created".format(name))
             return True
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
@@ -1041,11 +1041,11 @@ def db_remove(name, **connection_args):
     '''
     # check if db exists
     if not db_exists(name, **connection_args):
-        log.info('DB \'{0}\' does not exist'.format(name))
+        log.info("DB '{0}' does not exist".format(name))
         return False
 
     if name in ('mysql', 'information_scheme'):
-        log.info('DB \'{0}\' may not be removed'.format(name))
+        log.info("DB '{0}' may not be removed".format(name))
         return False
 
     # db does exists, proceed
@@ -1065,10 +1065,10 @@ def db_remove(name, **connection_args):
         return False
 
     if not db_exists(name, **connection_args):
-        log.info('Database \'{0}\' has been removed'.format(name))
+        log.info("Database '{0}' has been removed".format(name))
         return True
 
-    log.info('Database \'{0}\' has not been removed'.format(name))
+    log.info("Database '{0}' has not been removed".format(name))
     return False
 
 
@@ -1154,7 +1154,7 @@ def user_exists(user,
             qry += ' AND plugin=%(unix_socket)s'
             args['unix_socket'] = 'unix_socket'
         else:
-            qry += ' AND ' + password_column + ' = \'\''
+            qry += ' AND ' + password_column + " = ''"
     elif password:
         qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
         args['password'] = str(password)
@@ -1256,7 +1256,7 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     if user_exists(user, host, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
+        log.info("User '{0}'@'{1}' already exists".format(user, host))
         return False
 
     dbc = _connect(**connection_args)
@@ -1299,13 +1299,13 @@ def user_create(user,
         return False
 
     if user_exists(user, host, password, password_hash, password_column=password_column, **connection_args):
-        msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
+        msg = "User '{0}'@'{1}' has been created".format(user, host)
         if not any((password, password_hash)):
             msg += ' with passwordless login'
         log.info(msg)
         return True
 
-    log.info('User \'{0}\'@\'{1}\' was not created'.format(user, host))
+    log.info("User '{0}'@'{1}' was not created".format(user, host))
     return False
 
 
@@ -1367,7 +1367,7 @@ def user_chpass(user,
                   'allow_passwordless=True')
         return False
     else:
-        password_sql = '\'\''
+        password_sql = "''"
 
     dbc = _connect(**connection_args)
     if dbc is None:
@@ -1399,7 +1399,7 @@ def user_chpass(user,
     if result:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
-            'Password for user \'{0}\'@\'{1}\' has been {2}'.format(
+            "Password for user '{0}'@'{1}' has been {2}".format(
                 user, host,
                 'changed' if any((password, password_hash)) else 'cleared'
             )
@@ -1407,7 +1407,7 @@ def user_chpass(user,
         return True
 
     log.info(
-        'Password for user \'{0}\'@\'{1}\' was not {2}'.format(
+        "Password for user '{0}'@'{1}' was not {2}".format(
             user, host,
             'changed' if any((password, password_hash)) else 'cleared'
         )
@@ -1445,10 +1445,10 @@ def user_remove(user,
         return False
 
     if not user_exists(user, host, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' has been removed'.format(user, host))
+        log.info("User '{0}'@'{1}' has been removed".format(user, host))
         return True
 
-    log.info('User \'{0}\'@\'{1}\' has NOT been removed'.format(user, host))
+    log.info("User '{0}'@'{1}' has NOT been removed".format(user, host))
     return False
 
 
@@ -1488,11 +1488,11 @@ def db_check(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Checking table \'{0}\' in db \'{1}\'..'.format(name, table)
+                "Checking table '{0}' in db '{1}'..".format(name, table)
             )
             ret.append(__check_table(name, table, **connection_args))
     else:
-        log.info('Checking table \'{0}\' in db \'{1}\'..'.format(name, table))
+        log.info("Checking table '{0}' in db '{1}'..".format(name, table))
         ret = __check_table(name, table, **connection_args)
     return ret
 
@@ -1515,11 +1515,11 @@ def db_repair(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Repairing table \'{0}\' in db \'{1}\'..'.format(name, table)
+                "Repairing table '{0}' in db '{1}'..".format(name, table)
             )
             ret.append(__repair_table(name, table, **connection_args))
     else:
-        log.info('Repairing table \'{0}\' in db \'{1}\'..'.format(name, table))
+        log.info("Repairing table '{0}' in db '{1}'..".format(name, table))
         ret = __repair_table(name, table, **connection_args)
     return ret
 
@@ -1542,12 +1542,12 @@ def db_optimize(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
+                "Optimizing table '{0}' in db '{1}'..".format(name, table)
             )
             ret.append(__optimize_table(name, table, **connection_args))
     else:
         log.info(
-            'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
+            "Optimizing table '{0}' in db '{1}'..".format(name, table)
         )
         ret = __optimize_table(name, table, **connection_args)
     return ret
@@ -1564,7 +1564,7 @@ def __grant_normalize(grant):
     exploded_grants = grant.split(",")
     for chkgrant in exploded_grants:
         if chkgrant.strip().upper() not in __grants__:
-            raise Exception('Invalid grant : \'{0}\''.format(
+            raise Exception("Invalid grant : '{0}'".format(
                 chkgrant
             ))
 
@@ -1581,7 +1581,7 @@ def __ssl_option_sanitize(ssl_option):
         normal_key = key.strip().upper()
 
         if normal_key not in __ssl_options__:
-            raise Exception('Invalid SSL option : \'{0}\''.format(
+            raise Exception("Invalid SSL option : '{0}'".format(
                 key
             ))
 
@@ -1651,7 +1651,7 @@ def user_grants(user,
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
     if not user_exists(user, host, **connection_args):
-        log.info('User \'{0}\'@\'{1}\' does not exist'.format(user, host))
+        log.info("User '{0}'@'{1}' does not exist".format(user, host))
         return False
 
     dbc = _connect(**connection_args)
@@ -1725,7 +1725,7 @@ def grant_exists(grant,
                     set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
             else:
-                log.debug('grants mismatch \'{0}\'<>\'{1}\''.format(
+                log.debug("grants mismatch '{0}'<>'{1}'".format(
                     grant_tokens,
                     target_tokens
                 ))
@@ -1783,14 +1783,14 @@ def grant_add(grant,
             grant, database, user, host, grant_option, escape,
             **connection_args):
         log.info(
-            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
+            "Grant '{0}' on '{1}' for user '{2}' has been added".format(
                 grant, database, user
             )
         )
         return True
 
     log.info(
-        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been added'.format(
+        "Grant '{0}' on '{1}' for user '{2}' has NOT been added".format(
             grant, database, user
         )
     )
@@ -1864,13 +1864,13 @@ def grant_revoke(grant,
                         escape,
                         **connection_args):
         log.info(
-            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '
+            "Grant '{0}' on '{1}' for user '{2}' has been "
             'revoked'.format(grant, database, user)
         )
         return True
 
     log.info(
-        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been '
+        "Grant '{0}' on '{1}' for user '{2}' has NOT been "
         'revoked'.format(grant, database, user)
     )
     return False
@@ -1935,7 +1935,7 @@ def __do_query_into_hash(conn, sql_str):
     try:
         cursor = conn.cursor()
     except MySQLdb.MySQLError:
-        log.error('{0}: Can\'t get cursor for SQL->{1}'.format(mod, sql_str))
+        log.error("{0}: Can't get cursor for SQL->{1}".format(mod, sql_str))
         cursor.close()
         log.debug('{0}-->'.format(mod))
         return rtn_results

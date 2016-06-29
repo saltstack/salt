@@ -135,17 +135,17 @@ def _run_composer(action,
     # Validate Composer is there
     if not _valid_composer(composer):
         raise CommandNotFoundError(
-            '\'composer.{0}\' is not available. Couldn\'t find \'{1}\'.'
+            "'composer.{0}' is not available. Couldn't find '{1}'."
             .format(action, composer)
         )
 
     if action is None:
-        raise SaltInvocationError('The \'action\' argument is required')
+        raise SaltInvocationError("The 'action' argument is required")
 
     # Don't need a dir for the 'selfupdate' action; all other actions do need a dir
     if directory is None and action != 'selfupdate':
         raise SaltInvocationError(
-            'The \'directory\' argument is required for composer.{0}'.format(action)
+            "The 'directory' argument is required for composer.{0}".format(action)
         )
 
     # Base Settings

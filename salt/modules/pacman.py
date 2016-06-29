@@ -225,7 +225,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      "line: '{0}'".format(line))
         else:
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
@@ -267,7 +267,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      "line: '{0}'".format(line))
         else:
             available.setdefault(group, []).append(pkg)
 
@@ -283,7 +283,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Qg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      "line: '{0}'".format(line))
         else:
             installed.setdefault(group, []).append(pkg)
 
@@ -338,7 +338,7 @@ def group_info(name):
             pkg = line.split()[1]
         except ValueError:
             log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      "line: '{0}'".format(line))
         else:
             ret['default'].add(pkg)
 
@@ -513,7 +513,7 @@ def install(name=None,
             # Allow 'version' to work for single package target
             pkg_params = {name: version_num}
         else:
-            log.warning('\'version\' parameter will be ignored for multiple '
+            log.warning("'version' parameter will be ignored for multiple "
                         'package targets')
 
     if 'root' in kwargs:
@@ -538,8 +538,8 @@ def install(name=None,
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                 else:
-                    msg = 'Invalid version string \'{0}\' for package ' \
-                          '\'{1}\''.format(version_num, name)
+                    msg = "Invalid version string '{0}' for package " \
+                          "'{1}'".format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:

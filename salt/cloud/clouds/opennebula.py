@@ -516,7 +516,7 @@ def get_cluster_id(kwargs=None, call=None):
         ret = list_clusters()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The cluster \'{0}\' could not be found'.format(name)
+            "The cluster '{0}' could not be found".format(name)
         )
 
     return ret
@@ -552,7 +552,7 @@ def get_datastore_id(kwargs=None, call=None):
         ret = list_datastores()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The datastore \'{0}\' could not be found.'.format(name)
+            "The datastore '{0}' could not be found.".format(name)
         )
 
     return ret
@@ -588,7 +588,7 @@ def get_host_id(kwargs=None, call=None):
         ret = avail_locations()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The host \'{0}\' could not be found'.format(name)
+            "The host '{0}' could not be found".format(name)
         )
 
     return ret
@@ -609,7 +609,7 @@ def get_image(vm_):
         if vm_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
     raise SaltCloudNotFound(
-        'The specified image, \'{0}\', could not be found.'.format(vm_image)
+        "The specified image, '{0}', could not be found.".format(vm_image)
     )
 
 
@@ -643,7 +643,7 @@ def get_image_id(kwargs=None, call=None):
         ret = avail_images()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image \'{0}\' could not be found'.format(name)
+            "The image '{0}' could not be found".format(name)
         )
 
     return ret
@@ -669,7 +669,7 @@ def get_location(vm_):
                            locations[location]['id']):
             return locations[location]['id']
     raise SaltCloudNotFound(
-        'The specified location, \'{0}\', could not be found.'.format(
+        "The specified location, '{0}', could not be found.".format(
             vm_location
         )
     )
@@ -698,14 +698,14 @@ def get_secgroup_id(kwargs=None, call=None):
     name = kwargs.get('name', None)
     if name is None:
         raise SaltCloudSystemExit(
-            'The get_secgroup_id function requires a \'name\'.'
+            "The get_secgroup_id function requires a 'name'."
         )
 
     try:
         ret = list_security_groups()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The security group \'{0}\' could not be found.'.format(name)
+            "The security group '{0}' could not be found.".format(name)
         )
 
     return ret
@@ -734,14 +734,14 @@ def get_template_id(kwargs=None, call=None):
     name = kwargs.get('name', None)
     if name is None:
         raise SaltCloudSystemExit(
-            'The get_template_id function requires a \'name\'.'
+            "The get_template_id function requires a 'name'."
         )
 
     try:
         ret = list_templates()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The template \'{0}\' could not be foound.'.format(name)
+            "The template '{0}' could not be foound.".format(name)
         )
 
     return ret
@@ -764,7 +764,7 @@ def get_template(vm_):
         return list_templates()[vm_template]['id']
     except KeyError:
         raise SaltCloudNotFound(
-            'The specified template, \'{0}\', could not be found.'.format(vm_template)
+            "The specified template, '{0}', could not be found.".format(vm_template)
         )
 
 
@@ -798,7 +798,7 @@ def get_vm_id(kwargs=None, call=None):
         ret = list_nodes()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The VM \'{0}\' could not be found.'.format(name)
+            "The VM '{0}' could not be found.".format(name)
         )
 
     return ret
@@ -834,7 +834,7 @@ def get_vn_id(kwargs=None, call=None):
         ret = list_vns()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The VN \'{0}\' could not be found.'.format(name)
+            "The VN '{0}' could not be found.".format(name)
         )
 
     return ret
@@ -997,7 +997,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename \'{0}\' does not exist'.format(
+            "The defined key_filename '{0}' does not exist".format(
                 key_filename
             )
         )
@@ -1029,9 +1029,9 @@ def create(vm_):
     ret['private_ips'] = private_ip
     ret['public_ips'] = []
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info("Created Cloud VM '{0[name]}'".format(vm_))
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        "'{0[name]}' VM creation details:\n{1}".format(
             vm_, pprint.pformat(data)
         )
     )
@@ -1158,28 +1158,28 @@ def image_allocate(call=None, kwargs=None):
     if datastore_id:
         if datastore_name:
             log.warning(
-                'Both a \'datastore_id\' and a \'datastore_name\' were provided. '
-                '\'datastore_id\' will take precedence.'
+                "Both a 'datastore_id' and a 'datastore_name' were provided. "
+                "'datastore_id' will take precedence."
             )
     elif datastore_name:
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
     else:
         raise SaltCloudSystemExit(
-            'The image_allocate function requires either a \'datastore_id\' or a '
-            '\'datastore_name\' to be provided.'
+            "The image_allocate function requires either a 'datastore_id' or a "
+            "'datastore_name' to be provided."
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The image_allocate function requires either a file \'path\' or \'data\' '
+            "The image_allocate function requires either a file 'path' or 'data' "
             'to be provided.'
         )
 
@@ -1233,21 +1233,21 @@ def image_clone(call=None, kwargs=None):
 
     if name is None:
         raise SaltCloudSystemExit(
-            'The image_clone function requires a \'name\' to be provided.'
+            "The image_clone function requires a 'name' to be provided."
         )
 
     if image_id:
         if image_name:
             log.warning(
-                'Both the \'image_id\' and \'image_name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'image_name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif image_name:
         image_id = get_image_id(kwargs={'name': image_name})
     else:
         raise SaltCloudSystemExit(
-            'The image_clone function requires either an \'image_id\' or an '
-            '\'image_name\' to be provided.'
+            "The image_clone function requires either an 'image_id' or an "
+            "'image_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1299,15 +1299,15 @@ def image_delete(call=None, kwargs=None):
     if image_id:
         if name:
             log.warning(
-                'Both the \'image_id\' and \'name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif name:
         image_id = get_image_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The image_delete function requires either an \'image_id\' or a '
-            '\'name\' to be provided.'
+            "The image_delete function requires either an 'image_id' or a "
+            "'name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1360,14 +1360,14 @@ def image_info(call=None, kwargs=None):
     if image_id:
         if name:
             log.warning(
-                'Both the \'image_id\' and \'name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif name:
         image_id = get_image_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The image_info function requires either a \'name or an \'image_id\' '
+            "The image_info function requires either a 'name or an 'image_id' "
             'to be provided.'
         )
 
@@ -1419,22 +1419,22 @@ def image_persistent(call=None, kwargs=None):
 
     if persist is None:
         raise SaltCloudSystemExit(
-            'The image_persistent function requires \'persist\' to be set to \'True\' '
-            'or \'False\'.'
+            "The image_persistent function requires 'persist' to be set to 'True' "
+            "or 'False'."
         )
 
     if image_id:
         if name:
             log.warning(
-                'Both the \'image_id\' and \'name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif name:
         image_id = get_image_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The image_persistent function requires either a \'name\' or an '
-            '\'image_id\' to be provided.'
+            "The image_persistent function requires either a 'name' or an "
+            "'image_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1489,21 +1489,21 @@ def image_snapshot_delete(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_snapshot_delete function requires a \'snapshot_id\' to be provided.'
+            "The image_snapshot_delete function requires a 'snapshot_id' to be provided."
         )
 
     if image_id:
         if image_name:
             log.warning(
-                'Both the \'image_id\' and \'image_name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'image_name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif image_name:
         image_id = get_image_id(kwargs={'name': image_name})
     else:
         raise SaltCloudSystemExit(
-            'The image_snapshot_delete function requires either an \'image_id\' '
-            'or a \'image_name\' to be provided.'
+            "The image_snapshot_delete function requires either an 'image_id' "
+            "or a 'image_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1556,21 +1556,21 @@ def image_snapshot_revert(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_snapshot_revert function requires a \'snapshot_id\' to be provided.'
+            "The image_snapshot_revert function requires a 'snapshot_id' to be provided."
         )
 
     if image_id:
         if image_name:
             log.warning(
-                'Both the \'image_id\' and \'image_name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'image_name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif image_name:
         image_id = get_image_id(kwargs={'name': image_name})
     else:
         raise SaltCloudSystemExit(
-            'The image_snapshot_revert function requires either an \'image_id\' or '
-            'an \'image_name\' to be provided.'
+            "The image_snapshot_revert function requires either an 'image_id' or "
+            "an 'image_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1623,22 +1623,22 @@ def image_snapshot_flatten(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_flatten function requires a \'snapshot_id\' '
+            "The image_stanpshot_flatten function requires a 'snapshot_id' "
             'to be provided.'
         )
 
     if image_id:
         if image_name:
             log.warning(
-                'Both the \'image_id\' and \'image_name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'image_name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif image_name:
         image_id = get_image_id(kwargs={'name': image_name})
     else:
         raise SaltCloudSystemExit(
             'The image_snapshot_flatten function requires either an '
-            '\'image_id\' or an \'image_name\' to be provided.'
+            "'image_id' or an 'image_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1705,7 +1705,7 @@ def image_update(call=None, kwargs=None):
 
     if update_type is None:
         raise SaltCloudSystemExit(
-            'The image_update function requires an \'update_type\' to be provided.'
+            "The image_update function requires an 'update_type' to be provided."
         )
 
     if update_type == update_args[0]:
@@ -1723,28 +1723,28 @@ def image_update(call=None, kwargs=None):
     if image_id:
         if image_name:
             log.warning(
-                'Both the \'image_id\' and \'image_name\' arguments were provided. '
-                '\'image_id\' will take precedence.'
+                "Both the 'image_id' and 'image_name' arguments were provided. "
+                "'image_id' will take precedence."
             )
     elif image_name:
         image_id = get_image_id(kwargs={'name': image_name})
     else:
         raise SaltCloudSystemExit(
-            'The image_update function requires either an \'image_id\' or an '
-            '\'image_name\' to be provided.'
+            "The image_update function requires either an 'image_id' or an "
+            "'image_name' to be provided."
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The image_update function requires either \'data\' or a file \'path\' '
+            "The image_update function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -1829,15 +1829,15 @@ def secgroup_allocate(call=None, kwargs=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The secgroup_allocate function requires either \'data\' or a file '
-            '\'path\' to be provided.'
+            "The secgroup_allocate function requires either 'data' or a file "
+            "'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1892,21 +1892,21 @@ def secgroup_clone(call=None, kwargs=None):
 
     if name is None:
         raise SaltCloudSystemExit(
-            'The secgroup_clone function requires a \'name\' to be provided.'
+            "The secgroup_clone function requires a 'name' to be provided."
         )
 
     if secgroup_id:
         if secgroup_name:
             log.warning(
-                'Both the \'secgroup_id\' and \'secgroup_name\' arguments were provided. '
-                '\'secgroup_id\' will take precedence.'
+                "Both the 'secgroup_id' and 'secgroup_name' arguments were provided. "
+                "'secgroup_id' will take precedence."
             )
     elif secgroup_name:
         secgroup_id = get_secgroup_id(kwargs={'name': secgroup_name})
     else:
         raise SaltCloudSystemExit(
-            'The secgroup_clone function requires either a \'secgroup_id\' or a '
-            '\'secgroup_name\' to be provided.'
+            "The secgroup_clone function requires either a 'secgroup_id' or a "
+            "'secgroup_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -1959,15 +1959,15 @@ def secgroup_delete(call=None, kwargs=None):
     if secgroup_id:
         if name:
             log.warning(
-                'Both the \'secgroup_id\' and \'name\' arguments were provided. '
-                '\'secgroup_id\' will take precedence.'
+                "Both the 'secgroup_id' and 'name' arguments were provided. "
+                "'secgroup_id' will take precedence."
             )
     elif name:
         secgroup_id = get_secgroup_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The secgroup_delete function requires either a \'name\' or a '
-            '\'secgroup_id\' to be provided.'
+            "The secgroup_delete function requires either a 'name' or a "
+            "'secgroup_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2020,8 +2020,8 @@ def secgroup_info(call=None, kwargs=None):
     if secgroup_id:
         if name:
             log.warning(
-                'Both the \'secgroup_id\' and \'name\' arguments were provided. '
-                '\'secgroup_id\' will take precedence.'
+                "Both the 'secgroup_id' and 'name' arguments were provided. "
+                "'secgroup_id' will take precedence."
             )
     elif name:
         secgroup_id = get_secgroup_id(kwargs={'name': name})
@@ -2096,7 +2096,7 @@ def secgroup_update(call=None, kwargs=None):
 
     if update_type is None:
         raise SaltCloudSystemExit(
-            'The secgroup_update function requires an \'update_type\' to be provided.'
+            "The secgroup_update function requires an 'update_type' to be provided."
         )
 
     if update_type == update_args[0]:
@@ -2114,28 +2114,28 @@ def secgroup_update(call=None, kwargs=None):
     if secgroup_id:
         if secgroup_name:
             log.warning(
-                'Both the \'secgroup_id\' and \'secgroup_name\' arguments were provided. '
-                '\'secgroup_id\' will take precedence.'
+                "Both the 'secgroup_id' and 'secgroup_name' arguments were provided. "
+                "'secgroup_id' will take precedence."
             )
     elif secgroup_name:
         secgroup_id = get_secgroup_id(kwargs={'name': secgroup_name})
     else:
         raise SaltCloudSystemExit(
-            'The secgroup_update function requires either a \'secgroup_id\' or a '
-            '\'secgroup_name\' to be provided.'
+            "The secgroup_update function requires either a 'secgroup_id' or a "
+            "'secgroup_name' to be provided."
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The secgroup_update function requires either \'data\' or a file \'path\' '
+            "The secgroup_update function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -2193,15 +2193,15 @@ def template_allocate(call=None, kwargs=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The template_allocate function requires either \'data\' or a file '
-            '\'path\' to be provided.'
+            "The template_allocate function requires either 'data' or a file "
+            "'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2260,15 +2260,15 @@ def template_clone(call=None, kwargs=None):
     if template_id:
         if template_name:
             log.warning(
-                'Both the \'template_id\' and \'template_name\' arguments were provided. '
-                '\'template_id\' will take precedence.'
+                "Both the 'template_id' and 'template_name' arguments were provided. "
+                "'template_id' will take precedence."
             )
     elif template_name:
         template_id = get_template_id(kwargs={'name': template_name})
     else:
         raise SaltCloudSystemExit(
-            'The template_clone function requires either a \'template_id\' '
-            'or a \'template_name\' to be provided.'
+            "The template_clone function requires either a 'template_id' "
+            "or a 'template_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2321,14 +2321,14 @@ def template_delete(call=None, kwargs=None):
     if template_id:
         if name:
             log.warning(
-                'Both the \'template_id\' and \'name\' arguments were provided. '
-                '\'template_id\' will take precedence.'
+                "Both the 'template_id' and 'name' arguments were provided. "
+                "'template_id' will take precedence."
             )
     elif name:
         template_id = get_template_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The template_delete function requires either a \'name\' or a \'template_id\' '
+            "The template_delete function requires either a 'name' or a 'template_id' "
             'to be provided.'
         )
 
@@ -2389,21 +2389,21 @@ def template_instantiate(call=None, kwargs=None):
 
     if vm_name is None:
         raise SaltCloudSystemExit(
-            'The template_instantiate function requires a \'vm_name\' to be provided.'
+            "The template_instantiate function requires a 'vm_name' to be provided."
         )
 
     if template_id:
         if template_name:
             log.warning(
-                'Both the \'template_id\' and \'template_name\' arguments were provided. '
-                '\'template_id\' will take precedence.'
+                "Both the 'template_id' and 'template_name' arguments were provided. "
+                "'template_id' will take precedence."
             )
     elif template_name:
         template_id = get_template_id(kwargs={'name': template_name})
     else:
         raise SaltCloudSystemExit(
-            'The template_instantiate function requires either a \'template_id\' '
-            'or a \'template_name\' to be provided.'
+            "The template_instantiate function requires either a 'template_id' "
+            "or a 'template_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2475,7 +2475,7 @@ def template_update(call=None, kwargs=None):
 
     if update_type is None:
         raise SaltCloudSystemExit(
-            'The template_update function requires an \'update_type\' to be provided.'
+            "The template_update function requires an 'update_type' to be provided."
         )
 
     if update_type == update_args[0]:
@@ -2493,29 +2493,29 @@ def template_update(call=None, kwargs=None):
     if template_id:
         if template_name:
             log.warning(
-                'Both the \'template_id\' and \'template_name\' arguments were provided. '
-                '\'template_id\' will take precedence.'
+                "Both the 'template_id' and 'template_name' arguments were provided. "
+                "'template_id' will take precedence."
             )
     elif template_name:
         template_id = get_template_id(kwargs={'name': template_name})
     else:
         raise SaltCloudSystemExit(
-            'The template_update function requires either a \'template_id\' '
-            'or a \'template_name\' to be provided.'
+            "The template_update function requires either a 'template_id' "
+            "or a 'template_name' to be provided."
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The template_update function requires either \'data\' or a file '
-            '\'path\' to be provided.'
+            "The template_update function requires either 'data' or a file "
+            "'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2579,7 +2579,7 @@ def vm_action(name, kwargs=None, call=None):
     action = kwargs.get('action', None)
     if action is None:
         raise SaltCloudSystemExit(
-            'The vm_action function must have an \'action\' provided.'
+            "The vm_action function must have an 'action' provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2639,14 +2639,14 @@ def vm_allocate(call=None, kwargs=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vm_allocate function requires either \'data\' or a file \'path\' '
+            "The vm_allocate function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -2704,15 +2704,15 @@ def vm_attach(name, kwargs=None, call=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vm_attach function requires either \'data\' or a file '
-            '\'path\' to be provided.'
+            "The vm_attach function requires either 'data' or a file "
+            "'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2770,15 +2770,15 @@ def vm_attach_nic(name, kwargs=None, call=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vm_attach_nic function requires either \'data\' or a file '
-            '\'path\' to be provided.'
+            "The vm_attach_nic function requires either 'data' or a file "
+            "'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2854,22 +2854,22 @@ def vm_deploy(name, kwargs=None, call=None):
     if host_id:
         if host_name:
             log.warning(
-                'Both the \'host_id\' and \'host_name\' arguments were provided. '
-                '\'host_id\' will take precedence.'
+                "Both the 'host_id' and 'host_name' arguments were provided. "
+                "'host_id' will take precedence."
             )
     elif host_name:
         host_id = get_host_id(kwargs={'name': host_name})
     else:
         raise SaltCloudSystemExit(
-            'The vm_deploy function requires a \'host_id\' or a \'host_name\' '
+            "The vm_deploy function requires a 'host_id' or a 'host_name' "
             'to be provided.'
         )
 
     if datastore_id:
         if datastore_name:
             log.warning(
-                'Both the \'datastore_id\' and \'datastore_name\' arguments were provided. '
-                '\'datastore_id\' will take precedence.'
+                "Both the 'datastore_id' and 'datastore_name' arguments were provided. "
+                "'datastore_id' will take precedence."
             )
     elif datastore_name:
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
@@ -2924,7 +2924,7 @@ def vm_detach(name, kwargs=None, call=None):
     disk_id = kwargs.get('disk_id', None)
     if disk_id is None:
         raise SaltCloudSystemExit(
-            'The vm_detach function requires a \'disk_id\' to be provided.'
+            "The vm_detach function requires a 'disk_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -2971,7 +2971,7 @@ def vm_detach_nic(name, kwargs=None, call=None):
     nic_id = kwargs.get('nic_id', None)
     if nic_id is None:
         raise SaltCloudSystemExit(
-            'The vm_detach_nic function requires a \'nic_id\' to be provided.'
+            "The vm_detach_nic function requires a 'nic_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3035,7 +3035,7 @@ def vm_disk_save(name, kwargs=None, call=None):
 
     if disk_id is None or image_name is None:
         raise SaltCloudSystemExit(
-            'The vm_disk_save function requires a \'disk_id\' and an \'image_name\' '
+            "The vm_disk_save function requires a 'disk_id' and an 'image_name' "
             'to be provided.'
         )
 
@@ -3093,7 +3093,7 @@ def vm_disk_snapshot_create(name, kwargs=None, call=None):
 
     if disk_id is None or description is None:
         raise SaltCloudSystemExit(
-            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'description\' '
+            "The vm_disk_snapshot_create function requires a 'disk_id' and a 'description' "
             'to be provided.'
         )
 
@@ -3149,7 +3149,7 @@ def vm_disk_snapshot_delete(name, kwargs=None, call=None):
 
     if disk_id is None or snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'snapshot_id\' '
+            "The vm_disk_snapshot_create function requires a 'disk_id' and a 'snapshot_id' "
             'to be provided.'
         )
 
@@ -3205,7 +3205,7 @@ def vm_disk_snapshot_revert(name, kwargs=None, call=None):
 
     if disk_id is None or snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The vm_disk_snapshot_revert function requires a \'disk_id\' and a \'snapshot_id\' '
+            "The vm_disk_snapshot_revert function requires a 'disk_id' and a 'snapshot_id' "
             'to be provided.'
         )
 
@@ -3320,29 +3320,29 @@ def vm_migrate(name, kwargs=None, call=None):
     if datastore_id:
         if datastore_name:
             log.warning(
-                'Both the \'datastore_id\' and \'datastore_name\' arguments were provided. '
-                '\'datastore_id\' will take precedence.'
+                "Both the 'datastore_id' and 'datastore_name' arguments were provided. "
+                "'datastore_id' will take precedence."
             )
     elif datastore_name:
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
     else:
         raise SaltCloudSystemExit(
-            'The vm_migrate function requires either a \'datastore_id\' or a '
-            '\'datastore_name\' to be provided.'
+            "The vm_migrate function requires either a 'datastore_id' or a "
+            "'datastore_name' to be provided."
         )
 
     if host_id:
         if host_name:
             log.warning(
-                'Both the \'host_id\' and \'host_name\' arguments were provided. '
-                '\'host_id\' will take precedence.'
+                "Both the 'host_id' and 'host_name' arguments were provided. "
+                "'host_id' will take precedence."
             )
     elif host_name:
         host_id = get_host_id(kwargs={'name': host_name})
     else:
         raise SaltCloudSystemExit(
-            'The vm_migrate function requires either a \'host_id\' '
-            'or a \'host_name\' to be provided.'
+            "The vm_migrate function requires either a 'host_id' "
+            "or a 'host_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3397,7 +3397,7 @@ def vm_monitoring(name, call=None):
 
     if response[0] is False:
         log.error(
-            'There was an error retrieving the specified VM\'s monitoring '
+            "There was an error retrieving the specified VM's monitoring "
             'information.'
         )
         return {}
@@ -3456,14 +3456,14 @@ def vm_resize(name, kwargs=None, call=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vm_resize function requires either \'data\' or a file \'path\' '
+            "The vm_resize function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -3511,7 +3511,7 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
     snapshot_name = kwargs.get('snapshot_name', None)
     if snapshot_name is None:
         raise SaltCloudSystemExit(
-            'The vm_snapshot_create function requires a \'snapshot_name\' to be provided.'
+            "The vm_snapshot_create function requires a 'snapshot_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3558,7 +3558,7 @@ def vm_snapshot_delete(vm_name, kwargs=None, call=None):
     snapshot_id = kwargs.get('snapshot_id', None)
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The vm_snapshot_delete function requires a \'snapshot_id\' to be provided.'
+            "The vm_snapshot_delete function requires a 'snapshot_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3605,7 +3605,7 @@ def vm_snapshot_revert(vm_name, kwargs=None, call=None):
     snapshot_id = kwargs.get('snapshot_id', None)
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The vm_snapshot_revert function requires a \'snapshot_id\' to be provided.'
+            "The vm_snapshot_revert function requires a 'snapshot_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3665,7 +3665,7 @@ def vm_update(name, kwargs=None, call=None):
 
     if update_type is None:
         raise SaltCloudSystemExit(
-            'The vm_update function requires an \'update_type\' to be provided.'
+            "The vm_update function requires an 'update_type' to be provided."
         )
 
     if update_type == update_args[0]:
@@ -3683,14 +3683,14 @@ def vm_update(name, kwargs=None, call=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vm_update function requires either \'data\' or a file \'path\' '
+            "The vm_update function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -3756,28 +3756,28 @@ def vn_add_ar(call=None, kwargs=None):
     if vn_id:
         if vn_name:
             log.warning(
-                'Both the \'vn_id\' and \'vn_name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'vn_name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif vn_name:
         vn_id = get_vn_id(kwargs={'name': vn_name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_add_ar function requires a \'vn_id\' and a \'vn_name\' to '
+            "The vn_add_ar function requires a 'vn_id' and a 'vn_name' to "
             'be provided.'
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vn_add_ar function requires either \'data\' or a file \'path\' '
+            "The vn_add_ar function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
@@ -3842,22 +3842,22 @@ def vn_allocate(call=None, kwargs=None):
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vn_allocate function requires either \'data\' or a file \'path\' '
+            "The vn_allocate function requires either 'data' or a file 'path' "
             'to be provided.'
         )
 
     if cluster_id:
         if cluster_name:
             log.warning(
-                'Both the \'cluster_id\' and \'cluster_name\' arguments were provided. '
-                '\'cluster_id\' will take precedence.'
+                "Both the 'cluster_id' and 'cluster_name' arguments were provided. "
+                "'cluster_id' will take precedence."
              )
     elif cluster_name:
         cluster_id = get_cluster_id(kwargs={'name': cluster_name})
@@ -3912,14 +3912,14 @@ def vn_delete(call=None, kwargs=None):
     if vn_id:
         if name:
             log.warning(
-                'Both the \'vn_id\' and \'name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif name:
         vn_id = get_vn_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_delete function requires a \'name\' or a \'vn_id\' '
+            "The vn_delete function requires a 'name' or a 'vn_id' "
             'to be provided.'
         )
 
@@ -3975,20 +3975,20 @@ def vn_free_ar(call=None, kwargs=None):
 
     if ar_id is None:
         raise SaltCloudSystemExit(
-            'The vn_free_ar function requires an \'rn_id\' to be provided.'
+            "The vn_free_ar function requires an 'rn_id' to be provided."
         )
 
     if vn_id:
         if vn_name:
             log.warning(
-                'Both the \'vn_id\' and \'vn_name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'vn_name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif vn_name:
         vn_id = get_vn_id(kwargs={'name': vn_name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_free_ar function requires a \'vn_id\' or a \'vn_name\' to '
+            "The vn_free_ar function requires a 'vn_id' or a 'vn_name' to "
             'be provided.'
         )
 
@@ -4052,28 +4052,28 @@ def vn_hold(call=None, kwargs=None):
     if vn_id:
         if vn_name:
             log.warning(
-                'Both the \'vn_id\' and \'vn_name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'vn_name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif vn_name:
         vn_id = get_vn_id(kwargs={'name': vn_name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_hold function requires a \'vn_id\' or a \'vn_name\' to '
+            "The vn_hold function requires a 'vn_id' or a 'vn_name' to "
             'be provided.'
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vn_hold function requires either \'data\' or a \'path\' to '
+            "The vn_hold function requires either 'data' or a 'path' to "
             'be provided.'
         )
 
@@ -4126,14 +4126,14 @@ def vn_info(call=None, kwargs=None):
     if vn_id:
         if name:
             log.warning(
-                'Both the \'vn_id\' and \'name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif name:
         vn_id = get_vn_id(kwargs={'name': name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_info function requires either a \'name\' or a \'vn_id\' '
+            "The vn_info function requires either a 'name' or a 'vn_id' "
             'to be provided.'
         )
 
@@ -4196,28 +4196,28 @@ def vn_release(call=None, kwargs=None):
     if vn_id:
         if vn_name:
             log.warning(
-                'Both the \'vn_id\' and \'vn_name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'vn_name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif vn_name:
         vn_id = get_vn_id(kwargs={'name': vn_name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_release function requires a \'vn_id\' or a \'vn_name\' to '
+            "The vn_release function requires a 'vn_id' or a 'vn_name' to "
             'be provided.'
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vn_release function requires either \'data\' or a \'path\' to '
+            "The vn_release function requires either 'data' or a 'path' to "
             'be provided.'
         )
 
@@ -4282,28 +4282,28 @@ def vn_reserve(call=None, kwargs=None):
     if vn_id:
         if vn_name:
             log.warning(
-                'Both the \'vn_id\' and \'vn_name\' arguments were provided. '
-                '\'vn_id\' will take precedence.'
+                "Both the 'vn_id' and 'vn_name' arguments were provided. "
+                "'vn_id' will take precedence."
             )
     elif vn_name:
         vn_id = get_vn_id(kwargs={'name': vn_name})
     else:
         raise SaltCloudSystemExit(
-            'The vn_reserve function requires a \'vn_id\' or a \'vn_name\' to '
+            "The vn_reserve function requires a 'vn_id' or a 'vn_name' to "
             'be provided.'
         )
 
     if data:
         if path:
             log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
+                "Both the 'data' and 'path' arguments were provided. "
+                "'data' will take precedence."
             )
     elif path:
         data = salt.utils.fopen(path, mode='r').read()
     else:
         raise SaltCloudSystemExit(
-            'The vn_reserve function requires a \'path\' to be provided.'
+            "The vn_reserve function requires a 'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4337,7 +4337,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
+                "Failed to get the data for node '{0}'. Remaining "
                 'attempts: {1}'.format(
                     name, attempts
                 )

@@ -198,7 +198,7 @@ def get_jids():
 
     # Make sure the 'total_rows' is returned.. if not error out.
     if 'total_rows' not in _response:
-        log.error('Didn\'t get valid response from requesting all docs: {0}'
+        log.error("Didn't get valid response from requesting all docs: {0}"
                   .format(_response))
         return {}
 

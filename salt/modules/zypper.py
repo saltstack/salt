@@ -679,7 +679,7 @@ def del_repo(repo):
                     'message': msg[0].childNodes[0].nodeValue,
                 }
 
-    raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
+    raise CommandExecutionError("Repository '{0}' not found.".format(repo))
 
 
 def mod_repo(repo, **kwargs):
@@ -729,13 +729,13 @@ def mod_repo(repo, **kwargs):
         url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found, and neither \'baseurl\' nor '
-                '\'mirrorlist\' was specified'.format(repo)
+                "Repository '{0}' not found, and neither 'baseurl' nor "
+                "'mirrorlist' was specified".format(repo)
             )
 
         if not _urlparse(url).scheme:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and URL for baseurl/mirrorlist '
+                "Repository '{0}' not found and URL for baseurl/mirrorlist "
                 'is malformed'.format(repo)
             )
 
@@ -756,7 +756,7 @@ def mod_repo(repo, **kwargs):
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    'Repository \'{0}\' already exists as \'{1}\'.'.format(
+                    "Repository '{0}' already exists as '{1}'.".format(
                         repo,
                         alias
                     )
@@ -769,7 +769,7 @@ def mod_repo(repo, **kwargs):
         repos_cfg = _get_configured_repos()
         if repo not in repos_cfg.sections():
             raise CommandExecutionError(
-                'Failed add new repository \'{0}\' for unspecified reason. '
+                "Failed add new repository '{0}' for unspecified reason. "
                 'Please check zypper logs.'.format(repo))
         added = True
 
@@ -839,11 +839,11 @@ def refresh_db():
         if not line:
             continue
         if line.strip().startswith('Repository'):
-            key = line.split('\'')[1].strip()
+            key = line.split("'")[1].strip()
             if 'is up to date' in line:
                 ret[key] = False
         elif line.strip().startswith('Building'):
-            key = line.split('\'')[1].strip()
+            key = line.split("'")[1].strip()
             if 'done' in line:
                 ret[key] = True
     return ret
@@ -961,7 +961,7 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
                     log.debug(targets)
                 else:
-                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
+                    msg = ("Invalid version string '{0}' for package '{1}'".format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -974,7 +974,7 @@ def install(name=None,
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
-        log.info('Targeting repo \'{0}\''.format(fromrepo))
+        log.info("Targeting repo '{0}'".format(fromrepo))
     else:
         fromrepoopt = ''
     cmd_install = ['install', '--name', '--auto-agree-with-licenses']
@@ -1471,7 +1471,7 @@ def search(criteria, refresh=False):
     solvables = __zypper__.nolock.xml.call('se', criteria).getElementsByTagName('solvable')
     if not solvables:
         raise CommandExecutionError(
-            'No packages found matching \'{0}\''.format(criteria)
+            "No packages found matching '{0}'".format(criteria)
         )
 
     out = {}

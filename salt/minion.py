@@ -154,7 +154,7 @@ def resolve_dns(opts, fallback=True):
             if opts['retry_dns']:
                 while True:
                     import salt.log
-                    msg = ('Master hostname: \'{0}\' not found. Retrying in {1} '
+                    msg = ("Master hostname: '{0}' not found. Retrying in {1} "
                            'seconds').format(opts['master'], opts['retry_dns'])
                     if salt.log.setup.is_console_configured():
                         log.error(msg)
@@ -179,9 +179,9 @@ def resolve_dns(opts, fallback=True):
             if master == '':
                 master = unknown_str
             if opts.get('__role') == 'syndic':
-                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'syndic_master\' value in minion config.'.format(master)
+                err = "Master address: '{0}' could not be resolved. Invalid or unresolveable address. Set 'syndic_master' value in minion config.".format(master)
             else:
-                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'master\' value in minion config.'.format(master)
+                err = "Master address: '{0}' could not be resolved. Invalid or unresolveable address. Set 'master' value in minion config.".format(master)
             log.error(err)
             raise SaltSystemExit(code=42, msg=err)
     else:
@@ -453,7 +453,7 @@ class MinionBase(object):
                     # See issue 23611 for details
                     opts['master'] = [opts['master']]
                 elif opts['__role'] == 'syndic':
-                    log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
+                    log.info("Syndic setting master_syndic to '{0}'".format(opts['master']))
 
                 # if failed=True, the minion was previously connected
                 # we're probably called from the minions main-event-loop
@@ -471,7 +471,7 @@ class MinionBase(object):
                     else:
                         opts['master'] = opts['master_list']
                 else:
-                    msg = ('master_type set to \'failover\' but \'master\' '
+                    msg = ("master_type set to 'failover' but 'master' "
                            'is not of type list but of type '
                            '{0}'.format(type(opts['master'])))
                     log.error(msg)
@@ -479,13 +479,13 @@ class MinionBase(object):
                 # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
                 # See issue 21082 for details
                 if opts['retry_dns']:
-                    msg = ('\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
-                           'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
+                    msg = ("'master_type' set to 'failover' but 'retry_dns' is not 0. "
+                           "Setting 'retry_dns' to 0 to failover to the next master on DNS errors.")
                     log.critical(msg)
                     opts['retry_dns'] = 0
             else:
-                msg = ('Invalid keyword \'{0}\' for variable '
-                       '\'master_type\''.format(opts['master_type']))
+                msg = ("Invalid keyword '{0}' for variable "
+                       "'master_type'".format(opts['master_type']))
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
@@ -1303,7 +1303,7 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if function_name != 'saltutil.refresh_pillar' and \
                             function_name not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
-                        raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                        raise SaltInvocationError("Minion in blackout mode. Set 'minion_blackout' "
                                                  'to False in pillar to resume operations. Only '
                                                  'saltutil.refresh_pillar allowed in blackout mode.')
                 func = minion_instance.functions[function_name]
@@ -1362,7 +1362,7 @@ class Minion(MinionBase):
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
-                msg = 'Command required for \'{0}\' not found'.format(
+                msg = "Command required for '{0}' not found".format(
                     function_name
                 )
                 log.debug(msg, exc_info=True)
@@ -1370,7 +1370,7 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
             except CommandExecutionError as exc:
                 log.error(
-                    'A command in \'{0}\' had a problem: {1}'.format(
+                    "A command in '{0}' had a problem: {1}".format(
                         function_name,
                         exc
                     ),
@@ -1380,13 +1380,13 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
             except SaltInvocationError as exc:
                 log.error(
-                    'Problem executing \'{0}\': {1}'.format(
+                    "Problem executing '{0}': {1}".format(
                         function_name,
                         exc
                     ),
                     exc_info_on_loglevel=logging.DEBUG
                 )
-                ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
+                ret['return'] = "ERROR executing '{0}': {1}".format(
                     function_name, exc
                 )
                 ret['out'] = 'nested'
@@ -1405,7 +1405,7 @@ class Minion(MinionBase):
             ret['return'] = minion_instance.functions.missing_fun_string(function_name)
             mod_name = function_name.split('.')[0]
             if mod_name in minion_instance.function_errors:
-                ret['return'] += ' Possible reasons: \'{0}\''.format(
+                ret['return'] += " Possible reasons: '{0}'".format(
                     minion_instance.function_errors[mod_name]
                 )
             ret['success'] = False
@@ -1475,7 +1475,7 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if data['fun'][ind] != 'saltutil.refresh_pillar' and \
                             data['fun'][ind] not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
-                        raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                        raise SaltInvocationError("Minion in blackout mode. Set 'minion_blackout' "
                                                  'to False in pillar to resume operations. Only '
                                                  'saltutil.refresh_pillar allowed in blackout mode.')
                 func = minion_instance.functions[data['fun'][ind]]
@@ -1608,9 +1608,9 @@ class Minion(MinionBase):
         if self.opts['startup_states']:
             if self.opts.get('master_type', 'str') == 'disable' and \
                         self.opts.get('file_client', 'remote') == 'remote':
-                log.warning('Cannot run startup_states when \'master_type\' is '
-                            'set to \'disable\' and \'file_client\' is set to '
-                            '\'remote\'. Skipping.')
+                log.warning("Cannot run startup_states when 'master_type' is "
+                            "set to 'disable' and 'file_client' is set to "
+                            "'remote'. Skipping.")
             else:
                 data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
                 if self.opts['startup_states'] == 'sls':
@@ -1784,7 +1784,7 @@ class Minion(MinionBase):
 
         try:
             log.info(
-                '{0} is starting as user \'{1}\''.format(
+                "{0} is starting as user '{1}'".format(
                     self.__class__.__name__,
                     salt.utils.get_user()
                 )
@@ -1821,7 +1821,7 @@ class Minion(MinionBase):
         if not self.ready:
             raise tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
-        log.debug('Minion of "{0}" is handling event tag \'{1}\''.format(self.opts['master'], tag))
+        log.debug("Minion of '{0}' is handling event tag '{1}'".format(self.opts['master'], tag))
         if tag.startswith('module_refresh'):
             self.module_refresh(notify=data.get('notify', False))
         elif tag.startswith('pillar_refresh'):
@@ -1849,11 +1849,11 @@ class Minion(MinionBase):
             if tag.startswith('__master_failback'):
                 # if the master failback event is not for the top master, raise an exception
                 if data['master'] != self.opts['master_list'][0]:
-                    raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
+                    raise SaltException("Bad master '{0}' when mine failback is '{1}'".format(
                         data['master'], self.opts['master']))
                 # if the master failback event is for the current master, raise an exception
                 elif data['master'] == self.opts['master'][0]:
-                    raise SaltException('Already connected to \'{0}\''.format(data['master']))
+                    raise SaltException("Already connected to '{0}'".format(data['master']))
 
             if self.connected:
                 # we are not connected anymore
@@ -1987,7 +1987,7 @@ class Minion(MinionBase):
         '''
         self._pre_tune()
 
-        log.debug('Minion \'{0}\' trying to tune in'.format(self.opts['id']))
+        log.debug("Minion '{0}' trying to tune in".format(self.opts['id']))
 
         if start:
             self.sync_connect_master()
@@ -2485,7 +2485,7 @@ class SyndicManager(MinionBase):
             self.opts['_minion_conf_file'], io_loop=self.io_loop)
         self.local.event.subscribe('')
 
-        log.debug('SyndicManager \'{0}\' trying to tune in'.format(self.opts['id']))
+        log.debug("SyndicManager '{0}' trying to tune in".format(self.opts['id']))
 
         # register the event sub to the poller
         self.job_rets = {}

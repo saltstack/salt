@@ -102,7 +102,7 @@ def fail_without_changes(name):
 
     if __opts__['test']:
         ret['result'] = False
-        ret['comment'] = 'If we weren\'t testing, this would be a failure!'
+        ret['comment'] = "If we weren't testing, this would be a failure!"
 
     return ret
 
@@ -134,7 +134,7 @@ def succeed_with_changes(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('If we weren\'t testing, this would be successful '
+        ret['comment'] = ("If we weren't testing, this would be successful "
                           'with changes')
 
     return ret
@@ -167,7 +167,7 @@ def fail_with_changes(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('If we weren\'t testing, this would be failed with '
+        ret['comment'] = ("If we weren't testing, this would be failed with "
                           'changes')
 
     return ret
@@ -221,9 +221,9 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     elif changes is False:
         ret['changes'] = {}
     else:
-        err = ('You have specified the state option \'Changes\' with'
+        err = ("You have specified the state option 'Changes' with"
                ' invalid arguments. It must be either '
-               ' \'True\', \'False\', or \'Random\'')
+               " 'True', 'False', or 'Random'")
         raise SaltInvocationError(err)
 
     if result == 'Random':
@@ -235,9 +235,9 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         ret['result'] = False
     else:
         raise SaltInvocationError('You have specified the state option '
-                                  '\'Result\' with invalid arguments. It must '
-                                  'be either \'True\', \'False\', or '
-                                  '\'Random\'')
+                                  "'Result' with invalid arguments. It must "
+                                  "be either 'True', 'False', or "
+                                  "'Random'")
 
     if __opts__['test']:
         ret['result'] = True if changes is False else None

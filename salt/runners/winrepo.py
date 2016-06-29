@@ -55,8 +55,8 @@ def genrepo(opts=None, fire_event=True):
     if 'win_repo' in opts:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
+            "The 'win_repo' config option is deprecated, please use "
+            "'winrepo_dir' instead."
         )
         winrepo_dir = opts['win_repo']
     else:
@@ -65,8 +65,8 @@ def genrepo(opts=None, fire_event=True):
     if 'win_repo_mastercachefile' in opts:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo_mastercachefile\' config option is deprecated, '
-            'please use \'winrepo_cachefile\' instead.'
+            "The 'win_repo_mastercachefile' config option is deprecated, "
+            "please use 'winrepo_cachefile' instead."
         )
         winrepo_cachefile = opts['win_repo_mastercachefile']
     else:
@@ -99,7 +99,7 @@ def genrepo(opts=None, fire_event=True):
                     revmap = {}
                     for pkgname, versions in six.iteritems(config):
                         log.debug(
-                            'Compiling winrepo data for package \'{0}\''
+                            "Compiling winrepo data for package '{0}'"
                             .format(pkgname)
                         )
                         for version, repodata in six.iteritems(versions):
@@ -174,8 +174,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
     if 'win_repo' in opts:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
+            "The 'win_repo' config option is deprecated, please use "
+            "'winrepo_dir' instead."
         )
         winrepo_dir = opts['win_repo']
     else:
@@ -184,8 +184,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
     if 'win_gitrepos' in opts:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_gitrepos\' config option is deprecated, please use '
-            '\'winrepo_remotes\' instead.'
+            "The 'win_gitrepos' config option is deprecated, please use "
+            "'winrepo_remotes' instead."
         )
         winrepo_remotes = opts['win_gitrepos']
     else:

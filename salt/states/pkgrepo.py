@@ -276,8 +276,8 @@ def managed(name, ppa=None, **kwargs):
                          '"key_url" argument.'
     if 'repo' in kwargs:
         ret['result'] = False
-        ret['comment'] = ('\'repo\' is not a supported argument for this '
-                          'state. The \'name\' argument is probably what was '
+        ret['comment'] = ("'repo' is not a supported argument for this "
+                          "state. The 'name' argument is probably what was "
                           'intended.')
         return ret
 
@@ -327,7 +327,7 @@ def managed(name, ppa=None, **kwargs):
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to examine repo \'{0}\': {1}'.format(name, exc)
+            "Failed to examine repo '{0}': {1}".format(name, exc)
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
@@ -379,13 +379,13 @@ def managed(name, ppa=None, **kwargs):
 
         if not needs_update:
             ret['result'] = True
-            ret['comment'] = ('Package repo \'{0}\' already configured'
+            ret['comment'] = ("Package repo '{0}' already configured"
                               .format(name))
             return ret
 
     if __opts__['test']:
         ret['comment'] = (
-            'Package repo \'{0}\' will be configured. This may cause pkg '
+            "Package repo '{0}' will be configured. This may cause pkg "
             'states to behave differently than stated if this action is '
             'repeated without test=True, due to the differences in the '
             'configured repositories.'.format(name)
@@ -406,7 +406,7 @@ def managed(name, ppa=None, **kwargs):
         # function.
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
+            "Failed to configure repo '{0}': {1}".format(name, exc)
         return ret
 
     try:
@@ -424,11 +424,11 @@ def managed(name, ppa=None, **kwargs):
             ret['changes'] = {'repo': repo}
 
         ret['result'] = True
-        ret['comment'] = 'Configured package repo \'{0}\''.format(name)
+        ret['comment'] = "Configured package repo '{0}'".format(name)
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
+            "Failed to confirm config of repo '{0}': {1}".format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -513,7 +513,7 @@ def absent(name, **kwargs):
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
+            "Failed to configure repo '{0}': {1}".format(name, exc)
         return ret
 
     if not repo:
@@ -522,7 +522,7 @@ def absent(name, **kwargs):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = ('Package repo \'{0}\' will be removed. This may '
+        ret['comment'] = ("Package repo '{0}' will be removed. This may "
                           'cause pkg states to behave differently than stated '
                           'if this action is repeated without test=True, due '
                           'to the differences in the configured repositories.'

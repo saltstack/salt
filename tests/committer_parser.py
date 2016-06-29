@@ -110,7 +110,7 @@ def counts_by_contributor(commits_by_contributor, results):
     output += '\n'
 
     for email in sorted(commits_by_contributor.keys()):
-        output += '\'{0}'.format(email)
+        output += "'{0}".format(email)
         for d in dates:
             if d in commits_by_contributor[email]:
                 output += '\t{0}'.format(commits_by_contributor[email][d])
@@ -136,7 +136,7 @@ def main(argv=None):
         try:
             opts, args = getopt.getopt(argv[1:], 'hc', ['help', 'contributor-detail'])
             if len(args) < 1:
-                raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
+                raise Usage("committer_parser.py needs a filename or '-' to read from stdin")
         except getopt.error as msg:
             raise Usage(msg)
     except Usage as err:
