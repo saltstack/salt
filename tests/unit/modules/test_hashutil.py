@@ -51,9 +51,3 @@ class HashutilTestCase(ModuleCase):
                 'shared secret',
                 self.the_string_hmac)
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HashutilTestCase,
-              needs_daemon=False)
