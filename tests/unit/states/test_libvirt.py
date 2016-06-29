@@ -15,10 +15,6 @@ from salttesting.mock import (
     mock_open,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.states import virt
 import salt.utils
@@ -65,8 +61,3 @@ class LibvirtTestCase(TestCase):
                     ret.update({'comment': comt, 'result': True,
                                 'changes': {'servercert': 'new'}})
                     self.assertDictEqual(virt.keys(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LibvirtTestCase, needs_daemon=False)
