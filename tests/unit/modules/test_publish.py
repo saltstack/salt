@@ -15,10 +15,6 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import publish
 import salt.crypt
@@ -116,8 +112,3 @@ class PublishTestCase(TestCase):
             Channel.flag = 1
             self.assertEqual(publish.runner('manage.down'),
                              "'manage.down' runner publish timed out")
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PublishTestCase, needs_daemon=False)
