@@ -12,9 +12,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import mdadm
@@ -56,7 +54,3 @@ class MdadmTestCase(TestCase):
                               '--force -l 5 -e default -n 3 '
                               '/dev/sdb1 /dev/sdc1 /dev/sdd1', ret)
             assert not mock.called, 'test mode failed, cmd.run called'
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MdadmTestCase, needs_daemon=False)
