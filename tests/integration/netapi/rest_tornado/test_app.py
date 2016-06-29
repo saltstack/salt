@@ -13,9 +13,6 @@ from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../../')
 
 import salt.ext.six as six
 
@@ -608,13 +605,3 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                               )
         response_obj = json.loads(response.body)
         self.assertTrue(response_obj['success'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestEventsSaltAPIHandler,
-              TestJobsSaltAPIHandler,
-              TestMinionSaltAPIHandler,
-              TestRunSaltAPIHandler,
-              TestSaltAPIHandler,
-              TestWebhookSaltAPIHandler, needs_daemon=True)
