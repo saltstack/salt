@@ -12,9 +12,8 @@ import string
 import logging
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
+from salttesting.helpers import requires_salt_modules
 from salttesting import skipIf
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -131,8 +130,3 @@ class DockerTest(integration.ModuleCase):
         new_container = self.run_function('docker.create_container', image='testsuite_committed_img')
         final_ret = self.run_function('docker.run_stdout', container=new_container['id'], cmd='cat /tmp/cheese')
         self.assertEqual(final_ret['out'], 'The cheese shop is now closed.')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DockerTest)
