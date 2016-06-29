@@ -8,7 +8,6 @@ from salt.states import proxy as proxy
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -16,8 +15,6 @@ from salttesting.mock import (
     patch,
     call
 )
-
-ensure_in_syspath('../../')
 
 proxy.__salt__ = {}
 proxy.__grains__ = {}
@@ -188,8 +185,3 @@ class ProxyTestCase(TestCase):
 
             assert not set_proxy_mock.called
             self.assertEqual(out, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ProxyTestCase, needs_daemon=False)
