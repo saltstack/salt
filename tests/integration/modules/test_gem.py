@@ -8,8 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from salttesting.helpers import destructiveTest
 
 # Import salt libs
 import integration
@@ -138,7 +137,3 @@ class GemModuleTest(integration.ModuleCase):
         '''
         ret = self.run_function('gem.update_system')
         self.assertTrue(ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GemModuleTest)
