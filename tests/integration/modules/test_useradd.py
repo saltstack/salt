@@ -10,10 +10,8 @@ import random
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
     requires_system_grains
 )
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils
@@ -109,8 +107,3 @@ class UseraddModuleTest(integration.ModuleCase):
         except:
             self.run_function('user.delete', [name])
             raise
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UseraddModuleTest)
