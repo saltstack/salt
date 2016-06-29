@@ -2,20 +2,15 @@
 '''
     :codeauthor: :email:`Thayne Harbaugh (tharbaug@adobe.com)`
 
-    tests.integration.shell.proxy
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.integration.shell.test_proxy
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import logging
 
-# Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
 # Import salt libs
-import integration
 from integration.utils import testprogram
 
 log = logging.getLogger(__name__)
@@ -120,7 +115,3 @@ class ProxyTest(testprogram.TestProgramCase):
             stdout=stdout, stderr=stderr
         )
         proxy.shutdown()
-
-
-if __name__ == '__main__':
-    integration.run_tests(ProxyTest)
