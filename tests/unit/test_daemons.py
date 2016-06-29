@@ -8,10 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../')
 
 # Import Salt libs
 import integration
@@ -215,8 +212,3 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                     _create_syndic().start()
                     self.assertTrue(_logger.messages)
                     self.assertFalse(_logger.has_message('Do not use '))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DaemonsStarterTestCase, needs_daemon=False)
