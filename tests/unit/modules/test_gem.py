@@ -5,9 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.modules.gem as gem
@@ -132,8 +130,3 @@ http://rubygems.org/
         with patch.object(gem, '_gem', new=mock):
             self.assertEqual(
                 ['http://rubygems.org/'], gem.sources_list())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestGemModule, needs_daemon=False)
