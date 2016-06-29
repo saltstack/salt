@@ -107,8 +107,3 @@ class HgTestCase(TestCase):
                 'dir 0': {'added': ['file 0']},
                 'dir 1': {'modified': ['file 1']},
             })
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HgTestCase, needs_daemon=False)
