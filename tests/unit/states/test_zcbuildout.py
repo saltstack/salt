@@ -6,15 +6,10 @@ import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    requires_network,
-)
-
-ensure_in_syspath('../../')
-import integration
+from salttesting.helpers import requires_network
 
 # Import Salt libs
+import integration
 import salt.utils
 from unit.modules.zcbuildout_test import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 from salt.modules import zcbuildout as modbuildout
@@ -89,8 +84,3 @@ class BuildoutTestCase(Base):
         self.assertEqual(ret['result'], True)
         self.assertTrue('OUTPUT:' in ret['comment'])
         self.assertTrue('Log summary:' in ret['comment'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BuildoutTestCase, needs_daemon=False)
