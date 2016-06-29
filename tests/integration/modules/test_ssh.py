@@ -9,9 +9,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
-
+from salttesting.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import integration
@@ -91,7 +89,7 @@ class SSHModuleTest(integration.ModuleCase):
 
     def test_get_known_host(self):
         '''
-        Check that known host information is returned from ~/.ssh/config
+        Check that known host information is returned from ~/.test_ssh/config
         '''
         shutil.copyfile(
              os.path.join(integration.FILES, 'ssh', 'known_hosts'),
@@ -229,8 +227,3 @@ class SSHModuleTest(integration.ModuleCase):
                     exc, ret
                 )
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHModuleTest)
