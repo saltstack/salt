@@ -2,14 +2,11 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-from mock import call
 import re
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call
 
 # Import salt libs
 from salt.modules import postgres
@@ -1452,7 +1449,3 @@ class PostgresTestCase(TestCase):
         name = '/var/lib/pgsql/data'
         ret = postgres.datadir_exists(name)
         self.assertTrue(ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PostgresTestCase, needs_daemon=False)
