@@ -6,9 +6,7 @@ import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
-
-ensure_in_syspath('../../')
+from salttesting.helpers import requires_salt_modules
 
 # Import salt libs
 import integration
@@ -28,8 +26,3 @@ class RabbitModuleTest(integration.ModuleCase):
         '''
         ret = self.run_function('rabbitmq.user_exists', ['null_user'])
         self.assertEqual(ret, False)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitModuleTest)
