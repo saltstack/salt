@@ -12,8 +12,7 @@ import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
+from salttesting.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import integration
@@ -223,8 +222,3 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             repo=name,
             **{'global': False})
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitTest)
