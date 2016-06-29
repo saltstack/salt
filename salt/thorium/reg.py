@@ -6,7 +6,6 @@ values are stored and computed, such as averages etc.
 
 # import python libs
 from __future__ import absolute_import, division
-import time
 import fnmatch
 
 __func_alias__ = {

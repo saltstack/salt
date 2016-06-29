@@ -16,7 +16,7 @@ def _get_key_api():
     '''
     Return the key api hook
     '''
-    if not 'keyapi' in __context__:
+    if 'keyapi' not in __context__:
         __context__['keyapi'] = salt.key.Key(__opts__)
     return __context__['keyapi']
 
