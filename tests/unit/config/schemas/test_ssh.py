@@ -10,9 +10,6 @@ from __future__ import absolute_import, print_function
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
