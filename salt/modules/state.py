@@ -1439,6 +1439,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
         shutil.rmtree(root)
     except (IOError, OSError):
         pass
+    _set_retcode(ret)
     return ret
 
 

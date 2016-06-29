@@ -150,6 +150,8 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test salt grain matcher
         '''
+        # Sync grains
+        self.run_salt('-t1 "*" saltutil.sync_grains')
         # First-level grain (string value)
         data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
         data = '\n'.join(data)
@@ -159,6 +161,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Custom grain
+        data = self.run_salt('-t 1 -G "match:maker" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
         # First-level grain (list member)
         data = self.run_salt('-t 1 -G "planets:earth" test.ping')
         data = '\n'.join(data)
