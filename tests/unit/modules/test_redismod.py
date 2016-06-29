@@ -13,10 +13,6 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 from salt.modules import redismod
 from datetime import datetime
@@ -467,8 +463,3 @@ class RedismodTestCase(TestCase):
         Test to get a range of values from a sorted set in Redis by index
         '''
         self.assertEqual(redismod.zrange('key', 'start', 'stop'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RedismodTestCase, needs_daemon=False)
