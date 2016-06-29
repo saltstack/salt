@@ -303,6 +303,19 @@ def runas_system(cmd, username, password):
         # Get Unrestricted Token (UAC) if this is an Admin Account
         elevated_token = win32security.GetTokenInformation(
             token, win32security.TokenLinkedToken)
+
+        # Get list of privileges this token contains
+        privileges = win32security.GetTokenInformation(
+            elevated_token, win32security.TokenPrivileges)
+
+        # Create a set of all privileges to be enabled
+        enable_privs = set()
+        for luid, flags in privileges:
+            enable_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+        # Enable the privileges
+        win32security.AdjustTokenPrivileges(elevated_token, 0, enable_privs)
+
     except win32security.error as exc:
         # User doesn't have admin, use existing token
         if exc[0] == winerror.ERROR_NO_SUCH_LOGON_SESSION \
