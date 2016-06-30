@@ -421,7 +421,13 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     data = dict((k, '') for k in data)
                 image_labels.update(data)
                 data = image_labels
-            if actual_data != data:
+
+            def _filter_swarm_labels(_api_data):
+                return { k: v for k, v in _api_data.iteritems()
+                        if k != 'com.docker.swarm.id' }
+
+            if (_filter_swarm_labels(actual_data) !=
+                    _filter_swarm_labels(data)):
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
         elif item == 'log_config':
