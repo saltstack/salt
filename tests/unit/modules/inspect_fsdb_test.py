@@ -203,6 +203,28 @@ class InspectorFSDBTestCase(TestCase):
 
     @patch("os.makedirs", MagicMock())
     @patch("os.listdir", MagicMock(return_value=['test_db']))
+    def test_get_obj_equals(self):
+        '''
+        Getting an object from the store with conditions
+        :return:
+        '''
+        with patch("gzip.open", MagicMock()):
+            with patch("csv.reader", MagicMock(return_value=iter([[], ['foo:int', 'bar:str', 'spam:float'],
+                                                                  ['123', 'test', '0.123'],
+                                                                  ['234', 'another', '0.456']]))):
+                csvdb = CsvDB('/foobar')
+                csvdb.open()
+
+                entities = csvdb.get(FoobarEntity, eq={'foo': 123})
+                assert list == type(entities)
+                assert len(entities) == 1
+
+                assert entities[0].foo == 123
+                assert entities[0].bar == 'test'
+                assert entities[0].spam == 0.123
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.listdir", MagicMock(return_value=['test_db']))
     def test_get_obj_more_than(self):
         '''
         Getting an object from the store with conditions
