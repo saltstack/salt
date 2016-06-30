@@ -28,5 +28,5 @@ def beacon(config):
     '''
     Just say that we are ok!
     '''
-    ctime = datetime.datetime.utcnow().ctime()
+    ctime = datetime.datetime.utcnow().isoformat()
     return [{'tag': ctime}]
