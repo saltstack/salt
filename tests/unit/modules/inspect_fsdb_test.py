@@ -57,7 +57,8 @@ def mock_open(data=None):
     return mock
 
 
-class TestEntity(CsvDBEntity):
+
+class FoobarEntity(CsvDBEntity):
     '''
     Entity for test purposes.
     '''
@@ -131,7 +132,7 @@ class InspectorFSDBTestCase(TestCase):
         with patch("gzip.open", MagicMock(return_value=writer)):
             csvdb = CsvDB('/foobar')
             csvdb.open()
-            csvdb.create_table_from_object(TestEntity())
+            csvdb.create_table_from_object(FoobarEntity())
 
         assert writer.data[0].strip() == "foo:int,bar:str,spam:float"
 
