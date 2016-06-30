@@ -147,6 +147,11 @@ class InspectorFSDBTestCase(TestCase):
     @patch("os.listdir", MagicMock(return_value=['test_db']))
     def test_list_databases(self):
         '''
+        Test list databases.
+        :return:
+        '''
+        csvdb = CsvDB('/foobar')
+        assert csvdb.list() == ['test_db']
         Test storing object into the database.
 
     def test_obj_serialization(self):
