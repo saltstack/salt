@@ -89,7 +89,6 @@ class FoobarEntity(CsvDBEntity):
         self.spam = 0.
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class InspectorFSDBTestCase(TestCase):
     '''
     Test case for the FSDB: FileSystem Database.
@@ -154,7 +153,28 @@ class InspectorFSDBTestCase(TestCase):
         '''
         csvdb = CsvDB('/foobar')
         assert csvdb.list() == ['test_db']
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.path.exists", MagicMock(return_value=False))
+    @patch("os.listdir", MagicMock(return_value=['some_table']))
+    def test_add_object(self):
+        '''
         Test storing object into the database.
+        :return:
+        '''
+        writable = Writable()
+        with patch("gzip.open", MagicMock(return_value=writable)):
+            obj = FoobarEntity()
+            obj.foo = 123
+            obj.bar = 'test entity'
+            obj.spam = 0.123
+
+            csvdb = CsvDB('/foobar')
+            csvdb.open()
+            csvdb._tables = {'some_table': OrderedDict([tuple(elm.split(':'))
+                                                        for elm in ["foo:int", "bar:str", "spam:float"]])}
+            csvdb.store(obj)
+            assert writable.data[0].strip() == '123,test entity,0.123'
 
     def test_obj_serialization(self):
         '''
