@@ -47,6 +47,7 @@ config = salt.config.minion_config(
         os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
 )
 
+# Set HTTP_PROXY_URL for use in various internet facing actions...eg apt-key adv
 if config['proxy_host'] and config['proxy_port']:
     if config['proxy_username'] and config['proxy_password']:
         HTTP_PROXY_URL = 'http://{0}:{1}@{2}:{3}'.format(
