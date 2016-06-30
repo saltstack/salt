@@ -60,8 +60,11 @@ def mock_open(data=None):
 
 
 class Writable(StringIO):
-    def __init__(self):
-        StringIO.__init__(self)
+    def __init__(self, data=None):
+        if data:
+            StringIO.__init__(self, data)
+        else:
+            StringIO.__init__(self)
         self.data = []
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -69,9 +72,6 @@ class Writable(StringIO):
 
     def __enter__(self):
         return self
-
-    def read(self, n=-1):
-        return ""
 
     def write(self, s):
         self.data.append(s)
