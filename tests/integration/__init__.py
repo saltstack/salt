@@ -31,10 +31,6 @@ try:
     import pwd
 except ImportError:
     pass
-try:
-    import salt.ext.six.moves.socketserver as socketserver
-except ImportError:
-    import socketserver
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
