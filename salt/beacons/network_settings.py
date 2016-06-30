@@ -2,6 +2,8 @@
 '''
 Beacon to monitor network adapter setting changes on Linux
 
+.. versionadded:: 2016.3.0
+
 '''
 from __future__ import absolute_import
 # Import third party libs
