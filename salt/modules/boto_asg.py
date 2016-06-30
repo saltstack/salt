@@ -597,6 +597,43 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
+def get_all_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
+
+    CLI example::
+
+        salt-call boto_asg.get_all_groups region=us-east-1 --output yaml
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        next_token = ''
+        asgs = []
+        while next_token is not None:
+            ret = conn.get_all_groups(next_token=next_token)
+            asgs += [a for a in ret]
+            next_token = ret.next_token
+        return asgs
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of names).
+
+    CLI example::
+
+        salt-call boto_asg.list_groups region=us-east-1
+
+    '''
+    return [a.name for a in get_all_groups(region=region, key=key, keyid=keyid, profile=profile)]
+
+
 def get_instances(name, lifecycle_state="InService", health_status="Healthy",
                   attribute="private_ip_address", attributes=None, region=None,
                   key=None, keyid=None, profile=None):
