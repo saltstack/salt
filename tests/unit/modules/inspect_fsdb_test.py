@@ -57,6 +57,21 @@ def mock_open(data=None):
     return mock
 
 
+class Writable(StringIO):
+    data = []
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def read(self, n=-1):
+        return ""
+
+    def write(self, s):
+        self.data.append(s)
+
 
 class FoobarEntity(CsvDBEntity):
     '''
@@ -117,24 +132,13 @@ class InspectorFSDBTestCase(TestCase):
         Test creating table.
         :return:
         '''
-        class Writer(StringIO):
-            data = []
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                return self
-            def __enter__(self):
-                return self
-            def read(self, n = -1):
-                return ""
-            def write(self, s):
-                self.data.append(s)
-
-        writer = Writer()
-        with patch("gzip.open", MagicMock(return_value=writer)):
+        writable = Writable()
+        with patch("gzip.open", MagicMock(return_value=writable)):
             csvdb = CsvDB('/foobar')
             csvdb.open()
             csvdb.create_table_from_object(FoobarEntity())
 
-        assert writer.data[0].strip() == "foo:int,bar:str,spam:float"
+        assert writable.data[0].strip() == "foo:int,bar:str,spam:float"
 
 
     @patch("os.makedirs", MagicMock())
