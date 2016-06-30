@@ -79,4 +79,5 @@ to function properly you will also need to enable the `status` beacon:
 .. code-block:: yaml
 
     beacons:
-      status: {}
+      status:
+        interval: 10
