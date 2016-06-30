@@ -162,7 +162,21 @@ class InspectorFSDBTestCase(TestCase):
         descr = OrderedDict([tuple(elm.split(':')) for elm in ["foo:int", "bar:str", "spam:float"]])
         assert obj._serialize(descr) == [123, 'test entity', 0.123]
 
+    @patch("os.makedirs", MagicMock())
+    @patch("os.path.exists", MagicMock(return_value=False))
+    @patch("os.listdir", MagicMock(return_value=['some_table']))
+    def test_obj_validation(self):
+        '''
+        Test object validation.
+
         :return:
         '''
+        obj = FoobarEntity()
+        obj.foo = 123
+        obj.bar = 'test entity'
+        obj.spam = 0.123
+
         csvdb = CsvDB('/foobar')
-        assert csvdb.list() == ['test_db']
+        csvdb._tables = {'some_table': OrderedDict([tuple(elm.split(':'))
+                                                    for elm in ["foo:int", "bar:str", "spam:float"]])}
+        assert csvdb._validate_object(obj) == [123, 'test entity', 0.123]
