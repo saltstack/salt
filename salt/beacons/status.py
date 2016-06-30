@@ -12,7 +12,7 @@ health and status data
 
 # Import python libs
 from __future__ import absolute_import
-import time
+import datetime
 
 
 def validate(config):
@@ -28,4 +28,5 @@ def beacon(config):
     '''
     Just say that we are ok!
     '''
-    return [{'tag': '{0}'.format(int(time.time()))}]
+    ctime = datetime.datetime.utcnow().ctime()
+    return [{'tag': ctime}]
