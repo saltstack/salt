@@ -264,12 +264,12 @@ class CsvDB(object):
         '''
         # Fail matcher if "less than"
         for field, value in (mt or {}).items():
-            if getattr(obj, field) < value:
+            if getattr(obj, field) <= value:
                 return False
 
         # Fail matcher if "more than"
         for field, value in (lt or {}).items():
-            if getattr(obj, field) > value:
+            if getattr(obj, field) >= value:
                 return False
 
         # Fail matcher if "not equal"
