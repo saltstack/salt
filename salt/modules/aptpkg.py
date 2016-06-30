@@ -33,6 +33,8 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
 
 # Import salt libs
+import salt.config
+import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 from salt.exceptions import (
@@ -40,6 +42,24 @@ from salt.exceptions import (
 )
 
 log = logging.getLogger(__name__)
+
+config = salt.config.minion_config(
+        os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
+)
+
+if config['proxy_host'] and config['proxy_port']:
+    if config['proxy_username'] and config['proxy_password']:
+        HTTP_PROXY_URL = 'http://{0}:{1}@{2}:{3}'.format(
+            config['proxy_username'],
+            config['proxy_password'],
+            config['proxy_host'],
+            config['proxy_port'])
+    else:
+        HTTP_PROXY_URL = 'http://{0}:{1}'.format(
+            config['proxy_host'],
+            config['proxy_port'])
+else:
+  HTTP_PROXY_URL = None
 
 # pylint: disable=import-error
 try:
@@ -1865,8 +1885,12 @@ def mod_repo(repo, saltenv='base', **kwargs):
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
-                cmd = ['apt-key', 'adv', '--keyserver', keyserver,
-                       '--logger-fd', '1', '--recv-keys', keyid]
+                if HTTP_PROXY_URL:
+                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(HTTP_PROXY_URL),
+                           '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
+                else:
+                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                           '--logger-fd', '1', '--recv-keys', keyid]
                 ret = __salt__['cmd.run_all'](cmd,
                                               python_shell=False,
                                               **kwargs)
