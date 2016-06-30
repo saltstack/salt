@@ -60,7 +60,9 @@ def mock_open(data=None):
 
 
 class Writable(StringIO):
-    data = []
+    def __init__(self):
+        StringIO.__init__(self)
+        self.data = []
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self
