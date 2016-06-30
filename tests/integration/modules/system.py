@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
 class SystemModuleTest(integration.ModuleCase):
     '''
@@ -32,7 +33,7 @@ class SystemModuleTest(integration.ModuleCase):
     def setUp(self):
         super(SystemModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in ('Linux'):
+        if os_grain['kernel'] not in 'Linux':
             self.skipTest(
                 'Test not applicable to \'{kernel}\' kernel'.format(
                     **os_grain

@@ -346,7 +346,7 @@ def set_system_date_time(years=None,
     try:
         new_datetime = datetime(years, months, days, hours, minutes, seconds, 0,
                                 date_time.tzinfo)
-    except ValueError, err:
+    except ValueError as err:
         raise SaltInvocationError(err.message)
 
     return _date_bin_set_datetime(new_datetime)
