@@ -199,3 +199,6 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
     def __deepcopy__(self, memo):
         return type(self)(copy.deepcopy(self.__dict, memo),
                           copy.deepcopy(self.pre_keys, memo))
+
+    def __str__(self):
+        return self._dict().__str__()
