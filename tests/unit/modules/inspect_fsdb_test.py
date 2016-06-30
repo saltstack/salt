@@ -201,6 +201,28 @@ class InspectorFSDBTestCase(TestCase):
                 assert entities[1].bar == 'another'
                 assert entities[1].spam == 0.456
 
+    @patch("os.makedirs", MagicMock())
+    @patch("os.listdir", MagicMock(return_value=['test_db']))
+    def test_get_obj_more_than(self):
+        '''
+        Getting an object from the store with conditions
+        :return:
+        '''
+        with patch("gzip.open", MagicMock()):
+            with patch("csv.reader", MagicMock(return_value=iter([[], ['foo:int', 'bar:str', 'spam:float'],
+                                                                  ['123', 'test', '0.123'],
+                                                                  ['234', 'another', '0.456']]))):
+                csvdb = CsvDB('/foobar')
+                csvdb.open()
+
+                entities = csvdb.get(FoobarEntity, mt={'foo': 123})
+                assert list == type(entities)
+                assert len(entities) == 1
+
+                assert entities[0].foo == 234
+                assert entities[0].bar == 'another'
+                assert entities[0].spam == 0.456
+
     def test_obj_serialization(self):
         '''
         Test object serialization.
