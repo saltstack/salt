@@ -34,6 +34,8 @@ from salttesting.mock import (
 from salttesting.helpers import ensure_in_syspath
 from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import CsvDBEntity
+from salt.utils.odict import OrderedDict
+
 
 from StringIO import StringIO
 
@@ -146,6 +148,19 @@ class InspectorFSDBTestCase(TestCase):
     def test_list_databases(self):
         '''
         Test storing object into the database.
+
+    def test_obj_serialization(self):
+        '''
+        Test object serialization.
+        :return:
+        '''
+        obj = FoobarEntity()
+        obj.foo = 123
+        obj.bar = 'test entity'
+        obj.spam = 0.123
+
+        descr = OrderedDict([tuple(elm.split(':')) for elm in ["foo:int", "bar:str", "spam:float"]])
+        assert obj._serialize(descr) == [123, 'test entity', 0.123]
 
         :return:
         '''
