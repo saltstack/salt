@@ -98,7 +98,7 @@ wordpress, mariadb, and apache.
 optional
 ~~~~~~~~
 A comma-separated list of packages which are related to this package, but are
-neither required not necessarily recommended. This list is displayed in an
+neither required nor necessarily recommended. This list is displayed in an
 informational message when the package is installed to SPM.
 
 recommended
