@@ -96,12 +96,13 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          eth0:
-            ipaddr:
-            promiscuity:
-              onvalue: 1
-          eth1:
-            linkmode:
+          network_settings:
+            eth0:
+              ipaddr:
+              promiscuity:
+                onvalue: 1
+            eth1:
+              linkmode:
 
     The config above will check for value changes on eth0 ipaddr and eth1 linkmode. It will also
     emit if the promiscuity value changes to 1.
@@ -115,10 +116,11 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          coalesce: True
-          eth0:
-            ipaddr:
-            promiscuity:
+          network_settings:
+            coalesce: True
+            eth0:
+              ipaddr:
+              promiscuity:
 
     '''
     ret = []
