@@ -17,19 +17,19 @@ import logging
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.client
 import salt.exceptions
-import salt.utils.event
 import salt.daemons.masterapi
-from salt.utils import kinds
-from salt.utils.event import tagify
+import salt.utils
+import salt.utils.event
+import salt.utils.kinds
 
-# Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import input
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+
+# Import third party libs
 try:
     import msgpack
 except ImportError:
@@ -536,7 +536,7 @@ class Key(object):
     def __init__(self, opts):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -811,7 +811,8 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'accept',
                              'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
+                    self.event.fire_event(eload,
+                                          salt.utils.event.tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         return (
@@ -839,7 +840,8 @@ class Key(object):
                 eload = {'result': True,
                          'act': 'accept',
                          'id': key}
-                self.event.fire_event(eload, tagify(prefix='key'))
+                self.event.fire_event(eload,
+                                      salt.utils.event.tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         return self.list_keys()
@@ -881,7 +883,8 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
+                    self.event.fire_event(eload,
+                                          salt.utils.event.tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         if preserve_minions:
@@ -908,7 +911,8 @@ class Key(object):
                     eload = {'result': True,
                                  'act': 'delete',
                                  'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
+                    self.event.fire_event(eload,
+                                          salt.utils.event.tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
@@ -925,7 +929,8 @@ class Key(object):
                     eload = {'result': True,
                              'act': 'delete',
                              'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
+                    self.event.fire_event(eload,
+                                          salt.utils.event.tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
@@ -965,7 +970,8 @@ class Key(object):
                     eload = {'result': True,
                             'act': 'reject',
                             'id': key}
-                    self.event.fire_event(eload, tagify(prefix='key'))
+                    self.event.fire_event(eload,
+                                          salt.utils.event.tagify(prefix='key'))
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
@@ -996,7 +1002,8 @@ class Key(object):
                 eload = {'result': True,
                          'act': 'reject',
                          'id': key}
-                self.event.fire_event(eload, tagify(prefix='key'))
+                self.event.fire_event(eload,
+                                      salt.utils.event.tagify(prefix='key'))
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
@@ -1075,7 +1082,7 @@ class RaetKey(Key):
                     shutil.rmtree(os.path.join(m_cache, minion))
 
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
