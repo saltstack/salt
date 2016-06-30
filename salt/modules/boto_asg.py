@@ -602,7 +602,11 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
 
-    CLI example::
+    .. versionadded:: Carbon
+
+    CLI example:
+
+    .. code-block:: bash
 
         salt-call boto_asg.get_all_groups region=us-east-1 --output yaml
 
@@ -626,7 +630,11 @@ def list_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of names).
 
-    CLI example::
+    .. versionadded:: Carbon
+
+    CLI example:
+
+    .. code-block:: bash
 
         salt-call boto_asg.list_groups region=us-east-1
 
