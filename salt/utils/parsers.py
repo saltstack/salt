@@ -2791,6 +2791,20 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Pass a JID to be used instead of generating one.'
         )
 
+        ports_group = optparse.OptionGroup(
+            self, 'Port Forwarding Options',
+            'Parameters for setting up SSH port forwarding.'
+        )
+        ports_group.add_option(
+            '--remote-port-forwards',
+            dest='ssh_remote_port_forwards',
+            help='Setup remote port forwarding using the same syntax as with '
+                 'the -R parameter of ssh. A comma separated list of port '
+                 'forwarding definitions will be translated into multiple '
+                 '-R parameters.'
+        )
+        self.add_option_group(ports_group)
+
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
             'Parameters affecting authentication.'

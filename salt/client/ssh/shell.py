@@ -62,7 +62,8 @@ class Shell(object):
             sudo=False,
             tty=False,
             mods=None,
-            identities_only=False):
+            identities_only=False,
+            remote_port_forwards=None):
         self.opts = opts
         self.host = host
         self.user = user
@@ -74,6 +75,7 @@ class Shell(object):
         self.tty = tty
         self.mods = mods
         self.identities_only = identities_only
+        self.remote_port_forwards = remote_port_forwards
 
     def get_error(self, errstr):
         '''
@@ -223,11 +225,18 @@ class Shell(object):
             opts = self._passwd_opts()
         if self.priv:
             opts = self._key_opts()
-        return "{0} {1} {2} {3} {4}".format(
+
+        ports = ''
+        if self.remote_port_forwards:
+            port_forwards = self.remote_port_forwards.split(',')
+            ports = ' '.join(map(lambda x: '-R {0}'.format(x), port_forwards))
+
+        return "{0} {1} {2} {3} {4} {5}".format(
                 ssh,
                 '' if ssh == 'scp' else self.host,
                 '-t -t' if tty else '',
                 opts,
+                '' if ssh == 'scp' else ports,
                 cmd)
 
     def _old_run_cmd(self, cmd):
