@@ -59,6 +59,15 @@ QuickStart
 The :ref:`Salt Cloud Quickstart <salt-cloud-qs>` walks you through defining
 a provider, a VM profile, and shows you how to create virtual machines using Salt Cloud.
 
+Note that if you installed Salt via `Salt Bootstrap`_, it may not have
+automatically installed salt-cloud for you. Use your distribution's package
+manager to install the ``salt-cloud`` package from the same repo that you
+used to install Salt.  These repos will automatically be setup by Salt Bootstrap.
+
+If there is no salt-cloud package, install with ``pip install salt-cloud``.
+
+.. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
+
 Using Salt Cloud
 ================
 .. toctree::
