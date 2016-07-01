@@ -7,8 +7,8 @@ integration tests for mac_pkgutil
 from __future__ import absolute_import
 import os
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -65,7 +65,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         self.assertFalse(
             self.run_function('pkgutil.is_installed', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_install_forget(self):
         '''
         Test pkgutil.install
