@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function
 import random
 import string
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range
 
 # Import salt libs
@@ -83,7 +83,7 @@ class MacSystemModuleTest(integration.ModuleCase):
         self.run_function('system.set_disable_keyboard_on_lock',
                           [self.KEYBOARD_DISABLED])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_remote_login(self):
         '''
         Test system.get_remote_login
@@ -110,7 +110,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             'Invalid String Value for Enabled',
             self.run_function('system.set_remote_login', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_remote_events(self):
         '''
         Test system.get_remote_events
@@ -137,7 +137,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             'Invalid String Value for Enabled',
             self.run_function('system.set_remote_events', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_computer_name(self):
         '''
         Test system.get_computer_name
@@ -149,7 +149,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             self.run_function('system.get_computer_name'),
             SET_COMPUTER_NAME)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_subnet_name(self):
         '''
         Test system.get_subnet_name
