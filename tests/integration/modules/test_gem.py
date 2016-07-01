@@ -6,9 +6,8 @@ Integration tests for Ruby Gem module
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -30,9 +29,9 @@ def check_status():
     return ret['status'] == 200
 
 
-@destructiveTest
-@skipIf(not salt.utils.which('gem'), 'Gem is not available')
-@skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_binaries_missing('gem', message='Gem is not available')
+@pytest.mark.skipif(not check_status(), 'External source \'https://rubygems.org\' is not available')
 class GemModuleTest(integration.ModuleCase):
     '''
     Validate gem module
