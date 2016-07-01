@@ -3,11 +3,9 @@
 # Import python libs
 from __future__ import absolute_import
 import datetime
-import os
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -82,8 +80,8 @@ class SystemModuleTest(integration.ModuleCase):
                .format(t1, t2))
         self.assertTrue(self._same_times(t1, t2), msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -101,8 +99,8 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(result and self._same_times(time_now, cmp_time),
                         msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utc(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -119,8 +117,8 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utcoffset_east(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -142,8 +140,8 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utcoffset_west(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -164,8 +162,8 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_time(self):
         '''
         Test setting the system time without adjusting the date.
@@ -182,8 +180,8 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_set_system_date(self):
         '''
         Test setting the system date without adjusting the time.
