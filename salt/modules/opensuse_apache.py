@@ -61,7 +61,7 @@ def check_mod_enabled(mod):
     try:
         for line in salt.utils.fopen('/etc/sysconfig/apache2', 'r'):
             if re.search(sysconfig_re,line):
-            return True
+                return True
         if mod in salt.utils.fopen('/etc/apache2/sysconfig.d/loadmodule.conf', 'r').read():
             return True
         else:
