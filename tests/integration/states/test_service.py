@@ -4,11 +4,9 @@ Tests for the service state
 '''
 # Import python libs
 from __future__ import absolute_import
-import os
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 from integration import ModuleCase, SaltReturnAssertsMixIn
@@ -31,8 +29,8 @@ def installed(run_function, package):
     return PKG_INSTALLED
 
 
-@destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class ServiceTest(ModuleCase,
                   SaltReturnAssertsMixIn):
     '''
