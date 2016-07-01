@@ -147,7 +147,7 @@ def present(name,
 
     if default_password is not None:
         default_password = postgres._maybe_encrypt_password(name,
-                                                            password,
+                                                            default_password,
                                                             encrypted=encrypted)
 
     db_args = {
