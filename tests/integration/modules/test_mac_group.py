@@ -5,16 +5,12 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party Libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Import Salt Libs
 import integration
@@ -58,8 +54,8 @@ class MacGroupModuleTest(integration.ModuleCase):
                 )
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_group_add(self, grains=None):
         '''
@@ -73,8 +69,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_group_delete(self, grains=None):
         '''
@@ -92,8 +88,8 @@ class MacGroupModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_group_chgid(self, grains=None):
         '''
@@ -112,8 +108,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [CHANGE_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_adduser(self, grains=None):
         '''
@@ -132,8 +128,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_deluser(self, grains=None):
         '''
@@ -151,8 +147,8 @@ class MacGroupModuleTest(integration.ModuleCase):
         group_info = self.run_function('group.info', [ADD_GROUP])
         self.assertNotIn(ADD_USER, ''.join(group_info['members']))
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_members(self, grains=None):
         '''
@@ -174,8 +170,8 @@ class MacGroupModuleTest(integration.ModuleCase):
         self.assertIn(REP_USER_GROUP, str(group_info['members']))
         self.assertNotIn(ADD_USER, str(group_info['members']))
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_mac_getent(self, grains=None):
         '''
@@ -193,8 +189,8 @@ class MacGroupModuleTest(integration.ModuleCase):
         self.assertIn(ADD_GROUP, str(getinfo))
         self.assertIn(ADD_USER, str(getinfo))
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def tearDown(self, grains=None):
         '''
