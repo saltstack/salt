@@ -62,9 +62,9 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'skip_if_binaries_missing(*binaries, check_all=False): Skip if any of the '
-        'passed binaries are not found in path. If \'check_all\' is \'True\', then '
-        'all binaries must be found.'
+        'skip_if_binaries_missing(*binaries, check_all=False, message=None): Skip if '
+        'any of the passed binaries are not found in path. If \'check_all\' is '
+        '\'True\', then all binaries must be found.'
     )
     config.addinivalue_line(
         'markers',
