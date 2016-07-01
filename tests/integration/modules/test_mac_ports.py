@@ -6,8 +6,8 @@ integration tests for mac_ports
 # Import python libs
 from __future__ import absolute_import, print_function
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -43,7 +43,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         if not self.AGREE_INSTALLED:
             self.run_function('pkg.remove', ['agree'])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_list_pkgs(self):
         '''
         Test pkg.list_pkgs
@@ -52,7 +52,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(self.run_function('pkg.list_pkgs'), dict)
         self.assertIn('agree', self.run_function('pkg.list_pkgs'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_latest_version(self):
         '''
         Test pkg.latest_version
@@ -64,7 +64,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(result, dict)
         self.assertIn('agree', result)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_remove(self):
         '''
         Test pkg.remove
@@ -74,7 +74,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(removed, dict)
         self.assertIn('agree', removed)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_install(self):
         '''
         Test pkg.install
@@ -91,7 +91,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(
             self.run_function('pkg.list_upgrades', refresh=False), dict)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade_available(self):
         '''
         Test pkg.upgrade_available
@@ -107,7 +107,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         self.assertTrue(self.run_function('pkg.refresh_db'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade(self):
         '''
         Test pkg.upgrade
