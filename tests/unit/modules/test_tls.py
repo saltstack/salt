@@ -19,8 +19,9 @@ try:
 except Exception:
     NO_PYOPENSSL = True
 
-# Import Salt Testing Libs
-from salttesting import TestCase, skipIf
+# Import 3rd-party Libs
+import pytest
+from salttesting import TestCase
 from salttesting.mock import (
     mock_open,
     MagicMock,
@@ -28,7 +29,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.modules import tls
@@ -117,8 +117,8 @@ bymYbi0l2pWqQLA2sPoRHNw=
 # Skip this test case if we don't have access to mock or PyOpenSSL.
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(NO_PYOPENSSL, 'PyOpenSSL must be installed to run these tests.')
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_PYOPENSSL, 'PyOpenSSL must be installed to run these tests.')
 class TLSAddTestCase(TestCase):
     maxDiff = None
 
@@ -277,7 +277,7 @@ class TLSAddTestCase(TestCase):
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_ca(self):
@@ -313,7 +313,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_ca(self):
@@ -352,7 +352,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_csr(self):
@@ -389,7 +389,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_csr(self):
@@ -429,7 +429,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_self_signed_cert(self):
@@ -464,7 +464,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_self_signed_cert(self):
@@ -499,7 +499,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_ca_signed_cert(self):
@@ -532,7 +532,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_ca_signed_cert(self):
@@ -568,7 +568,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_pkcs12(self):
@@ -603,7 +603,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_pkcs12(self):
@@ -675,7 +675,7 @@ class TLSAddTestCase(TestCase):
                 self.assertEqual(tls.get_extensions('server'), pillarval)
                 self.assertEqual(tls.get_extensions('client'), pillarval)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_pyOpenSSL_version_destructive(self):
         '''
         Test extension logic with different pyOpenSSL versions
