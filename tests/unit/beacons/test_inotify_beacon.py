@@ -9,12 +9,10 @@ import tempfile
 # Salt libs
 from salt.beacons import inotify
 
-# Salt testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-
 # Third-party libs
+import pytest
+from salttesting import TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 try:
     import pyinotify  # pylint: disable=unused-import
     HAS_PYINOTIFY = True
@@ -22,8 +20,8 @@ except ImportError:
     HAS_PYINOTIFY = False
 
 
-@skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(not HAS_PYINOTIFY, 'pyinotify is not available')
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 class INotifyBeaconTestCase(TestCase):
     '''
     Test case for salt.beacons.inotify
@@ -49,7 +47,7 @@ class INotifyBeaconTestCase(TestCase):
         self.assertEqual(ret[0]['path'], path)
         self.assertEqual(ret[0]['change'], 'IN_OPEN')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_dir_no_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -73,7 +71,7 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_dir_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -101,7 +99,7 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_dir_recurse(self, *args, **kwargs):
         tmpdir = None
         try:
@@ -131,7 +129,7 @@ class INotifyBeaconTestCase(TestCase):
             if tmpdir:
                 shutil.rmtree(tmpdir)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_dir_recurse_auto_add(self, *args, **kwargs):
         tmpdir = None
         try:
