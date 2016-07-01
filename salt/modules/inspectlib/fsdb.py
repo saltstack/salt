@@ -211,7 +211,11 @@ class CsvDB(object):
         updated = False
         objects = list()
         for _obj in self.get(obj.__class__):
-            objects.append(not self.__criteria(_obj, matches=matches, mt=mt, lt=lt, eq=eq) and _obj or obj)
+            if self.__criteria(_obj, matches=matches, mt=mt, lt=lt, eq=eq):
+                objects.append(obj)
+                updated = True
+            else:
+                objects.append(_obj)
         self.flush(obj._TABLE)
         self.create_table_from_object(obj)
         for obj in objects:
