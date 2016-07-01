@@ -55,7 +55,6 @@ if HAS_WIN32:
     STD_OUTPUT_HANDLE = wintypes.DWORD(-11).value
     STD_ERROR_HANDLE = wintypes.DWORD(-12).value
 
-
     class SECURITY_ATTRIBUTES(ctypes.Structure):
         _fields_ = (('nLength', wintypes.DWORD),
                     ('lpSecurityDescriptor', wintypes.LPVOID),
@@ -69,7 +68,6 @@ if HAS_WIN32:
     LPBYTE = ctypes.POINTER(wintypes.BYTE)
     LPHANDLE = PHANDLE = ctypes.POINTER(ctypes.c_void_p)
     LPDWORD = ctypes.POINTER(ctypes.c_ulong)
-
 
     class STARTUPINFO(ctypes.Structure):
         """https://msdn.microsoft.com/en-us/library/ms686331"""
@@ -99,18 +97,15 @@ if HAS_WIN32:
     if HAS_WIN32:
         LPSTARTUPINFO = ctypes.POINTER(STARTUPINFO)
 
-
     class PROC_THREAD_ATTRIBUTE_LIST(ctypes.Structure):
         pass
 
     PPROC_THREAD_ATTRIBUTE_LIST = ctypes.POINTER(PROC_THREAD_ATTRIBUTE_LIST)
 
-
     class STARTUPINFOEX(STARTUPINFO):
         _fields_ = (('lpAttributeList', PPROC_THREAD_ATTRIBUTE_LIST),)
 
     LPSTARTUPINFOEX = ctypes.POINTER(STARTUPINFOEX)
-
 
     class PROCESS_INFORMATION(ctypes.Structure):
         """https://msdn.microsoft.com/en-us/library/ms684873"""
@@ -121,32 +116,26 @@ if HAS_WIN32:
 
     LPPROCESS_INFORMATION = ctypes.POINTER(PROCESS_INFORMATION)
 
-
     class HANDLE_IHV(wintypes.HANDLE):
         pass
-
 
     def errcheck_ihv(result, func, args):
         if result.value == INVALID_HANDLE_VALUE:
             raise ctypes.WinError()
         return result.value
 
-
     class DWORD_IDV(wintypes.DWORD):
         pass
-
 
     def errcheck_idv(result, func, args):
         if result.value == INVALID_DWORD_VALUE:
             raise ctypes.WinError()
         return result.value
 
-
     def errcheck_bool(result, func, args):
         if not result:
             raise ctypes.WinError()
         return args
-
 
     def _win(func, restype, *argtypes):
         func.restype = restype
@@ -157,7 +146,6 @@ if HAS_WIN32:
             func.errcheck = errcheck_idv
         else:
             func.errcheck = errcheck_bool
-
 
     # https://msdn.microsoft.com/en-us/library/ms687032
     _win(kernel32.WaitForSingleObject, DWORD_IDV,
@@ -203,7 +191,6 @@ if HAS_WIN32:
         LPSECURITY_ATTRIBUTES,  # _In_opt_ lpPipeAttributes,
         wintypes.DWORD)         # _In_     nSize
 
-
     # https://msdn.microsoft.com/en-us/library/ms682431
     _win(advapi32.CreateProcessWithLogonW, wintypes.BOOL,
         wintypes.LPCWSTR,       # _In_        lpUsername
@@ -218,7 +205,6 @@ if HAS_WIN32:
         LPSTARTUPINFO,          # _In_        lpStartupInfo
         LPPROCESS_INFORMATION)  # _Out_       lpProcessInformation
 
-
     # High-level wrappers
     def DuplicateHandle(hsrc=kernel32.GetCurrentProcess(),
                         srchandle=kernel32.GetCurrentProcess(),
@@ -231,7 +217,6 @@ if HAS_WIN32:
                                  access, inherit, options)
         return tgthandle.value
 
-
     def CreatePipe(inherit_read=False, inherit_write=False):
         read, write = wintypes.HANDLE(), wintypes.HANDLE()
         kernel32.CreatePipe(ctypes.byref(read), ctypes.byref(write), None, 0)
@@ -242,7 +227,6 @@ if HAS_WIN32:
             kernel32.SetHandleInformation(write, win32con.HANDLE_FLAG_INHERIT,
                                           win32con.HANDLE_FLAG_INHERIT)
         return read.value, write.value
-
 
     def CreateProcessWithLogonW(username=None,
                                 domain=None,
