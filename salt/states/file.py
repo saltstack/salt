@@ -3536,7 +3536,7 @@ def append(name,
                 continue
 
             for line_item in chunk.splitlines():
-                append_lines.append('{0}\n'.format(line_item))
+                append_lines.append('{0}'.format(line_item))
 
     except TypeError:
         return _error(ret, 'No text found to append. Nothing appended')
@@ -3552,7 +3552,7 @@ def append(name,
             else:
                 # Changes happened, add them
                 ret['changes']['diff'] = (
-                    ''.join(difflib.unified_diff(slines, nlines))
+                    '\n'.join(difflib.unified_diff(slines, nlines))
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
@@ -3560,7 +3560,6 @@ def append(name,
         return ret
 
     if len(append_lines):
-        append_lines = [item.strip() for item in append_lines]
         __salt__['file.append'](name, args=append_lines)
         ret['comment'] = 'Appended {0} lines'.format(len(append_lines))
     else:
