@@ -1341,7 +1341,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
                 if expr_match(value, expr):
                     return False
         except TypeError:
-            log.error('Non-iterable blacklist {0}'.format(whitelist))
+            log.error('Non-iterable blacklist {0}'.format(blacklist))
 
     if whitelist:
         if not hasattr(whitelist, '__iter__'):
