@@ -919,7 +919,7 @@ class Single(object):
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
-        # We're running in the mind, need to fetch the arguments from the
+        # We're running in the mine, need to fetch the arguments from the
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
