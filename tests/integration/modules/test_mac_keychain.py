@@ -7,12 +7,9 @@ Validate the mac-keychain module
 from __future__ import absolute_import
 import os
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party Libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Import Salt Libs
 import integration
@@ -29,8 +26,8 @@ CERT_ALIAS = 'Salt Test'
 PASSWD = 'salttest'
 
 
-@destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_keychain module
