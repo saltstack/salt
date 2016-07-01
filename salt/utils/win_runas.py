@@ -19,6 +19,7 @@ try:
     import win32profile
     import msvcrt
     import ctypes
+    import winerror
     from ctypes import wintypes
     HAS_WIN32 = True
 except ImportError:
@@ -298,6 +299,31 @@ def runas_system(cmd, username, password):
                                     win32con.LOGON32_LOGON_INTERACTIVE,
                                     win32con.LOGON32_PROVIDER_DEFAULT)
 
+    try:
+        # Get Unrestricted Token (UAC) if this is an Admin Account
+        elevated_token = win32security.GetTokenInformation(
+            token, win32security.TokenLinkedToken)
+
+        # Get list of privileges this token contains
+        privileges = win32security.GetTokenInformation(
+            elevated_token, win32security.TokenPrivileges)
+
+        # Create a set of all privileges to be enabled
+        enable_privs = set()
+        for luid, flags in privileges:
+            enable_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+        # Enable the privileges
+        win32security.AdjustTokenPrivileges(elevated_token, 0, enable_privs)
+
+    except win32security.error as exc:
+        # User doesn't have admin, use existing token
+        if exc[0] == winerror.ERROR_NO_SUCH_LOGON_SESSION \
+                or exc[0] == winerror.ERROR_PRIVILEGE_NOT_HELD:
+            elevated_token = token
+        else:
+            raise
+
     # Get Security Attributes
     security_attributes = win32security.SECURITY_ATTRIBUTES()
     security_attributes.bInheritHandle = 1
@@ -337,8 +363,8 @@ def runas_system(cmd, username, password):
                 None,
                 startup_info)
 
-    hProcess, hThread, PId, TId = win32process.CreateProcessAsUser(token,
-                                                                   *procArgs)
+    hProcess, hThread, PId, TId = \
+        win32process.CreateProcessAsUser(elevated_token, *procArgs)
 
     if stdin_read is not None:
         stdin_read.Close()

@@ -1414,8 +1414,8 @@ def os_data():
             uname_v = os.uname()[3]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v[uname_v.index('_')+1:]
-        elif salt.utils.is_smartos_globalzone():
-            grains.update(_smartos_computenode_data())
+            if salt.utils.is_smartos_globalzone():
+                grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()

@@ -2891,10 +2891,11 @@ class ProxyMinion(Minion):
         ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            log.error('No proxy key found in pillar or opts for id '+self.opts['id']+'.')
-            log.error('Check your pillar configuration and contents.  Salt-proxy aborted.')
+            errmsg = 'No proxy key found in pillar for id '+self.opts['id']+'. '+\
+                     'Check your pillar configuration and contents.  Salt-proxy aborted.'
+            log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1)
+            raise SaltSystemExit(code=-1, msg=errmsg)
 
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
@@ -2931,10 +2932,11 @@ class ProxyMinion(Minion):
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
                 or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
-            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
-            log.error('Check your proxymodule.  Salt-proxy aborted.')
+            errmsg = 'Proxymodule {0} is missing an init() or a shutdown() or both. '.format(fq_proxyname)+\
+                     'Check your proxymodule.  Salt-proxy aborted.'
+            log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1)
+            raise SaltSystemExit(code=-1, msg=errmsg)
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
