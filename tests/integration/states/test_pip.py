@@ -14,13 +14,10 @@ import pwd
 import glob
 import shutil
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    with_system_user
-)
+# Import 3rd-party libs
+import pytest
+import salt.ext.six as six
+from salttesting.helpers import requires_system_grains, with_system_user
 
 # Import salt libs
 import integration
@@ -28,11 +25,8 @@ import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd-party libs
-import salt.ext.six as six
 
-
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@pytest.mark.skip_if_binaries_missing(KNOWN_BINARY_NAMES, message='virtualenv not installed')
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_pip_installed_removed(self):
@@ -196,8 +190,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @with_system_user('issue-6912', on_existing='delete', delete=True)
     def test_issue_6912_wrong_owner(self, username):
         venv_dir = os.path.join(
