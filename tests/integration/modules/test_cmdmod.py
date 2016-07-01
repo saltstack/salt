@@ -8,12 +8,12 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    skip_if_binaries_missing
-)
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+from salttesting.helpers import skip_if_binaries_missing
+
+# Import 3rd-party libs
+import pytest
+import salt.ext.six as six
+mock = pytest.importorskip('mock')
 
 # Import salt libs
 import integration
@@ -29,7 +29,6 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
 ])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CMDModuleTest(integration.ModuleCase):
     '''
     Validate the cmd module
@@ -63,8 +62,8 @@ class CMDModuleTest(integration.ModuleCase):
                          ['echo "a=b" | sed -e s/=/:/g'],
                          python_shell=True), 'a:b')
 
-    @patch('pwd.getpwnam')
-    @patch('subprocess.Popen')
+    @mock.patch('pwd.getpwnam')
+    @mock.patch('subprocess.Popen')
     def test_os_environment_remains_intact(self,
                                            popen_mock,
                                            getpwnam_mock):
@@ -74,7 +73,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         environment = os.environ.copy()
 
-        popen_mock.return_value = Mock(
+        popen_mock.return_value = mock.Mock(
             communicate=lambda *args, **kwags: ['{}', None],
             pid=lambda: 1,
             retcode=0
@@ -129,8 +128,6 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_all
         '''
-        from six import string_types
-
         if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
@@ -144,8 +141,8 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue('stderr' in ret)
         self.assertTrue(isinstance(ret.get('pid'), int))
         self.assertTrue(isinstance(ret.get('retcode'), int))
-        self.assertTrue(isinstance(ret.get('stdout'), string_types))
-        self.assertTrue(isinstance(ret.get('stderr'), string_types))
+        self.assertTrue(isinstance(ret.get('stdout'), six.string_types))
+        self.assertTrue(isinstance(ret.get('stderr'), six.string_types))
         self.assertEqual(ret.get('stderr').rstrip(), 'cheese')
 
     def test_retcode(self):
@@ -172,7 +169,7 @@ class CMDModuleTest(integration.ModuleCase):
         ret = self.run_function('cmd.script_retcode', [script])
         self.assertEqual(ret, 0)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_tty(self):
         '''
         cmd.tty
@@ -182,7 +179,7 @@ class CMDModuleTest(integration.ModuleCase):
                 ret = self.run_function('cmd.tty', [tty, 'apply salt liberally'])
                 self.assertTrue('Success' in ret)
 
-    @skip_if_binaries_missing(['which'])
+    @skip_if_binaries_missing('which')
     def test_which(self):
         '''
         cmd.which
@@ -190,7 +187,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('cmd.which', ['cat']).rstrip(),
                          self.run_function('cmd.run', ['which cat']).rstrip())
 
-    @skip_if_binaries_missing(['which'])
+    @skip_if_binaries_missing('which')
     def test_which_bin(self):
         '''
         cmd.which_bin
@@ -229,7 +226,7 @@ class CMDModuleTest(integration.ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
         self.assertEqual(result, expected_result)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.skip_if_not_root
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command
