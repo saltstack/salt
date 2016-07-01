@@ -5,21 +5,18 @@ from __future__ import absolute_import
 import os
 import shutil
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
-
 # Import salt libs
 import integration
 import salt.utils
 
 # Import 3rd-party libs
+import pytest
 import salt.ext.six as six
 
 
-@destructiveTest
-@skipIf(salt.utils.is_windows(), 'No mtab on Windows')
-@skipIf(salt.utils.is_darwin(), 'No mtab on Darwin')
+@pytest.mark.destructive_test
+@pytest.mark.skipif(salt.utils.is_windows(), 'No mtab on Windows')
+@pytest.mark.skipif(salt.utils.is_darwin(), 'No mtab on Darwin')
 class DiskModuleVirtualizationTest(integration.ModuleCase):
     '''
     Test to make sure we return a clean result under Docker. Refs #8976
