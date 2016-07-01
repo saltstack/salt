@@ -17,15 +17,12 @@ import yaml
 from datetime import datetime
 import logging
 
-# Import Salt Testing libs
-from salttesting import skipIf
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
 import salt.utils
-from salttesting.helpers import (
-    destructiveTest
-)
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +76,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
 
-    @destructiveTest
-    @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @pytest.mark.destructive_test
+    @pytest.mark.skipif(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
+    @pytest.mark.skipif(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_local_pkg_install(self):
         '''
         Test to ensure correct output when installing package
@@ -99,7 +96,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             else:
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @pytest.mark.skipif(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
         self.assertIn(
@@ -134,8 +131,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn(expected_comment, ''.join(stdout))
         self.assertNotEqual(0, retcode)
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @pytest.mark.skipif(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @pytest.mark.skipif(True, 'to be reenabled when #23623 is merged')
     def test_return(self):
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
@@ -159,7 +156,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @pytest.mark.skipif(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
         root_dir = os.path.join(integration.TMP, 'issue-2731')
         config_dir = os.path.join(root_dir, 'conf')
