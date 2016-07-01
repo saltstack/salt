@@ -6,21 +6,20 @@ Tests for minion blackout
 # Import Python libs
 from __future__ import absolute_import
 import os
-from time import sleep
 import textwrap
+from time import sleep
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import Salt libs
 import integration
 import salt.utils
 
-
 BLACKOUT_PILLAR = os.path.join(integration.PILLAR_DIR, 'base', 'blackout.sls')
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class MinionBlackoutTestCase(integration.ModuleCase):
     '''
     Test minion blackout functionality
