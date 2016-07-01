@@ -4,17 +4,14 @@
 from __future__ import absolute_import
 import logging
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import salt libs
 import integration
 from salt.modules import mysql as mysqlmod
-
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +22,7 @@ except Exception:
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
@@ -39,7 +36,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
     user = 'root'
     password = 'poney'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -152,7 +149,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             'Problem while removing db for db name: \'{0}\''.format(db_name)
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_creation_level1(self):
         '''
         Create database, test presence, then drop db. All theses with complex names.
@@ -247,7 +244,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_mysql_dbname_character_percent(self):
         '''
         Play with the '%' character problems
@@ -303,7 +300,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
         self.assertEqual(True, ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_creation_utf8(self):
         '''
         Test support of utf8 in database names
@@ -355,7 +352,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_maintenance(self):
         '''
         Test maintenance operations on a created database
@@ -606,7 +603,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         self.assertEqual(True, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
@@ -620,7 +617,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
     user = 'root'
     password = 'poney'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -754,7 +751,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             repr(ret)
         ))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_user_management(self):
         '''
         Test various users creation settings
@@ -1260,7 +1257,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         self.assertNotIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
@@ -1301,7 +1298,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         },
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password, create users
@@ -1377,7 +1374,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         '''
         Removes created users and db
@@ -1471,7 +1468,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             repr(ret)
         ))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def testGrants(self):
         '''
         Test user grant methods
