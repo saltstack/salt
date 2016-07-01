@@ -2,24 +2,22 @@
 '''
     :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
+# Import python libs
 from __future__ import absolute_import
-
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-
-# Import Python libs
 import errno
 import logging
 import os
 import shutil
 
+# Import 3rd-party libs
+import pytest
+import salt.ext.six as six
+from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
+
 # Import salt libs
 import integration
 import salt.utils
 from salt import fileclient
-from salt.ext import six
-from salttesting.helpers import destructiveTest
 
 SALTENVS = ('base', 'dev')
 FS_ROOT = os.path.join(integration.TMP, 'fileclient_fs_root')
@@ -45,8 +43,8 @@ MOCKED_OPTS = {
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.destructive_test
 class FileclientTest(integration.ModuleCase):
     '''
     Tests for the fileclient. The LocalClient is the only thing we can test as
