@@ -8,13 +8,9 @@ from __future__ import absolute_import
 import os
 import shutil
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    with_system_user,
-    skip_if_binaries_missing
-)
+# Import 3rd-party libs
+import pytest
+from salttesting.helpers import with_system_user
 
 # Import salt libs
 import integration
@@ -25,7 +21,7 @@ GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 GITHUB_IP = '192.30.252.129'
 
 
-@skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
+@pytest.mark.skip_if_binaries_missing('ssh', 'ssh-keygen', check_all=True)
 class SSHKnownHostsStateTest(integration.ModuleCase,
                              integration.SaltReturnAssertsMixIn):
     '''
@@ -149,8 +145,8 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
 class SSHAuthStateTests(integration.ModuleCase,
                         integration.SaltReturnAssertsMixIn):
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @with_system_user('issue_7409', on_existing='delete', delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
@@ -186,8 +182,8 @@ class SSHAuthStateTests(integration.ModuleCase,
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @with_system_user('issue_10198', on_existing='delete', delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function('user.info', [username])
