@@ -6,19 +6,14 @@ tests for pkgrepo states
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party libs
+import pytest
+import salt.ext.six as six
+from salttesting.helpers import requires_system_grains
 
 # Import salt libs
 import integration
 import salt.utils
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 
 class PkgrepoTest(integration.ModuleCase,
@@ -26,8 +21,8 @@ class PkgrepoTest(integration.ModuleCase,
     '''
     pkgrepo state tests
     '''
-    @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @pytest.mark.destructive_test
+    @pytest.mark.skipif(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         '''
@@ -56,8 +51,8 @@ class PkgrepoTest(integration.ModuleCase,
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @pytest.mark.destructive_test
+    @pytest.mark.skipif(salt.utils.is_windows(), 'minion is windows')
     def test_pkgrepo_02_absent(self):
         '''
         This is a destructive test as it removes the repository added in the
