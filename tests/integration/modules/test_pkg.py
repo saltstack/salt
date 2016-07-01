@@ -2,12 +2,9 @@
 
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting.helpers import (
-    destructiveTest,
-    requires_network,
-    requires_salt_modules,
-)
+# Import 3rd-party libs
+import pytest
+from salttesting.helpers import requires_salt_modules
 
 # Import salt libs
 import integration
@@ -42,8 +39,8 @@ class PkgModuleTest(integration.ModuleCase,
         else:
             self.skipTest('{0} is unavailable on {1}'.format(func, os_family))
 
-    @requires_network()
-    @destructiveTest
+    @pytest.mark.requires_network
+    @pytest.mark.destructive_test
     def test_mod_del_repo(self):
         '''
         test modifying and deleting a software repository
@@ -108,8 +105,8 @@ class PkgModuleTest(integration.ModuleCase,
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
 
-    @requires_network()
-    @destructiveTest
+    @pytest.mark.requires_network
+    @pytest.mark.destructive_test
     def test_install_remove(self):
         '''
         successfully install and uninstall a package
@@ -139,8 +136,8 @@ class PkgModuleTest(integration.ModuleCase,
             test_install()
             test_remove()
 
-    @requires_network()
-    @destructiveTest
+    @pytest.mark.requires_network
+    @pytest.mark.destructive_test
     def test_hold_unhold(self):
         '''
         test holding and unholding a package
@@ -177,8 +174,8 @@ class PkgModuleTest(integration.ModuleCase,
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format('pkg.hold', os_grain))
 
-    @requires_network()
-    @destructiveTest
+    @pytest.mark.requires_network
+    @pytest.mark.destructive_test
     def test_refresh_db(self):
         '''
         test refreshing the package database
