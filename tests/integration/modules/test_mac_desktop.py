@@ -5,20 +5,16 @@ Integration tests for the mac_desktop execution module.
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party Libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Import Salt Libs
 import integration
 
 
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@pytest.mark.skip_if_not_root
 class MacDesktopTestCase(integration.ModuleCase):
     '''
     Integration tests for the mac_desktop module.
@@ -44,7 +40,7 @@ class MacDesktopTestCase(integration.ModuleCase):
         ret = self.run_function('desktop.get_output_volume')
         self.assertIsNotNone(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_set_output_volume(self, grains=None):
         '''
@@ -61,7 +57,7 @@ class MacDesktopTestCase(integration.ModuleCase):
         # Set volume back to what it was before
         self.run_function('desktop.set_output_volume', [current_vol])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_screensaver(self, grains=None):
         '''
@@ -71,7 +67,7 @@ class MacDesktopTestCase(integration.ModuleCase):
             self.run_function('desktop.screensaver')
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_lock(self, grains=None):
         '''
@@ -81,7 +77,7 @@ class MacDesktopTestCase(integration.ModuleCase):
             self.run_function('desktop.lock')
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_say(self, grains=None):
         '''
