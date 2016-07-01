@@ -6,8 +6,8 @@ integration tests for mac_power
 # Import python libs
 from __future__ import absolute_import, print_function
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -70,7 +70,7 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.run_function('power.set_sleep_on_power_button',
                           [self.SLEEP_ON_BUTTON])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_computer_sleep(self):
         '''
         Test power.get_computer_sleep
@@ -98,7 +98,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_computer_sleep', [True]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_display_sleep(self):
         '''
         Test power.get_display_sleep
@@ -126,7 +126,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_display_sleep', [True]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_harddisk_sleep(self):
         '''
         Test power.get_harddisk_sleep
