@@ -6,14 +6,12 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import pwd
 import grp
 import random
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs libs
+import pytest
 
 # Import salt libs
 import salt.utils
@@ -49,14 +47,12 @@ class AuthTest(integration.ShellCase):
 
     _call_binary_ = 'salt'
 
-    is_not_root = os.geteuid() != 0
-
     userA = 'saltdev'
     userB = 'saltadm'
     group = 'saltops'
 
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def setUp(self):
         # This is a little wasteful but shouldn't be a problem
         for user in (self.userA, self.userB):
@@ -126,8 +122,8 @@ class AuthTest(integration.ShellCase):
             'minion:' in resp
         )
 
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_zzzz_tearDown(self):
         for user in (self.userA, self.userB):
             if pwd.getpwnam(user):
