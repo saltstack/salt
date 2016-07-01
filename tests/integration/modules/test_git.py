@@ -19,13 +19,9 @@ import subprocess
 import tarfile
 import tempfile
 
-# Import Salt Testing libs
+# Import 3rd-party libs
+import pytest
 from distutils.version import LooseVersion
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    skip_if_binaries_missing
-)
 
 # Import salt libs
 import integration
@@ -66,8 +62,8 @@ def _makedirs(path):
             raise
 
 
-@destructiveTest
-@skip_if_binaries_missing('git')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
 
     def setUp(self):
@@ -889,8 +885,7 @@ class GitModuleTest(integration.ModuleCase):
             'refs/heads/master'
         )
 
-    @skipIf(not _worktrees_supported(),
-            'Git 2.5 or newer required for worktree support')
+    @pytest.mark.skipif(not _worktrees_supported(), 'Git 2.5 or newer required for worktree support')
     def test_worktree_add_rm(self):
         '''
         This tests git.worktree_add, git.is_worktree, git.worktree_rm, and
