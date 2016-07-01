@@ -7,14 +7,13 @@
 from __future__ import absolute_import
 import os
 
+# 3rd-party libs
+import pytest
+
 # Salt Libs
 from salt.modules import beacons
 from salt.exceptions import CommandExecutionError
 import integration
-
-# Salttesting libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
 
 beacons.__opts__ = {}
 
@@ -23,8 +22,8 @@ if not os.path.exists(BEACON_CONF_DIR):
     os.makedirs(BEACON_CONF_DIR)
 
 
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
-@destructiveTest
+@pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
     Tests the add and delete functions
@@ -48,8 +47,8 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         self.run_function('beacons.save')
 
 
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
-@destructiveTest
+@pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 class BeaconsTest(integration.ModuleCase):
     '''
     Tests the beacons execution module
@@ -106,7 +105,7 @@ class BeaconsTest(integration.ModuleCase):
         _list = self.run_function('beacons.list', return_yaml=False)
         self.assertTrue(_list['enabled'])
 
-    @skipIf(True, 'Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.')
+    @pytest.mark.skipif(True, 'Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.')
     def test_enabled_beacons(self):
         '''
         Test enabled specific beacon
