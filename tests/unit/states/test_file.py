@@ -10,8 +10,9 @@ import tempfile
 import os
 import shutil
 
-# Import Salt Testing libs
-from salttesting import skipIf, TestCase
+# Import 3rd-party libs
+import pytest
+from salttesting import TestCase
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -45,7 +46,7 @@ filestate.__grains__ = {}
 filestate.__low__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 class TestFileState(TestCase):
 
     def test_serialize(self):
@@ -131,7 +132,7 @@ class TestFileState(TestCase):
         self.assertEqual(expected, returner.call_args[0][-4])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 class FileTestCase(TestCase):
 
     '''
@@ -139,7 +140,7 @@ class FileTestCase(TestCase):
     '''
     # 'symlink' function tests: 1
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_symlink(self):
         '''
         Test to create a symlink.
@@ -974,7 +975,7 @@ class FileTestCase(TestCase):
 
     # 'comment' function tests: 1
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
@@ -1032,7 +1033,7 @@ class FileTestCase(TestCase):
 
     # 'uncomment' function tests: 1
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
