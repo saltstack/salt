@@ -12,9 +12,8 @@ from __future__ import absolute_import
 import os
 import shutil
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -22,11 +21,11 @@ import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@pytest.mark.skip_if_binaries_missing(KNOWN_BINARY_NAMES, message='virtualenv not installed')
 class VirtualenvTest(integration.ModuleCase,
                      integration.SaltReturnAssertsMixIn):
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):
