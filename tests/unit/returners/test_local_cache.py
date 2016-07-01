@@ -12,9 +12,9 @@ import os
 import shutil
 import tempfile
 
-# Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
+from salttesting import TestCase
 from salttesting.mock import (
     MagicMock,
     NO_MOCK,
@@ -33,8 +33,8 @@ local_cache.__opts__ = {'cachedir': TMP_CACHE_DIR,
                         'keep_jobs': 1}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.destructive_test
 class LocalCacheCleanOldJobsTestCase(TestCase):
     '''
     Tests for the local_cache.clean_old_jobs function.
