@@ -6,8 +6,8 @@ integration tests for mac_service
 # Import python libs
 from __future__ import absolute_import, print_function
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -96,7 +96,7 @@ class MacServiceModuleTest(integration.ModuleCase):
             'Service not found',
             self.run_function('service.list', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_enable(self):
         '''
         Test service.enable
@@ -108,7 +108,7 @@ class MacServiceModuleTest(integration.ModuleCase):
             'Service not found',
             self.run_function('service.enable', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_disable(self):
         '''
         Test service.disable
@@ -120,7 +120,7 @@ class MacServiceModuleTest(integration.ModuleCase):
             'Service not found',
             self.run_function('service.disable', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_start(self):
         '''
         Test service.start
@@ -133,7 +133,7 @@ class MacServiceModuleTest(integration.ModuleCase):
             'Service not found',
             self.run_function('service.start', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_stop(self):
         '''
         Test service.stop
@@ -144,7 +144,7 @@ class MacServiceModuleTest(integration.ModuleCase):
             'Service not found',
             self.run_function('service.stop', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_status(self):
         '''
         Test service.status
@@ -178,7 +178,7 @@ class MacServiceModuleTest(integration.ModuleCase):
         self.assertFalse(self.run_function('service.missing', [self.SERVICE_NAME]))
         self.assertTrue(self.run_function('service.missing', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_enabled(self):
         '''
         Test service.enabled
@@ -193,7 +193,7 @@ class MacServiceModuleTest(integration.ModuleCase):
 
         self.assertFalse(self.run_function('service.enabled', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_disabled(self):
         '''
         Test service.disabled
