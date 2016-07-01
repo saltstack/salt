@@ -455,13 +455,20 @@ def build(runas,
     return ret
 
 
-def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='root'):
+def make_repo(repodir,
+              keyid=None,
+              env=None,
+              use_passphrase=False,
+              gnupghome='/etc/salt/gpgkeys',
+              runas='root'):
     '''
     Given the repodir (directory to create repository in), create a Debian
     repository and optionally sign it and packages present. This state is
     best used with onchanges linked to your package building states
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgbuild.make_repo /var/www/html
 
