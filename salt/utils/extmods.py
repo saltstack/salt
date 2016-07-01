@@ -49,6 +49,7 @@ def sync(opts, form, saltenv=None):
     source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(opts['extension_modules'], '{0}'.format(form))
     cumask = os.umask(0o77)
+    touched = False
     try:
         if not os.path.isdir(mod_dir):
             log.info('Creating module dir \'{0}\''.format(mod_dir))
