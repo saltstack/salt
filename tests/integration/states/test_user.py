@@ -14,12 +14,9 @@ import sys
 from random import randint
 import grp
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Import salt libs
 import salt.utils
@@ -42,28 +39,26 @@ class UserTest(integration.ModuleCase,
     '''
     test for user absent
     '''
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def setUp(self):
         if salt.utils.is_darwin():
-            #on mac we need to add user, because there is
-            #no creationtime for nobody user.
+            # on mac we need to add user, because there is
+            # no creationtime for nobody user.
             add_user = self.run_function('user.add', [USER], gid=GID)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_if_present(self):
         ret = self.run_state('user.present', name=USER)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_if_present_with_gid(self):
         if self.run_function('group.info', [USER]):
             ret = self.run_state('user.present', name=USER, gid=GID)
@@ -75,8 +70,8 @@ class UserTest(integration.ModuleCase,
             )
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_not_present(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -88,8 +83,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_present_when_home_dir_does_not_18843(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -112,8 +107,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_present_nondefault(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -125,8 +120,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_user_present_gid_from_name_default(self, grains=None):
         '''
@@ -159,8 +154,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_present_gid_from_name(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -184,9 +179,12 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('group.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @skipIf(sys.getfilesystemencoding().startswith('ANSI'), 'A system encoding which supports Unicode characters must be set. Current setting is: {0}. Try setting $LANG=\'en_US.UTF-8\''.format(sys.getfilesystemencoding()))
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.skipif(sys.getfilesystemencoding().startswith('ANSI'),
+                        'A system encoding which supports Unicode characters must be set. '
+                        'Current setting is: {0}. Try setting $LANG=\'en_US.UTF-8\''.format(
+                            sys.getfilesystemencoding()))
     def test_user_present_unicode(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -208,8 +206,8 @@ class UserTest(integration.ModuleCase,
 #        ret = self.run_state('user.absent', name='salt_test')
 #        self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_present_gecos(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -227,8 +225,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_user_present_gecos_none_fields(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -254,8 +252,6 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def tearDown(self):
         if salt.utils.is_darwin():
             check_user = self.run_function('user.list_users')
