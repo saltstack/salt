@@ -14,8 +14,8 @@ Time sync do the following:
 from __future__ import absolute_import
 import datetime
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -66,7 +66,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             self.run_function('timezone.set_date', [self.CURRENT_DATE])
             self.run_function('timezone.set_time', [self.CURRENT_TIME])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_date(self):
         '''
         Test timezone.get_date
@@ -92,7 +92,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         obj_date = datetime.datetime.strptime(text_time, '%H:%M:%S')
         self.assertIsInstance(obj_date, datetime.date)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_time(self):
         '''
         Test timezone.set_time
@@ -106,7 +106,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'ERROR executing \'timezone.set_time\': '
             'Invalid Date/Time Format: 3:71')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_zone(self):
         '''
         Test timezone.get_zone
@@ -138,7 +138,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.assertIsInstance(self.run_function('timezone.get_offset'), str)
         self.assertEqual(self.run_function('timezone.get_offset'), '-0700')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_zonecode(self):
         '''
         Test timezone.get_zonecode
@@ -167,7 +167,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'America/Los_Angeles',
             self.run_function('timezone.list_zones'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_zone_compare(self):
         '''
         Test timezone.zone_compare
@@ -179,7 +179,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.assertFalse(
             self.run_function('timezone.zone_compare', ['Pacific/Wake']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_using_network_time(self):
         '''
         Test timezone.get_using_network_time
@@ -193,7 +193,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             self.run_function('timezone.set_using_network_time', [False]))
         self.assertFalse(self.run_function('timezone.get_using_network_time'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_time_server(self):
         '''
         Test timezone.get_time_server
