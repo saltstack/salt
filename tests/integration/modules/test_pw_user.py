@@ -7,13 +7,11 @@
 '''
 # Import python libs
 from __future__ import absolute_import
-import os
 import string
 import random
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -40,8 +38,8 @@ class PwUserModuleTest(integration.ModuleCase):
             for x in range(size)
         )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name
