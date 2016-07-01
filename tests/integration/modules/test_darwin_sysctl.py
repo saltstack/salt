@@ -13,12 +13,9 @@ import integration
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party Libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Module Variables
 ASSIGN_CMD = 'net.inet.icmp.icmplim'
@@ -57,8 +54,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
                 raise CommandExecutionError(msg.format(CONFIG))
             os.remove(CONFIG)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_assign(self, grains=None):
         '''
@@ -79,8 +76,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             self.run_function('sysctl.assign', [ASSIGN_CMD, self.val])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_persist_new_file(self, grains=None):
         '''
@@ -101,8 +98,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_persist_already_set(self, grains=None):
         '''
@@ -122,8 +119,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def test_persist_apply_change(self, grains=None):
         '''
@@ -189,8 +186,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
                     return True
             return False
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @requires_system_grains
     def tearDown(self, grains=None):
         '''
