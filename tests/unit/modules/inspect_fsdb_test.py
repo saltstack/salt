@@ -178,6 +178,37 @@ class InspectorFSDBTestCase(TestCase):
 
     @patch("os.makedirs", MagicMock())
     @patch("os.listdir", MagicMock(return_value=['test_db']))
+    def test_delete_object(self):
+        '''
+        Deleting an object from the store.
+        :return:
+        '''
+        with patch("gzip.open", MagicMock()):
+            with patch("csv.reader", MagicMock(return_value=iter([[], ['foo:int', 'bar:str', 'spam:float'],
+                                                                  ['123', 'test', '0.123'],
+                                                                  ['234', 'another', '0.456']]))):
+                class InterceptedCsvDB(CsvDB):
+                    def __init__(self, path):
+                        CsvDB.__init__(self, path)
+                        self._remained = list()
+
+                    def store(self, obj, distinct=False):
+                        self._remained.append(obj)
+
+                csvdb = InterceptedCsvDB('/foobar')
+                csvdb.open()
+                csvdb.create_table_from_object = MagicMock()
+                csvdb.flush = MagicMock()
+
+                assert csvdb.delete(FoobarEntity, eq={'foo': 123}) == True
+                assert len(csvdb._remained) == 1
+
+                assert csvdb._remained[0].foo == 234
+                assert csvdb._remained[0].bar == 'another'
+                assert csvdb._remained[0].spam == 0.456
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.listdir", MagicMock(return_value=['test_db']))
     def test_get_object(self):
         '''
         Getting an object from the store.
