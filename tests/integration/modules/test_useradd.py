@@ -2,16 +2,12 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import string
 import random
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+# Import 3rd-party libs
+import pytest
+from salttesting.helpers import requires_system_grains
 
 # Import salt libs
 import salt.utils
@@ -21,11 +17,11 @@ import integration
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
-@destructiveTest
-@skipIf(os.geteuid() != 0, 'you must be root to run these tests')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 # Only run on linux for now until or if we can figure out a way to use
 # __grains__ inside of useradd.__virtual__
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@pytest.mark.skipif(not salt.utils.is_linux(), 'These tests can only be run on linux')
 class UseraddModuleTest(integration.ModuleCase):
 
     def setUp(self):
