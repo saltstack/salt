@@ -1161,7 +1161,10 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name)
+        args = [name]
+        if salt.utils.is_windows():
+            args.insert(0, __env__)
+        version = __salt__['pkg.latest_version'](*args)
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
@@ -1722,7 +1725,13 @@ def latest(
             desired_pkgs = [name]
 
     try:
-        avail = __salt__['pkg.latest_version'](*desired_pkgs,
+        args = list(desired_pkgs)
+        # We are shallow-copying here because we want to leave the
+        # original list alone.
+
+        if salt.utils.is_windows():
+            args.insert(0, __env__)
+        avail = __salt__['pkg.latest_version'](*args,
                                                fromrepo=fromrepo,
                                                refresh=refresh,
                                                **kwargs)
