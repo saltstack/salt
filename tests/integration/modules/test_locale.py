@@ -3,13 +3,9 @@
 # Import python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    requires_salt_modules,
-    requires_system_grains,
-    destructiveTest,
-)
+# Import 3rd-party libs
+import pytest
+from salttesting.helpers import requires_salt_modules, requires_system_grains
 
 # Import salt libs
 import integration
@@ -22,7 +18,7 @@ def _find_new_locale(current_locale):
             return locale
 
 
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@pytest.mark.skipif(salt.utils.is_windows(), 'minion is windows')
 @requires_salt_modules('locale')
 class LocaleModuleTest(integration.ModuleCase):
     @requires_system_grains
@@ -30,7 +26,7 @@ class LocaleModuleTest(integration.ModuleCase):
         locale = self.run_function('locale.get_locale')
         self.assertNotEqual(None, locale)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_gen_locale(self, grains):
         locale = self.run_function('locale.get_locale')
@@ -38,7 +34,7 @@ class LocaleModuleTest(integration.ModuleCase):
         ret = self.run_function('locale.gen_locale', [new_locale])
         self.assertEqual(True, ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_system_grains
     def test_set_locale(self, grains):
         original_locale = self.run_function('locale.get_locale')
