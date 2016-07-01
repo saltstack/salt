@@ -246,6 +246,7 @@ execution modules
     openbsdpkg
     openbsdrcctl
     openbsdservice
+    opensuse_apache
     openstack_config
     openvswitch
     opkg
