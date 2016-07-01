@@ -320,3 +320,49 @@ class InspectorFSDBTestCase(TestCase):
         csvdb._tables = {'some_table': OrderedDict([tuple(elm.split(':'))
                                                     for elm in ["foo:int", "bar:str", "spam:float"]])}
         assert csvdb._validate_object(obj) == [123, 'test entity', 0.123]
+
+    @patch("os.makedirs", MagicMock())
+    @patch("os.path.exists", MagicMock(return_value=False))
+    @patch("os.listdir", MagicMock(return_value=['some_table']))
+    def test_criteria(self):
+        '''
+        Test criteria selector.
+
+        :return:
+        '''
+        obj = FoobarEntity()
+        obj.foo = 123
+        obj.bar = 'test entity'
+        obj.spam = 0.123
+        obj.pi = 3.14
+
+        cmp = CsvDB('/foobar')._CsvDB__criteria
+
+        # Single
+        assert cmp(obj, eq={'foo': 123}) == True
+        assert cmp(obj, lt={'foo': 124}) == True
+        assert cmp(obj, mt={'foo': 122}) == True
+
+        assert cmp(obj, eq={'foo': 0}) == False
+        assert cmp(obj, lt={'foo': 123}) == False
+        assert cmp(obj, mt={'foo': 123}) == False
+
+        assert cmp(obj, matches={'bar': r't\se.*?'}) == True
+        assert cmp(obj, matches={'bar': r'\s\sentity'}) == False
+
+        # Combined
+        assert cmp(obj, eq={'foo': 123, 'bar': r'test entity', 'spam': 0.123}) == True
+        assert cmp(obj, eq={'foo': 123, 'bar': r'test', 'spam': 0.123}) == False
+
+        assert cmp(obj, lt={'foo': 124, 'spam': 0.124}) == True
+        assert cmp(obj, lt={'foo': 124, 'spam': 0.123}) == False
+
+        assert cmp(obj, mt={'foo': 122, 'spam': 0.122}) == True
+        assert cmp(obj, mt={'foo': 122, 'spam': 0.123}) == False
+
+        assert cmp(obj, matches={'bar': r'test'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == True
+
+        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == True
+        assert cmp(obj, matches={'bar': r'^ent'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == False
+        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 123}, lt={'spam': 0.124}, eq={'pi': 3.14}) == False
+
