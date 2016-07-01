@@ -157,7 +157,7 @@ class RootsTest(integration.ModuleCase):
 
 class RootsLimitTraversalTest(integration.ModuleCase):
 
-    # @destructiveTest
+    # @pytest.mark.destructive_test
     def test_limit_traversal(self):
         '''
         1) Set up a deep directory structure
