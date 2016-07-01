@@ -5,13 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-)
+# Import 3rd-party Libs
+import pytest
 
 # Import Salt Libs
 import integration
@@ -27,8 +23,8 @@ ADD_PKG = 'algol68g'
 DEL_PKG = 'acme'
 
 
-@destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class BrewModuleTest(integration.ModuleCase):
     '''
     Integration tests for the brew module
