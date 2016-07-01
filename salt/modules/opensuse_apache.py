@@ -9,7 +9,6 @@ loading under the ``apache`` namespace.
 from __future__ import absolute_import
 
 # Import python libs
-import os
 import logging
 import re
 
@@ -57,18 +56,18 @@ def check_mod_enabled(mod):
         salt '*' apache.check_mod_enabled status.conf
         salt '*' apache.check_mod_enabled status.load
     '''
-    mod = mod.rsplit('.',1)[0]
+    mod = mod.rsplit('.', 1)[0]
     sysconfig_re = "APACHE_MODULES=.*" + mod
     try:
-      for line in salt.utils.fopen('/etc/sysconfig/apache2', 'r'):
-        if re.search(sysconfig_re,line):
-          return True
-      if mod in salt.utils.fopen('/etc/apache2/sysconfig.d/loadmodule.conf', 'r').read():
-          return True
-      else:
-          return False
+        for line in salt.utils.fopen('/etc/sysconfig/apache2', 'r'):
+            if re.search(sysconfig_re,line):
+            return True
+        if mod in salt.utils.fopen('/etc/apache2/sysconfig.d/loadmodule.conf', 'r').read():
+            return True
+        else:
+            return False
     except IOError:
-      return False
+        return False
 
 
 def a2enmod(mod):
