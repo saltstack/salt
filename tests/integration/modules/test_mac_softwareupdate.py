@@ -6,8 +6,8 @@ integration tests for mac_softwareupdate
 # Import python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting.helpers import destructiveTest
+# Import3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -69,7 +69,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.list_available'), dict)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_ignore(self):
         '''
         Test softwareupdate.ignore
@@ -94,7 +94,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
             'squidward',
             self.run_function('softwareupdate.list_ignored'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_schedule(self):
         '''
         Test softwareupdate.schedule_enable
@@ -110,7 +110,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
             self.run_function('softwareupdate.schedule_enable', [False]))
         self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_update(self):
         '''
         Test softwareupdate.update_all
@@ -141,7 +141,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.list_downloads'), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download(self):
         '''
         Test softwareupdate.download
@@ -154,7 +154,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
             'Update not available',
             self.run_function('softwareupdate.download', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download_all(self):
         '''
         Test softwareupdate.download_all
@@ -162,7 +162,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.download_all'), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_reset_catalog(self):
         '''
         Test softwareupdate.download_all
