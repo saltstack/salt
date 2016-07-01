@@ -7,9 +7,8 @@ Tests for the MySQL states
 from __future__ import absolute_import
 import logging
 
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest
+# Import 3rd-party libs
+import pytest
 
 # Import salt libs
 import integration
@@ -25,7 +24,7 @@ except ImportError:
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
@@ -39,7 +38,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
     user = 'root'
     password = 'poney'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -142,7 +141,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         )
         self.assertSaltStateChangesEqual(ret, {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent(self):
         '''
         mysql_database.present
@@ -161,7 +160,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
     # TODO: test with variations on collate and charset, check for db alter
     # once it will be done in mysql_database.present state
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent_fuzzy(self):
         '''
         mysql_database.present with utf-8 andf fuzzy db name
@@ -197,8 +196,8 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             #saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
-    @skipIf(True, 'This tests needs issue #8947 to be fixed first')
+    @pytest.mark.destructive_test
+    @pytest.mark.skipif(True, 'This tests needs issue #8947 to be fixed first')
     def test_utf8_from_sls_file(self):
         '''
         Try to create/destroy an utf-8 database name from an sls file #8947
@@ -231,7 +230,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
         self.assertEqual(expected_result, result)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
@@ -272,7 +271,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
         },
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -352,7 +351,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         '''
         Removes created users and db
@@ -405,7 +404,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_grant_present_absent(self):
         '''
         mysql_database.present
