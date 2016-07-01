@@ -3574,8 +3574,7 @@ def append(name,
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
-            )
+                '\n'.join(difflib.unified_diff(slines, nlines)))
 
     ret['result'] = True
 

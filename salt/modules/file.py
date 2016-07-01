@@ -2458,10 +2458,10 @@ def append(path, *args, **kwargs):
 
     # Make sure we have a newline at the end of the file. Do this in binary
     # mode so SEEK_END with nonzero offset will work.
-    with salt.utils.fopen(path, 'rb+') as ofile:
+    with salt.utils.fopen(path, 'rb+') as o_file:
         linesep = salt.utils.to_bytes(os.linesep)
         try:
-            ofile.seek(-len(linesep), os.SEEK_END)
+            o_file.seek(-len(linesep), os.SEEK_END)
         except IOError as exc:
             if exc.errno in (errno.EINVAL, errno.ESPIPE):
                 # Empty file, simply append lines at the beginning of the file
@@ -2469,14 +2469,14 @@ def append(path, *args, **kwargs):
             else:
                 raise
         else:
-            if ofile.read(len(linesep)) != linesep:
-                ofile.seek(0, os.SEEK_END)
-                ofile.write(linesep)
+            if o_file.read(len(linesep)) != linesep:
+                o_file.seek(0, os.SEEK_END)
+                o_file.write(linesep)
 
     # Append lines in text mode
-    with salt.utils.fopen(path, 'a') as ofile:
-        for line in args:
-            ofile.write('{0}{1}'.format(line, os.linesep))
+    with salt.utils.fopen(path, 'a') as o_file:
+        for new_line in args:
+            o_file.write('{0}{1}'.format(new_line, os.linesep))
 
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
