@@ -232,7 +232,7 @@ class MasterKeys(dict):
                                              opts['master_pubkey_signature'])
                 if os.path.isfile(self.sig_path):
                     self.pub_signature = salt.utils.fopen(self.sig_path).read()
-                    log.info('Read {0}\'s signature from {1}'
+                    log.info("Read {0}'s signature from {1}"
                              ''.format(os.path.basename(self.pub_path),
                                        self.opts['master_pubkey_signature']))
                 else:
@@ -240,7 +240,7 @@ class MasterKeys(dict):
                               'but no signature file found at the defined location '
                               '{0}'.format(self.sig_path))
                     log.error('The signature-file may be either named differently '
-                               'or has to be created with \'salt-key --gen-signature\'')
+                               "or has to be created with 'salt-key --gen-signature'")
                     sys.exit(1)
 
             # create a new signing key-pair to sign the masters
@@ -559,7 +559,7 @@ class AsyncAuth(object):
                 if not payload['load']['ret']:
                     if self.opts['rejected_retry']:
                         log.error(
-                            'The Salt Master has rejected this minion\'s public '
+                            "The Salt Master has rejected this minion's public "
                             'key.\nTo repair this issue, delete the public key '
                             'for this minion on the Salt Master.\nThe Salt '
                             'Minion will attempt to to re-authenicate.'
@@ -567,7 +567,7 @@ class AsyncAuth(object):
                         raise tornado.gen.Return('retry')
                     else:
                         log.critical(
-                            'The Salt Master has rejected this minion\'s public '
+                            "The Salt Master has rejected this minion's public "
                             'key!\nTo repair this issue, delete the public key '
                             'for this minion on the Salt Master and restart this '
                             'minion.\nOr restart the Salt Master in open mode to '
@@ -589,7 +589,7 @@ class AsyncAuth(object):
         auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
         if not auth['aes']:
             log.critical(
-                'The Salt Master server\'s public key did not authenticate!\n'
+                "The Salt Master server's public key did not authenticate!\n"
                 'The master may need to be updated if it is a version of Salt '
                 'lower than {0}, or\n'
                 'If you are confident that you are connecting to a valid Salt '
@@ -889,7 +889,7 @@ class AsyncAuth(object):
                 else:
                     # This is not the last master we connected to
                     log.error('The master key has changed, the salt master could '
-                              'have been subverted, verify salt master\'s public '
+                              "have been subverted, verify salt master's public "
                               'key')
                     return ''
 
@@ -932,7 +932,7 @@ class AsyncAuth(object):
     def _finger_fail(self, finger, master_key):
         log.critical(
             'The specified fingerprint in the master configuration '
-            'file:\n{0}\nDoes not match the authenticating master\'s '
+            "file:\n{0}\nDoes not match the authenticating master's "
             'key:\n{1}\nVerify that the configured fingerprint '
             'matches the fingerprint of the correct master and that '
             'this minion is not subject to a man-in-the-middle attack.'
@@ -1101,7 +1101,7 @@ class SAuth(AsyncAuth):
                 if not payload['load']['ret']:
                     if self.opts['rejected_retry']:
                         log.error(
-                            'The Salt Master has rejected this minion\'s public '
+                            "The Salt Master has rejected this minion's public "
                             'key.\nTo repair this issue, delete the public key '
                             'for this minion on the Salt Master.\nThe Salt '
                             'Minion will attempt to to re-authenicate.'
@@ -1109,7 +1109,7 @@ class SAuth(AsyncAuth):
                         return 'retry'
                     else:
                         log.critical(
-                            'The Salt Master has rejected this minion\'s public '
+                            "The Salt Master has rejected this minion's public "
                             'key!\nTo repair this issue, delete the public key '
                             'for this minion on the Salt Master and restart this '
                             'minion.\nOr restart the Salt Master in open mode to '
@@ -1123,7 +1123,7 @@ class SAuth(AsyncAuth):
                     log.error(
                         'The Salt Master has cached the public key for this '
                         'node. If this is the first time connecting to this master '
-                        'then this key may need to be accepted using \'salt-key -a {0}\' on '
+                        "then this key may need to be accepted using 'salt-key -a {0}' on "
                         'the salt master. This salt minion will wait for {1} seconds '
                         'before attempting to re-authenticate.'.format(
                             self.opts['id'],
@@ -1134,7 +1134,7 @@ class SAuth(AsyncAuth):
         auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
         if not auth['aes']:
             log.critical(
-                'The Salt Master server\'s public key did not authenticate!\n'
+                "The Salt Master server's public key did not authenticate!\n"
                 'The master may need to be updated if it is a version of Salt '
                 'lower than {0}, or\n'
                 'If you are confident that you are connecting to a valid Salt '

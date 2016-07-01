@@ -31,7 +31,7 @@ class CPModuleTest(integration.ModuleCase):
                 ])
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertIn("KNIGHT:  They're nervous, sire.", data)
             self.assertNotIn('bacon', data)
 
     def test_get_file_templated_paths(self):
@@ -71,7 +71,7 @@ class CPModuleTest(integration.ModuleCase):
         )
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertIn("KNIGHT:  They're nervous, sire.", data)
             self.assertNotIn('bacon', data)
             self.assertEqual(hash, hashlib.md5(data).hexdigest())
 
@@ -90,7 +90,7 @@ class CPModuleTest(integration.ModuleCase):
         )
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertIn("KNIGHT:  They're nervous, sire.", data)
             self.assertNotIn('bacon', data)
 
     def test_get_template(self):
@@ -156,7 +156,7 @@ class CPModuleTest(integration.ModuleCase):
                 ])
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertIn("KNIGHT:  They're nervous, sire.", data)
             self.assertNotIn('bacon', data)
 
     def test_get_url_https(self):
@@ -188,7 +188,7 @@ class CPModuleTest(integration.ModuleCase):
                 ])
         with salt.utils.fopen(ret, 'r') as scene:
             data = scene.read()
-            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertIn("KNIGHT:  They're nervous, sire.", data)
             self.assertNotIn('bacon', data)
 
     def test_cache_files(self):

@@ -42,7 +42,7 @@ SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 ALIAS_WARN = (
         'Starting in 2015.5, cmd.run uses python_shell=False by default, '
-        'which doesn\'t support shellisms (pipes, env variables, etc). '
+        "which doesn't support shellisms (pipes, env variables, etc). "
         'cmd.run is currently aliased to cmd.shell to prevent breakage. '
         'Please switch to cmd.shell or set python_shell=True to avoid '
         'breakage in the future, when this aliasing is removed.'

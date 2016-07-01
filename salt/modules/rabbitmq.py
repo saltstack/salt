@@ -108,8 +108,8 @@ def _output_to_dict(cmdoutput, values_mapper=None):
             # set it to an empty string to preserve rabbitmq reporting behavior.
             # e.g. A user's permission string for '/' is set to ['', '', ''],
             # Rabbitmq reports this only as '/' from the rabbitmqctl command.
-            log.debug('Could not find any values for key \'{0}\'. '
-                      'Setting to \'{0}\' to an empty string.'.format(row))
+            log.debug("Could not find any values for key '{0}'. "
+                      "Setting to '{0}' to an empty string.".format(row))
             ret[row] = ''
             continue
         ret[key] = values_mapper(values)
@@ -706,7 +706,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
         definition = json.dumps(definition)
     if not isinstance(definition, six.string_types):
         raise SaltInvocationError(
-            'The \'definition\' argument must be a dictionary or JSON string'
+            "The 'definition' argument must be a dictionary or JSON string"
         )
     cmd = ['rabbitmqctl', 'set_policy', '-p', vhost]
     if priority:

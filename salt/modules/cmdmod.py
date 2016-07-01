@@ -164,8 +164,8 @@ def _check_loglevel(level='info', quiet=False):
     '''
     def _bad_level(level):
         log.error(
-            'Invalid output_loglevel \'{0}\'. Valid levels are: {1}. Falling '
-            'back to \'info\'.'
+            "Invalid output_loglevel '{0}'. Valid levels are: {1}. Falling "
+            "back to 'info'."
             .format(
                 level,
                 ', '.join(
@@ -338,7 +338,7 @@ def _run(cmd,
     env = _parse_env(env)
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable \'{0}\' passed without a value. '
+        log.error("Environment variable '{0}' passed without a value. "
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
@@ -364,7 +364,7 @@ def _run(cmd,
             pwd.getpwnam(runas)
         except KeyError:
             raise CommandExecutionError(
-                'User \'{0}\' is not available'.format(runas)
+                "User '{0}' is not available".format(runas)
             )
         try:
             # Getting the environment for the runas user
@@ -402,7 +402,7 @@ def _run(cmd,
                     env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
-                'Environment could not be retrieved for User \'{0}\''.format(
+                "Environment could not be retrieved for User '{0}'".format(
                     runas
                 )
             )
@@ -412,10 +412,10 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
-                '\'' if not isinstance(cmd, list) else '',
+            "Executing command {0}{1}{0} {2}in directory '{3}'{4}".format(
+                "'" if not isinstance(cmd, list) else '',
                 cmd,
-                'as user \'{0}\' '.format(runas) if runas else '',
+                "as user '{0}' ".format(runas) if runas else '',
                 cwd,
                 ' in the background, no output will be logged' if bg else ''
             )
@@ -475,7 +475,7 @@ def _run(cmd,
         try:
             _umask = int(_umask, 8)
         except ValueError:
-            msg = 'Invalid umask: \'{0}\''.format(umask)
+            msg = "Invalid umask: '{0}'".format(umask)
             raise CommandExecutionError(msg)
     else:
         _umask = None
@@ -495,7 +495,7 @@ def _run(cmd,
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
-            'Specified cwd \'{0}\' either not absolute or does not exist'
+            "Specified cwd '{0}' either not absolute or does not exist"
             .format(cwd)
         )
 
@@ -510,7 +510,7 @@ def _run(cmd,
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                'Unable to run command \'{0}\' with the context \'{1}\', '
+                "Unable to run command '{0}' with the context '{1}', "
                 'reason: {2}'.format(cmd, kwargs, exc)
             )
 
@@ -901,7 +901,7 @@ def run(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
+                "Command '{0}' failed with return code: {1}".format(
                     cmd,
                     ret['retcode']
                 )
@@ -1262,7 +1262,7 @@ def run_stdout(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
+                "Command '{0}' failed with return code: {1}".format(
                     cmd,
                     ret['retcode']
                 )
@@ -1442,7 +1442,7 @@ def run_stderr(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
+                "Command '{0}' failed with return code: {1}".format(
                     cmd,
                     ret['retcode']
                 )
@@ -1633,7 +1633,7 @@ def run_all(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
+                "Command '{0}' failed with return code: {1}".format(
                     cmd,
                     ret['retcode']
                 )
@@ -1814,7 +1814,7 @@ def retcode(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
+                "Command '{0}' failed with return code: {1}".format(
                     cmd,
                     ret['retcode']
                 )
@@ -2009,7 +2009,7 @@ def script(source,
             os.remove(path)
         except (IOError, OSError) as exc:
             log.error(
-                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                "cmd.script: Unable to clean tempfile '{0}': {1}".format(
                     path,
                     exc
                 )
@@ -2018,8 +2018,8 @@ def script(source,
     if '__env__' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter '__env__' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('__env__')
@@ -2217,8 +2217,8 @@ def script_retcode(source,
     if '__env__' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter '__env__' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('__env__')
@@ -2754,7 +2754,7 @@ def powershell(cmd,
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
-        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        log.debug("Encoding PowerShell command '{0}'".format(cmd))
         cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
         cmd = base64.standard_b64encode(cmd_utf16)
         encoded_cmd = True

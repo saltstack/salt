@@ -24,7 +24,7 @@ RESULT_CODES = [
     'Volume on {0} conflicts with existing volumes',
     'UUID of {0} is the same as local uuid',
     '{0} responded with "unknown peer". This could happen if {0} doesn\'t have localhost defined',
-    'Failed to add peer. Information on {0}\'s logs',
+    "Failed to add peer. Information on {0}'s logs",
     'Cluster quorum is not met. Changing peers is not allowed.',
     'Failed to update list of missed snapshots from {0}',
     'Conflict comparing list of snapshots from {0}',

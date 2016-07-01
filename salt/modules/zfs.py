@@ -519,7 +519,7 @@ def inherit(prop, name, **kwargs):
         if 'property cannot be inherited' in res['stderr']:
             ret[name][prop] = '{0}, {1}'.format(
                 ret[name][prop],
-                'use revert=True to try and reset it to it\'s default value.'
+                "use revert=True to try and reset it to it's default value."
             )
     else:
         ret[name][prop] = 'cleared'

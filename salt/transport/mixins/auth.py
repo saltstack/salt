@@ -177,7 +177,7 @@ class AESReqServerMixin(object):
                 minions = self.ckminions.connected_ids()
                 if len(minions) > 1000:
                     log.info('With large numbers of minions it is advised '
-                             'to enable the ConCache with \'con_cache: True\' '
+                             "to enable the ConCache with 'con_cache: True' "
                              'in the masters configuration file.')
 
             if not len(minions) <= self.opts['max_minions']:

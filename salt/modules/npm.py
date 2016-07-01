@@ -54,7 +54,7 @@ def _check_valid_version():
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
-            '\'npm\' is not recent enough({0} < {1}). Please Upgrade.'.format(
+            "'npm' is not recent enough({0} < {1}). Please Upgrade.".format(
                 npm_version, valid_version
             )
         )

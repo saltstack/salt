@@ -295,7 +295,7 @@ def list_upgrades(ruby=None,
         if match:
             name, version = match.groups()
         else:
-            log.error('Can\'t parse line \'{0}\''.format(line))
+            log.error("Can't parse line '{0}'".format(line))
             continue
         ret[name] = version
     return ret

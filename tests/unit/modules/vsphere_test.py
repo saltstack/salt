@@ -528,7 +528,7 @@ class VsphereTestCase(TestCase):
         Tests function returns False when an invalid syslog config is passed.
         '''
         config = 'foo'
-        ret = {'success': False, 'message': '\'{0}\' is not a valid config variable.'.format(config)}
+        ret = {'success': False, 'message': "'{0}' is not a valid config variable.".format(config)}
         self.assertEqual(ret, vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'bar'))
 
     @patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR}))

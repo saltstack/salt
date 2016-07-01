@@ -56,7 +56,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
-        data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
+        data = self.run_salt("-t 1 -C '{0}' test.ping".format(match))
         self.assertTrue(minion_in_returns('minion', data))
         self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
@@ -282,7 +282,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data.replace('sub_minion', 'stub'))
 
     def test_ipcidr(self):
-        subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
+        subnets_data = self.run_salt("--out yaml '*' network.subnets")
         yaml_data = yaml.load('\n'.join(subnets_data))
 
         # We're just after the first defined subnet from 'minion'

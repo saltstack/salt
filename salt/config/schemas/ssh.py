@@ -41,7 +41,7 @@ class RosterEntryConfig(Schema):
                       min_length=1,
                       required=True)
     port = PortItem(title='Port',
-                    description='The target system\'s ssh port number',
+                    description="The target system's ssh port number",
                     default=22)
     user = StringItem(title='User',
                       description='The user to log in as. Defaults to root',
@@ -63,7 +63,7 @@ class RosterEntryConfig(Schema):
                             description=('Number of seconds to wait for response '
                                          'when establishing an SSH connection'))
     thin_dir = StringItem(title='Thin Directory',
-                            description=('The target system\'s storage directory for Salt '
+                            description=("The target system's storage directory for Salt "
                                          'components. Defaults to /tmp/salt-<hash>.'))
     minion_opts = DictItem(title='Minion Options',
                              description='Dictionary of minion options',

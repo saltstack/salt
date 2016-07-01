@@ -919,7 +919,7 @@ def syslog_configured(name,
                 if not val.get('success'):
                     msg = val.get('message')
                     if not msg:
-                        msg = 'There was an error resetting a syslog config \'{0}\'.' \
+                        msg = "There was an error resetting a syslog config '{0}'." \
                               'Please check debug logs.'.format(val)
                     ret['comment'] = 'Error: {0}'.format(msg)
                     return ret
@@ -958,7 +958,7 @@ def syslog_configured(name,
         try:
             lookup_key = _lookup_syslog_config(key)
         except KeyError:
-            ret['comment'] = '\'{0}\' is not a valid config variable.'.format(key)
+            ret['comment'] = "'{0}' is not a valid config variable.".format(key)
             return ret
 
         current_val = current_syslog_config[lookup_key]
@@ -974,7 +974,7 @@ def syslog_configured(name,
                 if not success:
                     msg = response.get(key).get('message')
                     if not msg:
-                        msg = 'There was an error setting syslog config \'{0}\'. ' \
+                        msg = "There was an error setting syslog config '{0}'. " \
                               'Please check debug logs.'.format(key)
                     ret['comment'] = msg
                     return ret

@@ -378,9 +378,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
             typename = getattr(dtype, '__name__',
                                hasattr(dtype, '__class__')
                                and getattr(dtype.__class__, 'name', dtype))
-            errmsg = '{0} within \'{1}\''.format(typename, within)
+            errmsg = "{0} within '{1}'".format(typename, within)
         else:
-            errmsg = 'within \'{0}\''.format(within)
+            errmsg = "within '{0}'".format(within)
     return (valid, _value, errmsg)
 
 
@@ -1286,7 +1286,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if not valid:
                 _raise_error_iface(
                     iface,
-                    '\'{0}\' \'{1}\''.format(opt, valuestr),
+                    "'{0}' '{1}'".format(opt, valuestr),
                     [errmsg]
                 )
 

@@ -173,7 +173,7 @@ class Registry(object):  # pylint: disable=R0903
         try:
             return self.hkeys[k]
         except KeyError:
-            msg = 'No hkey named \'{0}. Try one of {1}\''
+            msg = "No hkey named '{0}'. Try one of {1}"
             hkeys = ', '.join(self.hkeys)
             raise CommandExecutionError(msg.format(k, hkeys))
 

@@ -319,8 +319,8 @@ def zpool_list():
     '''
     salt.utils.warn_until(
             'Carbon',
-            'The \'zpool_list()\' module function is being deprecated and is '
-            'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
+            "The 'zpool_list()' module function is being deprecated and is "
+            "being renamed to 'list()'. This function 'zpool_list()' will be removed in "
             'Salt Carbon.'
         )
     return list_()
@@ -727,7 +727,7 @@ def add(zpool, *vdevs, **kwargs):
     '''
     .. versionchanged:: 2016.3.0
 
-    Add the specified vdev\'s to the given storage pool
+    Add the specified vdev's to the given storage pool
 
     zpool : string
         name of storage pool

@@ -41,10 +41,10 @@ class AtTestCase(TestCase):
         Tests the at.atq not available for any type of os_family.
         '''
         with patch.dict(at.__grains__, {'os_family': 'RedHat'}):
-            self.assertEqual(at.atq(), '\'at.atq\' is not available.')
+            self.assertEqual(at.atq(), "'at.atq' is not available.")
 
         with patch.dict(at.__grains__, {'os_family': ''}):
-            self.assertEqual(at.atq(), '\'at.atq\' is not available.')
+            self.assertEqual(at.atq(), "'at.atq' is not available.")
 
     @patch('salt.modules.at._cmd', MagicMock(return_value=''))
     def test_atq_no_jobs_available(self):
@@ -117,7 +117,7 @@ class AtTestCase(TestCase):
                                                'tag': None}})
 
         with patch.object(at, '_cmd', return_value=None):
-            self.assertEqual(at.atrm(101), '\'at.atrm\' is not available.')
+            self.assertEqual(at.atrm(101), "'at.atrm' is not available.")
 
     @patch('salt.modules.at.atq', MagicMock(return_value=atq_output))
     def test_jobcheck(self):
@@ -190,11 +190,11 @@ class AtTestCase(TestCase):
             Tests for atc
         """
         with patch.object(at, '_cmd', return_value=None):
-            self.assertEqual(at.atc(101), '\'at.atc\' is not available.')
+            self.assertEqual(at.atc(101), "'at.atc' is not available.")
 
         with patch.object(at, '_cmd', return_value=''):
             self.assertDictEqual(at.atc(101),
-                                 {'error': 'invalid job id \'101\''})
+                                 {'error': "invalid job id '101'"})
 
         with patch.object(at, '_cmd',
                           return_value='101\tThu Dec 11 19:48:47 2014 A B'):

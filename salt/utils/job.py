@@ -119,7 +119,7 @@ def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
         mminion.returners[minions_fstr](jid, minions, syndic_id=syndic_id)
     except KeyError:
         raise KeyError(
-            'Returner \'{0}\' does not support function save_minions'.format(
+            "Returner '{0}' does not support function save_minions".format(
                 job_cache
             )
         )

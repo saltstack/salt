@@ -134,7 +134,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
                 sid = has_names_decls(data)
                 if sid:
                     raise SaltRenderError(
-                        '\'names\' declaration(found in state id: {0}) is '
+                        "'names' declaration(found in state id: {0}) is "
                         'not supported with implicitly ordered states! You '
                         'should generate the states in a template for-loop '
                         'instead.'.format(sid)
@@ -387,7 +387,7 @@ def rename_state_ids(data, sls, is_extend=False):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:
                 raise SaltRenderError(
-                    'Can\'t rename state id({0}) into {1} because the later '
+                    "Can't rename state id({0}) into {1} because the later "
                     'already exists!'.format(sid, newsid)
                 )
             # add a '- name: sid' to those states without '- name'.
@@ -449,7 +449,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_after:
                 raise SaltRenderError(
-                    'State({0}) can\'t require/watch/listen a state({1}) defined '
+                    "State({0}) can't require/watch/listen a state({1}) defined "
                     'after it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -459,7 +459,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_before:
                 raise SaltRenderError(
-                    'State({0}) can\'t require_in/watch_in/listen_in a state({1}) '
+                    "State({0}) can't require_in/watch_in/listen_in a state({1}) "
                     'defined before it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -479,7 +479,7 @@ def add_start_state(data, sls):
     start_sid = __opts__['stateconf_start_state']
     if start_sid in data:
         raise SaltRenderError(
-            'Can\'t generate start state({0})! The same state id already '
+            "Can't generate start state({0})! The same state id already "
             'exists!'.format(start_sid)
         )
     if not data:
@@ -495,7 +495,7 @@ def add_start_state(data, sls):
         if '__sls__' not in states or states['__sls__'] == sls:
             break
     else:
-        raise SaltRenderError('Can\'t determine the first state in the sls file!')
+        raise SaltRenderError("Can't determine the first state in the sls file!")
     reqin = {state_name(next(six.iterkeys(data[sid]))): sid}
     data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
@@ -504,7 +504,7 @@ def add_goal_state(data):
     goal_sid = __opts__['stateconf_goal_state']
     if goal_sid in data:
         raise SaltRenderError(
-            'Can\'t generate goal state({0})! The same state id already '
+            "Can't generate goal state({0})! The same state id already "
             'exists!'.format(goal_sid)
         )
     else:

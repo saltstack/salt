@@ -119,7 +119,7 @@ class Base(TestCase):
 
 @skipIf(True, 'These tests are not running reliably')
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 @skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
@@ -311,7 +311,7 @@ class BuildoutTestCase(Base):
 
 
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutOnlineTestCase(Base):
 

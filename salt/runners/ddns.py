@@ -75,7 +75,7 @@ def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout)
 
     for rrset in answer.answer:
         if rdata in rrset.items:
-            return {fqdn: 'Record of type \'{0}\' already exists with ttl of {1}'.format(rdtype, rrset.ttl)}
+            return {fqdn: "Record of type '{0}' already exists with ttl of {1}".format(rdtype, rrset.ttl)}
 
     keyring = _get_keyring(keyfile)
 
@@ -84,9 +84,9 @@ def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout)
 
     answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
-        return {fqdn: 'Failed to create record of type \'{0}\''.format(rdtype)}
+        return {fqdn: "Failed to create record of type '{0}'".format(rdtype)}
 
-    return {fqdn: 'Created record of type \'{0}\': {1} -> {2}'.format(rdtype, fqdn, data)}
+    return {fqdn: "Created record of type '{0}': {1} -> {2}".format(rdtype, fqdn, data)}
 
 
 def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout, replace=False):
@@ -123,7 +123,7 @@ def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout,
                 if replace and (len(answer.answer) > 1
                         or len(rrset.items) > 1):
                     break
-                return {fqdn: 'Record of type \'{0}\' already present with ttl of {1}'.format(rdtype, ttl)}
+                return {fqdn: "Record of type '{0}' already present with ttl of {1}".format(rdtype, ttl)}
             break
 
     keyring = _get_keyring(keyfile)
@@ -133,9 +133,9 @@ def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout,
 
     answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
-        return {fqdn: 'Failed to update record of type \'{0}\''.format(rdtype)}
+        return {fqdn: "Failed to update record of type '{0}'".format(rdtype)}
 
-    return {fqdn: 'Updated record of type \'{0}\''.format(rdtype)}
+    return {fqdn: "Updated record of type '{0}'".format(rdtype)}
 
 
 def delete(zone, name, keyname, keyfile, nameserver, timeout, rdtype=None, data=None):
@@ -244,7 +244,7 @@ def delete_host(zone, name, keyname, keyfile, nameserver, timeout):
         ips = []
 
     ret = delete(zone, name, keyname, keyfile, nameserver, timeout)
-    res.append("{0} of type \'A\'".format(ret[fqdn]))
+    res.append("{0} of type 'A'".format(ret[fqdn]))
 
     for ip in ips:
         parts = ip.split('.')[::-1]
@@ -262,7 +262,7 @@ def delete_host(zone, name, keyname, keyfile, nameserver, timeout):
             ret = delete(zone, name, keyname, keyfile, nameserver, timeout, 'PTR', "{0}.".format(fqdn))
 
             if "Deleted" in ret[rev_fqdn]:
-                res.append("{0} of type \'PTR\'".format(ret[rev_fqdn]))
+                res.append("{0} of type 'PTR'".format(ret[rev_fqdn]))
                 return {fqdn: res}
 
         res.append(ret[rev_fqdn])

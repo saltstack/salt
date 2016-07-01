@@ -193,7 +193,7 @@ class StateModuleTest(integration.ModuleCase,
         testfile = os.path.join(integration.TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
-            'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
+            "ID '{0}' in SLS 'issue-1876' contains multiple state "
             'declarations of the same type'.format(testfile),
             sls
         )
@@ -403,7 +403,7 @@ class StateModuleTest(integration.ModuleCase,
             self.assertTrue(isinstance(ret, list))
             self.assertNotEqual(ret, [])
             self.assertEqual(
-                ['The \'{0}\' declaration found on \'<template-str>\' is '
+                ["The '{0}' declaration found on '<template-str>' is "
                  'invalid when rendering single templates'.format(item)],
                 ret
             )
@@ -424,11 +424,11 @@ class StateModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function('state.sls', mods='syntax.badlist')
         self.assertEqual(ret, [
-            'State \'A\' in SLS \'syntax.badlist\' is not formed as a list'
+            "State 'A' in SLS 'syntax.badlist' is not formed as a list"
         ])
         ret = self.run_function('state.sls', mods='syntax.badlist2')
         self.assertEqual(ret, [
-            'State \'C\' in SLS \'syntax.badlist2\' is not formed as a list'
+            "State 'C' in SLS 'syntax.badlist2' is not formed as a list"
         ])
 
     def test_requisites_mixed_require_prereq_use(self):
@@ -639,8 +639,8 @@ class StateModuleTest(integration.ModuleCase,
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
         self.assertEqual(ret, [
-            'The require statement in state \'B\' in SLS '
-          + '\'requisites.require_simple_nolist\' needs to be formed as a list'
+            "The require statement in state 'B' in SLS "
+          + "'requisites.require_simple_nolist' needs to be formed as a list"
         ])
 
         # commented until a fix is made for issue #8772

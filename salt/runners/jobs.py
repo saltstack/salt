@@ -76,9 +76,9 @@ def active(outputter=None, display_progress=False):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the jobs.active runner '
+            "The 'outputter' argument to the jobs.active runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': ret}
     else:
@@ -168,9 +168,9 @@ def lookup_jid(jid,
     else:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the jobs.lookup_jid runner '
+            "The 'outputter' argument to the jobs.lookup_jid runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
 
     if outputter:
@@ -225,9 +225,9 @@ def list_job(jid, ext_source=None, outputter=None, display_progress=False):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the jobs.list_job runner '
+            "The 'outputter' argument to the jobs.list_job runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': ret}
     else:
@@ -373,7 +373,7 @@ def list_jobs(ext_source=None,
                     _match = True
             else:
                 log.error(
-                    '\'dateutil\' library not available, skipping start_time '
+                    "'dateutil' library not available, skipping start_time "
                     'comparision.'
                 )
 
@@ -386,7 +386,7 @@ def list_jobs(ext_source=None,
                     _match = True
             else:
                 log.error(
-                    '\'dateutil\' library not available, skipping end_time '
+                    "'dateutil' library not available, skipping end_time "
                     'comparision.'
                 )
 
@@ -433,7 +433,7 @@ def list_jobs_filter(count,
     fun = '{0}.get_jids_filter'.format(returner)
     if fun not in mminion.returners:
         raise NotImplementedError(
-            '\'{0}\' returner function not implemented yet.'.format(fun)
+            "'{0}' returner function not implemented yet.".format(fun)
         )
     ret = mminion.returners[fun](count, filter_find_job)
 
@@ -483,9 +483,9 @@ def print_job(jid, ext_source=None, outputter=None):
     if outputter:
         salt.utils.warn_until(
             'Carbon',
-            'The \'outputter\' argument to the jobs.print_job runner '
+            "The 'outputter' argument to the jobs.print_job runner "
             'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
+            "See the output of 'salt-run -h' for more information."
         )
         return {'outputter': outputter, 'data': ret}
     else:

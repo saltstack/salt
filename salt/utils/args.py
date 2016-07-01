@@ -187,7 +187,7 @@ def get_function_argspec(func):
             del aspec.args[0]  # self
         else:
             raise TypeError(
-                'Cannot inspect argument list for \'{0}\''.format(func)
+                "Cannot inspect argument list for '{0}'".format(func)
             )
     else:
         if inspect.isfunction(func):
@@ -200,6 +200,6 @@ def get_function_argspec(func):
             del aspec.args[0]  # self
         else:
             raise TypeError(
-                'Cannot inspect argument list for \'{0}\''.format(func)
+                "Cannot inspect argument list for '{0}'".format(func)
             )
     return aspec

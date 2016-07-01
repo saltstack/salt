@@ -45,7 +45,7 @@ class SaltCloudCliTest(integration.ShellCase,
 
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
-            'salt-cloud: error: \'--list-providers\' does not accept any '
+            "salt-cloud: error: '--list-providers' does not accept any "
             'arguments',
             self.run_cloud('--list-providers ec2', catch_stderr=True)[1]
         )

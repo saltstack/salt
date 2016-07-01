@@ -2067,8 +2067,8 @@ def request_instance(vm_):
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
             raise SaltCloudSystemExit(
-                'The value of \'ex_disk_type\' needs to be one of: '
-                '\'pd-standard\', \'pd-ssd\''
+                "The value of 'ex_disk_type' needs to be one of: "
+                "'pd-standard', 'pd-ssd'"
             )
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
@@ -2132,9 +2132,9 @@ def create(vm_=None, call=None):
     vm_['key_filename'] = ssh_key
     salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info("Created Cloud VM '{0[name]}'".format(vm_))
     log.trace(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        "'{0[name]}' VM creation details:\n{1}".format(
             vm_, pprint.pformat(node_dict)
         )
     )

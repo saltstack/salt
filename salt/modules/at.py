@@ -73,7 +73,7 @@ def atq(tag=None):
         output = _cmd('atq')
 
     if output is None:
-        return '\'at.atq\' is not available.'
+        return "'at.atq' is not available."
 
     # No jobs so return
     if output == '':
@@ -156,7 +156,7 @@ def atrm(*args):
 
     # Need to do this here also since we use atq()
     if not salt.utils.which('at'):
-        return '\'at.atrm\' is not available.'
+        return "'at.atrm' is not available."
 
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
@@ -177,7 +177,7 @@ def atrm(*args):
     # but __salt__ isn't available in __virtual__()
     output = _cmd('at', '-d', ' '.join(opts))
     if output is None:
-        return '\'at.atrm\' is not available.'
+        return "'at.atrm' is not available."
 
     return ret
 
@@ -205,7 +205,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     # but __salt__ isn't available in __virtual__()
     binary = salt.utils.which('at')
     if not binary:
-        return '\'at.at\' is not available.'
+        return "'at.at' is not available."
 
     if 'tag' in kwargs:
         stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
@@ -219,7 +219,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     output = __salt__['cmd.run'](cmd, **cmd_kwargs)
 
     if output is None:
-        return '\'at.at\' is not available.'
+        return "'at.at' is not available."
 
     if output.endswith('Garbled time'):
         return {'jobs': [], 'error': 'invalid timespec'}
@@ -255,9 +255,9 @@ def atc(jobid):
     output = _cmd('at', '-c', str(jobid))
 
     if output is None:
-        return '\'at.atc\' is not available.'
+        return "'at.atc' is not available."
     elif output == '':
-        return {'error': 'invalid job id \'{0}\''.format(jobid)}
+        return {'error': "invalid job id '{0}'".format(jobid)}
 
     return output
 

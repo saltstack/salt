@@ -34,7 +34,7 @@ class VirtualenvTest(integration.ModuleCase,
             # Left behind on a canceled test run?
             self.run_function('user.delete', [user, True, True])
             if not self.run_function('user.add', [user]):
-                self.skipTest('Failed to create the \'{0}\' user'.format(user))
+                self.skipTest("Failed to create the '{0}' user".format(user))
 
         uinfo = self.run_function('user.info', [user])
 

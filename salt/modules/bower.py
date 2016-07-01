@@ -49,7 +49,7 @@ def _check_valid_version():
     # pylint: enable=no-member
     if bower_version < valid_version:
         raise CommandExecutionError(
-            '\'bower\' is not recent enough({0} < {1}). '
+            "'bower' is not recent enough({0} < {1}). "
             'Please Upgrade.'.format(
                 bower_version, valid_version
             )

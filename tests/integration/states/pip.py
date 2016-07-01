@@ -62,7 +62,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':'
+                "Error installing 'supervisor':"
             )
 
             # We now create the missing virtualenv
@@ -85,7 +85,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
-                'You already have \'{0}\'. This test would overwrite this '
+                "You already have '{0}'. This test would overwrite this "
                 'directory'.format(ographite)
             )
         try:
@@ -94,7 +94,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if err.errno == 13:
                 # Permission denied
                 self.skipTest(
-                    'You don\'t have the required permissions to run this test'
+                    "You don't have the required permissions to run this test"
                 )
         finally:
             if os.path.isdir(ographite):
@@ -119,8 +119,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    'There was no error installing package \'carbon\' '
-                    'although it does not show when calling \'pip.freeze\'.'
+                    "There was no error installing package 'carbon' "
+                    "although it does not show when calling 'pip.freeze'."
                 )
         finally:
             if os.path.isdir(venv_dir):
@@ -166,7 +166,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_function('state.sls', mods='issue-2087-missing-pip')
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
-                'Error installing \'pep8\': Could not find a `pip` binary',
+                "Error installing 'pep8': Could not find a `pip` binary",
                 ret
             )
         finally:

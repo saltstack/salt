@@ -403,7 +403,7 @@ class Fileserver(object):
                 if remote:
                     if not isinstance(remote, six.string_types):
                         errors.append(
-                            'Badly formatted remote pattern \'{0}\''
+                            "Badly formatted remote pattern '{0}'"
                             .format(remote)
                         )
                         continue
@@ -511,8 +511,8 @@ class Fileserver(object):
         if 'env' in kwargs:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             kwargs.pop('env')
@@ -541,8 +541,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -567,8 +567,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -594,8 +594,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -625,8 +625,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -656,8 +656,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')
@@ -687,8 +687,8 @@ class Fileserver(object):
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             load.pop('env')

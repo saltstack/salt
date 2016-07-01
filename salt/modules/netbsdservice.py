@@ -228,7 +228,7 @@ def _rcconf_status(name, service_status):
     rcconf = '/etc/rc.conf'
     rxname = '^{0}=.*'.format(name)
     newstatus = '{0}={1}'.format(name, service_status)
-    ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
+    ret = __salt__['cmd.retcode']("grep '{0}' {1}".format(rxname, rcconf))
     if ret == 0:  # service found in rc.conf, modify its status
         __salt__['file.replace'](rcconf, rxname, newstatus)
     else:

@@ -42,7 +42,7 @@ class SaltmodTestCase(TestCase):
         name = 'state'
         tgt = 'minion1'
 
-        comt = ('Passed invalid value for \'allow_fail\', must be an int')
+        comt = ("Passed invalid value for 'allow_fail', must be an int")
 
         ret = {'name': name,
                'changes': {},

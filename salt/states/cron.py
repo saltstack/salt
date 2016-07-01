@@ -337,7 +337,7 @@ def present(name,
         return ret
 
     if data == 'new':
-        ret['comment'] = 'Cron {0} added to {1}\'s crontab'.format(name, user)
+        ret['comment'] = "Cron {0} added to {1}'s crontab".format(name, user)
         ret['changes'] = {user: name}
         return ret
 
@@ -617,7 +617,7 @@ def env_present(name,
         return ret
 
     if data == 'new':
-        ret['comment'] = 'Cron env {0} added to {1}\'s crontab'.format(name, user)
+        ret['comment'] = "Cron env {0} added to {1}'s crontab".format(name, user)
         ret['changes'] = {user: name}
         return ret
 

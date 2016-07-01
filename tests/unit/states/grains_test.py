@@ -252,7 +252,7 @@ class GrainsTestCase(TestCase):
             value='newbar')
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['changes'], {})
-        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['comment'], "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.")
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
@@ -264,7 +264,7 @@ class GrainsTestCase(TestCase):
             value=None)
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['changes'], {})
-        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['comment'], "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.")
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
@@ -276,9 +276,9 @@ class GrainsTestCase(TestCase):
             name='foo',
             value=['l1', 'l2'])
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo\' exists and the '
+        self.assertEqual(ret['comment'], "The key 'foo' exists and the "
                                        + 'given value is a dict or a list. '
-                                       + 'Use \'force=True\' to overwrite.')
+                                       + "Use 'force=True' to overwrite.")
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,
@@ -290,9 +290,9 @@ class GrainsTestCase(TestCase):
             name='foo',
             value={'k1': 'v1'})
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo\' exists and the given '
+        self.assertEqual(ret['comment'], "The key 'foo' exists and the given "
                                        + 'value is a dict or a list. Use '
-                                       + '\'force=True\' to overwrite.')
+                                       + "'force=True' to overwrite.")
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,
@@ -306,9 +306,9 @@ class GrainsTestCase(TestCase):
             delimiter=',')
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['changes'], {})
-        self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
+        self.assertEqual(ret['comment'], "The key 'foo:is:nested' exists and the "
                                        + 'given value is a dict or a list. '
-                                       + 'Use \'force=True\' to overwrite.')
+                                       + "Use 'force=True' to overwrite.")
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
@@ -319,9 +319,9 @@ class GrainsTestCase(TestCase):
             name='foo:is:nested',
             value={'k1': 'v1'})
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
+        self.assertEqual(ret['comment'], "The key 'foo:is:nested' exists and the "
                                        + 'given value is a dict or a list. '
-                                       + 'Use \'force=True\' to overwrite.')
+                                       + "Use 'force=True' to overwrite.")
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,
@@ -334,9 +334,9 @@ class GrainsTestCase(TestCase):
             name='foo',
             value={'k2': 'v2'})
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo\' exists but '
+        self.assertEqual(ret['comment'], "The key 'foo' exists but "
                                        + 'is a dict or a list. '
-                                       + 'Use \'force=True\' to overwrite.')
+                                       + "Use 'force=True' to overwrite.")
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'k1': 'v1'}})
@@ -353,7 +353,7 @@ class GrainsTestCase(TestCase):
             value=['l1', 'l2'],
             force=True)
         self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['comment'], 'Set grain foo to [\'l1\', \'l2\']')
+        self.assertEqual(ret['comment'], "Set grain foo to ['l1', 'l2']")
         self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
         self.assertEqual(
             grains.__grains__,
@@ -371,7 +371,7 @@ class GrainsTestCase(TestCase):
             value={'k1': 'v1'},
             force=True)
         self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['comment'], 'Set grain foo to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['comment'], "Set grain foo to {'k1': 'v1'}")
         self.assertEqual(ret['changes'], {'foo': {'k1': 'v1'}})
         self.assertEqual(
             grains.__grains__,
@@ -390,7 +390,7 @@ class GrainsTestCase(TestCase):
             force=True)
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['changes'], {'foo': {'is': {'nested': ['l1', 'l2']}}})
-        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to [\'l1\', \'l2\']')
+        self.assertEqual(ret['comment'], "Set grain foo:is:nested to ['l1', 'l2']")
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}})
@@ -409,7 +409,7 @@ class GrainsTestCase(TestCase):
             value={'k1': 'v1'},
             force=True)
         self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['comment'], "Set grain foo:is:nested to {'k1': 'v1'}")
         self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
         self.assertEqual(
             grains.__grains__,
@@ -429,9 +429,9 @@ class GrainsTestCase(TestCase):
             name='foo:is:nested',
             value={'k1': 'v1'})
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo\' value is \'bar\', '
+        self.assertEqual(ret['comment'], "The key 'foo' value is 'bar', "
                                + 'which is different from the provided '
-                               + 'key \'is\'. Use \'force=True\' to overwrite.')
+                               + "key 'is'. Use 'force=True' to overwrite.")
         self.assertEqual(ret['changes'], {})
 
     def test_present_overwrite_test(self):
@@ -457,7 +457,7 @@ class GrainsTestCase(TestCase):
             name='foo:is:nested',
             value={'k1': 'v1'})
         self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['comment'], "Set grain foo:is:nested to {'k1': 'v1'}")
         self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}}})
         self.assertEqual(
             grains.__grains__,
@@ -475,7 +475,7 @@ class GrainsTestCase(TestCase):
             name='foo:is:nested',
             value={'k1': 'v1'})
         self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['comment'], "Set grain foo:is:nested to {'k1': 'v1'}")
         self.assertEqual(ret['changes'], {'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
         self.assertEqual(
             grains.__grains__,
@@ -619,7 +619,7 @@ class GrainsTestCase(TestCase):
         ret = grains.absent(
             name='foo:is')
         self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['comment'], "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.")
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,

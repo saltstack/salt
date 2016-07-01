@@ -754,7 +754,7 @@ def grains(opts, force_refresh=False, proxy=None):
                         else:
                             grains_data.update(ret)
                     except Exception:
-                        log.critical('Failed to run proxy\'s grains function!',
+                        log.critical("Failed to run proxy's grains function!",
                             exc_info=True
                         )
         except KeyError:
@@ -895,7 +895,7 @@ def clouds(opts):
     )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
-            '\'{0}\' has been marked as not supported. Removing from the list '
+            "'{0}' has been marked as not supported. Removing from the list "
             'of supported cloud functions'.format(
                 funcname
             )
@@ -1101,17 +1101,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         mod_name = function_name.split('.')[0]
         if mod_name in self.loaded_modules:
-            return '\'{0}\' is not available.'.format(function_name)
+            return "'{0}' is not available.".format(function_name)
         else:
             try:
                 reason = self.missing_modules[mod_name]
             except KeyError:
-                return '\'{0}\' is not available.'.format(function_name)
+                return "'{0}' is not available.".format(function_name)
             else:
                 if reason is not None:
-                    return '\'{0}\' __virtual__ returned False: {1}'.format(mod_name, reason)
+                    return "'{0}' __virtual__ returned False: {1}".format(mod_name, reason)
                 else:
-                    return '\'{0}\' __virtual__ returned False'.format(mod_name)
+                    return "'{0}' __virtual__ returned False".format(mod_name)
 
     def refresh_file_mapping(self):
         '''
@@ -1187,7 +1187,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
                         if '' in (curr_ext, ext) and curr_ext != ext:
                             log.error(
-                                'Module/package collision: \'%s\' and \'%s\'',
+                                "Module/package collision: '%s' and '%s'",
                                 fpath,
                                 self.file_mapping[f_noext][0]
                             )
@@ -1412,7 +1412,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         if getattr(mod, '__load__', False) is not False:
             log.info(
-                'The functions from module \'{0}\' are being loaded from the '
+                "The functions from module '{0}' are being loaded from the "
                 'provided __load__ attribute'.format(
                     module_name
                 )
@@ -1584,8 +1584,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         log.warning(
                             '{0}.__virtual__() is wrongly returning `None`. '
                             'It should either return `True`, `False` or a new '
-                            'name. If you\'re the developer of the module '
-                            '\'{1}\', please fix this.'.format(
+                            "name. If you're the developer of the module "
+                            "'{1}', please fix this.".format(
                                 mod.__name__,
                                 module_name
                             )
@@ -1606,10 +1606,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not hasattr(mod, '__virtualname__'):
                         salt.utils.warn_until(
                             'Hydrogen',
-                            'The \'{0}\' module is renaming itself in its '
+                            "The '{0}' module is renaming itself in its "
                             '__virtual__() function ({1} => {2}). Please '
-                            'set it\'s virtual name as the '
-                            '\'__virtualname__\' module attribute. '
+                            "set it's virtual name as the "
+                            "'__virtualname__' module attribute. "
                             'Example: "__virtualname__ = \'{2}\'"'.format(
                                 mod.__name__,
                                 module_name,
@@ -1622,9 +1622,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # being returned by the __virtual__() function. This
                         # should be considered an error.
                         log.error(
-                            'The module \'{0}\' is showing some bad usage. Its '
-                            '__virtualname__ attribute is set to \'{1}\' yet the '
-                            '__virtual__() function is returning \'{2}\'. These '
+                            "The module '{0}' is showing some bad usage. Its "
+                            "__virtualname__ attribute is set to '{1}' yet the "
+                            "__virtual__() function is returning '{2}'. These "
                             'values should match!'.format(
                                 mod.__name__,
                                 virtualname,

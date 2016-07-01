@@ -422,7 +422,7 @@ def apply_config(path, source=None, salt_env='base'):
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
     cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(config)
-    cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
+    cmd += "Do{ } While ($job.State -notin 'Completed', 'Failed'); " \
            'return $job.State'
     ret = _pshell(cmd)
     log.info('DSC Apply Config: {0}'.format(ret))

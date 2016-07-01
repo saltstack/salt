@@ -286,11 +286,11 @@ def _resolve_datacenter(dc, pillarenv):
     try:
         mappings = dc.items()  # is it a dict?
     except AttributeError:
-        log.debug('Using pre-defined DC: \'%s\'', dc)
+        log.debug("Using pre-defined DC: '%s'", dc)
         return dc
 
     log.debug('Selecting DC based on pillarenv using %d pattern(s)', len(mappings))
-    log.debug('Pillarenv set to \'%s\'', pillarenv)
+    log.debug("Pillarenv set to '%s'", pillarenv)
 
     # sort in reverse based on pattern length
     # but use alphabetic order within groups of patterns of same length
@@ -299,9 +299,9 @@ def _resolve_datacenter(dc, pillarenv):
     for pattern, target in sorted_mappings:
         match = re.match(pattern, pillarenv)
         if match:
-            log.debug('Matched pattern: \'%s\'', pattern)
+            log.debug("Matched pattern: '%s'", pattern)
             result = target.format(**match.groupdict())
-            log.debug('Resolved datacenter: \'%s\'', result)
+            log.debug("Resolved datacenter: '%s'", result)
             return result
 
     log.debug(

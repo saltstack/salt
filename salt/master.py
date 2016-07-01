@@ -301,7 +301,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
                 pillar.update()
         except Exception as exc:
             log.error(
-                'Exception \'{0}\' caught while updating git_pillar'
+                "Exception '{0}' caught while updating git_pillar"
                 .format(exc),
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -392,7 +392,7 @@ class Master(SMaster):
         if mof_c > mof_h:
             # The configured value is higher than what's allowed
             log.info(
-                'The value for the \'max_open_files\' setting, {0}, is higher '
+                "The value for the 'max_open_files' setting, {0}, is higher "
                 'than what the user running salt is allowed to raise to, {1}. '
                 'Defaulting to {1}.'.format(mof_c, mof_h)
             )
@@ -505,7 +505,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user \'{0}\''.format(
+            "salt-master is starting as user '{0}'".format(
                 salt.utils.get_user()
             )
         )
@@ -1057,7 +1057,7 @@ class AESFuncs(object):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for \'{1}\', missing \'{2}\''
+                "Received incomplete call from {0} for '{1}', missing '{2}'"
                 .format(
                     load['id'],
                     inspect_stack()['co_name'],
@@ -1208,8 +1208,8 @@ class AESFuncs(object):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for \'{1}\', missing '
-                '\'{2}\''.format(
+                "Received incomplete call from {0} for '{1}', missing "
+                "'{2}'".format(
                     load['id'],
                     inspect_stack()['co_name'],
                     'tok'
@@ -1905,8 +1905,8 @@ class ClearFuncs(object):
         if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
             salt.utils.warn_until(
                     'Nitrogen',
-                    'ACL rules should be configured with \'publisher_acl\' and '
-                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    "ACL rules should be configured with 'publisher_acl' and "
+                    "'publisher_acl_blacklist' not 'client_acl' and 'client_acl_blacklist'. "
                     'This functionality will be removed in Salt Nitrogen.'
                     )
         publisher_acl = salt.acl.PublisherACL(
@@ -2227,7 +2227,7 @@ class ClearFuncs(object):
         except (KeyError, TypeError):
             # The returner is not present
             msg = (
-                'Failed to allocate a jid. The requested returner \'{0}\' '
+                "Failed to allocate a jid. The requested returner '{0}' "
                 'could not be loaded.'.format(fstr.split('.')[0])
             )
             log.error(msg)
@@ -2281,7 +2281,7 @@ class ClearFuncs(object):
                 if 'minions' not in arg_spec.args:
                     log.critical(
                         'The specified returner used for the external job cache '
-                        '\'{0}\' does not have a \'minions\' kwarg in the returner\'s '
+                        "'{0}' does not have a 'minions' kwarg in the returner's "
                         'save_load function.'.format(
                             self.opts['ext_job_cache']
                         )

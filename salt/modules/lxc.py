@@ -131,7 +131,7 @@ def _clear_context():
     Clear any lxc variables set in __context__
     '''
     for var in [x for x in __context__ if x.startswith('lxc.')]:
-        log.trace('Clearing __context__[\'{0}\']'.format(var))
+        log.trace("Clearing __context__['{0}']".format(var))
         __context__.pop(var, None)
 
 
@@ -1327,8 +1327,8 @@ def init(name,
     if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
             'Carbon',
-            'The \'nic\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'network_profile\' instead.'
+            "The 'nic' argument to 'lxc.init' has been deprecated, "
+            "please use 'network_profile' instead."
         )
         network_profile = nic
     if not network_profile:
@@ -1343,8 +1343,8 @@ def init(name,
     else:
         salt.utils.warn_until(
             'Carbon',
-            'The \'clone\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'clone_from\' instead.'
+            "The 'clone' argument to 'lxc.init' has been deprecated, "
+            "please use 'clone_from' instead."
         )
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
@@ -1387,7 +1387,7 @@ def init(name,
         salt.utils.warn_until(
             'Carbon',
             'Starting with the Carbon release, passwords passed to the '
-            '\'lxc.init\' function will be assumed to be hashed, unless '
+            "'lxc.init' function will be assumed to be hashed, unless "
             'password_encrypted=False. Please keep this in mind.'
         )
         password_encrypted = False
@@ -1500,7 +1500,7 @@ def init(name,
 
     if remove_seed_marker:
         run(name,
-            'rm -f \'{0}\''.format(SEED_MARKER),
+            "rm -f '{0}'".format(SEED_MARKER),
             path=path,
             chroot_fallback=False,
             python_shell=False)
@@ -1596,7 +1596,7 @@ def init(name,
     # retro compatibility, test also old markers
     if remove_seed_marker:
         run(name,
-            'rm -f \'{0}\''.format(SEED_MARKER),
+            "rm -f '{0}'".format(SEED_MARKER),
             path=path,
             python_shell=False)
     gid = '/.lxc.initial_seed'
@@ -1642,19 +1642,19 @@ def init(name,
                                             name,
                                             salt_config)
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = ('Bootstrap via seed_cmd \'{0}\' failed: {1}'
+                ret['comment'] = ("Bootstrap via seed_cmd '{0}' failed: {1}"
                                   .format(seed_cmd, exc.strerror))
                 ret['result'] = False
             else:
                 if not result:
-                    ret['comment'] = ('Bootstrap via seed_cmd \'{0}\' failed, '
+                    ret['comment'] = ("Bootstrap via seed_cmd '{0}' failed, "
                                       'see minion log for more information '
                                       .format(seed_cmd))
                     ret['result'] = False
                 else:
                     changes.append(
                         {'bootstrap': 'Container successfully bootstrapped '
-                                      'using seed_cmd \'{0}\''
+                                      "using seed_cmd '{0}'"
                                       .format(seed_cmd)}
                     )
 
@@ -1670,7 +1670,7 @@ def init(name,
         changes.append({'state': {'old': state_pre, 'new': state_post}})
 
     if ret.get('result', True):
-        ret['comment'] = ('Container \'{0}\' successfully initialized'
+        ret['comment'] = ("Container '{0}' successfully initialized"
                           .format(name))
         ret['result'] = True
     if changes:
@@ -1721,7 +1721,7 @@ def images(dist=None):
     )
     if 'DIST' not in out:
         raise CommandExecutionError(
-            'Unable to run the \'download\' template script. Is it installed?'
+            "Unable to run the 'download' template script. Is it installed?"
         )
 
     ret = {}
@@ -1786,8 +1786,8 @@ def _after_ignition_network_profile(cmd,
 
             if network_changes:
                 log.info(
-                    'Network changes from applying network profile \'{0}\' '
-                    'to newly-created container \'{1}\':\n{2}'
+                    "Network changes from applying network profile '{0}' "
+                    "to newly-created container '{1}':\n{2}"
                     .format(network_profile, name, network_changes)
                 )
         c_state = state(name, path=path)
@@ -1802,7 +1802,7 @@ def _after_ignition_network_profile(cmd,
             cmd += ' -n {0}'.format(name)
             __salt__['cmd.retcode'](cmd, python_shell=False)
         raise CommandExecutionError(
-            'Container could not be created with cmd \'{0}\': {1}'
+            "Container could not be created with cmd '{0}': {1}"
             .format(cmd, ret['stderr'])
         )
 
@@ -1909,7 +1909,7 @@ def create(name,
     path = select('path')
     if exists(name, path=path):
         raise CommandExecutionError(
-            'Container \'{0}\' already exists'.format(name)
+            "Container '{0}' already exists".format(name)
         )
 
     tvg = select('vgname')
@@ -1920,11 +1920,11 @@ def create(name,
     image = select('image')
     if template and image:
         raise SaltInvocationError(
-            'Only one of \'template\' and \'image\' is permitted'
+            "Only one of 'template' and 'image' is permitted"
         )
     elif not any((template, image, profile)):
         raise SaltInvocationError(
-            'At least one of \'template\', \'image\', and \'profile\' is '
+            "At least one of 'template', 'image', and 'profile' is "
             'required'
         )
 
@@ -1978,7 +1978,7 @@ def create(name,
                             if x not in options]
             if missing_deps:
                 raise SaltInvocationError(
-                    'Missing params in \'options\' dict: {0}'
+                    "Missing params in 'options' dict: {0}"
                     .format(', '.join(missing_deps))
                 )
         cmd += ' --'
@@ -2067,13 +2067,13 @@ def clone(name,
     path = select('path')
     if exists(name, path=path):
         raise CommandExecutionError(
-            'Container \'{0}\' already exists'.format(name)
+            "Container '{0}' already exists".format(name)
         )
 
     _ensure_exists(orig, path=path)
     if state(orig, path=path) != 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' must be stopped to be cloned'.format(orig)
+            "Container '{0}' must be stopped to be cloned".format(orig)
         )
 
     backing = select('backing')
@@ -2260,7 +2260,7 @@ def _change_state(cmd,
     if pre == expected:
         return {'result': True,
                 'state': {'old': expected, 'new': expected},
-                'comment': 'Container \'{0}\' already {1}'
+                'comment': "Container '{0}' already {1}"
                            .format(name, expected)}
 
     if cmd == 'lxc-destroy':
@@ -2294,8 +2294,8 @@ def _change_state(cmd,
 
     if error:
         raise CommandExecutionError(
-            'Error changing state for container \'{0}\' using command '
-            '\'{1}\': {2}'.format(name, cmd, error)
+            "Error changing state for container '{0}' using command "
+            "'{1}': {2}".format(name, cmd, error)
         )
     if expected is not None:
         # some commands do not wait, so we will
@@ -2317,7 +2317,7 @@ def _ensure_exists(name, path=None):
     '''
     if not exists(name, path=path):
         raise CommandExecutionError(
-            'Container \'{0}\' does not exist'.format(name)
+            "Container '{0}' does not exist".format(name)
         )
 
 
@@ -2341,13 +2341,13 @@ def _ensure_running(name, no_start=False, path=None):
     elif pre == 'stopped':
         if no_start:
             raise CommandExecutionError(
-                'Container \'{0}\' is not running'.format(name)
+                "Container '{0}' is not running".format(name)
             )
         return start(name, path=path)
     elif pre == 'frozen':
         if no_start:
             raise CommandExecutionError(
-                'Container \'{0}\' is not running'.format(name)
+                "Container '{0}' is not running".format(name)
             )
         return unfreeze(name, path=path)
 
@@ -2442,13 +2442,13 @@ def start(name, **kwargs):
     if kwargs.get('restart', False):
         salt.utils.warn_until(
             'Carbon',
-            'The \'restart\' argument to \'lxc.start\' has been deprecated, '
-            'please use \'lxc.restart\' instead.'
+            "The 'restart' argument to 'lxc.start' has been deprecated, "
+            "please use 'lxc.restart' instead."
         )
         return restart(name, path=path)
     if state(name, path=path) == 'frozen':
         raise CommandExecutionError(
-            'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
+            "Container '{0}' is frozen, use lxc.unfreeze".format(name)
         )
     # lxc-start daemonize itself violently, we must not communicate with it
     use_vt = kwargs.get('use_vt', None)
@@ -2541,7 +2541,7 @@ def freeze(name, **kwargs):
     if orig_state == 'stopped':
         if not start_:
             raise CommandExecutionError(
-                'Container \'{0}\' is stopped'.format(name)
+                "Container '{0}' is stopped".format(name)
             )
         start(name, path=path)
     cmd = 'lxc-freeze'
@@ -2579,7 +2579,7 @@ def unfreeze(name, path=None, use_vt=None):
     _ensure_exists(name, path=path)
     if state(name, path=path) == 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' is stopped'.format(name)
+            "Container '{0}' is stopped".format(name)
         )
     cmd = 'lxc-unfreeze'
     if path:
@@ -2620,7 +2620,7 @@ def destroy(name, stop=False, path=None):
     _ensure_exists(name, path=path)
     if not stop and state(name, path=path) != 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' is not stopped'.format(name)
+            "Container '{0}' is not stopped".format(name)
         )
     return _change_state('lxc-destroy', name, None, path=path)
 
@@ -2685,7 +2685,7 @@ def state(name, path=None):
             if ret['retcode'] != 0:
                 _clear_context()
                 raise CommandExecutionError(
-                    'Unable to get state of container \'{0}\''.format(name)
+                    "Unable to get state of container '{0}'".format(name)
                 )
             c_infos = ret['stdout'].splitlines()
             c_state = None
@@ -2722,7 +2722,7 @@ def get_parameter(name, parameter, path=None):
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         raise CommandExecutionError(
-            'Unable to retrieve value for \'{0}\''.format(parameter)
+            "Unable to retrieve value for '{0}'".format(parameter)
         )
     return ret['stdout'].strip()
 
@@ -2865,7 +2865,7 @@ def info(name, path=None):
                 else:
                     # Neither was successful, give up
                     log.warning(
-                        'Unable to run ip or ifconfig in container \'{0}\''
+                        "Unable to run ip or ifconfig in container '{0}'"
                         .format(name)
                     )
                     ip_data = {}
@@ -2940,7 +2940,7 @@ def set_password(name, users, password, encrypted=True, path=None):
 
     '''
     def _bad_user_input():
-        raise SaltInvocationError('Invalid input for \'users\' parameter')
+        raise SaltInvocationError("Invalid input for 'users' parameter")
 
     if not isinstance(users, list):
         try:
@@ -3103,7 +3103,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
             dnsservers = dnsservers.split(',')
         except AttributeError:
             raise SaltInvocationError(
-                'Invalid input for \'dnsservers\' parameter'
+                "Invalid input for 'dnsservers' parameter"
             )
     if searchdomains is None:
         searchdomains = []
@@ -3112,7 +3112,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
             searchdomains = searchdomains.split(',')
         except AttributeError:
             raise SaltInvocationError(
-                'Invalid input for \'searchdomains\' parameter'
+                "Invalid input for 'searchdomains' parameter"
             )
     dns = ['nameserver {0}'.format(x) for x in dnsservers]
     dns.extend(['search {0}'.format(x) for x in searchdomains])
@@ -3162,7 +3162,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
             'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''.format(script),
             path=path, python_shell=True)
     if result['retcode'] != 0:
-        error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
+        error = ("Unable to write to /etc/resolv.conf in container '{0}'"
                  .format(name))
         if result['stderr']:
             error += ': {0}'.format(result['stderr'])
@@ -3236,7 +3236,7 @@ def running_systemd(name, cache=True, path=None):
                 ignore_retcode=True,
                 python_shell=True)
         if result['retcode'] != 0:
-            error = ('Unable to determine if the container \'{0}\''
+            error = ("Unable to determine if the container '{0}'"
                      ' was running systemd, assmuming it is not.'
                      ''.format(name))
             if result['stderr']:
@@ -3512,7 +3512,7 @@ def bootstrap(name,
     else:
         needs_install = True
     seeded = retcode(name,
-                     'test -e \'{0}\''.format(SEED_MARKER),
+                     "test -e '{0}'".format(SEED_MARKER),
                      path=path,
                      chroot_fallback=True,
                      ignore_retcode=True) == 0
@@ -3559,7 +3559,7 @@ def bootstrap(name,
                                script))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
-                log.info('Running {0} in LXC container \'{1}\''
+                log.info("Running {0} in LXC container '{1}'"
                          .format(cmd, name))
                 ret = retcode(name, cmd, output_loglevel='info',
                               path=path, use_vt=True) == 0
@@ -3599,7 +3599,7 @@ def bootstrap(name,
         # mark seeded upon successful install
         if ret:
             run(name,
-                'touch \'{0}\''.format(SEED_MARKER),
+                "touch '{0}'".format(SEED_MARKER),
                 path=path,
                 python_shell=False)
     return ret

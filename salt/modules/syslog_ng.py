@@ -664,7 +664,7 @@ def config(name,
     configs = _render_configuration()
 
     if __opts__.get('test', False):
-        comment = 'State syslog_ng will write \'{0}\' into {1}'.format(
+        comment = "State syslog_ng will write '{0}' into {1}".format(
             configs,
             __SYSLOG_NG_CONFIG_FILE
         )
@@ -816,7 +816,7 @@ def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
 
     if not salt.utils.which(command):
         error_message = (
-            'Unable to execute the command \'{0}\'. It is not in the PATH.'
+            "Unable to execute the command '{0}'. It is not in the PATH."
             .format(command)
         )
         log.error(error_message)
@@ -1219,7 +1219,7 @@ def write_version(name):
         return _format_state_result(name, result=True)
     except OSError as err:
         log.error(
-            'Failed to remove previous configuration file \'{0}\': {1}'
+            "Failed to remove previous configuration file '{0}': {1}"
             .format(__SYSLOG_NG_CONFIG_FILE, str(err))
         )
         return _format_state_result(name, result=False)

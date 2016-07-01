@@ -52,7 +52,7 @@ def write_launchd_plist(program):
 
     if program not in supported_programs:
         sys.stderr.write(
-            'Supported programs: \'{0}\'\n'.format(supported_programs)
+            "Supported programs: '{0}'\n".format(supported_programs)
         )
         sys.exit(-1)
 

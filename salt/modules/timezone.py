@@ -269,7 +269,7 @@ def zone_compare(timezone):
     try:
         usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
-        raise SaltInvocationError('Invalid timezone \'{0}\''.format(timezone))
+        raise SaltInvocationError("Invalid timezone '{0}'".format(timezone))
 
     try:
         etczone = salt.utils.get_hash(tzfile, hash_type)
@@ -407,7 +407,7 @@ def set_hwclock(clock):
 
     if not os.path.exists(zonepath):
         raise CommandExecutionError(
-            'Zone \'{0}\' does not exist'.format(zonepath)
+            "Zone '{0}' does not exist".format(zonepath)
         )
 
     os.unlink('/etc/localtime')
@@ -431,7 +431,7 @@ def set_hwclock(clock):
     elif 'Gentoo' in __grains__['os_family']:
         if clock not in ('UTC', 'localtime'):
             raise SaltInvocationError(
-                'Only \'UTC\' and \'localtime\' are allowed'
+                "Only 'UTC' and 'localtime' are allowed"
             )
         if clock == 'localtime':
             clock = 'local'

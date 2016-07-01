@@ -115,12 +115,12 @@ class AlternativesTestCase(TestCase):
             with patch.dict(alternatives.__opts__, {'test': False}):
                 self.assertDictEqual(alternatives.remove(name, path), ret)
 
-            comt = ('Alternative for {0} is set to it\'s default path True'
+            comt = ("Alternative for {0} is set to it's default path True"
                     ).format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(alternatives.remove(name, path), ret)
 
-            comt = ('Alternative for {0} doesn\'t exist').format(name)
+            comt = ("Alternative for {0} doesn't exist").format(name)
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(alternatives.remove(name, path), ret)
 
@@ -195,7 +195,7 @@ class AlternativesTestCase(TestCase):
             with patch.dict(alternatives.__opts__, {'test': False}):
                 self.assertDictEqual(alternatives.set_(name, path), ret)
 
-            comt = ('Alternative {0} for {1} doesn\'t exist').format(path, name)
+            comt = ("Alternative {0} for {1} doesn't exist").format(path, name)
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(alternatives.set_(name, path), ret)
 

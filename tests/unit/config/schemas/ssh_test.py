@@ -45,7 +45,7 @@ class RoosterEntryConfigTest(TestCase):
                     'minLength': 1
                 },
                 'port': {
-                    'description': 'The target system\'s ssh port number',
+                    'description': "The target system's ssh port number",
                     'title': 'Port',
                     'default': 22,
                     'maximum': 65535,
@@ -85,7 +85,7 @@ class RoosterEntryConfigTest(TestCase):
                 },
                 'thin_dir': {
                     'type': 'string',
-                    'description': 'The target system\'s storage directory for Salt components. Defaults to /tmp/salt-<hash>.',
+                    'description': "The target system's storage directory for Salt components. Defaults to /tmp/salt-<hash>.",
                     'title': 'Thin Directory'
                 },
                 # The actuall representation of the minion options would make this HUGE!
@@ -130,7 +130,7 @@ class RoosterEntryConfigTest(TestCase):
             print(json.dumps(config.serialize(), indent=4))
             raise
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_config_validate(self):
         try:
             jsonschema.validate(
@@ -267,7 +267,7 @@ class RosterItemTest(TestCase):
             print(json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
             raise
 
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_roster_config_validate(self):
         try:
             jsonschema.validate(
@@ -297,6 +297,6 @@ class RosterItemTest(TestCase):
                 format_checker=jsonschema.FormatChecker()
             )
         self.assertIn(
-            'Additional properties are not allowed (\'target-1:1\' was unexpected)',
+            "Additional properties are not allowed ('target-1:1' was unexpected)",
             excinfo.exception.message
         )

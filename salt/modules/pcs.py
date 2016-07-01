@@ -141,7 +141,7 @@ def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra option for the \'pcs cluster auth\' command
+        list of extra option for the 'pcs cluster auth' command
 
     CLI Example:
 
@@ -195,7 +195,7 @@ def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=None):
     pcsclustername
         Name of the Pacemaker cluster (default: pcscluster)
     extra_args
-        list of extra option for the \'pcs cluster setup\' command
+        list of extra option for the 'pcs cluster setup' command
 
     CLI Example:
 
@@ -222,7 +222,7 @@ def cluster_node_add(node, extra_args=None):
     node
         node that should be added
     extra_args
-        list of extra option for the \'pcs cluster node add\' command
+        list of extra option for the 'pcs cluster node add' command
 
     CLI Example:
 

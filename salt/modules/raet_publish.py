@@ -65,7 +65,7 @@ def _publish(
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
     if fun == 'publish.publish':
-        log.info('Function name is \'publish.publish\'. Returning {}')
+        log.info("Function name is 'publish.publish'. Returning {}")
         return {}
 
     arg = _parse_args(arg)
@@ -84,7 +84,7 @@ def _publish(
     try:
         peer_data = channel.send(load)
     except SaltReqTimeoutError:
-        return '\'{0}\' publish timed out'.format(fun)
+        return "'{0}' publish timed out".format(fun)
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
@@ -216,4 +216,4 @@ def runner(fun, arg=None, timeout=5):
     try:
         return channel.send(load)
     except SaltReqTimeoutError:
-        return '\'{0}\' runner publish timed out'.format(fun)
+        return "'{0}' runner publish timed out".format(fun)

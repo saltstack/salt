@@ -550,16 +550,16 @@ class Pillar(object):
         fn_ = self.client.get_state(sls, saltenv).get('dest', False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
-                log.debug('Skipping ignored and missing SLS \'{0}\' in'
-                          ' environment \'{1}\''.format(sls, saltenv))
+                log.debug("Skipping ignored and missing SLS '{0}' in"
+                          " environment '{1}'".format(sls, saltenv))
                 return None, mods, errors
             elif self.opts['pillar_roots'].get(saltenv):
-                msg = ('Specified SLS \'{0}\' in environment \'{1}\' is not'
+                msg = ("Specified SLS '{0}' in environment '{1}' is not"
                        ' available on the salt master').format(sls, saltenv)
                 log.error(msg)
                 errors.append(msg)
             else:
-                msg = ('Specified SLS \'{0}\' in environment \'{1}\' was not '
+                msg = ("Specified SLS '{0}' in environment '{1}' was not "
                        'found. '.format(sls, saltenv))
                 if self.opts.get('__git_pillar', False) is True:
                     msg += (
@@ -570,11 +570,11 @@ class Pillar(object):
                     )
                 else:
                     msg += (
-                        'This could be because SLS \'{0}\' is in an '
-                        'environment other than \'{1}\', but \'{1}\' is '
-                        'included in that environment\'s Pillar top file. It '
-                        'could also be due to environment \'{1}\' not being '
-                        'defined in \'pillar_roots\'.'.format(sls, saltenv)
+                        "This could be because SLS '{0}' is in an "
+                        "environment other than '{1}', but '{1}' is "
+                        "included in that environment's Pillar top file. It "
+                        "could also be due to environment '{1}' not being "
+                        "defined in 'pillar_roots'.".format(sls, saltenv)
                     )
                 log.debug(msg)
                 # return state, mods, errors
@@ -591,13 +591,13 @@ class Pillar(object):
                                      _pillar_rend=True,
                                      **defaults)
         except Exception as exc:
-            msg = 'Rendering SLS \'{0}\' failed, render error:\n{1}'.format(
+            msg = "Rendering SLS '{0}' failed, render error:\n{1}".format(
                 sls, exc
             )
             log.critical(msg)
             if self.opts.get('pillar_safe_render_error', True):
                 errors.append(
-                    'Rendering SLS \'{0}\' failed. Please see master log for '
+                    "Rendering SLS '{0}' failed. Please see master log for "
                     'details.'.format(sls)
                 )
             else:
@@ -606,13 +606,13 @@ class Pillar(object):
         nstate = None
         if state:
             if not isinstance(state, dict):
-                msg = 'SLS \'{0}\' does not render to a dictionary'.format(sls)
+                msg = "SLS '{0}' does not render to a dictionary".format(sls)
                 log.error(msg)
                 errors.append(msg)
             else:
                 if 'include' in state:
                     if not isinstance(state['include'], list):
-                        msg = ('Include Declaration in SLS \'{0}\' is not '
+                        msg = ("Include Declaration in SLS '{0}' is not "
                                'formed as a list'.format(sls))
                         log.error(msg)
                         errors.append(msg)
@@ -667,13 +667,13 @@ class Pillar(object):
                 if pstate is not None:
                     if not isinstance(pstate, dict):
                         log.error(
-                            'The rendered pillar sls file, \'{0}\' state did '
+                            "The rendered pillar sls file, '{0}' state did "
                             'not return the expected data format. This is '
                             'a sign of a malformed pillar sls file. Returned '
                             'errors: {1}'.format(
                                 sls,
                                 ', '.join(
-                                    ['\'{0}\''.format(e) for e in errors]
+                                    ["'{0}'".format(e) for e in errors]
                                 )
                             )
                         )
@@ -776,8 +776,8 @@ class Pillar(object):
         if ext:
             if self.opts.get('pillar_roots_override_ext_pillar', False) or self.opts.get('ext_pillar_first', False):
                 salt.utils.warn_until('Nitrogen',
-                     'The \'ext_pillar_first\' option has been deprecated and '
-                     'replaced by \'pillar_roots_override_ext_pillar\'.'
+                     "The 'ext_pillar_first' option has been deprecated and "
+                     "replaced by 'pillar_roots_override_ext_pillar'."
                 )
                 self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
                 self.rend = salt.loader.render(self.opts, self.functions)

@@ -236,7 +236,7 @@ def uninstall(packages,
         args.append('--remove-packages {pkgs}'.format(pkgs=packages))
         LOG.debug('args: {0}'.format(args))
         if not _check_cygwin_installed(cyg_arch):
-            LOG.debug('We\'re convinced cygwin isn\'t installed')
+            LOG.debug("We're convinced cygwin isn't installed")
             return True
 
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args, mirrors=mirrors)

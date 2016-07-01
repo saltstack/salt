@@ -684,13 +684,13 @@ def set(key,
 
     if _existing_value is not None and not force:
         if _existing_value_type == 'complex':
-            ret['comment'] = 'The key \'{0}\' exists but is a dict or a list. '.format(key) \
-                 + 'Use \'force=True\' to overwrite.'
+            ret['comment'] = "The key '{0}' exists but is a dict or a list. ".format(key) \
+                 + "Use 'force=True' to overwrite."
             ret['result'] = False
             return ret
         elif _new_value_type == 'complex' and _existing_value_type is not None:
-            ret['comment'] = 'The key \'{0}\' exists and the given value is a '.format(key) \
-                 + 'dict or a list. Use \'force=True\' to overwrite.'
+            ret['comment'] = "The key '{0}' exists and the given value is a ".format(key) \
+                 + "dict or a list. Use 'force=True' to overwrite."
             ret['result'] = False
             return ret
         else:
@@ -722,9 +722,9 @@ def set(key,
         elif _existing_value == rest or force:
             _existing_value = {rest: _value}
         else:
-            ret['comment'] = 'The key \'{0}\' value is \'{1}\', '.format(key, _existing_value) \
-                 + 'which is different from the provided key \'{0}\'. '.format(rest) \
-                 + 'Use \'force=True\' to overwrite.'
+            ret['comment'] = "The key '{0}' value is '{1}', ".format(key, _existing_value) \
+                 + "which is different from the provided key '{0}'. ".format(rest) \
+                 + "Use 'force=True' to overwrite."
             ret['result'] = False
             return ret
         _value = _existing_value

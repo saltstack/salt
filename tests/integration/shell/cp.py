@@ -136,7 +136,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--out pprint --config-dir {0} \'*\' foo {0}/foo'.format(
+            "--out pprint --config-dir {0} '*' foo {0}/foo".format(
                 config_dir
             ),
             catch_stderr=True,

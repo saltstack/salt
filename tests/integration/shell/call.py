@@ -82,7 +82,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('Succeeded: 1', ''.join(out))
 
     @destructiveTest
-    @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
+    @skipIf(True, "Skipping due to off the wall failures and hangs on most os's. Will re-enable when fixed.")
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_local_pkg_install(self):
         '''
@@ -105,7 +105,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
         self.assertIn(
-            'salt \'*\' user.delete name remove=True force=True',
+            "salt '*' user.delete name remove=True force=True",
             ''.join(ret)
         )
 

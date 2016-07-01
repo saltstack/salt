@@ -115,7 +115,7 @@ class SPMClient(object):
             elif command == 'info':
                 self._info(args)
             else:
-                raise SPMInvocationError('Invalid command \'{0}\''.format(command))
+                raise SPMInvocationError("Invalid command '{0}'".format(command))
         except SPMException as exc:
             self.ui.error(str(exc))
 
@@ -144,7 +144,7 @@ class SPMClient(object):
         elif command == 'info':
             self._local_info(args)
         else:
-            raise SPMInvocationError('Invalid local command \'{0}\''.format(command))
+            raise SPMInvocationError("Invalid local command '{0}'".format(command))
 
     def _install(self, args):
         '''

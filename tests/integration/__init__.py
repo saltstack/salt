@@ -120,7 +120,7 @@ LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 SCRIPT_TEMPLATES = {
     'salt': [
         'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':\n'
+        "if __name__ == '__main__':\n"
         '    salt_main()'
     ],
     'salt-api': [
@@ -128,13 +128,13 @@ SCRIPT_TEMPLATES = {
         'def main():\n',
         '    sapi = salt.cli.SaltAPI()',
         '    sapi.run()\n',
-        'if __name__ == \'__main__\':',
+        "if __name__ == '__main__':",
         '    main()'
     ],
     'common': [
         'from salt.scripts import salt_{0}\n',
         'from salt.utils import is_windows\n\n',
-        'if __name__ == \'__main__\':\n',
+        "if __name__ == '__main__':\n",
         '    if is_windows():\n',
         '        import os.path\n',
         '        import py_compile\n',
@@ -202,7 +202,7 @@ def run_tests(*test_cases, **kwargs):
     needs_daemon = kwargs.pop('needs_daemon', True)
     if kwargs:
         raise RuntimeError(
-            'The \'run_tests\' function only accepts \'needs_daemon\' as a '
+            "The 'run_tests' function only accepts 'needs_daemon' as a "
             'keyword argument'
         )
 
@@ -424,7 +424,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         if salt.utils.is_windows():
             # Windows need the python executable to come first
             proc_args.insert(0, sys.executable)
-        log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
+        log.info("Running '%s' from %s...", ' '.join(proc_args), self.__class__.__name__)
 
         try:
             terminal = NonBlockingPopen(proc_args, cwd=CODE_DIR)
@@ -977,7 +977,7 @@ class TestDaemon(object):
         os.makedirs(TMP_SUB_MINION_CONF_DIR)
         os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(TMP_SYNDIC_MINION_CONF_DIR)
-        print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
+        print(" * Transplanting configuration files to '{0}'".format(TMP_CONF_DIR))
         if salt.utils.is_windows():
             running_tests_user = win32api.GetUserName()
         else:
@@ -1437,7 +1437,7 @@ class TestDaemon(object):
             timeout = 120
         # Let's sync all connected minions
         print(
-            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s {1} '
+            " {LIGHT_BLUE}*{ENDC} Syncing minion's {1} "
             '(saltutil.sync_{1})'.format(
                 ', '.join(targets),
                 modules_kind,
@@ -1668,14 +1668,14 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         if minion_tgt not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion \'{0}\'. Command output: {1}'.format(
+                "from the minion '{0}'. Command output: {1}".format(
                     minion_tgt, orig
                 )
             )
         elif orig[minion_tgt] is None and function not in know_to_return_none:
             self.skipTest(
-                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
-                'the minion \'{1}\'. Command output: {2}'.format(
+                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{0}' from "
+                "the minion '{1}'. Command output: {2}".format(
                     function, minion_tgt, orig
                 )
             )
@@ -1736,7 +1736,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
-                    'Job details: \'{0}\'  Killing Job Returned: \'{1}\''.format(
+                    "Job details: '{0}'  Killing Job Returned: '{1}'".format(
                         job_data, job_kill
                     )
                 )
@@ -1861,7 +1861,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
-            self.skipTest('\'_call_binary_\' not defined.')
+            self.skipTest("'_call_binary_' not defined.")
         from salt.utils import which
         from salt.version import __version_info__, SaltStackVersion
         git = which('git')
@@ -1888,8 +1888,8 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
             out, err = process.communicate()
         if not out:
             self.skipTest(
-                'Failed to get the output of \'git describe\'. '
-                'Error: \'{0}\''.format(
+                "Failed to get the output of 'git describe'. "
+                "Error: '{0}'".format(
                     salt.utils.to_str(err)
                 )
             )
@@ -1898,18 +1898,18 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
         if parsed_version.info < __version_info__:
             self.skipTest(
-                'We\'re likely about to release a new version. This test '
-                'would fail. Parsed(\'{0}\') < Expected(\'{1}\')'.format(
+                "We're likely about to release a new version. This test "
+                "would fail. Parsed('{0}') < Expected('{1}')".format(
                     parsed_version.info, __version_info__
                 )
             )
         elif parsed_version.info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
-                'git hash you need to update salt\'s local git '
-                'tags. Something like: \'git fetch --tags\' or '
-                '\'git fetch --tags upstream\' if you followed '
-                'salt\'s contribute documentation. The version '
+                "git hash you need to update salt's local git "
+                "tags. Something like: 'git fetch --tags' or "
+                "'git fetch --tags upstream' if you followed "
+                "salt's contribute documentation. The version "
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
@@ -1974,8 +1974,8 @@ class SaltReturnAssertsMixIn(object):
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
                 raise AssertionError(
-                    'Could not get ret{0} from salt\'s return: {1}'.format(
-                        ''.join(['[\'{0}\']'.format(k) for k in keys]), part
+                    "Could not get ret{0} from salt's return: {1}".format(
+                        ''.join(["['{0}']".format(k) for k in keys]), part
                     )
                 )
             while okeys:
@@ -1983,8 +1983,8 @@ class SaltReturnAssertsMixIn(object):
                     ret_item = ret_item[okeys.pop(0)]
                 except (KeyError, TypeError):
                     raise AssertionError(
-                        'Could not get ret{0} from salt\'s return: {1}'.format(
-                            ''.join(['[\'{0}\']'.format(k) for k in keys]), part
+                        "Could not get ret{0} from salt's return: {1}".format(
+                            ''.join(["['{0}']".format(k) for k in keys]), part
                         )
                     )
             return ret_item

@@ -230,7 +230,7 @@ class PipTestCase(TestCase):
             self.assertRaises(
                 CommandExecutionError,
                 pip.install,
-                '\'' + pkg + '\'',
+                "'" + pkg + "'",
                 find_links='sftp://pypi.crate.io'
             )
 

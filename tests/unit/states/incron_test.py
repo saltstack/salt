@@ -63,7 +63,7 @@ class IncronTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 
-                comt = ('Incron {0} added to root\'s incrontab'.format(name))
+                comt = ("Incron {0} added to root's incrontab".format(name))
                 ret.update({'comment': comt, 'changes': {'root': 'salt'}})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 

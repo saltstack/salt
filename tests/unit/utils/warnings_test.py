@@ -136,7 +136,7 @@ class WarnUntilTestCase(TestCase):
             raise_warning(foo=42)  # with a kwarg
             self.assertEqual(
                 'The following parameter(s) have been deprecated and '
-                'will be removed in \'0.17.0\': \'foo\'.',
+                "will be removed in '0.17.0': 'foo'.",
                 str(recorded_warnings[0].message)
             )
         # With no **kwargs, should not show warning until version info is >= (0, 17)

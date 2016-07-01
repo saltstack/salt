@@ -105,14 +105,14 @@ def top(**kwargs):
     log.info('connecting to {0}:{1} for mongo ext_tops'.format(host, port))
     conn = pymongo.MongoClient(host, port)
 
-    log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
+    log.debug("using database '{0}'".format(__opts__['mongo.db']))
     mdb = conn[__opts__['mongo.db']]
 
     user = __opts__.get('mongo.user')
     password = __opts__.get('mongo.password')
 
     if user and password:
-        log.debug('authenticating as \'{0}\''.format(user))
+        log.debug("authenticating as '{0}'".format(user))
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
@@ -121,7 +121,7 @@ def top(**kwargs):
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        'ext_tops.mongo: looking up tops def for {{\'{0}\': \'{1}\'}} '
+        "ext_tops.mongo: looking up tops def for {{'{0}': '{1}'}} "
         'in mongo'.format(
             id_field, minion_id
         )

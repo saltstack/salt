@@ -65,12 +65,12 @@ def _get_missing_results(results, dest_dir):
     except OSError as exc:
         if exc.errno == errno.ENOENT:
             log.debug(
-                'pkgbuild.built: dest_dir \'{0}\' does not exist'
+                "pkgbuild.built: dest_dir '{0}' does not exist"
                 .format(dest_dir)
             )
         elif exc.errno == errno.EACCES:
             log.error(
-                'pkgbuilt.built: cannot access dest_dir \'{0}\''
+                "pkgbuilt.built: cannot access dest_dir '{0}'"
                 .format(dest_dir)
             )
         present = set()
@@ -181,13 +181,13 @@ def built(name,
     if always is not None:
         salt.utils.warn_until(
             'Carbon',
-            'The \'always\' argument to the pkgbuild.built state has been '
-            'deprecated, please use \'force\' instead.'
+            "The 'always' argument to the pkgbuild.built state has been "
+            "deprecated, please use 'force' instead."
         )
         force = always
 
     if not results:
-        ret['comment'] = '\'results\' argument is required'
+        ret['comment'] = "'results' argument is required"
         ret['result'] = False
         return ret
 
@@ -211,7 +211,7 @@ def built(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+        ret['comment'] = ("Invalidly-formatted 'env' parameter. See "
                           'documentation.')
         ret['result'] = False
         return ret
@@ -352,7 +352,7 @@ def repo(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+        ret['comment'] = ("Invalidly-formatted 'env' parameter. See "
                           'documentation.')
         return ret
 

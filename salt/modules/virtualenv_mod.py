@@ -139,12 +139,12 @@ def create(path,
         if upgrade is not None:
             raise CommandExecutionError(
                 'The `upgrade`(`--upgrade`) option is not supported '
-                'by \'{0}\''.format(venv_bin)
+                "by '{0}'".format(venv_bin)
             )
         elif symlinks is not None:
             raise CommandExecutionError(
                 'The `symlinks`(`--symlinks`) option is not supported '
-                'by \'{0}\''.format(venv_bin)
+                "by '{0}'".format(venv_bin)
             )
         # <---- Stop the user if pyvenv only options are used ----------------
 
@@ -164,7 +164,7 @@ def create(path,
                 )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise CommandExecutionError(
-                    'Unable to get the virtualenv version output using \'{0}\'. '
+                    "Unable to get the virtualenv version output using '{0}'. "
                     'Returned data: {1}'.format(version_cmd, ret)
                 )
             virtualenv_version_info = tuple(
@@ -175,10 +175,10 @@ def create(path,
         if distribute:
             if virtualenv_version_info >= (1, 10):
                 log.info(
-                    'The virtualenv \'--distribute\' option has been '
+                    "The virtualenv '--distribute' option has been "
                     'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'distribute\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.'
+                    "'distribute' option to `virtualenv.create()` has "
+                    "also been deprecated and it's not necessary anymore."
                 )
             else:
                 cmd.append('--distribute')
@@ -200,15 +200,15 @@ def create(path,
         if never_download is True:
             if virtualenv_version_info >= (1, 10):
                 log.info(
-                    'The virtualenv \'--never-download\' option has been '
+                    "The virtualenv '--never-download' option has been "
                     'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.'
+                    "'never_download' option to `virtualenv.create()` has "
+                    "also been deprecated and it's not necessary anymore."
                 )
             else:
                 cmd.append('--never-download')
         if prompt is not None and prompt.strip() != '':
-            cmd.append('--prompt=\'{0}\''.format(prompt))
+            cmd.append("--prompt='{0}'".format(prompt))
     else:
         # venv module from the Python >= 3.3 standard library
 
@@ -218,22 +218,22 @@ def create(path,
         if python is not None and python.strip() != '':
             raise CommandExecutionError(
                 'The `python`(`--python`) option is not supported '
-                'by \'{0}\''.format(venv_bin)
+                "by '{0}'".format(venv_bin)
             )
         elif extra_search_dir is not None and extra_search_dir.strip() != '':
             raise CommandExecutionError(
                 'The `extra_search_dir`(`--extra-search-dir`) option is not '
-                'supported by \'{0}\''.format(venv_bin)
+                "supported by '{0}'".format(venv_bin)
             )
         elif never_download is not None:
             raise CommandExecutionError(
                 'The `never_download`(`--never-download`) option is not '
-                'supported by \'{0}\''.format(venv_bin)
+                "supported by '{0}'".format(venv_bin)
             )
         elif prompt is not None and prompt.strip() != '':
             raise CommandExecutionError(
                 'The `prompt`(`--prompt`) option is not supported '
-                'by \'{0}\''.format(venv_bin)
+                "by '{0}'".format(venv_bin)
             )
         # <---- Stop the user if virtualenv only options are being used ------
 
@@ -412,25 +412,25 @@ def get_resource_path(venv,
     if package_or_requirement is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'package_or_requirement\' argument to '
+            "The 'package_or_requirement' argument to "
             'virtualenv.get_resource_path is deprecated. Please use '
-            '\'package\' instead.'
+            "'package' instead."
         )
         if package is not None:
             raise CommandExecutionError(
-                'Only one of \'package\' and \'package_or_requirement\' is '
+                "Only one of 'package' and 'package_or_requirement' is "
                 'permitted.'
             )
         package = package_or_requirement
     if resource_name is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'resource_name\' argument to virtualenv.get_resource_path '
-            'is deprecated. Please use \'resource\' instead.'
+            "The 'resource_name' argument to virtualenv.get_resource_path "
+            "is deprecated. Please use 'resource' instead."
         )
         if resource is not None:
             raise CommandExecutionError(
-                'Only one of \'resource\' and \'resource_name\' is permitted.'
+                "Only one of 'resource' and 'resource_name' is permitted."
             )
         resource = resource_name
 
@@ -504,26 +504,26 @@ def get_resource_content(venv,
     if package_or_requirement is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'package_or_requirement\' argument to '
+            "The 'package_or_requirement' argument to "
             'virtualenv.get_resource_content is deprecated. Please use '
-            '\'package\' instead.'
+            "'package' instead."
         )
         if package is not None:
             raise CommandExecutionError(
-                'Only one of \'package\' and \'package_or_requirement\' is '
+                "Only one of 'package' and 'package_or_requirement' is "
                 'permitted.'
             )
         package = package_or_requirement
     if resource_name is not None:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'resource_name\' argument to '
+            "The 'resource_name' argument to "
             'virtualenv.get_resource_content is deprecated. Please use '
-            '\'resource\' instead.'
+            "'resource' instead."
         )
         if resource is not None:
             raise CommandExecutionError(
-                'Only one of \'resource\' and \'resource_name\' is permitted.'
+                "Only one of 'resource' and 'resource_name' is permitted."
             )
         resource = resource_name
 
@@ -573,7 +573,7 @@ def _verify_safe_py_code(*args):
     for arg in args:
         if not salt.utils.verify.safe_py_code(arg):
             raise SaltInvocationError(
-                'Unsafe python code detected in \'{0}\''.format(arg)
+                "Unsafe python code detected in '{0}'".format(arg)
             )
 
 
@@ -581,6 +581,6 @@ def _verify_virtualenv(venv_path):
     bin_path = os.path.join(venv_path, 'bin/python')
     if not os.path.exists(bin_path):
         raise CommandExecutionError(
-            'Path \'{0}\' does not appear to be a virtualenv: bin/python not found.'.format(venv_path)
+            "Path '{0}' does not appear to be a virtualenv: bin/python not found.".format(venv_path)
         )
     return bin_path

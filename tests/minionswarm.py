@@ -107,7 +107,7 @@ def parse():
         '--no-clean',
         action='store_true',
         default=False,
-        help='Don\'t cleanup temporary files/directories')
+        help="Don't cleanup temporary files/directories")
     parser.add_option(
         '--root-dir',
         dest='root_dir',

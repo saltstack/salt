@@ -1473,7 +1473,7 @@ def _validate_opts(opts):
 
     errors = []
 
-    err = ('Key \'{0}\' with value {1} has an invalid type of {2}, a {3} is '
+    err = ("Key '{0}' with value {1} has an invalid type of {2}, a {3} is "
            'required for this value')
     for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
@@ -1590,8 +1590,8 @@ def _absolute_path(path, relative_to=None):
         _abspath = os.path.join(relative_to, path)
         if os.path.isfile(_abspath):
             log.debug(
-                'Relative path \'{0}\' converted to existing absolute path '
-                '\'{1}\''.format(path, _abspath)
+                "Relative path '{0}' converted to existing absolute path "
+                "'{1}'".format(path, _abspath)
             )
             return _abspath
     return path
@@ -2112,22 +2112,22 @@ def apply_cloud_config(overrides, defaults=None):
                 for detail in details:
                     if 'provider' not in detail and 'driver' not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The cloud provider alias \'{0}\' has an entry '
+                            "The cloud provider alias '{0}' has an entry "
                             'missing the required setting of either '
-                            '\'provider\' or \'driver\'. Note that '
-                            '\'provider\' has been deprecated, so the '
-                            '\'driver\' notation should be used.'.format(
+                            "'provider' or 'driver'. Note that "
+                            "'provider' has been deprecated, so the "
+                            "'driver' notation should be used.".format(
                                 alias
                             )
                         )
                     elif 'provider' in detail:
                         salt.utils.warn_until(
                             'Nitrogen',
-                            'The term \'provider\' is being deprecated in '
-                            'favor of \'driver\'. Support for \'provider\' '
+                            "The term 'provider' is being deprecated in "
+                            "favor of 'driver'. Support for 'provider' "
                             'will be removed in Salt Nitrogen. Please convert '
                             'your cloud provider configuration files to use '
-                            '\'driver\'.'
+                            "'driver'."
                         )
                         driver = detail['provider']
                     elif 'driver' in detail:
@@ -2145,17 +2145,17 @@ def apply_cloud_config(overrides, defaults=None):
             elif isinstance(details, dict):
                 if 'provider' not in details and 'driver' not in details:
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The cloud provider alias \'{0}\' has an entry '
+                        "The cloud provider alias '{0}' has an entry "
                         'missing the required setting of either '
-                        '\'provider\' or \'driver\''.format(alias)
+                        "'provider' or 'driver'".format(alias)
                     )
                 elif 'provider' in details:
                     salt.utils.warn_until(
                         'Nitrogen',
-                        'The term \'provider\' is being deprecated in favor '
-                        'of \'driver\' and support for \'provider\' will be '
+                        "The term 'provider' is being deprecated in favor "
+                        "of 'driver' and support for 'provider' will be "
                         'removed in Salt Nitrogen. Please convert your cloud '
-                        'provider  configuration files to use \'driver\'.'
+                        "provider  configuration files to use 'driver'."
                     )
                     driver = details['provider']
                 elif 'driver' in details:
@@ -2259,7 +2259,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             continue
         if not isinstance(val, dict):
             raise salt.exceptions.SaltCloudConfigError(
-                'The VM profiles configuration found in \'{0[conf_file]}\' is '
+                "The VM profiles configuration found in '{0[conf_file]}' is "
                 'not in the proper format'.format(config)
             )
         val['profile'] = key
@@ -2272,7 +2272,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 alias, driver = details['provider'].split(':')
                 if alias not in providers or driver not in providers[alias]:
                     log.trace(
-                        'The profile \'{0}\' is defining \'{1[provider]}\' '
+                        "The profile '{0}' is defining '{1[provider]}' "
                         'as the provider. Since there is no valid '
                         'configuration for that provider, the profile will be '
                         'removed from the available listing'.format(
@@ -2289,7 +2289,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
             if details['provider'] not in providers:
                 log.trace(
-                    'The profile \'{0}\' is defining \'{1[provider]}\' as the '
+                    "The profile '{0}' is defining '{1[provider]}' as the "
                     'provider. Since there is no valid configuration for '
                     'that provider, the profile will be removed from the '
                     'available listing'.format(profile, details)
@@ -2308,8 +2308,8 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         extends = details.pop('extends')
         if extends not in vms:
             log.error(
-                'The \'{0}\' profile is trying to extend data from \'{1}\' '
-                'though \'{1}\' is not defined in the salt profiles loaded '
+                "The '{0}' profile is trying to extend data from '{1}' "
+                "though '{1}' is not defined in the salt profiles loaded "
                 'data. Not extending and removing from listing!'.format(
                     profile, extends
                 )
@@ -2324,7 +2324,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
                 log.trace(
-                    'The profile \'{0}\' is defining \'{1[provider]}\' as the '
+                    "The profile '{0}' is defining '{1[provider]}' as the "
                     'provider. Since there is no valid configuration for '
                     'that provider, the profile will be removed from the '
                     'available listing'.format(profile, extended)
@@ -2341,7 +2341,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             alias, driver = extended['provider'].split(':')
             if alias not in providers or driver not in providers[alias]:
                 log.trace(
-                    'The profile \'{0}\' is defining \'{1[provider]}\' as '
+                    "The profile '{0}' is defining '{1[provider]}' as "
                     'the provider. Since there is no valid configuration '
                     'for that provider, the profile will be removed from '
                     'the available listing'.format(profile, extended)
@@ -2444,13 +2444,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     log.error(
                         'You can only have one entry per cloud provider. For '
                         'example, if you have a cloud provider configuration '
-                        'section named, \'production\', you can only have a '
+                        "section named, 'production', you can only have a "
                         'single entry for EC2, Joyent, Openstack, and so '
                         'forth.'
                     )
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The cloud provider alias \'{0}\' has multiple entries '
-                        'for the \'{1[driver]}\' driver.'.format(key, details)
+                        "The cloud provider alias '{0}' has multiple entries "
+                        "for the '{1[driver]}' driver.".format(key, details)
                     )
                 handled_providers.add(details['driver'])
 
@@ -2460,10 +2460,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
             if 'provider' in entry:
                 salt.utils.warn_until(
                     'Nitrogen',
-                    'The term \'provider\' is being deprecated in favor of '
-                    '\'driver\'. Support for \'provider\' will be removed in '
+                    "The term 'provider' is being deprecated in favor of "
+                    "'driver'. Support for 'provider' will be removed in "
                     'Salt Nitrogen. Please convert your cloud provider '
-                    'configuration files to use \'driver\'.'
+                    "configuration files to use 'driver'."
                 )
                 entry['driver'] = entry.pop('provider')
 
@@ -2500,9 +2500,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     alias, provider = extends.split(':')
                     if alias not in providers:
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The \'{0}\' cloud provider entry in \'{1}\' is '
-                            'trying to extend data from \'{2}\' though '
-                            '\'{2}\' is not defined in the salt cloud '
+                            "The '{0}' cloud provider entry in '{1}' is "
+                            "trying to extend data from '{2}' though "
+                            "'{2}' is not defined in the salt cloud "
                             'providers loaded data.'.format(
                                 details['driver'],
                                 provider_alias,
@@ -2512,9 +2512,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
                     if provider not in providers.get(alias):
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The \'{0}\' cloud provider entry in \'{1}\' is '
-                            'trying to extend data from \'{2}:{3}\' though '
-                            '\'{3}\' is not defined in \'{1}\''.format(
+                            "The '{0}' cloud provider entry in '{1}' is "
+                            "trying to extend data from '{2}:{3}' though "
+                            "'{3}' is not defined in '{1}'".format(
                                 details['driver'],
                                 provider_alias,
                                 alias,
@@ -2527,16 +2527,16 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     details['driver'] = provider
                 elif providers.get(extends):
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The \'{0}\' cloud provider entry in \'{1}\' is '
-                        'trying to extend from \'{2}\' and no provider was '
+                        "The '{0}' cloud provider entry in '{1}' is "
+                        "trying to extend from '{2}' and no provider was "
                         'specified. Not extending!'.format(
                             details['driver'], provider_alias, extends
                         )
                     )
                 elif extends not in providers:
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The \'{0}\' cloud provider entry in \'{1}\' is '
-                        'trying to extend data from \'{2}\' though \'{2}\' '
+                        "The '{0}' cloud provider entry in '{1}' is "
+                        "trying to extend data from '{2}' though '{2}' "
                         'is not defined in the salt cloud providers loaded '
                         'data.'.format(
                             details['driver'], provider_alias, extends

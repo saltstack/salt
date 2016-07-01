@@ -132,7 +132,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests unsuccessful return of create function if dataset name is missing
         '''
-        res = {'myzpool': 'cannot create \'myzpool\': missing dataset name'}
+        res = {'myzpool': "cannot create 'myzpool': missing dataset name"}
         ret = {}
         ret['stdout'] = ""
         ret['stderr'] = "cannot create 'myzpool': missing dataset name"
@@ -146,7 +146,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests unsuccessful return of create function if trailing slash in name is present
         '''
-        res = {'myzpool/': 'cannot create \'myzpool/\': trailing slash in name'}
+        res = {'myzpool/': "cannot create 'myzpool/': trailing slash in name"}
         ret = {}
         ret['stdout'] = ""
         ret['stderr'] = "cannot create 'myzpool/': trailing slash in name"
@@ -160,7 +160,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests unsuccessful return of create function if the pool is not present
         '''
-        res = {'myzpool/mydataset': 'cannot create \'myzpool/mydataset\': no such pool \'myzpool\''}
+        res = {'myzpool/mydataset': "cannot create 'myzpool/mydataset': no such pool 'myzpool'"}
         ret = {}
         ret['stdout'] = ""
         ret['stderr'] = "cannot create 'myzpool/mydataset': no such pool 'myzpool'"
@@ -174,7 +174,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests unsuccessful return of create function if the parent datasets do not exist
         '''
-        res = {'myzpool/mydataset/mysubdataset': 'cannot create \'myzpool/mydataset/mysubdataset\': parent does not exist'}
+        res = {'myzpool/mydataset/mysubdataset': "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"}
         ret = {}
         ret['stdout'] = ""
         ret['stderr'] = "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"

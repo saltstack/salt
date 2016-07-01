@@ -325,8 +325,8 @@ def template(tem, queue=False, **kwargs):
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -726,8 +726,8 @@ def highstate(test=None,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -885,8 +885,8 @@ def sls(mods,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -1200,8 +1200,8 @@ def sls_id(
     __opts__['test'] = orig_test
     if not ret:
         raise SaltInvocationError(
-            'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, saltenv)
+            "No matches for ID '{0}' found in SLS '{1}' within saltenv "
+            "'{2}'".format(id_, mods, saltenv)
         )
     return ret
 
@@ -1224,8 +1224,8 @@ def show_low_sls(mods,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -1277,8 +1277,8 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -1337,8 +1337,8 @@ def show_top(queue=False, **kwargs):
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')

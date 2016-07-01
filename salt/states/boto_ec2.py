@@ -875,7 +875,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 continue
             else:
                 if __opts__['test']:
-                    changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
+                    changed_attrs[k] = "The instance attribute {0} is set to be changed from '{1}' to '{2}'.".format(
                                        k, curr.get(k), v)
                     continue
                 try:

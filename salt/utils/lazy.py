@@ -76,7 +76,7 @@ class LazyDict(collections.MutableMapping):
 
         Override this to return a more meaningfull error message if possible
         '''
-        return '\'{0}\' is not available.'.format(function_name)
+        return "'{0}' is not available.".format(function_name)
 
     def __setitem__(self, key, val):
         self._dict[key] = val

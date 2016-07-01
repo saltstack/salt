@@ -193,8 +193,8 @@ def _get_sysv_services():
         if os.access(os.path.join(INITSCRIPT_PATH, sysv_service), os.X_OK):
             if sysv_service in systemd_services:
                 log.debug(
-                    'sysvinit script \'%s\' found, but systemd unit '
-                    '\'%s.service\' already exists',
+                    "sysvinit script '%s' found, but systemd unit "
+                    "'%s.service' already exists",
                     sysv_service, sysv_service
                 )
                 continue
@@ -484,7 +484,7 @@ def available(name):
             break
     else:
         raise CommandExecutionError(
-            'Failed to get information on unit \'%s\'' % name
+            "Failed to get information on unit '%s'" % name
         )
     return ret
 
@@ -521,7 +521,7 @@ def unmask(name):
     _check_for_unit_changes(name)
     mask_status = masked(name)
     if not mask_status:
-        log.debug('Service \'%s\' is not masked', name)
+        log.debug("Service '%s' is not masked", name)
         return True
 
     cmd = 'unmask --runtime' if 'runtime' in mask_status else 'unmask'
@@ -530,7 +530,7 @@ def unmask(name):
                                   redirect_stderr=True)
 
     if out['retcode'] != 0:
-        raise CommandExecutionError('Failed to unmask service \'%s\'' % name)
+        raise CommandExecutionError("Failed to unmask service '%s'" % name)
 
     return True
 
@@ -561,7 +561,7 @@ def mask(name, runtime=False):
 
     if out['retcode'] != 0:
         raise CommandExecutionError(
-            'Failed to mask service \'%s\'' % name,
+            "Failed to mask service '%s'" % name,
             info=out['stdout']
         )
 

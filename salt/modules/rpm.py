@@ -89,7 +89,7 @@ def bin_pkg_info(path, saltenv='base'):
         newpath = __salt__['cp.cache_file'](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                'Unable to retrieve {0} from saltenv \'{1}\''
+                "Unable to retrieve {0} from saltenv '{1}'"
                 .format(path, saltenv)
             )
         path = newpath
@@ -442,7 +442,7 @@ def diff(package, path):
     res = __salt__['cmd.shell'](cmd.format(package, path),
                                 output_loglevel='trace')
     if res and res.startswith('Binary file'):
-        return 'File \'{0}\' is binary and its content has been ' \
+        return "File '{0}' is binary and its content has been " \
                'modified.'.format(path)
 
     return res

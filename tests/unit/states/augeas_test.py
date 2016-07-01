@@ -62,7 +62,7 @@ class AugeasTestCase(TestCase):
         '''
         Test if none list changes handled correctly
         '''
-        comt = ('\'changes\' must be specified as a list')
+        comt = ("'changes' must be specified as a list")
         self.ret.update({'comment': comt})
 
         self.assertDictEqual(augeas.change(self.name), self.ret)
@@ -71,7 +71,7 @@ class AugeasTestCase(TestCase):
         '''
         Test if none list load_path is handled correctly
         '''
-        comt = ('\'load_path\' must be specified as a list')
+        comt = ("'load_path' must be specified as a list")
         self.ret.update({'comment': comt})
 
         self.assertDictEqual(augeas.change(

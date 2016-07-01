@@ -1258,7 +1258,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             # if you specified something else, we don't do that
             if low.get('client') != 'local_async':
                 self.set_status(400)
-                self.write('We don\'t serve your kind here')
+                self.write("We don't serve your kind here")
                 self.finish()
                 return
 

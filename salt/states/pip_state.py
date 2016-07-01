@@ -111,7 +111,7 @@ def _check_pkg_version_format(pkg):
     if not HAS_PIP:
         ret['comment'] = (
             'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system\'s pip package '
+            "your system. This usually means that the system's pip package "
             'is not installed properly.'
         )
 
@@ -146,12 +146,12 @@ def _check_pkg_version_format(pkg):
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
             ret['comment'] = (
-                'Invalid version specification in package {0}. \'=\' is '
-                'not supported, use \'==\' instead.'.format(pkg)
+                "Invalid version specification in package {0}. '=' is "
+                "not supported, use '==' instead.".format(pkg)
             )
             return ret
         ret['comment'] = (
-            'pip raised an exception while parsing \'{0}\': {1}'.format(
+            "pip raised an exception while parsing '{0}': {1}".format(
                 pkg, exc
             )
         )
@@ -195,7 +195,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
         prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(state_pkg_name, err)
+        ret['comment'] = "Error installing '{0}': {1}".format(state_pkg_name, err)
         return ret
 
     # If the package was already installed, check
@@ -555,7 +555,7 @@ def installed(name,
         if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
-            ret['comment'] = ('The \'use_wheel\' option is only supported in '
+            ret['comment'] = ("The 'use_wheel' option is only supported in "
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -567,17 +567,17 @@ def installed(name,
         if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
-            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
+            ret['comment'] = ("The 'no_use_wheel' option is only supported in "
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
 
     # Deprecation warning for the repo option
     if repo is not None:
-        msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in Salt {version}. Please use \'name\' instead. '
-               'The current value for name, \'{0}\' will be replaced by the '
-               'value of repo, \'{1}\''.format(
+        msg = ("The 'repo' argument to pip.installed is deprecated and will "
+               "be removed in Salt {version}. Please use 'name' instead. "
+               "The current value for name, '{0}' will be replaced by the "
+               "value of repo, '{1}'".format(
                    name,
                    repo,
                    version=_SaltStackVersion.from_name('Lithium').formatted_version
@@ -616,7 +616,7 @@ def installed(name,
             if requirements:
                 # TODO: Check requirements file against currently-installed
                 # packages to provide more accurate state output.
-                comments.append('Requirements file \'{0}\' will be '
+                comments.append("Requirements file '{0}' will be "
                                 'processed.'.format(requirements))
             if editable:
                 comments.append(
@@ -774,9 +774,9 @@ def installed(name,
                     # installing it report it
                     if not pipsearch:
                         pkg_404_comms.append(
-                            'There was no error installing package \'{0}\' '
+                            "There was no error installing package '{0}' "
                             'although it does not show when calling '
-                            '\'pip.freeze\'.'.format(pkg)
+                            "'pip.freeze'.".format(pkg)
                         )
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
@@ -855,7 +855,7 @@ def removed(name,
         pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
+        ret['comment'] = "Error uninstalling '{0}': {1}".format(name, err)
         return ret
 
     if name not in pip_list:

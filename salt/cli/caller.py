@@ -210,7 +210,7 @@ class BaseCaller(object):
             except AttributeError:
                 ret['retcode'] = 1
         except (CommandExecutionError) as exc:
-            msg = 'Error running \'{0}\': {1}\n'
+            msg = "Error running '{0}': {1}\n"
             active_level = LOG_LEVELS.get(
                 self.opts['log_level'].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
@@ -218,7 +218,7 @@ class BaseCaller(object):
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
-            msg = 'Command required for \'{0}\' not found: {1}\n'
+            msg = "Command required for '{0}' not found: {1}\n"
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:

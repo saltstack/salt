@@ -77,7 +77,7 @@ class PipModuleTest(integration.ModuleCase):
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=self.venv_dir)
             self.assertIn(
-                'Command required for \'{0}\' not found: '
+                "Command required for '{0}' not found: "
                 'Could not find a `pip` binary in virtualenv'.format(func),
                 ret
             )

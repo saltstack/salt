@@ -242,11 +242,11 @@ class PyWinUpdater(object):
             search_string += '{0} and '.format(i)
 
         if not self.skipSoftwareUpdates and not self.skipDriverUpdates:
-            search_string += 'Type=\'Software\' or Type=\'Driver\''
+            search_string += "Type='Software' or Type='Driver'"
         elif not self.skipSoftwareUpdates:
-            search_string += 'Type=\'Software\''
+            search_string += "Type='Software'"
         elif not self.skipDriverUpdates:
-            search_string += 'Type=\'Driver\''
+            search_string += "Type='Driver'"
         else:
             return False
             # if there is no type, the is nothing to search.

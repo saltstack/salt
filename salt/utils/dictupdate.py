@@ -109,7 +109,7 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     elif strategy == 'overwrite':
         merged = merge_overwrite(obj_a, obj_b, merge_lists)
     else:
-        log.warning('Unknown merging strategy \'{0}\', '
+        log.warning("Unknown merging strategy '{0}', "
                     'fallback to recurse'.format(strategy))
         merged = merge_recurse(obj_a, obj_b)
 

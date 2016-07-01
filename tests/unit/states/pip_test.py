@@ -34,7 +34,7 @@ pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PIP,
-        'The \'pip\' library is not importable(installed system-wide)')
+        "The 'pip' library is not importable(installed system-wide)")
 class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
     def test_install_requirements_parsing(self):
@@ -47,7 +47,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 self.assertSaltFalseReturn({'test': ret})
                 self.assertInSaltComment(
                     'Invalid version specification in package pep8=1.3.2. '
-                    '\'=\' is not supported, use \'==\' instead.',
+                    "'=' is not supported, use '==' instead.",
                     {'test': ret}
                 )
 

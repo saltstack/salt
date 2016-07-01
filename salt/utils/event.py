@@ -565,14 +565,14 @@ class SaltEvent(object):
         if use_pending is not None:
             salt.utils.warn_until(
                 'Nitrogen',
-                'The \'use_pending\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
+                "The 'use_pending' keyword argument is deprecated and is simply ignored. "
+                "Please stop using it since it's support will be removed in {version}."
             )
         if pending_tags is not None:
             salt.utils.warn_until(
                 'Nitrogen',
-                'The \'pending_tags\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
+                "The 'pending_tags' keyword argument is deprecated and is simply ignored. "
+                "Please stop using it since it's support will be removed in {version}."
             )
         match_func = self._get_match_func(match_type)
 
@@ -637,7 +637,7 @@ class SaltEvent(object):
 
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError(
-                'Dict object expected, not \'{0}\'.'.format(data)
+                "Dict object expected, not '{0}'.".format(data)
             )
 
         if not self.cpush:
@@ -987,9 +987,9 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
                     salt.utils.warn_until(
                             'Nitrogen',
-                            'ACL rules should be configured with \'publisher_acl\' and '
-                            '\'publisher_acl_blacklist\' not \'client_acl\' and '
-                            '\'client_acl_blacklist\'. This functionality will be removed in Salt '
+                            "ACL rules should be configured with 'publisher_acl' and "
+                            "'publisher_acl_blacklist' not 'client_acl' and "
+                            "'client_acl_blacklist'. This functionality will be removed in Salt "
                             'Nitrogen.'
                             )
                 if (self.opts['ipc_mode'] != 'tcp' and (
@@ -1082,7 +1082,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events - returner \'{0}\' raised '
+                log.error("Could not store events - returner '{0}' raised "
                     'exception: {1}'.format(self.opts['event_return'], exc))
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
@@ -1092,7 +1092,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             del self.event_queue[:]
         else:
             log.error('Could not store return for event(s) - returner '
-                      '\'%s\' not found.', self.opts['event_return'])
+                      "'%s' not found.", self.opts['event_return'])
 
     def run(self):
         '''

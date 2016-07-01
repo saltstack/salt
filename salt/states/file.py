@@ -1464,8 +1464,8 @@ def managed(name,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -1486,14 +1486,14 @@ def managed(name,
     if source and contents_count > 0:
         return _error(
             ret,
-            '\'source\' cannot be used in combination with \'contents\', '
-            '\'contents_pillar\', or \'contents_grains\''
+            "'source' cannot be used in combination with 'contents', "
+            "'contents_pillar', or 'contents_grains'"
         )
     elif contents_count > 1:
         return _error(
             ret,
-            'Only one of \'contents\', \'contents_pillar\', and '
-            '\'contents_grains\' is permitted'
+            "Only one of 'contents', 'contents_pillar', and "
+            "'contents_grains' is permitted"
         )
 
     # If no source is specified, set replace to False, as there is nothing
@@ -1501,10 +1501,10 @@ def managed(name,
     if not source and contents_count == 0 and replace:
         replace = False
         log.warning(
-            'State for file: {0} - Neither \'source\' nor \'contents\' nor '
-            '\'contents_pillar\' nor \'contents_grains\' was defined, yet '
-            '\'replace\' was set to \'True\'. As there is no source to '
-            'replace the file with, \'replace\' has been set to \'False\' to '
+            "State for file: {0} - Neither 'source' nor 'contents' nor "
+            "'contents_pillar' nor 'contents_grains' was defined, yet "
+            "'replace' was set to 'True'. As there is no source to "
+            "replace the file with, 'replace' has been set to 'False' to "
             'avoid reading the file unnecessarily.'.format(name)
         )
 
@@ -1566,7 +1566,7 @@ def managed(name,
             elif contents_grains:
                 contents_id = 'contents_grains {0}'.format(contents_grains)
             else:
-                contents_id = '\'contents\''
+                contents_id = "'contents'"
             return _error(
                 ret,
                 '{0} value would result in empty contents. Set allow_empty '
@@ -2376,8 +2376,8 @@ def recurse(name,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -2403,8 +2403,8 @@ def recurse(name,
     if 'mode' in kwargs:
         ret['result'] = False
         ret['comment'] = (
-            '\'mode\' is not allowed in \'file.recurse\'. Please use '
-            '\'file_mode\' and \'dir_mode\'.'
+            "'mode' is not allowed in 'file.recurse'. Please use "
+            "'file_mode' and 'dir_mode'."
         )
         return ret
 
@@ -2428,7 +2428,7 @@ def recurse(name,
 
     for precheck in source_list:
         if not precheck.startswith('salt://'):
-            return _error(ret, ('Invalid source \'{0}\' '
+            return _error(ret, ("Invalid source '{0}' "
                                 '(must be a salt:// URI)'.format(precheck)))
 
     # Select the first source in source_list that exists
@@ -2448,8 +2448,8 @@ def recurse(name,
                          if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The directory \'{0}\' does not exist on the salt fileserver '
-            'in saltenv \'{1}\''.format(source, __env__)
+            "The directory '{0}' does not exist on the salt fileserver "
+            "in saltenv '{1}'".format(source, __env__)
         )
         return ret
 
@@ -4213,8 +4213,8 @@ def patch(name,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -4239,7 +4239,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
+        ret['comment'] = ("Unable to cache {0} from saltenv '{1}'"
                           .format(source, __env__))
         return ret
 
@@ -4835,8 +4835,8 @@ def serialize(name,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -4861,14 +4861,14 @@ def serialize(name,
 
     if len([x for x in (dataset, dataset_pillar) if x]) > 1:
         return _error(
-            ret, 'Only one of \'dataset\' and \'dataset_pillar\' is permitted')
+            ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
 
     if dataset_pillar:
         dataset = __salt__['pillar.get'](dataset_pillar)
 
     if dataset is None:
         return _error(
-            ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
+            ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
 
     if salt.utils.is_windows():
         if group is not None:
@@ -5167,8 +5167,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     else:
         ret['comment'] = (
-            'Node type unavailable: \'{0}\'. Available node types are '
-            'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
+            "Node type unavailable: '{0}'. Available node types are "
+            "character ('c'), block ('b'), and pipe ('p')".format(ntype)
         )
 
     return ret

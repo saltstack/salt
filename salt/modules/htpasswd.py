@@ -66,9 +66,9 @@ def useradd_all(pwfile, user, password, opts='', runas=None):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
     salt.utils.warn_until('Nitrogen',
-                          '\'htpasswd.useradd_all\' has been deprecated in favor of \'htpasswd.useradd\'. '
-                          'It\'s functionality will be removed in Salt Nitrogen. '
-                          'Please migrate to using \'useradd\' instead of \'useradd_all\'.')
+                          "'htpasswd.useradd_all' has been deprecated in favor of 'htpasswd.useradd'. "
+                          "It's functionality will be removed in Salt Nitrogen. "
+                          "Please migrate to using 'useradd' instead of 'useradd_all'.")
 
     return useradd(pwfile, user, password, opts=opts, runas=runas)
 

@@ -37,7 +37,7 @@ try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
 except OSError as err:
-    print('Failed to change directory to salt\'s source: {0}'.format(err))
+    print("Failed to change directory to salt's source: {0}".format(err))
 
 # Soft and hard limits on max open filehandles
 MAX_OPEN_FILES = {
@@ -344,7 +344,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
-                'destructive tests, as \'root\'. It would only produce '
+                "destructive tests, as 'root'. It would only produce "
                 'incorrect results.'
             )
 

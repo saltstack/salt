@@ -108,13 +108,13 @@ def returner(ret):
 
     if job_fun in functions_blacklist:
         log.info(
-            'Won\'t push new data to Elasticsearch, job with jid={0} and '
+            "Won't push new data to Elasticsearch, job with jid={0} and "
             'function={1} which is in the user-defined list of ignored '
             'functions'.format(job_id, job_fun))
         return
 
     if not job_success:
-        log.info('Won\'t push new data to Elasticsearch, job with jid={0} was '
+        log.info("Won't push new data to Elasticsearch, job with jid={0} was "
                  'not succesful'.format(job_id))
         return
 

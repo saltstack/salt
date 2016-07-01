@@ -319,16 +319,16 @@ class GrainsModuleTestCase(TestCase):
         grainsmod.__grains__ = {'a': 'aval', 'c': 8}
         res = grainsmod.set('a', ['item', 12])
         self.assertFalse(res['result'])
-        self.assertEqual(res['comment'], 'The key \'a\' exists and the given value is a '
-                            + 'dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(res['comment'], "The key 'a' exists and the given value is a "
+                            + "dict or a list. Use 'force=True' to overwrite.")
         self.assertEqual(grainsmod.__grains__, {'a': 'aval', 'c': 8})
 
         # Fails to overwrite a complex value without 'force'
         grainsmod.__grains__ = {'a': ['item', 12], 'c': 8}
         res = grainsmod.set('a', ['item', 14])
         self.assertFalse(res['result'])
-        self.assertEqual(res['comment'], 'The key \'a\' exists but is a dict or a list. '
-                            + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(res['comment'], "The key 'a' exists but is a dict or a list. "
+                            + "Use 'force=True' to overwrite.")
         self.assertEqual(grainsmod.__grains__, {'a': ['item', 12], 'c': 8})
 
         # Fails to overwrite a complex value without 'force' in a nested grain
@@ -337,8 +337,8 @@ class GrainsModuleTestCase(TestCase):
                                 'c': 8}
         res = grainsmod.set('b,l2', 'val2', delimiter=',')
         self.assertFalse(res['result'])
-        self.assertEqual(res['comment'], 'The key \'b,l2\' exists but is a dict or a '
-                            + 'list. Use \'force=True\' to overwrite.')
+        self.assertEqual(res['comment'], "The key 'b,l2' exists but is a dict or a "
+                            + "list. Use 'force=True' to overwrite.")
         self.assertEqual(grainsmod.__grains__, {'a': 'aval',
                                                 'b': ['l1', {'l2': ['val1']}],
                                                 'c': 8})
@@ -349,9 +349,9 @@ class GrainsModuleTestCase(TestCase):
         grainsmod.__grains__ = {'a': 'aval', 'b': 'l1', 'c': 8}
         res = grainsmod.set('b,l3', 'val3', delimiter=',')
         self.assertFalse(res['result'])
-        self.assertEqual(res['comment'], 'The key \'b\' value is \'l1\', which is '
-                            + 'different from the provided key \'l3\'. '
-                            + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(res['comment'], "The key 'b' value is 'l1', which is "
+                            + "different from the provided key 'l3'. "
+                            + "Use 'force=True' to overwrite.")
         self.assertEqual(grainsmod.__grains__, {'a': 'aval', 'b': 'l1', 'c': 8})
 
     def test_set_simple_value(self):

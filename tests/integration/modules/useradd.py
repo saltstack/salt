@@ -35,7 +35,7 @@ class UseraddModuleTest(integration.ModuleCase):
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in ('Linux', 'Darwin'):
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                "Test not applicable to '{kernel}' kernel".format(
                     **os_grain
                 )
             )

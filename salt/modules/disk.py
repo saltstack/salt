@@ -33,7 +33,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return (False, 'This module doesn\'t work on Windows.')
+        return (False, "This module doesn't work on Windows.")
     return True
 
 
@@ -213,7 +213,7 @@ def percent(args=None):
             log.error('Problem parsing disk usage information')
             ret = {}
     if args and args not in ret:
-        log.error('Problem parsing disk usage information: Partition \'{0}\' does not exist!'.format(args))
+        log.error("Problem parsing disk usage information: Partition '{0}' does not exist!".format(args))
         ret = {}
     elif args:
         return ret[args]

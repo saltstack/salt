@@ -53,7 +53,7 @@ def start():
 
     if mod_opts['num_processes'] > 1 and mod_opts.get('debug', False) is True:
         raise Exception((
-            'Tornado\'s debug implementation is not compatible with multiprocess. '
+            "Tornado's debug implementation is not compatible with multiprocess. "
             'Either disable debug, or set num_processes to 1.'
         ))
 

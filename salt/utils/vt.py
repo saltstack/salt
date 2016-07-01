@@ -121,8 +121,8 @@ class Terminal(object):
 
         if not args and not executable and not shell:
             raise TerminalException(
-                'You need to pass at least one of \'args\', \'executable\' '
-                'or \'shell=True\''
+                "You need to pass at least one of 'args', 'executable' "
+                "or 'shell=True'"
             )
 
         self.args = args
@@ -173,14 +173,14 @@ class Terminal(object):
                     not hasattr(stream_stdout, 'flush') or \
                     not hasattr(stream_stdout, 'close'):
                 raise TerminalException(
-                    '\'stream_stdout\' needs to have at least 3 methods, '
-                    '\'write()\', \'flush()\' and \'close()\'.'
+                    "'stream_stdout' needs to have at least 3 methods, "
+                    "'write()', 'flush()' and 'close()'."
                 )
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                'Don\'t know how to handle \'{0}\' as the VT\'s '
-                '\'stream_stdout\' parameter.'.format(stream_stdout)
+                "Don't know how to handle '{0}' as the VT's "
+                "'stream_stdout' parameter.".format(stream_stdout)
             )
 
         if stream_stderr is True:
@@ -192,14 +192,14 @@ class Terminal(object):
                     not hasattr(stream_stderr, 'flush') or \
                     not hasattr(stream_stderr, 'close'):
                 raise TerminalException(
-                    '\'stream_stderr\' needs to have at least 3 methods, '
-                    '\'write()\', \'flush()\' and \'close()\'.'
+                    "'stream_stderr' needs to have at least 3 methods, "
+                    "'write()', 'flush()' and 'close()'."
                 )
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                'Don\'t know how to handle \'{0}\' as the VT\'s '
-                '\'stream_stderr\' parameter.'.format(stream_stderr)
+                "Don't know how to handle '{0}' as the VT's "
+                "'stream_stderr' parameter.".format(stream_stderr)
             )
         # <---- Direct Streaming Setup ---------------------------------------
 
@@ -241,7 +241,7 @@ class Terminal(object):
         elif log_stdin is not None:
             if not isinstance(log_stdin, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdin\' needs to subclass `logging.Logger`'
+                    "'log_stdin' needs to subclass `logging.Logger`"
                 )
             self.stdin_logger = log_stdin
         else:
@@ -257,7 +257,7 @@ class Terminal(object):
         elif log_stdout is not None:
             if not isinstance(log_stdout, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdout\' needs to subclass `logging.Logger`'
+                    "'log_stdout' needs to subclass `logging.Logger`"
                 )
             self.stdout_logger = log_stdout
         else:
@@ -273,7 +273,7 @@ class Terminal(object):
         elif log_stderr is not None:
             if not isinstance(log_stderr, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stderr\' needs to subclass `logging.Logger`'
+                    "'log_stderr' needs to subclass `logging.Logger`"
                 )
             self.stderr_logger = log_stderr
         else:
@@ -722,7 +722,7 @@ class Terminal(object):
             '''
             if self.child_fd is None:
                 raise TerminalException(
-                    'Can\'t check the size of the terminal since we\'re not '
+                    "Can't check the size of the terminal since we're not "
                     'connected to the child process.'
                 )
 

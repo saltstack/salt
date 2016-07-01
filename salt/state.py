@@ -236,7 +236,7 @@ def format_log(ret):
                                 new = 'absent'
                             # This must be able to handle unicode as some package names contain
                             # non-ascii characters like "Français" or "Español". See Issue #33605.
-                            msg += u'\'{0}\' changed from \'{1}\' to \'{2}\'\n'.format(pkg, old, new)
+                            msg += u"'{0}' changed from '{1}' to '{2}'\n".format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
@@ -372,7 +372,7 @@ class Compiler(object):
                 continue
             if not isinstance(name, six.string_types):
                 errors.append(
-                    'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but '
+                    "ID '{0}' in SLS '{1}' is not formed as a string, but "
                     'is a {2}'.format(
                         name,
                         body['__sls__'],
@@ -389,7 +389,7 @@ class Compiler(object):
                     continue
                 if not isinstance(body[state], list):
                     errors.append(
-                        'State \'{0}\' in SLS \'{1}\' is not formed as a list'
+                        "State '{0}' in SLS '{1}' is not formed as a list"
                         .format(name, body['__sls__'])
                     )
                 else:
@@ -418,7 +418,7 @@ class Compiler(object):
                             if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
-                                    ' statement in state \'{1}\' in SLS \'{2}\' '
+                                    " statement in state '{1}' in SLS '{2}' "
                                     'needs to be formed as a list').format(
                                         argfirst,
                                         name,
@@ -443,11 +443,11 @@ class Compiler(object):
                                         req_val = req[req_key]
                                         if '.' in req_key:
                                             errors.append((
-                                                'Invalid requisite type \'{0}\' '
-                                                'in state \'{1}\', in SLS '
-                                                '\'{2}\'. Requisite types must '
+                                                "Invalid requisite type '{0}' "
+                                                "in state '{1}', in SLS "
+                                                "'{2}'. Requisite types must "
                                                 'not contain dots, did you '
-                                                'mean \'{3}\'?'.format(
+                                                "mean '{3}'?".format(
                                                     req_key,
                                                     name,
                                                     body['__sls__'],
@@ -485,19 +485,19 @@ class Compiler(object):
                                 # dict
                                 if len(list(arg)) != 1:
                                     errors.append(('Multiple dictionaries '
-                                    'defined in argument of state \'{0}\' in SLS'
-                                    ' \'{1}\'').format(
+                                    "defined in argument of state '{0}' in SLS"
+                                    " '{1}'").format(
                                         name,
                                         body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
-                        errors.append(('No function declared in state \'{0}\' in'
-                            ' SLS \'{1}\'').format(state, body['__sls__']))
+                        errors.append(("No function declared in state '{0}' in"
+                            " SLS '{1}'").format(state, body['__sls__']))
                     elif fun > 1:
                         errors.append(
-                            'Too many functions declared in state \'{0}\' in '
-                            'SLS \'{1}\''.format(state, body['__sls__'])
+                            "Too many functions declared in state '{0}' in "
+                            "SLS '{1}'".format(state, body['__sls__'])
                         )
         return errors
 
@@ -977,7 +977,7 @@ class State(object):
             errors.append('Missing "name" data')
         if data['name'] and not isinstance(data['name'], six.string_types):
             errors.append(
-                'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but is '
+                "ID '{0}' in SLS '{1}' is not formed as a string, but is "
                 'a {2}'.format(
                     data['name'], data['__sls__'], type(data['name']).__name__)
             )
@@ -987,7 +987,7 @@ class State(object):
         if full not in self.states:
             if '__sls__' in data:
                 errors.append(
-                    'State \'{0}\' was not found in SLS \'{1}\''.format(
+                    "State '{0}' was not found in SLS '{1}'".format(
                         full,
                         data['__sls__']
                         )
@@ -997,7 +997,7 @@ class State(object):
                     errors.append('Reason: {0}'.format(reason))
             else:
                 errors.append(
-                        'Specified state \'{0}\' was not found'.format(
+                        "Specified state '{0}' was not found".format(
                             full
                             )
                         )
@@ -1067,7 +1067,7 @@ class State(object):
                 pass
             if not isinstance(name, six.string_types):
                 errors.append(
-                    'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but '
+                    "ID '{0}' in SLS '{1}' is not formed as a string, but "
                     'is a {2}. It may need to be quoted.'.format(
                         name, body['__sls__'], type(name).__name__)
                 )
@@ -1081,7 +1081,7 @@ class State(object):
                     continue
                 if body[state] is None:
                     errors.append(
-                        'ID \'{0}\' in SLS \'{1}\' contains a short declaration '
+                        "ID '{0}' in SLS '{1}' contains a short declaration "
                         '({2}) with a trailing colon. When not passing any '
                         'arguments to a state, the colon must be omitted.'
                         .format(name, body['__sls__'], state)
@@ -1089,7 +1089,7 @@ class State(object):
                     continue
                 if not isinstance(body[state], list):
                     errors.append(
-                        'State \'{0}\' in SLS \'{1}\' is not formed as a list'
+                        "State '{0}' in SLS '{1}' is not formed as a list"
                         .format(name, body['__sls__'])
                     )
                 else:
@@ -1118,16 +1118,16 @@ class State(object):
                             if argfirst == 'names':
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
-                                        'The \'names\' argument in state '
-                                        '\'{0}\' in SLS \'{1}\' needs to be '
+                                        "The 'names' argument in state "
+                                        "'{0}' in SLS '{1}' needs to be "
                                         'formed as a list'
                                         .format(name, body['__sls__'])
                                     )
                             if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
-                                        'The {0} statement in state \'{1}\' in '
-                                        'SLS \'{2}\' needs to be formed as a '
+                                        "The {0} statement in state '{1}' in "
+                                        "SLS '{2}' needs to be formed as a "
                                         'list'.format(argfirst,
                                                       name,
                                                       body['__sls__'])
@@ -1151,11 +1151,11 @@ class State(object):
                                         req_val = req[req_key]
                                         if '.' in req_key:
                                             errors.append((
-                                                'Invalid requisite type \'{0}\' '
-                                                'in state \'{1}\', in SLS '
-                                                '\'{2}\'. Requisite types must '
+                                                "Invalid requisite type '{0}' "
+                                                "in state '{1}', in SLS "
+                                                "'{2}'. Requisite types must "
                                                 'not contain dots, did you '
-                                                'mean \'{3}\'?'.format(
+                                                "mean '{3}'?".format(
                                                     req_key,
                                                     name,
                                                     body['__sls__'],
@@ -1192,20 +1192,20 @@ class State(object):
                                 if len(list(arg)) != 1:
                                     errors.append(
                                         'Multiple dictionaries defined in '
-                                        'argument of state \'{0}\' in SLS \'{1}\''
+                                        "argument of state '{0}' in SLS '{1}'"
                                         .format(name, body['__sls__'])
                                     )
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
                         errors.append(
-                            'No function declared in state \'{0}\' in SLS \'{1}\''
+                            "No function declared in state '{0}' in SLS '{1}'"
                             .format(state, body['__sls__'])
                         )
                     elif fun > 1:
                         errors.append(
-                            'Too many functions declared in state \'{0}\' in '
-                            'SLS \'{1}\''.format(state, body['__sls__'])
+                            "Too many functions declared in state '{0}' in "
+                            "SLS '{1}'".format(state, body['__sls__'])
                         )
         return errors
 
@@ -1328,12 +1328,12 @@ class State(object):
                     ids = find_name(name, state_type, high)
                     if len(ids) != 1:
                         errors.append(
-                            'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
+                            "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
                             'part of the high state.\n'
                             'This is likely due to a missing include statement '
                             'or an incorrectly typed ID.\nEnsure that a '
-                            'state with an ID of \'{0}\' is available\nin '
-                            'environment \'{1}\' and to SLS \'{2}\''.format(
+                            "state with an ID of '{0}' is available\nin "
+                            "environment '{1}' and to SLS '{2}'".format(
                                 name,
                                 body.get('__env__', 'base'),
                                 body.get('__sls__', 'base'))
@@ -1472,8 +1472,8 @@ class State(object):
                                 if '.' in _state:
                                     errors.append((
                                         'Invalid requisite in {0}: {1} for '
-                                        '{2}, in SLS \'{3}\'. Requisites must '
-                                        'not contain dots, did you mean \'{4}\'?'
+                                        "{2}, in SLS '{3}'. Requisites must "
+                                        "not contain dots, did you mean '{4}'?"
                                         .format(
                                             rkey,
                                             _state,
@@ -1515,8 +1515,8 @@ class State(object):
                                 if '.' in _state:
                                     errors.append((
                                         'Invalid requisite in {0}: {1} for '
-                                        '{2}, in SLS \'{3}\'. Requisites must '
-                                        'not contain dots, did you mean \'{4}\'?'
+                                        "{2}, in SLS '{3}'. Requisites must "
+                                        "not contain dots, did you mean '{4}'?"
                                         .format(
                                             rkey,
                                             _state,
@@ -2303,7 +2303,7 @@ class State(object):
         for item in invalid_items:
             if item in high:
                 errors.append(
-                    'The \'{0}\' declaration found on \'{1}\' is invalid when '
+                    "The '{0}' declaration found on '{1}' is invalid when "
                     'rendering single templates'.format(item, template)
                 )
                 return high, errors
@@ -2333,7 +2333,7 @@ class State(object):
                     continue
                 if high[name][key] is None:
                     errors.append(
-                        'ID \'{0}\' in template {1} contains a short '
+                        "ID '{0}' in template {1} contains a short "
                         'declaration ({2}) with a trailing colon. When not '
                         'passing any arguments to a state, the colon must be '
                         'omitted.'.format(name, template, key)
@@ -2354,7 +2354,7 @@ class State(object):
                     #     - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            'ID \'{0}\' in template \'{1}\' contains multiple '
+                            "ID '{0}' in template '{1}' contains multiple "
                             'state declarations of the same type'
                             .format(name, template)
                         )
@@ -2576,9 +2576,9 @@ class BaseHighState(object):
                         tops[saltenv].append({})
                         log.debug('No contents loaded for env: {0}'.format(saltenv))
             if found > 1:
-                log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
+                log.warning("Top file merge strategy set to 'merge' and multiple top files found. "
                             'Top file merging order is undefined; '
-                            'for better results use \'same\' option')
+                            "for better results use 'same' option")
 
         if found == 0:
             log.error('No contents found in top file')
@@ -2805,7 +2805,7 @@ class BaseHighState(object):
                                      rendered_sls=mods
                                      )
         except SaltRenderError as exc:
-            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
+            msg = "Rendering SLS '{0}:{1}' failed: {2}".format(
                 saltenv, sls, exc
             )
             log.critical(msg)
@@ -2856,8 +2856,8 @@ class BaseHighState(object):
                         env_key = saltenv
 
                     if env_key not in self.avail:
-                        msg = ('Nonexistent saltenv \'{0}\' found in include '
-                               'of \'{1}\' within SLS \'{2}:{3}\''
+                        msg = ("Nonexistent saltenv '{0}' found in include "
+                               "of '{1}' within SLS '{2}:{3}'"
                                .format(env_key, inc_sls, saltenv, sls))
                         log.error(msg)
                         errors.append(msg)
@@ -2869,7 +2869,7 @@ class BaseHighState(object):
                             levels, include = match.groups()
                         else:
                             msg = ('Badly formatted include {0} found in include '
-                                    'in SLS \'{2}:{3}\''
+                                    "in SLS '{2}:{3}'"
                                     .format(inc_sls, saltenv, sls))
                             log.error(msg)
                             errors.append(msg)
@@ -2879,8 +2879,8 @@ class BaseHighState(object):
                         if state_data.get('source', '').endswith('/init.sls'):
                             p_comps.append('init')
                         if level_count > len(p_comps):
-                            msg = ('Attempted relative include of \'{0}\' '
-                                   'within SLS \'{1}:{2}\' '
+                            msg = ("Attempted relative include of '{0}' "
+                                   "within SLS '{1}:{2}' "
                                    'goes beyond top level package '
                                    .format(inc_sls, saltenv, sls))
                             log.error(msg)
@@ -3035,7 +3035,7 @@ class BaseHighState(object):
                     #           - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            'ID \'{0}\' in SLS \'{1}\' contains multiple state '
+                            "ID '{0}' in SLS '{1}' contains multiple state "
                             'declarations of the same type'.format(name, sls)
                         )
                         continue
@@ -3057,12 +3057,12 @@ class BaseHighState(object):
         if 'extend' in state:
             ext = state.pop('extend')
             if not isinstance(ext, dict):
-                errors.append(('Extension value in SLS \'{0}\' is not a '
+                errors.append(("Extension value in SLS '{0}' is not a "
                                'dictionary').format(sls))
                 return
             for name in ext:
                 if not isinstance(ext[name], dict):
-                    errors.append(('Extension name \'{0}\' in SLS \'{1}\' is '
+                    errors.append(("Extension name '{0}' in SLS '{1}' is "
                                    'not a dictionary'
                                    .format(name, sls)))
                     continue
@@ -3110,7 +3110,7 @@ class BaseHighState(object):
                 except KeyError:
                     all_errors.extend(
                         ['No matching salt environment for environment '
-                         '\'{0}\' found'.format(saltenv)]
+                         "'{0}' found".format(saltenv)]
                     )
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
@@ -3134,8 +3134,8 @@ class BaseHighState(object):
                                 sls_match)
                             if this_sls in error:
                                 errors[i] = (
-                                    'No matching sls found for \'{0}\' '
-                                    'in env \'{1}\''.format(sls_match, saltenv))
+                                    "No matching sls found for '{0}' "
+                                    "in env '{1}'".format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
@@ -3164,8 +3164,8 @@ class BaseHighState(object):
                     errors.append((
                             'Detected conflicting IDs, SLS'
                             ' IDs need to be globally unique.\n    The'
-                            ' conflicting ID is \'{0}\' and is found in SLS'
-                            ' \'{1}:{2}\' and SLS \'{3}:{4}\'').format(
+                            " conflicting ID is '{0}' and is found in SLS"
+                            " '{1}:{2}' and SLS '{3}:{4}'").format(
                                     id_,
                                     highstate[id_]['__env__'],
                                     highstate[id_]['__sls__'],

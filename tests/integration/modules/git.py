@@ -151,7 +151,7 @@ class GitModuleTest(integration.ModuleCase):
         self.assertEqual(
             ret,
             '\n'.join(
-                sorted(['add \'{0}\''.format(x)
+                sorted(["add '{0}'".format(x)
                         for x in files_relpath])
             )
         )
@@ -165,7 +165,7 @@ class GitModuleTest(integration.ModuleCase):
         with open(file_path, 'w') as fp_:
             fp_.write('This is a test file named ' + filename + '.\n')
         ret = self.run_function('git.add', [self.repo, filename])
-        self.assertEqual(ret, 'add \'{0}\''.format(filename))
+        self.assertEqual(ret, "add '{0}'".format(filename))
 
     def test_archive(self):
         '''
@@ -243,10 +243,10 @@ class GitModuleTest(integration.ModuleCase):
                 [self.repo, 'HEAD'],
                 opts='-b ' + new_branch
             ),
-            'Switched to a new branch \'' + new_branch + '\''
+            "Switched to a new branch '" + new_branch + "'"
         )
         self.assertTrue(
-            'Switched to branch \'master\'' in
+            "Switched to branch 'master'" in
             self.run_function('git.checkout', [self.repo, 'master']),
         )
 
@@ -259,10 +259,10 @@ class GitModuleTest(integration.ModuleCase):
             self.run_function(
                 'git.checkout', [self.repo], rev=None, opts='-b ' + new_branch
             ),
-            'Switched to a new branch \'' + new_branch + '\''
+            "Switched to a new branch '" + new_branch + "'"
         )
         self.assertTrue(
-            '\'rev\' argument is required unless -b or -B in opts' in
+            "'rev' argument is required unless -b or -B in opts" in
             self.run_function('git.checkout', [self.repo])
         )
 
@@ -358,7 +358,7 @@ class GitModuleTest(integration.ModuleCase):
                 'Try to specify both single and multivar (should raise error)'
             )
             self.assertTrue(
-                'Only one of \'value\' and \'multivar\' is permitted' in
+                "Only one of 'value' and 'multivar' is permitted" in
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
@@ -372,7 +372,7 @@ class GitModuleTest(integration.ModuleCase):
                 'error)'
             )
             self.assertTrue(
-                '\'cwd\' argument required unless global=True' in
+                "'cwd' argument required unless global=True" in
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
@@ -493,7 +493,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global
             )
-            log.debug('Get just the local foo.multi values containing \'a\'')
+            log.debug("Get just the local foo.multi values containing 'a'")
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -503,7 +503,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 {'foo.multi': [x for x in cfg_local['foo.multi'] if 'a' in x]}
             )
-            log.debug('Get just the global foo.multi values containing \'a\'')
+            log.debug("Get just the global foo.multi values containing 'a'")
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -796,11 +796,11 @@ class GitModuleTest(integration.ModuleCase):
         # Remove a single file
         self.assertEqual(
             self.run_function('git.rm', [self.repo, single_file]),
-            'rm \'' + single_file + '\''
+            "rm '" + single_file + "'"
         )
         # Remove an entire dir
         expected = '\n'.join(
-            sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
+            sorted(["rm '" + os.path.join(entire_dir, x) + "'"
                     for x in self.files])
         )
         self.assertEqual(

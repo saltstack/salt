@@ -45,7 +45,7 @@ class BrewModuleTest(integration.ModuleCase):
         # Must be running on a mac
         if os_grain['kernel'] not in 'Darwin':
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                "Test not applicable to '{kernel}' kernel".format(
                     **os_grain
                 )
             )

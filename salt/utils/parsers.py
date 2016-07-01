@@ -60,7 +60,7 @@ class MixInMeta(type):
         instance = super(MixInMeta, mcs).__new__(mcs, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
-                'Don\'t subclass {0} in {1} if you\'re not going to use it '
+                "Don't subclass {0} in {1} if you're not going to use it "
                 'as a salt parser mix-in.'.format(mcs.__name__, name)
             )
         return instance
@@ -237,7 +237,7 @@ class OptionParser(optparse.OptionParser, object):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
             '--versions-report', action='store_true',
-            help='Show program\'s dependencies version number and exit.'
+            help="Show program's dependencies version number and exit."
         )
 
     def print_versions_report(self, file=sys.stdout):  # pylint: disable=redefined-builtin
@@ -384,7 +384,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         if not os.path.isfile(self.options.saltfile):
             self.error(
-                '\'{0}\' file does not exist.\n'.format(self.options.saltfile
+                "'{0}' file does not exist.\n".format(self.options.saltfile
                 )
             )
 
@@ -393,7 +393,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Make sure we let the user know that we will be loading a Saltfile
         logging.getLogger(__name__).info(
-            'Loading Saltfile from \'{0}\''.format(self.options.saltfile)
+            "Loading Saltfile from '{0}'".format(self.options.saltfile)
         )
 
         saltfile_config = config._read_conf_file(saltfile)
@@ -487,14 +487,14 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
-                  '\'%default\'.')
+                  "'%default'.")
         )
 
     def process_config_dir(self):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: CONFIG \'{0}\' directory does not exist.\n'.format(
+                "WARNING: CONFIG '{0}' directory does not exist.\n".format(
                     self.options.config_dir
                 )
             )
@@ -548,7 +548,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 '-l', '--log-level',
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. '
-                     'Default: \'{1}\'.'.format(
+                     "Default: '{1}'.".format(
                          ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
                          getattr(self, '_default_logging_level_', 'warning')
                      )
@@ -557,7 +557,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '--log-file',
             default=None,
-            help='Log file path. Default: \'{0}\'.'.format(
+            help="Log file path. Default: '{0}'.".format(
                 self._default_logging_logfile_
             )
         )
@@ -567,7 +567,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. '
-                 'Default: \'{1}\'.'.format(
+                 "Default: '{1}'.".format(
                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
                      getattr(self, '_default_logging_level_', 'warning')
                  )
@@ -761,9 +761,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self._default_logging_logfile_
                     )
                     logging.getLogger(__name__).debug(
-                        'The user \'{0}\' is not allowed to write to \'{1}\'. '
+                        "The user '{0}' is not allowed to write to '{1}'. "
                         'The log file will be stored in '
-                        '\'~/.salt/\'{2}\'.log\''.format(
+                        "'~/.salt/'{2}'.log'".format(
                             current_user,
                             logfile,
                             logfile_basename
@@ -875,7 +875,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             default=os.path.join(
                 syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
             ),
-            help=('Specify the location of the pidfile. Default: \'%default\'.')
+            help=("Specify the location of the pidfile. Default: '%default'.")
         )
 
     def _mixin_before_exit(self):
@@ -984,7 +984,7 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
                 default=os.path.join(
                     syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
                 ),
-                help=('Specify the location of the pidfile. Default: \'%default\'.')
+                help=("Specify the location of the pidfile. Default: '%default'.")
             )
 
             # Since there was no colision with DaemonMixin, let's add the
@@ -1091,7 +1091,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--delimiter',
             default=DEFAULT_TARGET_DELIM,
             help=('Change the default delimiter for matching in multi-level '
-                  'data structures. Default: \'%default\'.')
+                  "data structures. Default: '%default'.")
         )
 
         self._create_process_functions()
@@ -1134,7 +1134,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'target matching. The compound target is space delimited, '
                   'targets other than globs are preceded with an identifier '
                   'matching the specific targets argument type: salt '
-                  '\'G@os:RedHat and webser* or E@database.*\'.')
+                  "'G@os:RedHat and webser* or E@database.*'.")
         )
         group.add_option(
             '-I', '--pillar',
@@ -1175,7 +1175,7 @@ class TimeoutMixIn(six.with_metaclass(MixInMeta, object)):
     def _mixin_setup(self):
         if not hasattr(self, 'default_timeout'):
             raise RuntimeError(
-                'You need to define the \'default_timeout\' attribute '
+                "You need to define the 'default_timeout' attribute "
                 'on {0}'.format(self.__class__.__name__)
             )
         self.add_option(
@@ -1230,7 +1230,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--out', '--output',
             dest='output',
             help=(
-                'Print the output from the \'{0}\' command using the '
+                "Print the output from the '{0}' command using the "
                 'specified outputter.'.format(
                     self.get_prog_name(),
                 )
@@ -1274,8 +1274,8 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--state-output', '--state_output',
             default=None,
             help=('Override the configured state_output value for minion '
-                  'output. One of \'full\', \'terse\', \'mixed\', \'changes\' or \'filter\'. '
-                  'Default: \'%default\'.')
+                  "output. One of 'full', 'terse', 'mixed', 'changes' or 'filter'. "
+                  "Default: '%default'.")
         )
         group.add_option(
             '--state-verbose', '--state_verbose',
@@ -1398,7 +1398,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=True,
             dest='deploy',
             action='store_false',
-            help='Don\'t run a deploy script after instance creation.'
+            help="Don't run a deploy script after instance creation."
         )
         group.add_option(
             '-P', '--parallel',
@@ -1500,7 +1500,7 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             action='store',
             help='Display a list of configured profiles. Pass in a cloud '
-                 'provider to view the provider\'s associated profiles, '
+                 "provider to view the provider's associated profiles, "
                  'such as digital_ocean, or pass in "all" to list all the '
                  'configured profiles.'
         )
@@ -1520,7 +1520,7 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
                         query = 'list_providers'
                         if self.args:
                             self.error(
-                                '\'--list-providers\' does not accept any '
+                                "'--list-providers' does not accept any "
                                 'arguments'
                             )
                     elif opt.dest == 'list_profiles':
@@ -1528,8 +1528,8 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
                         option_dict = vars(self.options)
                         if option_dict.get('list_profiles') == '--list-providers':
                             self.error(
-                                '\'--list-profiles\' does not accept '
-                                '\'--list-providers\' as an argument'
+                                "'--list-profiles' does not accept "
+                                "'--list-providers' as an argument"
                             )
                     self.selected_query_option = query
 
@@ -1620,7 +1620,7 @@ class ProfilingPMixIn(six.with_metaclass(MixInMeta, object)):
             '--profiling-path',
             dest='profiling_path',
             default='/tmp/stats',
-            help=('Folder that will hold all stats generations path. Default: \'%default\'.')
+            help=("Folder that will hold all stats generations path. Default: '%default'.")
         )
         group.add_option(
             '--enable-profiling',
@@ -1771,7 +1771,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
 
     default_timeout = 5
 
-    usage = '%prog [options] \'<target>\' <function> [arguments]'
+    usage = "%prog [options] '<target>' <function> [arguments]"
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -1810,7 +1810,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             dest='async',
             action='store_true',
-            help=('Run the salt command but don\'t wait for a reply.')
+            help=("Run the salt command but don't wait for a reply.")
         )
         self.add_option(
             '--subset',
@@ -2073,7 +2073,7 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
 
     default_timeout = 5
 
-    usage = '%prog [options] \'<target>\' SOURCE DEST'
+    usage = "%prog [options] '<target>' SOURCE DEST"
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
@@ -2132,12 +2132,12 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             default='',
             metavar='ARG',
             help=('List the public keys. The args '
-                  '\'pre\', \'un\', and \'unaccepted\' will list '
+                  "'pre', 'un', and 'unaccepted' will list "
                   'unaccepted/unsigned keys. '
-                  '\'acc\' or \'accepted\' will list accepted/signed keys. '
-                  '\'rej\' or \'rejected\' will list rejected keys. '
-                  '\'den\' or \'denied\' will list denied keys. '
-                  'Finally, \'all\' will list all keys.')
+                  "'acc' or 'accepted' will list accepted/signed keys. "
+                  "'rej' or 'rejected' will list rejected keys. "
+                  "'den' or 'denied' will list denied keys. "
+                  "Finally, 'all' will list all keys.")
         )
 
         actions_group.add_option(
@@ -2235,14 +2235,14 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         actions_group.add_option(
             '-f', '--finger',
             default='',
-            help='Print the specified key\'s fingerprint.'
+            help="Print the specified key's fingerprint."
         )
 
         actions_group.add_option(
             '-F', '--finger-all',
             default=False,
             action='store_true',
-            help='Print all keys\' fingerprints.'
+            help="Print all keys' fingerprints."
         )
         self.add_option_group(actions_group)
 
@@ -2374,7 +2374,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             return
         if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'den', 'all')):
             self.error(
-                '\'{0}\' is not a valid argument to \'--list\''.format(
+                "'{0}' is not a valid argument to '--list'".format(
                     self.options.list
                 )
             )
@@ -2703,7 +2703,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             dest='raw_shell',
             default=False,
             action='store_true',
-            help=('Don\'t execute a salt routine on the targets, execute a '
+            help=("Don't execute a salt routine on the targets, execute a "
                   'raw shell command.')
         )
         self.add_option(
@@ -2712,7 +2712,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
-                  'used. Default: \'flat\'.')
+                  "used. Default: 'flat'.")
         )
         self.add_option(
             '--roster-file',
@@ -2729,7 +2729,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help=('Force a refresh of the master side data cache of the '
-                  'target\'s data. This is needed if a target\'s grains have '
+                  "target's data. This is needed if a target's grains have "
                   'been changed and the auto refresh timeframe has not been '
                   'reached.')
         )
@@ -2924,7 +2924,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     def process_jid(self):
         if self.options.jid is not None:
             if not salt.utils.jid.is_jid(self.options.jid):
-                self.error('\'{0}\' is not a valid JID'.format(self.options.jid))
+                self.error("'{0}' is not a valid JID".format(self.options.jid))
 
 
 class SaltCloudParser(six.with_metaclass(OptionParserMeta,

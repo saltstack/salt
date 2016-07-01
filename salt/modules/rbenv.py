@@ -65,7 +65,7 @@ def _parse_env(env):
         env = {}
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable \'{0}\' passed without a value. '
+        log.error("Environment variable '{0}' passed without a value. "
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 

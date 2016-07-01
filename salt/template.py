@@ -49,8 +49,8 @@ def compile_template(template,
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         kwargs.pop('env')
@@ -97,7 +97,7 @@ def compile_template(template,
         start = time.time()
         ret = render(input_data, saltenv, sls, **render_kwargs)
         log.profile(
-            'Time (in seconds) to render \'{0}\' using \'{1}\' renderer: {2}'.format(
+            "Time (in seconds) to render '{0}' using '{1}' renderer: {2}".format(
                 template,
                 render.__module__.split('.')[-1],
                 time.time() - start

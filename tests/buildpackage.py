@@ -68,7 +68,7 @@ def _init():
     parser = OptionParser()
     parser.add_option('--platform',
                       dest='platform',
-                      help='Platform (\'os\' grain)')
+                      help="Platform ('os' grain)")
     parser.add_option('--log-level',
                       dest='log_level',
                       default='warning',
@@ -121,7 +121,7 @@ def _init():
     # Sanity checks
     problems = []
     if not opts.platform:
-        problems.append('Platform (\'os\' grain) required')
+        problems.append("Platform ('os' grain) required")
     if not os.path.isdir(opts.source_dir):
         problems.append('Source directory {0} not found'
                         .format(opts.source_dir))
@@ -220,7 +220,7 @@ def build_centos(opts):
             major_release = int(redhat_release.split()[2].split('.')[0])
     except (ValueError, IndexError):
         _abort('Unable to determine major release from /etc/redhat-release '
-               'contents: \'{0}\''.format(redhat_release))
+               "contents: '{0}'".format(redhat_release))
     except IOError as exc:
         _abort('{0}'.format(exc))
 
@@ -260,7 +260,7 @@ def build_centos(opts):
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
     except AttributeError:
-        _abort('Unable to extract version info from sdist filename \'{0}\''
+        _abort("Unable to extract version info from sdist filename '{0}'"
                .format(sdist))
 
     if offset is None:
@@ -352,7 +352,7 @@ if __name__ == '__main__':
                         datefmt=log_datefmt,
                         level=LOG_LEVELS[opts.log_level])
     if opts.log_level not in LOG_LEVELS:
-        log.error('Invalid log level \'{0}\', falling back to \'warning\''
+        log.error("Invalid log level '{0}', falling back to 'warning'"
                   .format(opts.log_level))
 
     # Build for the specified platform
@@ -361,7 +361,7 @@ if __name__ == '__main__':
     elif opts.platform.lower() == 'centos':
         artifacts = build_centos(opts)
     else:
-        _abort('Unsupported platform \'{0}\''.format(opts.platform))
+        _abort("Unsupported platform '{0}'".format(opts.platform))
 
     msg = ('Build complete. Artifacts will be stored in {0}'
            .format(opts.artifact_dir))

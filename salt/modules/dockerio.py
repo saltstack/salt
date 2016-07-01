@@ -331,7 +331,7 @@ def _get_image_infos(image):
     if not status['id']:
         _invalid(status)
         raise CommandExecutionError(
-            'ImageID \'{0}\' could not be resolved to '
+            "ImageID '{0}' could not be resolved to "
             'an existing Image'.format(image)
         )
     return status['out']
@@ -859,8 +859,8 @@ def kill(container, signal=None):
                 # no need to check if container is running
                 # because some signals might not stop the container.
                 _valid(status,
-                       comment='Kill signal \'{0}\' successfully'
-                       ' sent to the container \'{1}\''.format(signal, container),
+                       comment="Kill signal '{0}' successfully"
+                       " sent to the container '{1}'".format(signal, container),
                        id_=container)
             else:
                 if not is_running(dcontainer):
@@ -1116,7 +1116,7 @@ def remove_container(container, force=False, v=False):
                 _invalid(status, id_=container, out=None,
                          comment=(
                              'Container {0} is running, '
-                             'won\'t remove it').format(container))
+                             "won't remove it").format(container))
                 __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
                 return status
             else:
@@ -1858,7 +1858,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             )
     else:
         raise NotImplementedError(
-            'Unknown docker ExecutionDriver \'{0}\'. Or didn\'t find command'
+            "Unknown docker ExecutionDriver '{0}'. Or didn't find command"
             ' to attach to the container'.format(driver))
 
     # now execute the command
@@ -2173,8 +2173,8 @@ def _script(status,
         if 'env' in kwargs:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
+                "Parameter 'env' has been detected in the argument list.  This "
+                "parameter is no longer used and has been replaced by 'saltenv' "
                 'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
                 )
             kwargs.pop('env')

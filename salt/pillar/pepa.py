@@ -465,9 +465,9 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                             log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
                             immutable[rkey] = True
                         if rkey not in output:
-                            log.error('Cant\'t merge key {0} doesn\'t exist'.format(rkey))
+                            log.error("Cant't merge key {0} doesn't exist".format(rkey))
                         elif not isinstance(results[key], type(output[rkey])):
-                            log.error('Can\'t merge different types for key {0}'.format(rkey))
+                            log.error("Can't merge different types for key {0}".format(rkey))
                         elif isinstance(results[key], dict):
                             output[rkey].update(results[key])
                         elif isinstance(results[key], list):

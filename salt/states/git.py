@@ -165,7 +165,7 @@ def _fail(ret, msg, comments=None):
 
 def _failed_fetch(ret, exc, comments=None):
     msg = (
-        'Fetch failed. Set \'force_fetch\' to True to force the fetch if the '
+        "Fetch failed. Set 'force_fetch' to True to force the fetch if the "
         'failure was due to not being able to fast-forward. Output of the fetch '
         'command follows:\n\n{0}'.format(_strip_exc(exc))
     )
@@ -181,11 +181,11 @@ def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
     return _fail(
         ret,
         'Repository would be updated from {0} to {1}{2}, but this is not a '
-        'fast-forward merge. Set \'force_reset\' to True to force this '
+        "fast-forward merge. Set 'force_reset' to True to force this "
         'update.'.format(
             _short_sha(pre),
             _short_sha(post),
-            ' (after checking out local branch \'{0}\')'.format(branch)
+            " (after checking out local branch '{0}')".format(branch)
                 if _need_branch_change(branch, local_branch)
                 else ''
         ),
@@ -451,34 +451,34 @@ def latest(name,
     if always_fetch:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'always_fetch\' argument to the git.latest state no longer '
+            "The 'always_fetch' argument to the git.latest state no longer "
             'has any effect, see the 2015.8.0 release notes for details.'
         )
     if force:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'force\' argument to the git.latest state has been '
-            'deprecated, please use \'force_clone\' instead.'
+            "The 'force' argument to the git.latest state has been "
+            "deprecated, please use 'force_clone' instead."
         )
         force_clone = force
     if remote_name:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'remote_name\' argument to the git.latest state has been '
-            'deprecated, please use \'remote\' instead.'
+            "The 'remote_name' argument to the git.latest state has been "
+            "deprecated, please use 'remote' instead."
         )
         remote = remote_name
 
     if not remote:
-        return _fail(ret, '\'remote\' argument is required')
+        return _fail(ret, "'remote' argument is required")
 
     if not target:
-        return _fail(ret, '\'target\' argument is required')
+        return _fail(ret, "'target' argument is required")
 
     if not rev:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
+            "'{0}' is not a valid value for the 'rev' argument".format(rev)
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
@@ -490,7 +490,7 @@ def latest(name,
         if not os.path.isabs(target):
             return _fail(
                 ret,
-                'target \'{0}\' is not an absolute path'.format(target)
+                "target '{0}' is not an absolute path".format(target)
             )
     if branch is not None and not isinstance(branch, six.string_types):
         branch = str(branch)
@@ -513,14 +513,14 @@ def latest(name,
                     )
                     return _fail(
                         ret,
-                        'identity \'{0}\' does not exist.'.format(
+                        "identity '{0}' does not exist.".format(
                             ident_path
                         )
                     )
             if not os.path.isabs(ident_path):
                 return _fail(
                     ret,
-                    'identity \'{0}\' is not an absolute path'.format(
+                    "identity '{0}' is not an absolute path".format(
                         ident_path
                     )
                 )
@@ -532,7 +532,7 @@ def latest(name,
     if os.path.isfile(target):
         return _fail(
             ret,
-            'Target \'{0}\' exists and is a regular file, cannot proceed'
+            "Target '{0}' exists and is a regular file, cannot proceed"
             .format(target)
         )
 
@@ -554,8 +554,8 @@ def latest(name,
 
     # Check to make sure rev and mirror/bare are not both in use
     if rev != 'HEAD' and bare:
-        return _fail(ret, ('\'rev\' is not compatible with the \'mirror\' and '
-                           '\'bare\' arguments'))
+        return _fail(ret, ("'rev' is not compatible with the 'mirror' and "
+                           "'bare' arguments"))
 
     run_check_cmd_kwargs = {'runas': user}
     if 'shell' in __grains__:
@@ -666,7 +666,7 @@ def latest(name,
             # remote repo.
             return _fail(
                 ret,
-                'No revision matching \'{0}\' exists in the remote '
+                "No revision matching '{0}' exists in the remote "
                 'repository'.format(rev)
             )
 
@@ -720,7 +720,7 @@ def latest(name,
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
-                            'Unable to get position of local branch \'{0}\': '
+                            "Unable to get position of local branch '{0}': "
                             '{1}'.format(branch, _strip_exc(exc)),
                             comments
                         )
@@ -806,10 +806,10 @@ def latest(name,
                                         # tag's new location.
                                         return _fail(
                                             ret,
-                                            '\'{0}\' is a tag, but the remote '
-                                            'SHA1 for this tag ({1}) doesn\'t '
+                                            "'{0}' is a tag, but the remote "
+                                            "SHA1 for this tag ({1}) doesn't "
                                             'match the local SHA1 ({2}). Set '
-                                            '\'force_reset\' to True to force '
+                                            "'force_reset' to True to force "
                                             'this update.'.format(
                                                 rev,
                                                 _short_sha(remote_rev),
@@ -896,7 +896,7 @@ def latest(name,
                 fetch_url = remotes[remote]['fetch']
             else:
                 log.debug(
-                    'Remote \'{0}\' not found in git checkout at {1}'
+                    "Remote '{0}' not found in git checkout at {1}"
                     .format(remote, target)
                 )
                 fetch_url = None
@@ -904,7 +904,7 @@ def latest(name,
             if remote_rev is not None and desired_fetch_url != fetch_url:
                 if __opts__['test']:
                     actions = [
-                        'Remote \'{0}\' would be changed from {1} to {2}'
+                        "Remote '{0}' would be changed from {1} to {2}"
                         .format(
                             remote,
                             salt.utils.url.redact_http_basic_auth(fetch_url),
@@ -950,7 +950,7 @@ def latest(name,
                                            https_user=https_user,
                                            https_pass=https_pass)
                 comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
+                    "Remote '{0}' changed from {1} to {2}".format(
                         remote,
                         salt.utils.url.redact_http_basic_auth(fetch_url),
                         redacted_fetch_url
@@ -962,7 +962,7 @@ def latest(name,
                     actions = []
                     if not has_remote_rev:
                         actions.append(
-                            'Remote \'{0}\' would be fetched'.format(remote)
+                            "Remote '{0}' would be fetched".format(remote)
                         )
                     if (not revs_match) \
                             and (update_head or (branch is not None
@@ -973,7 +973,7 @@ def latest(name,
                     if _need_branch_change(branch, local_branch):
                         if branch not in all_local_branches:
                             actions.append(
-                                'New branch \'{0}\' would be checked '
+                                "New branch '{0}' would be checked "
                                 'out, with {1} as a starting '
                                 'point'.format(branch, remote_loc)
                             )
@@ -984,7 +984,7 @@ def latest(name,
                                 )
                         else:
                             actions.append(
-                                'Branch \'{0}\' would be checked out '
+                                "Branch '{0}' would be checked out "
                                 'and {1} to {2}'.format(
                                     branch,
                                     merge_action,
@@ -1117,7 +1117,7 @@ def latest(name,
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
-                            'Fetch did not successfully retrieve rev \'{0}\' '
+                            "Fetch did not successfully retrieve rev '{0}' "
                             'from {1}: {2}'.format(rev, name, exc)
                         )
 
@@ -1161,8 +1161,8 @@ def latest(name,
                     if local_changes and not force_checkout:
                         return _fail(
                             ret,
-                            'Local branch \'{0}\' has uncommitted '
-                            'changes. Set \'force_checkout\' to True to '
+                            "Local branch '{0}' has uncommitted "
+                            "changes. Set 'force_checkout' to True to "
                             'discard them and proceed.'.format(local_branch)
                         )
 
@@ -1188,7 +1188,7 @@ def latest(name,
                                              user=user)
                     if '-b' in checkout_opts:
                         comments.append(
-                            'New branch \'{0}\' was checked out, with {1} '
+                            "New branch '{0}' was checked out, with {1} "
                             'as a starting point'.format(
                                 branch,
                                 remote_loc
@@ -1196,7 +1196,7 @@ def latest(name,
                         )
                     else:
                         comments.append(
-                            '\'{0}\' was checked out'.format(checkout_rev)
+                            "'{0}' was checked out".format(checkout_rev)
                         )
 
                 if fast_forward is False:
@@ -1391,14 +1391,14 @@ def latest(name,
             elif os.listdir(target):
                 return _fail(
                     ret,
-                    'Target \'{0}\' exists, is non-empty and is not a git '
-                    'repository. Set the \'force_clone\' option to True to '
-                    'remove this directory\'s contents and proceed with '
+                    "Target '{0}' exists, is non-empty and is not a git "
+                    "repository. Set the 'force_clone' option to True to "
+                    "remove this directory's contents and proceed with "
                     'cloning the remote repository'.format(target)
                 )
 
         log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
+            "Target {0} is not found, 'git clone' is required".format(target)
         )
         if __opts__['test']:
             ret['changes']['new'] = name + ' => ' + target
@@ -1461,7 +1461,7 @@ def latest(name,
                                 target, user=user):
                         return _fail(
                             ret,
-                            'Revision \'{0}\' does not exist in clone'
+                            "Revision '{0}' does not exist in clone"
                             .format(rev),
                             comments
                         )
@@ -1481,7 +1481,7 @@ def latest(name,
                                                      opts=['-b', branch],
                                                      user=user)
                             comments.append(
-                                'Branch \'{0}\' checked out, with {1} '
+                                "Branch '{0}' checked out, with {1} "
                                 'as a starting point'.format(
                                     branch,
                                     remote_loc
@@ -1701,9 +1701,9 @@ def present(name,
         elif os.listdir(name):
             return _fail(
                 ret,
-                'Target \'{0}\' exists, is non-empty, and is not a git '
-                'repository. Set the \'force\' option to True to remove '
-                'this directory\'s contents and proceed with initializing a '
+                "Target '{0}' exists, is non-empty, and is not a git "
+                "repository. Set the 'force' option to True to remove "
+                "this directory's contents and proceed with initializing a "
                 'repository'.format(name)
             )
 
@@ -1844,13 +1844,13 @@ def detached(name,
     if not ref:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'ref\' argument'.format(ref)
+            "'{0}' is not a valid value for the 'ref' argument".format(ref)
         )
 
     if not target:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'target\' argument'.format(ref)
+            "'{0}' is not a valid value for the 'target' argument".format(ref)
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
@@ -1862,7 +1862,7 @@ def detached(name,
         if not os.path.isabs(target):
             return _fail(
                 ret,
-                'Target \'{0}\' is not an absolute path'.format(target)
+                "Target '{0}' is not an absolute path".format(target)
             )
     if user is not None and not isinstance(user, six.string_types):
         user = str(user)
@@ -1883,14 +1883,14 @@ def detached(name,
                     )
                     return _fail(
                         ret,
-                        'Identity \'{0}\' does not exist.'.format(
+                        "Identity '{0}' does not exist.".format(
                             ident_path
                         )
                     )
             if not os.path.isabs(ident_path):
                 return _fail(
                     ret,
-                    'Identity \'{0}\' is not an absolute path'.format(
+                    "Identity '{0}' is not an absolute path".format(
                         ident_path
                     )
                 )
@@ -1902,7 +1902,7 @@ def detached(name,
     if os.path.isfile(target):
         return _fail(
             ret,
-            'Target \'{0}\' exists and is a regular file, cannot proceed'
+            "Target '{0}' exists and is a regular file, cannot proceed"
             .format(target)
         )
 
@@ -1980,7 +1980,7 @@ def detached(name,
                                            https_user=https_user,
                                            https_pass=https_pass)
                 comments.append(
-                    'Remote {0} updated from \'{1}\' to \'{2}\''.format(
+                    "Remote {0} updated from '{1}' to '{2}'".format(
                         remote,
                         str(current_fetch_url),
                         name
@@ -2024,14 +2024,14 @@ def detached(name,
                 # can't proceed.
                 return _fail(
                     ret,
-                    'Target \'{0}\' exists, is non-empty and is not a git '
-                    'repository. Set the \'force_clone\' option to True to '
-                    'remove this directory\'s contents and proceed with '
+                    "Target '{0}' exists, is non-empty and is not a git "
+                    "repository. Set the 'force_clone' option to True to "
+                    "remove this directory's contents and proceed with "
                     'cloning the remote repository'.format(target)
                 )
 
         log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
+            "Target {0} is not found, 'git clone' is required".format(target)
         )
         if __opts__['test']:
             return _neutral_test(
@@ -2305,7 +2305,7 @@ def config_unset(name,
     if not global_ and not repo:
         return _fail(
             ret,
-            'Non-global config options require the \'repo\' argument to be '
+            "Non-global config options require the 'repo' argument to be "
             'set'
         )
 
@@ -2343,13 +2343,13 @@ def config_unset(name,
                 return _fail(
                     ret,
                     'Multiple values are matched by value_regex for the '
-                    'following keys (set \'all\' to True to force removal): '
+                    "following keys (set 'all' to True to force removal): "
                     '{0}'.format('; '.join(greedy_matches))
                 )
             else:
                 return _fail(
                     ret,
-                    'Multivar(s) matched by the key expression (set \'all\' '
+                    "Multivar(s) matched by the key expression (set 'all' "
                     'to True to force removal): {0}'.format(
                         '; '.join(greedy_matches)
                     )
@@ -2390,9 +2390,9 @@ def config_unset(name,
                 **{'global': global_}
             )
         except CommandExecutionError as exc:
-            msg = 'Failed to unset \'{0}\''.format(key_name)
+            msg = "Failed to unset '{0}'".format(key_name)
             if value_regex is not None:
-                msg += ' using value_regex \'{1}\''
+                msg += " using value_regex '{1}'"
             msg += ': ' + _strip_exc(exc)
             log.error(msg)
             failed.append(key_name)
@@ -2529,7 +2529,7 @@ def config_set(name,
     if value is not None and multivar is not None:
         return _fail(
             ret,
-            'Only one of \'value\' and \'multivar\' is permitted'
+            "Only one of 'value' and 'multivar' is permitted"
         )
 
     # Sanitize kwargs and make sure that no invalid ones were passed. This
@@ -2548,15 +2548,15 @@ def config_set(name,
     if is_global:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'is_global\' argument to the git.config_set state has been '
-            'deprecated, please use \'global\' instead.'
+            "The 'is_global' argument to the git.config_set state has been "
+            "deprecated, please use 'global' instead."
         )
         global_ = is_global
 
     if not global_ and not repo:
         return _fail(
             ret,
-            'Non-global config options require the \'repo\' argument to be '
+            "Non-global config options require the 'repo' argument to be "
             'set'
         )
 
@@ -2565,7 +2565,7 @@ def config_set(name,
     if value is not None:
         if not isinstance(value, six.string_types):
             value = str(value)
-        value_comment = '\'' + value + '\''
+        value_comment = "'" + value + "'"
         desired = [value]
     if multivar is not None:
         if not isinstance(multivar, list):
@@ -2594,7 +2594,7 @@ def config_set(name,
     )
 
     if desired == pre:
-        ret['comment'] = '{0}\'{1}\' is already set to {2}'.format(
+        ret['comment'] = "{0}'{1}' is already set to {2}".format(
             'Global key ' if global_ else '',
             name,
             value_comment
@@ -2603,7 +2603,7 @@ def config_set(name,
 
     if __opts__['test']:
         ret['changes'] = {'old': pre, 'new': desired}
-        msg = '{0}\'{1}\' would be {2} {3}'.format(
+        msg = "{0}'{1}' would be {2} {3}".format(
             'Global key ' if global_ else '',
             name,
             'added as' if pre is None else 'set to',
@@ -2624,7 +2624,7 @@ def config_set(name,
     except CommandExecutionError as exc:
         return _fail(
             ret,
-            'Failed to set {0}\'{1}\' to {2}: {3}'.format(
+            "Failed to set {0}'{1}' to {2}: {3}".format(
                 'global key ' if global_ else '',
                 name,
                 value_comment,
@@ -2638,14 +2638,14 @@ def config_set(name,
     if post != desired:
         return _fail(
             ret,
-            'Failed to set {0}\'{1}\' to {2}'.format(
+            "Failed to set {0}'{1}' to {2}".format(
                 'global key ' if global_ else '',
                 name,
                 value_comment
             )
         )
 
-    ret['comment'] = '{0}\'{1}\' was {2} {3}'.format(
+    ret['comment'] = "{0}'{1}' was {2} {3}".format(
         'Global key ' if global_ else '',
         name,
         'added as' if pre is None else 'set to',
@@ -2660,7 +2660,7 @@ def config(name, value=None, multivar=None, repo=None, user=None, **kwargs):
     '''
     salt.utils.warn_until(
         'Nitrogen',
-        'The \'git.config\' state has been renamed to \'git.config_set\', '
+        "The 'git.config' state has been renamed to 'git.config_set', "
         'please update your SLS files'
     )
     return config_set(name=name,

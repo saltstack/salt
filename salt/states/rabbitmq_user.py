@@ -126,9 +126,9 @@ def present(name,
             return ret
 
     if user and not any((force, perms, tags, passwd_reqs_update)):
-        log.debug(('RabbitMQ user \'%s\' exists, password is upto'
+        log.debug(("RabbitMQ user '%s' exists, password is upto"
                    ' date and force is not set.'), name)
-        ret['comment'] = 'User \'{0}\' is already present.'.format(name)
+        ret['comment'] = "User '{0}' is already present.".format(name)
         ret['result'] = True
         return ret
 
@@ -138,18 +138,18 @@ def present(name,
                                'new': name}})
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'User \'{0}\' is set to be created.'.format(name)
+            ret['comment'] = "User '{0}' is set to be created.".format(name)
             return ret
 
         log.debug(
-            'RabbitMQ user \'{0}\' doesn\'t exist - Creating.'.format(name))
+            "RabbitMQ user '{0}' doesn't exist - Creating.".format(name))
         try:
             __salt__['rabbitmq.add_user'](name, password, runas=runas)
         except CommandExecutionError as err:
             ret['comment'] = 'Error: {0}'.format(err)
             return ret
     else:
-        log.debug('RabbitMQ user \'{0}\' exists'.format(name))
+        log.debug("RabbitMQ user '{0}' exists".format(name))
         if force or passwd_reqs_update:
             if password is not None:
                 if not __opts__['test']:
@@ -217,15 +217,15 @@ def present(name,
 
     ret['result'] = True
     if ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
+        ret['comment'] = "'{0}' is already in the desired state.".format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        ret['comment'] = "Configuration for '{0}' will change.".format(name)
         return ret
 
-    ret['comment'] = '\'{0}\' was configured.'.format(name)
+    ret['comment'] = "'{0}' was configured.".format(name)
     return ret
 
 
@@ -259,14 +259,14 @@ def absent(name,
                                'new': ''}})
     else:
         ret['result'] = True
-        ret['comment'] = 'The user \'{0}\' is not present.'.format(name)
+        ret['comment'] = "The user '{0}' is not present.".format(name)
         return ret
 
     if __opts__['test'] and ret['changes']:
         ret['result'] = None
-        ret['comment'] = 'The user \'{0}\' will be removed.'.format(name)
+        ret['comment'] = "The user '{0}' will be removed.".format(name)
         return ret
 
     ret['result'] = True
-    ret['comment'] = 'The user \'{0}\' was removed.'.format(name)
+    ret['comment'] = "The user '{0}' was removed.".format(name)
     return ret

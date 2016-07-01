@@ -661,7 +661,7 @@ def _ensure_exists(wrapped):
         '''
         if not exists(name):
             raise CommandExecutionError(
-                'Container \'{0}\' does not exist'.format(name)
+                "Container '{0}' does not exist".format(name)
             )
         return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
     return wrapper
@@ -691,7 +691,7 @@ def _change_state(name, action, expected, *args, **kwargs):
     if action != 'restart' and pre == expected:
         return {'result': False,
                 'state': {'old': expected, 'new': expected},
-                'comment': ('Container \'{0}\' already {1}'
+                'comment': ("Container '{0}' already {1}"
                             .format(name, expected))}
     _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
@@ -825,7 +825,7 @@ def _get_exec_driver():
             __context__[contextkey] = 'nsenter'
         else:
             raise NotImplementedError(
-                'Unknown docker ExecutionDriver \'{0}\', or didn\'t find '
+                "Unknown docker ExecutionDriver '{0}', or didn't find "
                 'command to attach to the container'.format(driver)
             )
     return __context__[contextkey]
@@ -841,7 +841,7 @@ def _get_repo_tag(image, default_tag='latest'):
             # Would happen if some wiseguy requests a tag ending in a colon
             # (e.g. 'somerepo:')
             log.warning(
-                'Assuming tag \'{0}\' for repo \'{1}\''
+                "Assuming tag '{0}' for repo '{1}'"
                 .format(default_tag, image)
             )
             r_tag = default_tag
@@ -891,7 +891,7 @@ def _size_fmt(num):
                 return '{0:3.1f} {1}'.format(num, unit)
             num /= 1024.0
     except Exception:
-        log.error('Unable to format file size for \'{0}\''.format(num))
+        log.error("Unable to format file size for '{0}'".format(num))
         return 'unknown'
 
 
@@ -903,7 +903,7 @@ def _client_wrapper(attr, *args, **kwargs):
     catch_api_errors = kwargs.pop('catch_api_errors', True)
     func = getattr(__context__['docker.client'], attr)
     if func is None:
-        raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+        raise SaltInvocationError("Invalid client action '{0}'".format(attr))
     err = ''
     try:
         return func(*args, **kwargs)
@@ -991,7 +991,7 @@ def _image_wrapper(attr, *args, **kwargs):
 
     func = getattr(__context__['docker.client'], attr)
     if func is None:
-        raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+        raise SaltInvocationError("Invalid client action '{0}'".format(attr))
     ret = []
     try:
         output = func(*args, **kwargs)
@@ -1321,7 +1321,7 @@ def _validate_input(kwargs,
             port_num, _, protocol = str(item).partition('/')
             if not port_num.isdigit():
                 raise SaltInvocationError(
-                    'Invalid port number \'{0}\' in \'ports\' argument'
+                    "Invalid port number '{0}' in 'ports' argument"
                     .format(port_num)
                 )
             else:
@@ -1333,7 +1333,7 @@ def _validate_input(kwargs,
                 protocol = lc_protocol
             elif lc_protocol != '':
                 raise SaltInvocationError(
-                    'Invalid protocol \'{0}\' for port {1} in \'ports\' '
+                    "Invalid protocol '{0}' for port {1} in 'ports' "
                     'argument'.format(protocol, port_num)
                 )
             if protocol:
@@ -1388,18 +1388,18 @@ def _validate_input(kwargs,
                     key, val = env_var.split('=')
                 except AttributeError:
                     raise SaltInvocationError(
-                        'Invalid environment variable definition \'{0}\''
+                        "Invalid environment variable definition '{0}'"
                         .format(env_var)
                     )
                 else:
                     if key in repacked_env:
                         raise SaltInvocationError(
-                            'Duplicate environment variable \'{0}\''
+                            "Duplicate environment variable '{0}'"
                             .format(key)
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}=\'{val}\''
+                            "Environment values must be strings {key}='{val}'"
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1407,7 +1407,7 @@ def _validate_input(kwargs,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}=\'{val}\''
+                        "Environment values must be strings {key}='{val}'"
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -1480,7 +1480,7 @@ def _validate_input(kwargs,
                 else:
                     raise SaltInvocationError(
                         'Invalid read-only configuration for bind {0}, must '
-                        'be either \'ro\' or \'rw\''
+                        "be either 'ro' or 'rw'"
                         .format(host_path + '/' + container_path)
                     )
             else:
@@ -1566,7 +1566,7 @@ def _validate_input(kwargs,
                 try:
                     if not salt.utils.network.is_ip(addr):
                         errors.append(
-                            'dns nameserver \'{0}\' is not a valid IP address'
+                            "dns nameserver '{0}' is not a valid IP address"
                             .format(addr)
                         )
                 except RuntimeError:
@@ -1606,7 +1606,7 @@ def _validate_input(kwargs,
                 host_port, container_port = bind_parts
                 if not host_port.isdigit():
                     raise SaltInvocationError(
-                        'Invalid host port \'{0}\' for port {1} in '
+                        "Invalid host port '{0}' for port {1} in "
                         'port_bindings'.format(host_port, container_port)
                     )
                 bind_val = int(host_port)
@@ -1616,7 +1616,7 @@ def _validate_input(kwargs,
                     try:
                         if not salt.utils.network.is_ip(host_ip):
                             raise SaltInvocationError(
-                                'Host IP \'{0}\' in port_binding {1} is not a '
+                                "Host IP '{0}' in port_binding {1} is not a "
                                 'valid IP address'.format(host_ip, binding)
                             )
                     except RuntimeError:
@@ -1625,7 +1625,7 @@ def _validate_input(kwargs,
                     bind_val = (host_ip,)
                 elif not host_port.isdigit():
                     raise SaltInvocationError(
-                        'Invalid host port \'{0}\' for port {1} in '
+                        "Invalid host port '{0}' for port {1} in "
                         'port_bindings'.format(host_port, container_port)
                     )
                 else:
@@ -1635,7 +1635,7 @@ def _validate_input(kwargs,
             port_num, _, protocol = container_port.partition('/')
             if not port_num.isdigit():
                 raise SaltInvocationError(
-                    'Invalid container port number \'{0}\' in '
+                    "Invalid container port number '{0}' in "
                     'port_bindings argument'.format(port_num)
                 )
             lc_protocol = protocol.lower()
@@ -1681,13 +1681,13 @@ def _validate_input(kwargs,
             else:
                 # just a name assume it is a network
                 log.info(
-                    'Assuming network_mode \'{0}\' is a network.'.format(
+                    "Assuming network_mode '{0}' is a network.".format(
                         kwargs['network_mode'])
                 )
         except SaltInvocationError:
             raise SaltInvocationError(
-                'network_mode must be one of \'bridge\', \'host\', '
-                '\'container:<id or name>\' or a name of a network.'
+                "network_mode must be one of 'bridge', 'host', "
+                "'container:<id or name>' or a name of a network."
             )
 
     def _valid_restart_policy():  # pylint: disable=unused-variable
@@ -1705,13 +1705,13 @@ def _validate_input(kwargs,
                 count = '0'
             if not count.isdigit():
                 raise SaltInvocationError(
-                    'Invalid retry count \'{0}\' in restart_policy, '
+                    "Invalid retry count '{0}' in restart_policy, "
                     'must be an integer'.format(count)
                 )
             count = int(count)
             if pol_name == 'always' and count != 0:
                 log.warning(
-                    'Using \'always\' restart_policy. Retry count will '
+                    "Using 'always' restart_policy. Retry count will "
                     'be ignored.'
                 )
                 count = 0
@@ -1747,7 +1747,7 @@ def _validate_input(kwargs,
                 try:
                     if not salt.utils.network.is_ip(ip_addr):
                         errors.append(
-                            'Address \'{0}\' for extra_host \'{0}\' is not a '
+                            "Address '{0}' for extra_host '{0}' is not a "
                             'valid IP address'
                         )
                 except RuntimeError:
@@ -1764,7 +1764,7 @@ def _validate_input(kwargs,
         '''
         if kwargs.get('pid_mode') not in (None, 'host'):
             raise SaltInvocationError(
-                'pid_mode can only be \'host\', if set'
+                "pid_mode can only be 'host', if set"
             )
 
     def _valid_labels():  # pylint: disable=unused-variable
@@ -1812,7 +1812,7 @@ def _validate_input(kwargs,
     _locals = locals()
     for kwarg in kwargs:
         if kwarg not in VALID_CREATE_OPTS:
-            raise SaltInvocationError('Invalid argument \'{0}\''.format(kwarg))
+            raise SaltInvocationError("Invalid argument '{0}'".format(kwarg))
 
         # Check for Docker/docker-py compatibility
         compat_errors = []
@@ -1821,7 +1821,7 @@ def _validate_input(kwargs,
             if __context__['docker.docker_version'] is not None:
                 if __context__['docker.docker_version'] < min_docker:
                     compat_errors.append(
-                        'The \'{0}\' parameter requires at least Docker {1} '
+                        "The '{0}' parameter requires at least Docker {1} "
                         '(detected version {2})'.format(
                             kwarg,
                             '.'.join(map(str, min_docker)),
@@ -1834,7 +1834,7 @@ def _validate_input(kwargs,
                 min_docker_py = VALID_CREATE_OPTS[kwarg]['min_docker_py']
                 if cur_docker_py < min_docker_py:
                     compat_errors.append(
-                        'The \'{0}\' parameter requires at least docker-py '
+                        "The '{0}' parameter requires at least docker-py "
                         '{1} (detected version {2})'.format(
                             kwarg,
                             '.'.join(map(str, min_docker_py)),
@@ -1865,7 +1865,7 @@ def _validate_input(kwargs,
         key = '_valid_' + validator
         if key not in _locals:
             raise SaltInvocationError(
-                'Validator function missing for argument \'{0}\'. Please '
+                "Validator function missing for argument '{0}'. Please "
                 'report this.'.format(kwarg)
             )
         # Run validation function
@@ -2392,7 +2392,7 @@ def port(name, private_port=None):
             pattern = '{0}/*'.format(private_port)
         else:
             err = (
-                'Invalid private_port \'{0}\'. Must either be a port number, '
+                "Invalid private_port '{0}'. Must either be a port number, "
                 'or be in port/protocol notation (e.g. 5000/tcp)'
                 .format(private_port)
             )
@@ -2556,7 +2556,7 @@ def search(name, official=False, trusted=False):
     response = _client_wrapper('search', name)
     if not response:
         raise CommandExecutionError(
-            'No images matched the search string \'{0}\''.format(name)
+            "No images matched the search string '{0}'".format(name)
         )
 
     key_map = {
@@ -2990,7 +2990,7 @@ def create(image,
     if 'cmd' in kwargs:
         if 'command' in kwargs:
             raise SaltInvocationError(
-                'Only one of \'command\' and \'cmd\' can be used. Both '
+                "Only one of 'command' and 'cmd' can be used. Both "
                 'arguments are equivalent.'
             )
         kwargs['command'] = kwargs.pop('cmd')
@@ -3030,7 +3030,7 @@ def create(image,
 
     log.debug(
         'dockerng.create is using the following kwargs to create '
-        'container \'{0}\' from image \'{1}\': {2}'
+        "container '{0}' from image '{1}': {2}"
         .format(name, image, create_kwargs)
     )
     time_started = time.time()
@@ -3085,7 +3085,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
     c_state = state(name)
     if c_state != 'running':
         raise CommandExecutionError(
-            'Container \'{0}\' is not running'.format(name)
+            "Container '{0}' is not running".format(name)
         )
 
     # Destination file sanity checks
@@ -3143,7 +3143,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
                   .format(name, source, dest))
         return True
 
-    log.debug('Copying {0} from container \'{1}\' to local path {2}'
+    log.debug("Copying {0} from container '{1}' to local path {2}"
               .format(source, name, dest))
 
     cmd = ['docker', 'cp', '{0}:{1}'.format(name, source), dest_dir]
@@ -3283,7 +3283,7 @@ def export(name,
         salt myminion dockerng.export mycontainer /tmp/mycontainer.tar
         salt myminion dockerng.export mycontainer /tmp/mycontainer.tar.xz push=True
     '''
-    err = 'Path \'{0}\' is not absolute'.format(path)
+    err = "Path '{0}' is not absolute".format(path)
     try:
         if not os.path.isabs(path):
             raise SaltInvocationError(err)
@@ -3315,7 +3315,7 @@ def export(name,
 
     if compression and compression not in ('gzip', 'bzip2', 'xz'):
         raise SaltInvocationError(
-            'Invalid compression type \'{0}\''.format(compression)
+            "Invalid compression type '{0}'".format(compression)
         )
 
     parent_dir = os.path.dirname(path)
@@ -3425,7 +3425,7 @@ def rm_(name, force=False, volumes=False):
     '''
     if state(name) == 'running' and not force:
         raise CommandExecutionError(
-            'Container \'{0}\' is running, use force=True to forcibly '
+            "Container '{0}' is running, use force=True to forcibly "
             'remove this container'.format(name)
         )
     pre = ps_(all=True)
@@ -3890,7 +3890,7 @@ def layers(name):
             __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines()):
         ret.append(line)
     if not ret:
-        raise CommandExecutionError('Image \'{0}\' not found'.format(name))
+        raise CommandExecutionError("Image '{0}' not found".format(name))
     return ret
 
 
@@ -4136,7 +4136,7 @@ def rmi(*names, **kwargs):
                             catch_api_errors=False)
         except docker.errors.APIError as exc:
             if exc.response.status_code == 409:
-                err = ('Unable to remove image \'{0}\' because it is in '
+                err = ("Unable to remove image '{0}' because it is in "
                        'use by '.format(name))
                 deps = depends(name)
                 if deps['Containers']:
@@ -4240,7 +4240,7 @@ def save(name,
         salt myminion dockerng.save centos:7 /tmp/cent7.tar
         salt myminion dockerng.save 0123456789ab cdef01234567 /tmp/saved.tar
     '''
-    err = 'Path \'{0}\' is not absolute'.format(path)
+    err = "Path '{0}' is not absolute".format(path)
     try:
         if not os.path.isabs(path):
             raise SaltInvocationError(err)
@@ -4273,14 +4273,14 @@ def save(name,
 
     if compression and compression not in ('gzip', 'bzip2', 'xz'):
         raise SaltInvocationError(
-            'Invalid compression type \'{0}\''.format(compression)
+            "Invalid compression type '{0}'".format(compression)
         )
 
     parent_dir = os.path.dirname(path)
     if not os.path.isdir(parent_dir):
         if not makedirs:
             raise CommandExecutionError(
-                'Parent dir \'{0}\' of destination path does not exist. Use '
+                "Parent dir '{0}' of destination path does not exist. Use "
                 'makedirs=True to create it.'.format(parent_dir)
             )
 
@@ -4706,7 +4706,7 @@ def pause(name):
     if orig_state == 'stopped':
         return {'result': False,
                 'state': {'old': orig_state, 'new': orig_state},
-                'comment': ('Container \'{0}\' is stopped, cannot pause'
+                'comment': ("Container '{0}' is stopped, cannot pause"
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
@@ -4808,7 +4808,7 @@ def start(name):
     if orig_state == 'paused':
         return {'result': False,
                 'state': {'old': orig_state, 'new': orig_state},
-                'comment': ('Container \'{0}\' is paused, cannot start'
+                'comment': ("Container '{0}' is paused, cannot start"
                             .format(name))}
 
     return _change_state(name, 'start', 'running')
@@ -4856,13 +4856,13 @@ def stop(name, timeout=STOP_TIMEOUT, **kwargs):
             unpause_result = _change_state(name, 'unpause', 'running')
             if unpause_result['result'] is False:
                 unpause_result['comment'] = (
-                    'Failed to unpause container \'{0}\''.format(name)
+                    "Failed to unpause container '{0}'".format(name)
                 )
                 return unpause_result
         else:
             return {'result': False,
                     'state': {'old': orig_state, 'new': orig_state},
-                    'comment': ('Container \'{0}\' is paused, run with '
+                    'comment': ("Container '{0}' is paused, run with "
                                 'unpause=True to unpause before stopping'
                                 .format(name))}
     ret = _change_state(name, 'stop', 'stopped', timeout=timeout)
@@ -4901,7 +4901,7 @@ def unpause(name):
     if orig_state == 'stopped':
         return {'result': False,
                 'state': {'old': orig_state, 'new': orig_state},
-                'comment': ('Container \'{0}\' is stopped, cannot unpause'
+                'comment': ("Container '{0}' is stopped, cannot unpause"
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
 
@@ -4949,7 +4949,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     except CommandExecutionError:
         # Container doesn't exist anymore
         return {'result': ignore_already_stopped,
-                'comment': 'Container \'{0}\' absent'.format(name)}
+                'comment': "Container '{0}' absent".format(name)}
     already_stopped = pre == 'stopped'
     response = _client_wrapper('wait', name)
     _clear_context()
@@ -4970,7 +4970,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
               'state': {'old': pre, 'new': post},
               'exit_status': response}
     if already_stopped:
-        result['comment'] = 'Container \'{0}\' already stopped'.format(name)
+        result['comment'] = "Container '{0}' already stopped".format(name)
     if fail_on_exit_status and result['result']:
         result['result'] = result['exit_status'] == 0
     return result
@@ -5037,7 +5037,7 @@ def _script(name,
             os.remove(path)
         except (IOError, OSError) as exc:
             log.error(
-                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                "cmd.script: Unable to clean tempfile '{0}': {1}".format(
                     path,
                     exc
                 )

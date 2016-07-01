@@ -635,12 +635,12 @@ def rename(name, new_name, root=None):
     '''
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
 
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError(
-            'User \'{0}\' already exists'.format(new_name)
+            "User '{0}' already exists".format(new_name)
         )
 
     cmd = ['usermod', '-l', '{0}'.format(new_name), '{0}'.format(name)]

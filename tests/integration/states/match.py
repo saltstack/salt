@@ -43,8 +43,8 @@ class StateMatchTest(integration.ModuleCase):
             )
             ret = self.run_function('state.top', [top_filename])
             self.assertNotIn(
-                'AttributeError: \'Matcher\' object has no attribute '
-                '\'functions\'',
+                "AttributeError: 'Matcher' object has no attribute "
+                "'functions'",
                 ret
             )
         finally:

@@ -53,8 +53,8 @@ def genrepo(name, force=False, allow_empty=False):
     if 'win_repo' in master_config:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
+            "The 'win_repo' config option is deprecated, please use "
+            "'winrepo_dir' instead."
         )
         winrepo_dir = master_config['win_repo']
     else:
@@ -63,8 +63,8 @@ def genrepo(name, force=False, allow_empty=False):
     if 'win_repo_mastercachefile' in master_config:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'win_repo_mastercachefile\' config option is deprecated, '
-            'please use \'winrepo_cachefile\' instead.'
+            "The 'win_repo_mastercachefile' config option is deprecated, "
+            "please use 'winrepo_cachefile' instead."
         )
         winrepo_cachefile = master_config['win_repo_mastercachefile']
     else:

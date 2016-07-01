@@ -80,7 +80,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         # Test bad date format
         self.assertEqual(
             self.run_function('timezone.set_date', ['13/12/2014']),
-            'ERROR executing \'timezone.set_date\': '
+            "ERROR executing 'timezone.set_date': "
             'Invalid Date/Time Format: 13/12/2014'
         )
 
@@ -104,7 +104,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         # Test bad time format
         self.assertEqual(
             self.run_function('timezone.set_time', ['3:71']),
-            'ERROR executing \'timezone.set_time\': '
+            "ERROR executing 'timezone.set_time': "
             'Invalid Date/Time Format: 3:71')
 
     @destructiveTest
@@ -122,7 +122,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         # Test bad time zone
         self.assertEqual(
             self.run_function('timezone.set_zone', ['spongebob']),
-            'ERROR executing \'timezone.set_zone\': '
+            "ERROR executing 'timezone.set_zone': "
             'Invalid Timezone: spongebob')
 
     def test_get_offset(self):

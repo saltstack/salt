@@ -67,7 +67,7 @@ def present(name, filename, section, value, parameter=None):
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Value \'{0}\' is set to be changed to \'{1}\'.'.format(
+            ret['comment'] = "Value '{0}' is set to be changed to '{1}'.".format(
                 old_value,
                 value
             )
@@ -125,7 +125,7 @@ def absent(name, filename, section, parameter=None):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Value \'{0}\' is set to be deleted.'.format(
+        ret['comment'] = "Value '{0}' is set to be deleted.".format(
             old_value
         )
         return ret

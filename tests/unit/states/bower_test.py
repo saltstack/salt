@@ -45,7 +45,7 @@ class BowerTestCase(TestCase):
             ret = bower.removed('jquery', '/path/to/project')
             expected = {'name': 'jquery',
                         'result': True,
-                        'comment': 'Package \'jquery\' is not installed',
+                        'comment': "Package 'jquery' is not installed",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -60,7 +60,7 @@ class BowerTestCase(TestCase):
             ret = bower.removed('underscore', '/path/to/project')
             expected = {'name': 'underscore',
                         'result': False,
-                        'comment': 'Error removing \'underscore\': ',
+                        'comment': "Error removing 'underscore': ",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -79,7 +79,7 @@ class BowerTestCase(TestCase):
             expected = {'name': 'underscore',
                         'result': True,
                         'comment':
-                            'Package \'underscore\' was successfully removed',
+                            "Package 'underscore' was successfully removed",
                         'changes': {'underscore': 'Removed'}}
             self.assertEqual(ret, expected)
 
@@ -98,7 +98,7 @@ class BowerTestCase(TestCase):
             expected = {'name': 'underscore',
                         'result': False,
                         'comment':
-                            'Error removing \'underscore\': ',
+                            "Error removing 'underscore': ",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -114,7 +114,7 @@ class BowerTestCase(TestCase):
             expected = {'name': '/path/to/project',
                         'result': False,
                         'comment':
-                            'Error bootstrapping \'/path/to/project\': ',
+                            "Error bootstrapping '/path/to/project': ",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -161,7 +161,7 @@ class BowerTestCase(TestCase):
             ret = bower.installed('underscore', '/path/to/project')
             expected = {'name': 'underscore',
                         'result': False,
-                        'comment': 'Error looking up \'underscore\': ',
+                        'comment': "Error looking up 'underscore': ",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -182,7 +182,7 @@ class BowerTestCase(TestCase):
             expected = {'name': 'test',
                         'result': True,
                         'comment':
-                            ('Package(s) \'underscore, jquery#2.0.0\''
+                            ("Package(s) 'underscore, jquery#2.0.0'"
                              ' satisfied by underscore#1.7.0, jquery#2.0.0'),
                         'changes': {}}
             self.assertEqual(ret, expected)
@@ -200,7 +200,7 @@ class BowerTestCase(TestCase):
             ret = bower.installed('underscore', '/path/to/project')
             expected = {'name': 'underscore',
                         'result': False,
-                        'comment': 'Error installing \'underscore\': ',
+                        'comment': "Error installing 'underscore': ",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -218,7 +218,7 @@ class BowerTestCase(TestCase):
             expected = {'name': 'underscore',
                         'result': False,
                         'comment':
-                            'Could not install package(s) \'underscore\'',
+                            "Could not install package(s) 'underscore'",
                         'changes': {}}
             self.assertEqual(ret, expected)
 
@@ -236,7 +236,7 @@ class BowerTestCase(TestCase):
             expected = {'name': 'underscore',
                         'result': True,
                         'comment':
-                            'Package(s) \'underscore\' successfully installed',
+                            "Package(s) 'underscore' successfully installed",
                         'changes': {'new': ['underscore'], 'old': []}}
             self.assertEqual(ret, expected)
 

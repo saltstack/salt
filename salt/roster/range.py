@@ -37,16 +37,16 @@ def targets(tgt, tgt_type='range', **kwargs):
     '''
 
     r = seco.range.Range(__opts__['range_server'])
-    log.debug('Range connection to \'{0}\' established'.format(__opts__['range_server']))
+    log.debug("Range connection to '{0}' established".format(__opts__['range_server']))
 
     hosts = []
     try:
-        log.debug('Querying range for \'{0}\''.format(tgt))
+        log.debug("Querying range for '{0}'".format(tgt))
         hosts = r.expand(tgt)
     except seco.range.RangeException as err:
         log.error('Range server exception: %s', err)
         return {}
-    log.debug('Range responded with: \'{0}\''.format(hosts))
+    log.debug("Range responded with: '{0}'".format(hosts))
 
     # Currently we only support giving a raw range entry, no target filtering supported other than what range returns :S
     tgt_func = {
@@ -55,12 +55,12 @@ def targets(tgt, tgt_type='range', **kwargs):
         # 'glob': target_glob,
     }
 
-    log.debug('Filtering using tgt_type: \'{0}\''.format(tgt_type))
+    log.debug("Filtering using tgt_type: '{0}'".format(tgt_type))
     try:
         targeted_hosts = tgt_func[tgt_type](tgt, hosts)
     except KeyError:
         raise NotImplementedError
-    log.debug('Targeting data for salt-ssh: \'{0}\''.format(targeted_hosts))
+    log.debug("Targeting data for salt-ssh: '{0}'".format(targeted_hosts))
 
     return targeted_hosts
 

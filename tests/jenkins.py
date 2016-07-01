@@ -143,7 +143,7 @@ def echo_parseable_environment(options, parser):
         # environment
         if HAS_REQUESTS is False:
             parser.error(
-                'The python \'requests\' library needs to be installed'
+                "The python 'requests' library needs to be installed"
             )
 
         headers = {}
@@ -190,7 +190,7 @@ def download_unittest_reports(options):
     os.makedirs(xml_reports_path)
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unittests-output/',
+        "salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz '*.xml' cwd=/tmp/xml-unittests-output/",
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
         'mv -f /var/cache/salt/master/minions/{1}/files/tmp/xml-test-reports.tar.gz {2} && '
         'tar zxvf {2}/xml-test-reports.tar.gz -C {2}/xml-test-reports && '
@@ -333,7 +333,7 @@ def download_packages(options):
                 os.unlink(fname)
 
     cmds = [
-        ('salt {{0}} archive.tar czf {0}.tar.gz sources=\'*.*\' cwd={0}'
+        ("salt {{0}} archive.tar czf {0}.tar.gz sources='*.*' cwd={0}"
          .format(options.package_artifact_dir)),
         'salt {{0}} cp.push {0}.tar.gz'.format(options.package_artifact_dir),
         ('tar -C {{2}} -xzf /var/cache/salt/master/minions/{{1}}/files{0}.tar.gz'
@@ -482,7 +482,7 @@ def run(opts):
                 print('\n\nATTENTION!!!!\n')
                 print('The boostrapped minion version commit does not contain the desired commit:')
                 print(
-                    ' \'{0}\' does not contain \'{1}\''.format(
+                    " '{0}' does not contain '{1}'".format(
                         version_info[vm_name],
                         bootstrap_minion_version
                     )
@@ -495,7 +495,7 @@ def run(opts):
             else:
                 print('matches!')
         except ValueError:
-            print('Failed to load any JSON from \'{0}\''.format(outstr))
+            print("Failed to load any JSON from '{0}'".format(outstr))
 
     if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
@@ -660,14 +660,14 @@ def run(opts):
             remotes_info = json.loads(stdout.strip())
             if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
-                print(' \'{0}\' is not in {1}'.format(opts.test_git_url, remotes_info))
+                print(" '{0}' is not in {1}".format(opts.test_git_url, remotes_info))
                 sys.stdout.flush()
                 if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
+            print("Failed to load any JSON from '{0}'".format(salt.utils.to_str(stdout).strip()))
 
     if opts.test_git_commit is not None:
         test_git_commit_downtime = random.randint(1, opts.splay)
@@ -707,14 +707,14 @@ def run(opts):
             revision_info = json.loads(stdout.strip())
             if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
-                print(' \'{0}\' != \'{1}\''.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
+                print(" '{0}' != '{1}'".format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
                 sys.stdout.flush()
                 if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
+            print("Failed to load any JSON from '{0}'".format(salt.utils.to_str(stdout).strip()))
 
     # Run tests here
     test_begin_downtime = random.randint(3, opts.splay)
@@ -875,7 +875,7 @@ def parse():
         action='append',
         nargs=2,
         help='Pillar (key, value)s to pass to the sls file. '
-             'Example: \'--pillar pillar_key pillar_value\'')
+             "Example: '--pillar pillar_key pillar_value'")
     parser.add_option(
         '--no-clean',
         dest='clean',
@@ -902,7 +902,7 @@ def parse():
         '--download-remote-reports',
         default=False,
         action='store_true',
-        help='Download remote reports when running remote \'testrun\' state'
+        help="Download remote reports when running remote 'testrun' state"
     )
     parser.add_option(
         '--download-unittest-reports',

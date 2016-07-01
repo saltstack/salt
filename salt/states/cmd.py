@@ -337,7 +337,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
+                log.debug("Last command '{0}' return code: {1}".format(entry, cmd))
                 if cmd != 0:
                     return {'comment': 'onlyif execution failed: {0}'.format(entry),
                             'skip_watch': True,
@@ -801,7 +801,7 @@ def run(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+        ret['comment'] = ("Invalidly-formatted 'env' parameter. See "
                           'documentation.')
         return ret
 
@@ -1025,16 +1025,16 @@ def script(name,
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+        ret['comment'] = ("Invalidly-formatted 'env' parameter. See "
                           'documentation.')
         return ret
 
     if context and not isinstance(context, dict):
-        ret['comment'] = ('Invalidly-formatted \'context\' parameter. Must '
+        ret['comment'] = ("Invalidly-formatted 'context' parameter. Must "
                           'be formed as a dict.')
         return ret
     if defaults and not isinstance(defaults, dict):
-        ret['comment'] = ('Invalidly-formatted \'defaults\' parameter. Must '
+        ret['comment'] = ("Invalidly-formatted 'defaults' parameter. Must "
                           'be formed as a dict.')
         return ret
 
@@ -1090,7 +1090,7 @@ def script(name,
 
     if __opts__['test'] and not test_name:
         ret['result'] = None
-        ret['comment'] = 'Command \'{0}\' would have been ' \
+        ret['comment'] = "Command '{0}' would have been " \
                          'executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
@@ -1115,9 +1115,9 @@ def script(name,
         ret['result'] = not bool(cmd_all['retcode'])
     if ret.get('changes', {}).get('cache_error'):
         ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                         '\'{1}\''.format(source, __env__)
+                         "'{1}'".format(source, __env__)
     else:
-        ret['comment'] = 'Command \'{0}\' run'.format(name)
+        ret['comment'] = "Command '{0}' run".format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:

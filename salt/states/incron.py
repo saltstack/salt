@@ -144,7 +144,7 @@ def present(name,
         return ret
 
     if data == 'new':
-        ret['comment'] = 'Incron {0} added to {1}\'s incrontab'.format(name, user)
+        ret['comment'] = "Incron {0} added to {1}'s incrontab".format(name, user)
         ret['changes'] = {user: name}
         return ret
 

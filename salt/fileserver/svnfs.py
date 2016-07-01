@@ -79,7 +79,7 @@ def __virtual__():
     for param in ('svnfs_trunk', 'svnfs_branches', 'svnfs_tags'):
         if os.path.isabs(__opts__[param]):
             errors.append(
-                'Master configuration parameter \'{0}\' (value: {1}) cannot '
+                "Master configuration parameter '{0}' (value: {1}) cannot "
                 'be an absolute path'.format(param, __opts__[param])
             )
     if errors:
@@ -151,7 +151,7 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter \'{0}\' for remote {1}. '
+                    "Invalid configuration parameter '{0}' for remote {1}. "
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
                         param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
@@ -194,7 +194,7 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote \'{0}\': {1}'
+                    "Failed to initialize svnfs remote '{0}': {1}"
                     .format(repo_url, exc)
                 )
                 _failhard()
@@ -417,7 +417,7 @@ def update():
                 'Update lockfile is present for svnfs remote {0}, skipping. '
                 'If this warning persists, it is possible that the update '
                 'process was interrupted. Removing {1} or running '
-                '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
+                "'salt-run fileserver.clear_lock svnfs' will allow updates "
                 'to continue for this remote.'
                 .format(repo['url'], repo['lockfile'])
             )
@@ -505,7 +505,7 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
+                "svnfs trunk path '{0}' does not exist in repo {1}, no base "
                 'environment will be provided by this remote'
                 .format(repo['trunk'], repo['url'])
             )
@@ -515,7 +515,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path \'{0}\' does not exist in repo {1}'
+                "svnfs branches path '{0}' does not exist in repo {1}"
                 .format(repo['branches'], repo['url'])
             )
 
@@ -524,7 +524,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path \'{0}\' does not exist in repo {1}'
+                "svnfs tags path '{0}' does not exist in repo {1}"
                 .format(repo['tags'], repo['url'])
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
@@ -594,8 +594,8 @@ def serve_file(load, fnd):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')
@@ -625,8 +625,8 @@ def file_hash(load, fnd):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')
@@ -683,8 +683,8 @@ def _file_lists(load, form):
     if 'env' in load:
         salt.utils.warn_until(
             'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
+            "Parameter 'env' has been detected in the argument list.  This "
+            "parameter is no longer used and has been replaced by 'saltenv' "
             'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
             )
         load.pop('env')

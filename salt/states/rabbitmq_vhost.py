@@ -71,7 +71,7 @@ def present(name):
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if vhost_exists:
-        ret['comment'] = 'Virtual Host \'{0}\' already exists.'.format(name)
+        ret['comment'] = "Virtual Host '{0}' already exists.".format(name)
         return ret
 
     if not __opts__['test']:
@@ -88,7 +88,7 @@ def present(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Virtual Host \'{0}\' will be created.'.format(name)
+        ret['comment'] = "Virtual Host '{0}' will be created.".format(name)
 
     return ret
 
@@ -109,7 +109,7 @@ def absent(name):
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if not vhost_exists:
-        ret['comment'] = 'Virtual Host \'{0}\' is not present.'.format(name)
+        ret['comment'] = "Virtual Host '{0}' is not present.".format(name)
         return ret
 
     if not __opts__['test']:
@@ -126,6 +126,6 @@ def absent(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Virtual Host \'{0}\' will be removed.'.format(name)
+        ret['comment'] = "Virtual Host '{0}' will be removed.".format(name)
 
     return ret

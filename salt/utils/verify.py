@@ -452,8 +452,8 @@ def check_max_open_files(opts):
         level = logging.INFO
 
     if mof_c < mof_h:
-        msg += ('According to the system\'s hard limit, there\'s still a '
-                'margin of {0} to raise the salt\'s max_open_files '
+        msg += ("According to the system's hard limit, there's still a "
+                "margin of {0} to raise the salt's max_open_files "
                 'setting. ').format(mof_h - mof_c)
 
     msg += 'Please consider raising this value.'

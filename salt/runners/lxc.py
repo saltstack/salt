@@ -266,12 +266,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     for host, containers in six.iteritems(data):
         for name in names:
             if name in sum(six.itervalues(containers), []):
-                log.info('Container \'{0}\' already exists'
-                         ' on host \'{1}\','
+                log.info("Container '{0}' already exists"
+                         " on host '{1}',"
                          ' init can be a NO-OP'.format(
                              name, host))
     if host not in data:
-        ret['comment'] = 'Host \'{0}\' was not found'.format(host)
+        ret['comment'] = "Host '{0}' was not found".format(host)
         ret['result'] = False
         return ret
 
@@ -302,8 +302,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 ret['result'] = False
                 return ret
 
-    log.info('Creating container(s) \'{0}\''
-             ' on host \'{1}\''.format(names, host))
+    log.info("Creating container(s) '{0}'"
+             " on host '{1}'".format(names, host))
 
     cmds = []
     for name in names:

@@ -59,12 +59,12 @@ class PostgresClusterTestCase(TestCase):
             self.assertDictEqual(postgres_cluster.present(version, name), ret)
             infos['{0}/{1}'.format(version, name)]['port'] = 5433
             comt = ('Cluster {0}/{1} has wrong parameters '
-                    'which couldn\'t be changed on fly.'.format(version, name))
+                    "which couldn't be changed on fly.".format(version, name))
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
             infos['{0}/{1}'.format(version, name)]['datadir'] = '/tmp/'
             comt = ('Cluster {0}/{1} has wrong parameters '
-                    'which couldn\'t be changed on fly.'.format(version, name))
+                    "which couldn't be changed on fly.".format(version, name))
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
 

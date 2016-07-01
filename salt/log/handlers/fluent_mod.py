@@ -107,7 +107,7 @@ def get_global_sender():
 def __virtual__():
     if not any(['fluent_handler' in __opts__]):
         log.trace(
-            'The required configuration section, \'fluent_handler\', '
+            "The required configuration section, 'fluent_handler', "
             'was not found the in the configuration. Not loading the fluent '
             'logging handlers module.'
         )
@@ -125,8 +125,8 @@ def setup_handlers():
 
         if host is None and port is None:
             log.debug(
-                'The required \'fluent_handler\' configuration keys, '
-                '\'host\' and/or \'port\', are not properly configured. Not '
+                "The required 'fluent_handler' configuration keys, "
+                "'host' and/or 'port', are not properly configured. Not "
                 'configuring the fluent logging handler.'
             )
         else:

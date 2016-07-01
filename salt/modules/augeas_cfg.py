@@ -345,7 +345,7 @@ def setvalue(*args):
     if load_paths:
         if len(load_paths) > 1:
             raise SaltInvocationError(
-                'Only one \'load_path=\' value is permitted'
+                "Only one 'load_path=' value is permitted"
             )
         else:
             load_path = load_paths[0].split('=', 1)[1]
@@ -362,7 +362,7 @@ def setvalue(*args):
     if prefix:
         if len(prefix) > 1:
             raise SaltInvocationError(
-                'Only one \'prefix=\' value is permitted'
+                "Only one 'prefix=' value is permitted"
             )
         else:
             prefix = prefix[0].split('=', 1)[1]

@@ -288,7 +288,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         # If both exc_info and exc_info_on_loglevel are both passed, let's fail
         if exc_info and exc_info_on_loglevel:
             raise RuntimeError(
-                'Only one of \'exc_info\' and \'exc_info_on_loglevel\' is '
+                "Only one of 'exc_info' and 'exc_info_on_loglevel' is "
                 'permitted'
             )
         if exc_info_on_loglevel is not None:
@@ -297,8 +297,8 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
                                                       logging.ERROR)
             elif not isinstance(exc_info_on_loglevel, int):
                 raise RuntimeError(
-                    'The value of \'exc_info_on_loglevel\' needs to be a '
-                    'logging level or a logging level name, not \'{0}\''
+                    "The value of 'exc_info_on_loglevel' needs to be a "
+                    "logging level or a logging level name, not '{0}'"
                     .format(exc_info_on_loglevel)
                 )
         if extra is None:
@@ -347,7 +347,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             for key in extra:
                 if (key in ['message', 'asctime']) or (key in logrecord.__dict__):
                     raise KeyError(
-                        'Attempt to overwrite \'{0}\' in LogRecord'.format(key)
+                        "Attempt to overwrite '{0}' in LogRecord".format(key)
                     )
                 logrecord.__dict__[key] = extra[key]
 
@@ -444,7 +444,7 @@ def setup_temp_logger(log_level='error'):
         LOGGING_NULL_HANDLER.sync_with_handlers([handler])
     else:
         logging.getLogger(__name__).debug(
-            'LOGGING_NULL_HANDLER is already None, can\'t sync messages '
+            "LOGGING_NULL_HANDLER is already None, can't sync messages "
             'with it'
         )
 
@@ -579,7 +579,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise RuntimeError(
-                    'The syslog facility \'{0}\' is not known'.format(
+                    "The syslog facility '{0}' is not known".format(
                         facility_name
                     )
                 )
@@ -594,7 +594,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # This python syslog version does not know about the user provided
             # facility name
             raise RuntimeError(
-                'The syslog facility \'{0}\' is not known'.format(
+                "The syslog facility '{0}' is not known".format(
                     facility_name
                 )
             )
@@ -721,7 +721,7 @@ def setup_extended_logging(opts):
                 continue
 
             logging.getLogger(__name__).debug(
-                'Adding the \'{0}\' provided logging handler: \'{1}\''.format(
+                "Adding the '{0}' provided logging handler: '{1}'".format(
                     name, handler
                 )
             )
@@ -738,7 +738,7 @@ def setup_extended_logging(opts):
         LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
     else:
         logging.getLogger(__name__).debug(
-            'LOGGING_STORE_HANDLER is already None, can\'t sync messages '
+            "LOGGING_STORE_HANDLER is already None, can't sync messages "
             'with it'
         )
 
@@ -1024,7 +1024,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     else:
         # Log the exception
         logging.getLogger(__name__).error(
-            'An un-handled exception was caught by salt\'s global exception '
+            "An un-handled exception was caught by salt's global exception "
             'handler:\n{0}: {1}\n{2}'.format(
                 exc_type.__name__,
                 exc_value,

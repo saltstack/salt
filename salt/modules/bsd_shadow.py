@@ -68,7 +68,7 @@ def info(name):
     if not isinstance(name, six.string_types):
         name = str(name)
     if ':' in name:
-        raise SaltInvocationError('Invalid username \'{0}\''.format(name))
+        raise SaltInvocationError("Invalid username '{0}'".format(name))
 
     if __salt__['cmd.has_exec']('pw'):
         change, expire = __salt__['cmd.run_stdout'](

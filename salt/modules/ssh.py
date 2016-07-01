@@ -67,7 +67,7 @@ def _refine_enc(enc):
         return 'ssh-ed25519'
     else:
         raise CommandExecutionError(
-            'Incorrect encryption key type \'{0}\'.'.format(enc)
+            "Incorrect encryption key type '{0}'.".format(enc)
         )
 
 
@@ -117,7 +117,7 @@ def _get_config_file(user, config):
     '''
     uinfo = __salt__['user.info'](user)
     if not uinfo:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(user))
+        raise CommandExecutionError("User '{0}' does not exist".format(user))
     home = uinfo['home']
     config = _expand_authorized_keys_path(config, user, home)
     if not os.path.isabs(config):

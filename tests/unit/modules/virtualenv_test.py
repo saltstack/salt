@@ -75,10 +75,10 @@ class VirtualenvTestCase(TestCase):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--distribute\' option has been '
+                    "INFO:The virtualenv '--distribute' option has been "
                     'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'distribute\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    "'distribute' option to `virtualenv.create()` has "
+                    "also been deprecated and it's not necessary anymore.",
                     handler.messages
                 )
 
@@ -112,10 +112,10 @@ class VirtualenvTestCase(TestCase):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--never-download\' option has been '
+                    "INFO:The virtualenv '--never-download' option has been "
                     'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    "'never_download' option to `virtualenv.create()` has "
+                    "also been deprecated and it's not necessary anymore.",
                     handler.messages
                 )
 
@@ -300,7 +300,7 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='PY Prompt')
             mock.assert_called_once_with(
-                ['virtualenv', '--prompt=\'PY Prompt\'', '/tmp/foo'],
+                ['virtualenv', "--prompt='PY Prompt'", '/tmp/foo'],
                 runas=None,
                 python_shell=False
             )
@@ -308,7 +308,7 @@ class VirtualenvTestCase(TestCase):
         # Now with some quotes on the mix
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
+            virtualenv_mod.create('/tmp/foo', prompt="'PY' Prompt")
             mock.assert_called_once_with(
                 ['virtualenv', "--prompt=''PY' Prompt'", '/tmp/foo'],
                 runas=None,

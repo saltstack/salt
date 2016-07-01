@@ -64,10 +64,10 @@ def __virtual__():
     @return True|False|str
     '''
     if not HAS_VBOX:
-        return False, 'The virtualbox driver cannot be loaded: \'vboxapi\' is not installed.'
+        return False, "The virtualbox driver cannot be loaded: 'vboxapi' is not installed."
 
     if get_configured_provider() is False:
-        return False, 'The virtualbox driver cannot be loaded: \'virtualbox\' provider is not configured.'
+        return False, "The virtualbox driver cannot be loaded: 'virtualbox' provider is not configured."
 
     # If the name of the driver used does not match the filename,
     #  then that name should be returned instead of True.

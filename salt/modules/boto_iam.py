@@ -255,7 +255,7 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
         return conn.get_all_access_keys(user_name, marker, max_items)
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('Failed to get user\'s {0} access keys.'.format(user_name))
+        log.error("Failed to get user's {0} access keys.".format(user_name))
         return str(e)
 
 

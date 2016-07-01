@@ -307,7 +307,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         uinfo = __salt__['user.info'](runas)
         if not uinfo:
             raise SaltInvocationError(
-                'User \'{0}\' does not exist'.format(runas)
+                "User '{0}' does not exist".format(runas)
             )
 
     zip_file, sources = _render_filenames(zip_file, sources, None, template)
@@ -321,7 +321,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         for src in sources:
             if not os.path.isabs(src):
                 raise SaltInvocationError(
-                    'Relative paths require the \'cwd\' parameter'
+                    "Relative paths require the 'cwd' parameter"
                 )
     else:
         def _bad_cwd():

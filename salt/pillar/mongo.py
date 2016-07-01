@@ -119,14 +119,14 @@ def ext_pillar(minion_id,
     log.info('connecting to {0}:{1} for mongo ext_pillar'.format(host, port))
     conn = pymongo.MongoClient(host, port)
 
-    log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
+    log.debug("using database '{0}'".format(__opts__['mongo.db']))
     mdb = conn[__opts__['mongo.db']]
 
     user = __opts__.get('mongo.user')
     password = __opts__.get('mongo.password')
 
     if user and password:
-        log.debug('authenticating as \'{0}\''.format(user))
+        log.debug("authenticating as '{0}'".format(user))
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
@@ -134,7 +134,7 @@ def ext_pillar(minion_id,
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        'ext_pillar.mongo: looking up pillar def for {{\'{0}\': \'{1}\'}} '
+        "ext_pillar.mongo: looking up pillar def for {{'{0}': '{1}'}} "
         'in mongo'.format(
             id_field, minion_id
         )
@@ -145,7 +145,7 @@ def ext_pillar(minion_id,
         if fields:
             log.debug(
                 'ext_pillar.mongo: found document, returning fields '
-                '\'{0}\''.format(
+                "'{0}'".format(
                     fields
                 )
             )

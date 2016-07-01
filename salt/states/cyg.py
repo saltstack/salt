@@ -54,8 +54,8 @@ def installed(name,
 
     if cyg_arch not in ['x86', 'x86_64']:
         ret['result'] = False
-        ret['comment'] = 'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\''
+        ret['comment'] = "The 'cyg_arch' argument must\
+ be one of 'x86' or 'x86_64'"
         return ret
 
     LOG.debug('Installed State: Initial Mirror list: {0}'.format(mirrors))
@@ -120,8 +120,8 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
 
     if cyg_arch not in ['x86', 'x86_64']:
         ret['result'] = False
-        ret['comment'] = 'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\''
+        ret['comment'] = "The 'cyg_arch' argument must\
+ be one of 'x86' or 'x86_64'"
         return ret
 
     if not __salt__['cyg.check_valid_package'](name,
@@ -178,8 +178,8 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
 
     if cyg_arch not in ['x86', 'x86_64']:
         ret['result'] = False
-        ret['comment'] = 'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\''
+        ret['comment'] = "The 'cyg_arch' argument must\
+ be one of 'x86' or 'x86_64'"
         return ret
 
     if __opts__['test']:
