@@ -53,7 +53,7 @@ def __virtual__():
     return (False, "Module win_pkg: module only works on Windows systems")
 
 
-def latest_version(saltenv='base', *names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -77,6 +77,8 @@ def latest_version(saltenv='base', *names, **kwargs):
     ret = {}
     for name in names:
         ret[name] = ''
+
+    saltenv = kwargs.get('saltenv', 'base')
 
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
