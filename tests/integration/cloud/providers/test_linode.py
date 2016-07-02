@@ -9,7 +9,7 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
+# Import 3rd-party Libs
 from salttesting.helpers import expensiveTest
 
 # Import Salt Libs
@@ -37,7 +37,7 @@ class LinodeTest(integration.ShellCase):
     Integration tests for the Linode cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
