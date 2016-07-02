@@ -45,6 +45,7 @@ def pytest_addoption(parser):
     )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
+
 # ----- Register Markers -------------------------------------------------------------------------------------------->
 def pytest_configure(config):
     '''
@@ -72,6 +73,7 @@ def pytest_configure(config):
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
 # <---- Register Markers ---------------------------------------------------------------------------------------------
+
 
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
 @pytest.hookimpl(tryfirst=True)
@@ -106,7 +108,7 @@ def pytest_runtest_setup(item):
             for binary in binaries:
                 if salt.utils.which(binary) is None:
                     pytest.skip(
-                        '{0}The {1!r} binary was not found'.format(
+                        '{0}The "{1}" binary was not found'.format(
                             message and '{0}. '.format(message) or '',
                             binary
                         )
@@ -178,6 +180,7 @@ def pytest_runtest_setup(item):
                 pytest.skip('No internet network connection was detected')
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
+
 # ----- Automatic Markers Setup ------------------------------------------------------------------------------------->
 def pytest_collection_modifyitems(items):
     '''
@@ -202,6 +205,7 @@ def pytest_collection_modifyitems(items):
                     item.add_marker(getattr(pytest.mark, kind))
                     break
 # <---- Automatic Markers Setup --------------------------------------------------------------------------------------
+
 
 # ----- Pytest Helpers ---------------------------------------------------------------------------------------------->
 if six.PY2:
@@ -261,7 +265,6 @@ if six.PY2:
             for line in _data:
                 yield line
 
-
         global file_spec
         if file_spec is None:
             file_spec = file
@@ -291,3 +294,8 @@ else:
         _mock = pytest.importorskip('mock', minversion='2.0.0')
         return _mock.mock_open(mock=mock, read_data=read_data)
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
+
+
+# ----- Salt Configuration ------------------------------------------------------------------------------------------>
+
+# <---- Salt Configuration -------------------------------------------------------------------------------------------
