@@ -2,10 +2,10 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 
-# Import Salt Testing libs
-from salttesting import skipIf, TestCase
+# Import 3rd-party libs
+import pytest
+from salttesting import TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
@@ -32,7 +32,7 @@ else:
     SALT_STUB = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(deb_postgres,
                 __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pg_createcluster'))
@@ -65,7 +65,7 @@ class PostgresClusterTestCase(TestCase):
     #                            datadir='/opt/postgresql'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(deb_postgres,
                 __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pg_lsclusters'))
@@ -104,7 +104,7 @@ class PostgresLsClusterTestCase(TestCase):
         self.assertFalse(deb_postgres.cluster_exists('3.4', 'main'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@pytest.mark.skipif(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(deb_postgres,
                 __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
