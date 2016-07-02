@@ -11,8 +11,8 @@ import unittest
 import logging
 import socket
 
-# Import Salt Testing Libs
-from salttesting import skipIf
+# Import 3rd-party Libs
+import pytest
 
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
     PROVIDER_NAME, \
@@ -198,9 +198,8 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
             vb_destroy_machine(INSTANCE_NAME)
 
 
-@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-        "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
-        )
+@pytest.mark.skipif(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+                    "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME))
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     """
     Tests that include actually booting a machine and doing operations on it that might be lengthy.
@@ -372,9 +371,8 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         self.assertMachineDoesNotExist(vb_name)
 
 
-@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-        "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
-        )
+@pytest.mark.skipif(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+                    "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME))
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
         for i in range(2):
