@@ -9,16 +9,13 @@ import os
 import random
 import string
 
+# Import Third-Party Libs
+import pytest
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import expensiveTest
-
-# Import Third-Party Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def __random_name(size=6):
@@ -35,13 +32,13 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
 
 
-@skipIf(True, 'Skipping until we can figure out why the testrunner bails.')
+@pytest.mark.skipif(True, 'Skipping until we can figure out why the testrunner bails.')
 class EC2Test(integration.ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
