@@ -9,9 +9,8 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import expensiveTest
+# Import 3rd-party Libs
+import pytest
 
 # Import Salt Libs
 import integration
@@ -35,14 +34,15 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
 
 
-@skipIf(True, 'Valid provider configs are not available for the DigitalOcean v1 API '
-              'in conjunction with the configs needed for v2 API.')
+@pytest.mark.skipif(True,
+                    'Valid provider configs are not available for the DigitalOcean v1 API '
+                    'in conjunction with the configs needed for v2 API.')
 class DigitalOceanTest(integration.ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
