@@ -10,16 +10,13 @@ import random
 import string
 from distutils.version import LooseVersion
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import expensiveTest
+# Import 3rd-party Libs
+import pytest
+from salt.ext.six.moves import range
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-
-# Import Third-Party Libs
-from salt.ext.six.moves import range
 
 try:
     import azure  # pylint: disable=unused-import
@@ -61,14 +58,14 @@ def __has_required_azure():
         return False
 
 
-@skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
-@skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
+@pytest.mark.skipif(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
+@pytest.mark.skipif(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
 class AzureTest(integration.ShellCase):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
