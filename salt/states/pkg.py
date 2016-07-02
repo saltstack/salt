@@ -1161,7 +1161,7 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name,**kwargs)
+        version = __salt__['pkg.latest_version'](name, **kwargs)
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
