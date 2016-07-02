@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from unittest2 import skipIf
 from integration.cloud.helpers import random_name
 from salt.utils import virtualbox
 import json
@@ -8,6 +7,7 @@ import logging
 import os
 import unittest
 import integration
+import pytest
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = random_name()
@@ -28,7 +28,7 @@ log.setLevel(logging.INFO)
 info = log.info
 
 
-@skipIf(virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
+@pytest.mark.skipif(virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
 class VirtualboxTestCase(unittest.TestCase):
     def setUp(self):
         self.vbox = virtualbox.vb_get_box()
@@ -46,7 +46,7 @@ class VirtualboxTestCase(unittest.TestCase):
         self.assertRaisesRegexp(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
 
 
-@skipIf(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
+@pytest.mark.skipif(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
 class VirtualboxCloudTestCase(integration.ShellCase):
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
