@@ -10,15 +10,13 @@ import os
 import random
 import string
 
+# Import Third-Party Libs
+import pytest
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-
-# Import Salt Testing Libs
-from salttesting.helpers import expensiveTest
-
-# Import Third-Party Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def _random_name(size=6):
@@ -36,7 +34,7 @@ class GCETest(integration.ShellCase):
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
