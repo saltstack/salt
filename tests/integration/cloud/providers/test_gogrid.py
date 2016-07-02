@@ -9,14 +9,13 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting.helpers import expensiveTest
-from salttesting import skipIf
+# Import 3rd-party Libs
+import pytest
+from salt.ext.six.moves import range
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range
 
 
 def __random_name(size=6):
@@ -33,13 +32,13 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'gogrid'
 
 
-@skipIf(True, 'waiting on bug report fixes from #13365')
+@pytest.mark.skipif(True, 'waiting on bug report fixes from #13365')
 class GoGridTest(integration.ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
