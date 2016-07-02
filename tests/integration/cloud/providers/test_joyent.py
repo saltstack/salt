@@ -9,8 +9,8 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting.helpers import expensiveTest
+# Import 3rd-party Libs
+import pytest
 
 # Import Salt Libs
 import integration
@@ -37,7 +37,7 @@ class JoyentTest(integration.ShellCase):
     Integration tests for the Joyent cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
