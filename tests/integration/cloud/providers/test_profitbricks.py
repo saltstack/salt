@@ -9,14 +9,13 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import expensiveTest
+# Import 3rd-party Libs
+import pytest
+from salt.ext.six.moves import range
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range
 
 # Import Third-Party Libs
 try:
@@ -41,13 +40,13 @@ PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
 
 
-@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
+@pytest.mark.skipif(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
 class ProfitBricksTest(integration.ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
