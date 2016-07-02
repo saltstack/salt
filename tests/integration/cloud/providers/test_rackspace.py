@@ -9,14 +9,13 @@ import os
 import random
 import string
 
-# Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import expensiveTest
+# Import 3rd-party Libs
+import pytest
+from salt.ext.six.moves import range
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range
 
 # Import Third-Party Libs
 try:
@@ -41,13 +40,13 @@ PROVIDER_NAME = 'rackspace'
 DRIVER_NAME = 'openstack'
 
 
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
+@pytest.mark.skipif(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 class RackspaceTest(integration.ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
         '''
         Sets up the test requirements
