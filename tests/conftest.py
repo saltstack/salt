@@ -418,9 +418,6 @@ def cli_bin_dir(tempdir,
         if not os.path.isfile(script_path):
             log.info('Generating {0}'.format(script_path))
 
-            # Late import
-            import salt.utils
-
             with salt.utils.fopen(script_path, 'w') as sfh:
                 script_template = script_templates.get(original_script_name, None)
                 if script_template is None:
