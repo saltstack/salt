@@ -60,7 +60,7 @@ if config['proxy_host'] and config['proxy_port']:
             config['proxy_host'],
             config['proxy_port'])
 else:
-  HTTP_PROXY_URL = None
+    HTTP_PROXY_URL = None
 
 # pylint: disable=import-error
 try:
