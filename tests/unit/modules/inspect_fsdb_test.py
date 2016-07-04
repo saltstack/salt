@@ -136,7 +136,6 @@ class InspectorFSDBTestCase(TestCase):
 
         assert writable.data[0].strip() == "foo:int,bar:str,spam:float"
 
-
     @patch("os.makedirs", MagicMock())
     @patch("os.listdir", MagicMock(return_value=['test_db']))
     def test_list_databases(self):
@@ -345,7 +344,7 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb = CsvDB('/foobar')
                 csvdb.open()
 
-                entities = csvdb.get(FoobarEntity, matches={'bar': 'is\stest'})
+                entities = csvdb.get(FoobarEntity, matches={'bar': r'is\stest'})
                 assert list == type(entities)
                 assert len(entities) == 1
 
@@ -429,4 +428,3 @@ class InspectorFSDBTestCase(TestCase):
         assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) is True
         assert cmp(obj, matches={'bar': r'^ent'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) is False
         assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 123}, lt={'spam': 0.124}, eq={'pi': 3.14}) is False
-

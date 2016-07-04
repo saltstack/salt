@@ -222,7 +222,6 @@ class Inspector(EnvLoader):
                 idx += 1
                 self.db.store(payload)
 
-
     def _get_managed_files(self):
         '''
         Build a in-memory data of all managed files.
