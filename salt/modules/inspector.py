@@ -244,3 +244,29 @@ def snapshots():
         log.error(_get_error_message(err))
         raise Exception(err)
 
+
+def delete(*databases):
+    '''
+    Remove description snapshots from the system.
+
+    CLI example:
+
+    .. code-block:: bash:
+
+        salt myminion inspector.delete <ID> <ID1> <ID2>..
+
+    '''
+    if not databases:
+        raise CommandExecutionError('At least one database ID required.')
+
+    try:
+        ret = dict()
+        inspector = _("collector").Inspector()
+        for dbid in databases:
+            ret[dbid] = inspector.db.purge(dbid)
+        return ret
+    except InspectorSnapshotException as err:
+        raise CommandExecutionError(err)
+    except Exception as err:
+        log.error(_get_error_message(err))
+        raise Exception(err)
