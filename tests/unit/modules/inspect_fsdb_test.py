@@ -106,7 +106,7 @@ class InspectorFSDBTestCase(TestCase):
         csvdb = CsvDB('/foobar')
         csvdb.open()
         assert csvdb.list_tables() == ['test_db']
-        assert csvdb.is_closed() == False
+        assert csvdb.is_closed() is False
 
     @patch("os.makedirs", MagicMock())
     @patch("os.listdir", MagicMock(return_value=['test_db']))
@@ -119,7 +119,7 @@ class InspectorFSDBTestCase(TestCase):
         csvdb = CsvDB('/foobar')
         csvdb.open()
         csvdb.close()
-        assert csvdb.is_closed() == True
+        assert csvdb.is_closed() is True
 
     @patch("os.makedirs", MagicMock())
     @patch("os.path.exists", MagicMock(return_value=False))
@@ -194,7 +194,7 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb.create_table_from_object = MagicMock()
                 csvdb.flush = MagicMock()
 
-                assert csvdb.delete(FoobarEntity, eq={'foo': 123}) == True
+                assert csvdb.delete(FoobarEntity, eq={'foo': 123}) is True
                 assert len(csvdb._remained) == 1
 
                 assert csvdb._remained[0].foo == 234
@@ -230,7 +230,7 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb.create_table_from_object = MagicMock()
                 csvdb.flush = MagicMock()
 
-                assert csvdb.update(obj, eq={'foo': 123}) == True
+                assert csvdb.update(obj, eq={'foo': 123}) is True
                 assert len(csvdb._remained) == 2
 
                 assert csvdb._remained[0].foo == 123
@@ -404,30 +404,30 @@ class InspectorFSDBTestCase(TestCase):
         cmp = CsvDB('/foobar')._CsvDB__criteria
 
         # Single
-        assert cmp(obj, eq={'foo': 123}) == True
-        assert cmp(obj, lt={'foo': 124}) == True
-        assert cmp(obj, mt={'foo': 122}) == True
+        assert cmp(obj, eq={'foo': 123}) is True
+        assert cmp(obj, lt={'foo': 124}) is True
+        assert cmp(obj, mt={'foo': 122}) is True
 
-        assert cmp(obj, eq={'foo': 0}) == False
-        assert cmp(obj, lt={'foo': 123}) == False
-        assert cmp(obj, mt={'foo': 123}) == False
+        assert cmp(obj, eq={'foo': 0}) is False
+        assert cmp(obj, lt={'foo': 123}) is False
+        assert cmp(obj, mt={'foo': 123}) is False
 
-        assert cmp(obj, matches={'bar': r't\se.*?'}) == True
-        assert cmp(obj, matches={'bar': r'\s\sentity'}) == False
+        assert cmp(obj, matches={'bar': r't\se.*?'}) is True
+        assert cmp(obj, matches={'bar': r'\s\sentity'}) is False
 
         # Combined
-        assert cmp(obj, eq={'foo': 123, 'bar': r'test entity', 'spam': 0.123}) == True
-        assert cmp(obj, eq={'foo': 123, 'bar': r'test', 'spam': 0.123}) == False
+        assert cmp(obj, eq={'foo': 123, 'bar': r'test entity', 'spam': 0.123}) is True
+        assert cmp(obj, eq={'foo': 123, 'bar': r'test', 'spam': 0.123}) is False
 
-        assert cmp(obj, lt={'foo': 124, 'spam': 0.124}) == True
-        assert cmp(obj, lt={'foo': 124, 'spam': 0.123}) == False
+        assert cmp(obj, lt={'foo': 124, 'spam': 0.124}) is True
+        assert cmp(obj, lt={'foo': 124, 'spam': 0.123}) is False
 
-        assert cmp(obj, mt={'foo': 122, 'spam': 0.122}) == True
-        assert cmp(obj, mt={'foo': 122, 'spam': 0.123}) == False
+        assert cmp(obj, mt={'foo': 122, 'spam': 0.122}) is True
+        assert cmp(obj, mt={'foo': 122, 'spam': 0.123}) is False
 
-        assert cmp(obj, matches={'bar': r'test'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == True
+        assert cmp(obj, matches={'bar': r'test'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) is True
 
-        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == True
-        assert cmp(obj, matches={'bar': r'^ent'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) == False
-        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 123}, lt={'spam': 0.124}, eq={'pi': 3.14}) == False
+        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) is True
+        assert cmp(obj, matches={'bar': r'^ent'}, mt={'foo': 122}, lt={'spam': 0.124}, eq={'pi': 3.14}) is False
+        assert cmp(obj, matches={'bar': r'^test.*?y$'}, mt={'foo': 123}, lt={'spam': 0.124}, eq={'pi': 3.14}) is False
 
