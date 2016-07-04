@@ -30,8 +30,7 @@ from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.utils.odict import OrderedDict
 
-
-from StringIO import StringIO
+from salt.ext.six.moves import StringIO
 
 ensure_in_syspath('../../')
 
