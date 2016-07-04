@@ -224,3 +224,23 @@ def export(local=False, path="/tmp", format='qcow2'):
     except Exception as ex:
         log.error(_get_error_message(ex))
         raise Exception(ex)
+
+
+def snapshots():
+    '''
+    List current description snapshots.
+
+    CLI Example:
+
+    .. code-block:: bash:
+
+        salt myminion inspector.snapshots
+    '''
+    try:
+        return _("collector").Inspector().db.list()
+    except InspectorSnapshotException as err:
+        raise CommandExecutionError(err)
+    except Exception as err:
+        log.error(_get_error_message(err))
+        raise Exception(err)
+
