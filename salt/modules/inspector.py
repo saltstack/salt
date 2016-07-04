@@ -38,7 +38,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows()
+    return not salt.utils.is_windows() and 'inspector'
 
 
 def _(module):
@@ -86,9 +86,9 @@ def inspect(mode='all', priority=19, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' node.inspect
-        salt '*' node.inspect configuration
-        salt '*' node.inspect payload filter=/opt,/ext/oracle
+        salt '*' inspector.inspect
+        salt '*' inspector.inspect configuration
+        salt '*' inspector.inspect payload filter=/opt,/ext/oracle
     '''
     collector = _("collector")
     try:
@@ -154,8 +154,8 @@ def query(scope, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' node.query scope=os
-        salt '*' node.query payload type=file,link filter=/etc size=Kb brief=False
+        salt '*' inspector.query scope=os
+        salt '*' inspector.query payload type=file,link filter=/etc size=Kb brief=False
     '''
     query = _("query")
     try:
@@ -183,8 +183,8 @@ def build(format='qcow2', path='/tmp/'):
 
     .. code-block:: bash:
 
-        salt myminion node.build
-        salt myminion node.build format=iso path=/opt/builds/
+        salt myminion inspector.build
+        salt myminion inspector.build format=iso path=/opt/builds/
     '''
     try:
         _("collector").Inspector(cachedir=__opts__['cachedir'],
@@ -211,8 +211,8 @@ def export(local=False, path="/tmp", format='qcow2'):
 
     .. code-block:: bash:
 
-        salt myminion node.export
-        salt myminion node.export format=iso path=/opt/builds/
+        salt myminion inspector.export
+        salt myminion inspector.export format=iso path=/opt/builds/
     '''
     if getpass.getuser() != 'root':
         raise CommandExecutionError('In order to export system, the minion should run as "root".')
