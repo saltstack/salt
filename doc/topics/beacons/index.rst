@@ -44,6 +44,10 @@ minion configuration file:
 The beacon system, like many others in Salt, can also be configured via the
 minion pillar, grains, or local config file.
 
+.. note::
+    The `inotify` beacon only works on OSes that have `inotify` kernel support.
+    Currently this excludes FreeBSD, Mac OS X, and Windows.
+
 Beacon Monitoring Interval
 --------------------------
 
