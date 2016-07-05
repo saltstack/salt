@@ -3519,6 +3519,7 @@ def append(name,
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
+        slines = [item.rstrip() for item in slines]
 
     append_lines = []
     try:
