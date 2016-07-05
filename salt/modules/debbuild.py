@@ -17,6 +17,9 @@ import logging
 import os
 import tempfile
 import shutil
+import re
+import time
+import traceback
 
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
@@ -33,6 +36,7 @@ except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
 
 __virtualname__ = 'pkgbuild'
 
@@ -418,7 +422,6 @@ def build(runas,
     for dsc in dscs:
         afile = os.path.basename(dsc)
         adist = os.path.join(dest_dir, afile)
-        shutil.copy(dsc, adist)
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
@@ -537,6 +540,9 @@ def make_repo(repodir,
         Note: Ensure User has correct rights to any files and directories which
               are to be utilized.
     '''
+    SIGN_PROMPT_RE = re.compile(r'Enter passphrase: ', re.M)
+    REPREPRO_SIGN_PROMPT_RE = re.compile(r'Passphrase: ', re.M)
+
     repoconf = os.path.join(repodir, 'conf')
     if not os.path.isdir(repoconf):
         os.makedirs(repoconf)
@@ -546,8 +552,21 @@ def make_repo(repodir,
     with salt.utils.fopen(repoconfdist, 'w') as fow:
         fow.write('{0}'.format(repocfg_dists))
 
+    repocfg_opts = _get_repo_options_env(env)
+    repoconfopts = os.path.join(repoconf, 'options')
+    with salt.utils.fopen(repoconfopts, 'w') as fow:
+        fow.write('{0}'.format(repocfg_opts))
+
     local_fingerprint = None
     local_keyid = None
+
+    # preset passphase and interaction with gpg-agent
+    gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
+    gpg_tty_info_file = '{0}/gpg-tty-info-salt'.format(gnupghome)
+    gpg_tty_info_dict = {}
+
+    # test if using older than gnupg 2.1, env file exists
+    older_gnupg = __salt__['file.file_exists'](gpg_info_file)
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
@@ -587,31 +606,77 @@ def make_repo(repodir,
 
         _check_repo_sign_utils_support()
 
-        # preset passphase and interaction with gpg-agent
-        gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
-        with salt.utils.fopen(gpg_info_file, 'r') as fow:
-            gpg_raw_info = fow.readlines()
-
-        for gpg_info_line in gpg_raw_info:
-            gpg_info = gpg_info_line.split('=')
-            gpg_info_dict = {gpg_info[0]: gpg_info[1]}
-            __salt__['environ.setenv'](gpg_info_dict)
-            break
-
         if use_passphrase:
             _check_repo_gpg_phrase_utils_support()
+            phrase = __salt__['pillar.get']('gpg_passphrase')
 
+        if older_gnupg:
+            with salt.utils.fopen(gpg_info_file, 'r') as fow:
+                gpg_raw_info = fow.readlines()
+
+            for gpg_info_line in gpg_raw_info:
+                gpg_info = gpg_info_line.split('=')
+                gpg_info_dict = {gpg_info[0]: gpg_info[1]}
+                __salt__['environ.setenv'](gpg_info_dict)
+                break
+        else:
+            with salt.utils.fopen(gpg_tty_info_file, 'r') as fow:
+                gpg_raw_info = fow.readlines()
+
+            for gpg_tty_info_line in gpg_raw_info:
+                gpg_tty_info = gpg_tty_info_line.split('=')
+                gpg_tty_info_dict = {gpg_tty_info[0]: gpg_tty_info[1]}
+                __salt__['environ.setenv'](gpg_tty_info_dict)
+                break
+
+            ## sign_it_here
+            for file in os.listdir(repodir):
+                if file.endswith('.dsc'):
+                    abs_file = os.path.join(repodir, file)
+                    number_retries = 5
+                    times_looped = 0
+                    error_msg = 'Failed to debsign file {0}'.format(abs_file)
+                    cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                    try:
+                        stdout, stderr = None, None
+                        proc = salt.utils.vt.Terminal(
+                                cmd,
+                                shell=True,
+                                stream_stdout=True,
+                                stream_stderr=True
+                                )
+                        while proc.has_unread_data:
+                            stdout, stderr = proc.recv()
+                            if stdout and SIGN_PROMPT_RE.search(stdout):
+                                # have the prompt for inputting the passphrase
+                                proc.sendline(phrase)
+                            else:
+                                times_looped += 1
+
+                            if times_looped > number_retries:
+                                raise SaltInvocationError(
+                                        'Attemping to sign file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
+                                 )
+                            # 0.125 is really too fast on some systems
+                            time.sleep(0.5)
+
+                        proc_exitstatus = proc.exitstatus
+                        if proc_exitstatus != 0:
+                            raise SaltInvocationError(
+                                 'Signing file {0} failed with proc.status {1}'.format(abs_file, proc_exitstatus)
+                                 )
+                    except salt.utils.vt.TerminalException as err:
+                        trace = traceback.format_exc()
+                        log.error(error_msg, err, trace)
+                    finally:
+                        proc.close(terminate=True, kill=True)
+
+        if use_passphrase:
             cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --forget {0}'.format(local_fingerprint)
             __salt__['cmd.run'](cmd, runas=runas)
 
-            phrase = __salt__['pillar.get']('gpg_passphrase')
             cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase "{0}" {1}'.format(phrase, local_fingerprint)
             __salt__['cmd.run'](cmd, runas=runas)
-
-    repocfg_opts = _get_repo_options_env(env)
-    repoconfopts = os.path.join(repoconf, 'options')
-    with salt.utils.fopen(repoconfopts, 'w') as fow:
-        fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):
         abs_file = os.path.join(repodir, debfile)
@@ -619,11 +684,53 @@ def make_repo(repodir,
             os.remove(abs_file)
 
         if debfile.endswith('.dsc'):
-            if local_keyid is not None:
-                cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, os.path.join(repodir, abs_file))
+            if older_gnupg:
+                if local_keyid is not None:
+                    cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                    __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+
+                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
                 __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
-            cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
-            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            else:
+                number_retries = 5
+                times_looped = 0
+                error_msg = 'Failed to reprepro includedsc file {0}'.format(abs_file)
+                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
+                try:
+                    stdout, stderr = None, None
+                    proc = salt.utils.vt.Terminal(
+                            cmd,
+                            shell=True,
+                            cwd=repodir,
+                            env=gpg_tty_info_dict,
+                            stream_stdout=True,
+                            stream_stderr=True
+                            )
+                    while proc.has_unread_data:
+                        stdout, stderr = proc.recv()
+                        if stdout and REPREPRO_SIGN_PROMPT_RE.search(stdout):
+                            # have the prompt for inputting the passphrase
+                            proc.sendline(phrase)
+                        else:
+                            times_looped += 1
+
+                        if times_looped > number_retries:
+                            raise SaltInvocationError(
+                                    'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
+                             )
+                        # 0.125 is really too fast on some systems
+                        time.sleep(0.5)
+
+                    proc_exitstatus = proc.exitstatus
+                    if proc_exitstatus != 0:
+                        raise SaltInvocationError(
+                             'Reprepro includedsc for codename {0} and file {1} failed with proc.status {2}'.format(codename, abs_file, proc_exitstatus)
+                             )
+                except salt.utils.vt.TerminalException as err:
+                    trace = traceback.format_exc()
+                    log.error(error_msg, err, trace)
+                finally:
+                    proc.close(terminate=True, kill=True)
 
         if debfile.endswith('.deb'):
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
