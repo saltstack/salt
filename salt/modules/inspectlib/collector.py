@@ -289,25 +289,26 @@ class Inspector(EnvLoader):
         dirs = list()
         links = list()
 
-        for obj in os.listdir(path):
-            obj = os.path.join(path, obj)
-            valid = True
-            for ex_obj in exclude:
-                if obj.startswith(str(ex_obj)):
-                    valid = False
+        if os.access(path, os.R_OK):
+            for obj in os.listdir(path):
+                obj = os.path.join(path, obj)
+                valid = True
+                for ex_obj in exclude:
+                    if obj.startswith(str(ex_obj)):
+                        valid = False
+                        continue
+                if not valid or not os.path.exists(obj) or not os.access(obj, os.R_OK):
                     continue
-            if not valid or not os.path.exists(obj):
-                continue
-            if os.path.islink(obj):
-                links.append(obj)
-            elif os.path.isdir(obj):
-                dirs.append(obj)
-                f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
-                files.extend(f_obj)
-                dirs.extend(d_obj)
-                links.extend(l_obj)
-            elif os.path.isfile(obj):
-                files.append(obj)
+                if os.path.islink(obj):
+                    links.append(obj)
+                elif os.path.isdir(obj):
+                    dirs.append(obj)
+                    f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
+                    files.extend(f_obj)
+                    dirs.extend(d_obj)
+                    links.extend(l_obj)
+                elif os.path.isfile(obj):
+                    files.append(obj)
 
         return sorted(files), sorted(dirs), sorted(links)
 
