@@ -102,7 +102,7 @@ def inspect(mode='all', priority=19, **kwargs):
         raise Exception(ex)
 
 
-def query(scope, **kwargs):
+def query(*args, **kwargs):
     '''
     Query the node for specific information.
 
@@ -159,7 +159,7 @@ def query(scope, **kwargs):
     '''
     query = _("query")
     try:
-        return query.Query(scope, cachedir=__opts__['cachedir'])(**kwargs)
+        return query.Query(kwargs.get('scope'), cachedir=__opts__['cachedir'])(*args, **kwargs)
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
