@@ -1091,6 +1091,10 @@ def installed(
               pkg.installed:
                 - only_upgrade: True
 
+        .. note::
+            If this parameter is set to True and the package is not already
+            installed, the state will fail.
+
    :param bool report_reboot_exit_codes:
        If the installer exits with a recognized exit code indicating that
        a reboot is required, the module function
@@ -1666,6 +1670,10 @@ def latest(
         httpd:
           pkg.latest:
             - only_upgrade: True
+
+    .. note::
+        If this parameter is set to True and the package is not already
+        installed, the state will fail.
 
    report_reboot_exit_codes
         If the installer exits with a recognized exit code indicating that
