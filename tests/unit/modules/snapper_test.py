@@ -181,7 +181,7 @@ class SnapperTestCase(TestCase):
             }
             self.assertEqual(snapper.create_snapshot(**opts), 1234)
 
-    @patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id':42}))
+    @patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id': 42}))
     def test__get_num_interval(self):
         self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=None), (42, 0))
         self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=50), (42, 50))
@@ -196,7 +196,7 @@ class SnapperTestCase(TestCase):
             self.assertEqual(snapper.run("test.ping"), True)
             self.assertRaises(CommandExecutionError, snapper.run, "unknown.func")
 
-    @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42,43)))
+    @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43)))
     @patch('salt.modules.snapper.snapper.GetComparison', MagicMock())
     @patch('salt.modules.snapper.snapper.GetFiles', MagicMock(return_value=DBUS_RET['GetFiles']))
     def test_status(self):

@@ -234,7 +234,7 @@ def get_config(name='root'):
 
 
 def create_snapshot(config='root', type='single', pre_number=None,
-                    description=None, cleanup_algorithm='number', userdata={},
+                    description=None, cleanup_algorithm='number', userdata=None,
                     **kwargs):
     '''
     Creates an snapshot
@@ -268,6 +268,9 @@ def create_snapshot(config='root', type='single', pre_number=None,
     .. code-block:: bash
         salt '*' snapper.create_snapshot
     '''
+    if not userdata:
+        userdata = {}
+
     jid = kwargs.get('__pub_jid', None)
     if description is None and jid is not None:
         description = 'salt job {0}'.format(jid)
@@ -315,8 +318,8 @@ def _is_text_file(filename):
     return type_of_file.startswith('text')
 
 
-def run(function, config='root', args=[], description=None,
-        cleanup_algorithm='number', userdata={}, **kwargs):
+def run(function, config='root', args=None, description=None,
+        cleanup_algorithm='number', userdata=None, **kwargs):
     '''
     Runs a function from an execution module creating pre and post snapshots
     and associating the salt job id with those snapshots for easy undo and
@@ -332,6 +335,11 @@ def run(function, config='root', args=[], description=None,
 
     You can immediately see the changes
     '''
+    if not args:
+        args = []
+    if not userdata:
+        userdata = {}
+
     pre_nr = __salt__['snapper.create_snapshot'](
         config=config,
         type='pre',
@@ -457,8 +465,8 @@ def _get_jid_snapshots(jid, config='root'):
     jid_snapshots = [x for x in list_snapshots(config) if x['userdata'].get("salt_jid") == jid]
 
     return (
-        filter(lambda x: x['type'] == "pre", jid_snapshots)[0]['id'],
-        filter(lambda x: x['type'] == "post", jid_snapshots)[0]['id']
+        [x for x in jid_snapshots if x['type'] == "pre"][0]['id'],
+        [x for x in jid_snapshots if x['type'] == "post"][0]['id']
     )
 
 
@@ -514,7 +522,7 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
         post_mount = snapper.MountSnapshot(config, post, False) if post else ""
 
         files_diff = dict()
-        for f in filter(lambda x: not os.path.isdir(x), files):
+        for f in [f for f in files if not os.path.isdir(f)]:
             pre_file = pre_mount + f
             post_file = post_mount + f
 
