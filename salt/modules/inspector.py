@@ -237,12 +237,13 @@ def snapshots():
         salt myminion inspector.snapshots
     '''
     try:
-        return _("collector").Inspector().db.list()
+        return _("collector").Inspector(cachedir=__opts__['cachedir'],
+                                        piddir=os.path.dirname(__opts__['pidfile'])).db.list()
     except InspectorSnapshotException as err:
-        raise CommandExecutionError(err)
+       raise CommandExecutionError(err)
     except Exception as err:
-        log.error(_get_error_message(err))
-        raise Exception(err)
+       log.error(_get_error_message(err))
+       raise Exception(err)
 
 
 def delete(*databases):
@@ -261,9 +262,10 @@ def delete(*databases):
 
     try:
         ret = dict()
-        inspector = _("collector").Inspector()
+        inspector = _("collector").Inspector(cachedir=__opts__['cachedir'],
+                                             piddir=os.path.dirname(__opts__['pidfile']))
         for dbid in databases:
-            ret[dbid] = inspector.db.purge(dbid)
+            ret[dbid] = inspector.db._db.purge(str(dbid))
         return ret
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)
