@@ -1112,6 +1112,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_env': '',
     'git_pillar_root': '',
     'git_pillar_ssl_verify': True,
+    'git_pillar_mountpoint': '',
     'git_pillar_global_lock': True,
     'git_pillar_user': '',
     'git_pillar_password': '',
