@@ -167,7 +167,7 @@ class Query(EnvLoader):
             )
         elif not scope:
             raise InspectorQueryException(
-                "Scope cannot be empty. Must be one of: {0}".format(repr(scope), ", ".join(self.SCOPES))
+                "Scope cannot be empty. Must be one of: {0}".format(", ".join(self.SCOPES))
             )
         EnvLoader.__init__(self, cachedir=cachedir)
         self.scope = '_' + scope
