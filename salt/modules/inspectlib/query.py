@@ -420,6 +420,7 @@ class Query(EnvLoader):
         * **type**: Comma-separated type of included payload: dir (or directory), link and/or file.
         * **brief**: Return just a list of matches, if True. Default: False
         * **offset**: Offset of the files
+        * **max**: Maximum returned values. Default 1000.
 
         Options:
 
@@ -473,7 +474,7 @@ class Query(EnvLoader):
 
         brief = kwargs.get("brief")
         pld_files = list() if brief else dict()
-        for pld_data in self.db.get(PayloadFile)[offset:offset + 1000]:
+        for pld_data in self.db.get(PayloadFile)[offset:offset + kwargs.get('max', 1000)]:
             if brief:
                 pld_files.append(pld_data.path)
             else:
