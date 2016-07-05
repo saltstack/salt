@@ -26,8 +26,7 @@ def __virtual__():
     Load only on windows with servermanager module
     '''
     if not salt.utils.is_windows():
-        return False, 'Failed to load win_servermanager module: ' \
-                      'Only available on Windows systems.'
+        return False
 
     if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
         return False, 'Failed to load win_servermanager module: ' \
