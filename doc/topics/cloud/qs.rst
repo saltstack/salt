@@ -5,8 +5,16 @@ Salt Cloud Quickstart
 =====================
 
 Salt Cloud is built-in to Salt, and the easiest way to run Salt Cloud is
-directly from your Salt Master. On most platforms you can install the
-``salt-cloud`` package from the same repo that you used to install Salt.
+directly from your Salt Master.
+
+Note that if you installed Salt via `Salt Bootstrap`_, it may not have
+automatically installed salt-cloud for you. Use your distribution's package
+manager to install the ``salt-cloud`` package from the same repo that you
+used to install Salt.  These repos will automatically be setup by Salt Bootstrap.
+
+If there is no salt-cloud package, install with ``pip install salt-cloud``.
+
+.. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 
 This quickstart walks you through the basic steps of setting up a cloud host
 and defining some virtual machines to create.
