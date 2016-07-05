@@ -407,7 +407,7 @@ class Query(EnvLoader):
 
     def _payload(self, *args, **kwargs):
         '''
-        Find all unmanaged files.
+        Find all unmanaged files. Returns maximum 1000 values.
 
         Parameters:
 
@@ -419,6 +419,11 @@ class Query(EnvLoader):
                       Values: name (default), id
         * **type**: Comma-separated type of included payload: dir (or directory), link and/or file.
         * **brief**: Return just a list of matches, if True. Default: False
+        * **offset**: Offset of the files
+
+        Options:
+
+        * **total**: Return a total amount of found payload files
         '''
         def _size_format(size, fmt):
             if fmt is None:
