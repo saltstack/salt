@@ -3459,15 +3459,15 @@ def append(name,
 
     .. versionadded:: 0.9.5
     '''
-    if not name:
-        return _error(ret, 'Must provide name to file.append')
-
-    name = os.path.expanduser(name)
-
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
+
+    if not name:
+        return _error(ret, 'Must provide name to file.append')
+
+    name = os.path.expanduser(name)
 
     if sources is None:
         sources = []
