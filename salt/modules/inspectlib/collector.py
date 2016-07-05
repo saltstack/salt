@@ -331,9 +331,9 @@ class Inspector(EnvLoader):
         m_files, m_dirs, m_links = managed
         s_files, s_dirs, s_links = system_all
 
-        return (sorted(list(set(s_files).intersection(m_files))),
-                sorted(list(set(s_dirs).intersection(m_dirs))),
-                sorted(list(set(s_links).intersection(m_links))))
+        return (sorted(list(set(s_files).difference(m_files))),
+                sorted(list(set(s_dirs).difference(m_dirs))),
+                sorted(list(set(s_links).difference(m_links))))
 
     def _scan_payload(self):
         '''
@@ -424,11 +424,8 @@ class Inspector(EnvLoader):
         '''
         self._init_env()
 
-        changed_cfg_pkgs = self._get_changed_cfg_pkgs(self._get_cfg_pkgs())
-        self._save_cfg_packages(changed_cfg_pkgs)
-
-        payload = self._scan_payload()
-        self._save_payload(*payload)
+        self._save_cfg_packages(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
+        self._save_payload(*self._scan_payload())
 
     def request_snapshot(self, mode, priority=19, **kwargs):
         '''
