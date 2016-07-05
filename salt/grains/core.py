@@ -1483,7 +1483,7 @@ def os_data():
     grains.update(_ps(grains))
 
     # Load additional OS family grains
-    if grains['os_family'] == "RedHat":
+    if grains['os_family'] in ['RedHat', 'SUSE']:
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
