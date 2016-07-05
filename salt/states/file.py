@@ -3560,7 +3560,7 @@ def append(name,
             ret['result'] = True
         return ret
 
-    if len(append_lines):
+    if append_lines:
         __salt__['file.append'](name, args=append_lines)
         ret['comment'] = 'Appended {0} lines'.format(len(append_lines))
     else:
