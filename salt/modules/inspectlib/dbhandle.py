@@ -16,7 +16,6 @@
 
 # Import Python LIbs
 from __future__ import absolute_import
-import os
 from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import (Package, PackageCfgFile,
                                               PayloadFile, IgnoredDir, AllowedDir)
@@ -41,7 +40,7 @@ class DBHandleBase(object):
         '''
         Init the database, if required.
         '''
-        self._db.new() if new else self._db.open()
+        self._db.new() if new else self._db.open()  # pylint: disable=W0106
         self._run_init_queries()
 
     def _run_init_queries(self):

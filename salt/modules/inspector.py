@@ -240,10 +240,10 @@ def snapshots():
         return _("collector").Inspector(cachedir=__opts__['cachedir'],
                                         piddir=os.path.dirname(__opts__['pidfile'])).db.list()
     except InspectorSnapshotException as err:
-       raise CommandExecutionError(err)
+        raise CommandExecutionError(err)
     except Exception as err:
-       log.error(_get_error_message(err))
-       raise Exception(err)
+        log.error(_get_error_message(err))
+        raise Exception(err)
 
 
 def delete(all=False, *databases):
@@ -266,7 +266,7 @@ def delete(all=False, *databases):
         ret = dict()
         inspector = _("collector").Inspector(cachedir=__opts__['cachedir'],
                                              piddir=os.path.dirname(__opts__['pidfile']))
-        for dbid in (all and inspector.db.list() or databases):
+        for dbid in all and inspector.db.list() or databases:
             ret[dbid] = inspector.db._db.purge(str(dbid))
         return ret
     except InspectorSnapshotException as err:

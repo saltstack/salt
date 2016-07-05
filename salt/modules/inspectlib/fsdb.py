@@ -18,7 +18,9 @@
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
 
+from __future__ import absolute_import
 import os
+import sys
 import re
 import csv
 import datetime
@@ -191,11 +193,13 @@ class CsvDB(object):
         :return:
         '''
         if distinct:
-            fields = dict(zip(self._tables[obj._TABLE].keys(), obj._serialize(self._tables[obj._TABLE])))
+            # pylint: disable=W1699
+            fields = dict(zip(self._tables[obj._TABLE].keys(),
+                              obj._serialize(self._tables[obj._TABLE])))
+            # pylint: enable=W1699
             db_obj = self.get(obj.__class__, eq=fields)
             if db_obj and distinct:
                 raise Exception("Object already in the database.")
-
         with gzip.open(os.path.join(self.db_path, obj._TABLE), 'a') as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
@@ -322,7 +326,7 @@ class CsvDB(object):
         elif type == 'float':
             data = float(data)
         elif type == 'long':
-            data = long(data)
+            data = sys.version_info[0] == 2 and long(data) or int(data)  # pylint: disable=W1699
         else:
             data = str(data)
         return data
