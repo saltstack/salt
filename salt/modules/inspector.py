@@ -154,8 +154,8 @@ def query(scope, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' inspector.query scope=os
-        salt '*' inspector.query payload type=file,link filter=/etc size=Kb brief=False
+        salt '*' inspector.query scope=system
+        salt '*' inspector.query scope=payload type=file,link filter=/etc size=Kb brief=False
     '''
     query = _("query")
     try:
