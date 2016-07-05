@@ -440,6 +440,7 @@ class Query(EnvLoader):
                 return "{0} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
 
         filter = kwargs.get('filter')
+        offset = kwargs.get('offset', 0)
 
         timeformat = kwargs.get("time", "tz")
         if timeformat not in ["ticks", "tz"]:
@@ -467,9 +468,12 @@ class Query(EnvLoader):
                                               'dir, file and/or link.'.format(", ".join(incl_type)))
         self.db.open()
 
+        if "total" in args:
+            return {'total': len(self.db.get(PayloadFile))}
+
         brief = kwargs.get("brief")
         pld_files = list() if brief else dict()
-        for pld_data in self.db.get(PayloadFile):
+        for pld_data in self.db.get(PayloadFile)[offset:offset + 1000]:
             if brief:
                 pld_files.append(pld_data.path)
             else:
