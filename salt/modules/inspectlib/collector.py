@@ -431,6 +431,9 @@ class Inspector(EnvLoader):
         if mode not in self.MODE:
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
+        if is_alive(self.pidfile):
+            raise CommandExecutionError('Inspection already in progress.')
+
         self._prepare_full_scan(**kwargs)
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
@@ -468,12 +471,13 @@ def is_alive(pidfile):
     '''
     Check if PID is still alive.
     '''
-    # Just silencing os.kill exception if no such PID, therefore try/pass.
     try:
         os.kill(int(open(pidfile).read().strip()), 0)
-        sys.exit(1)
+        return True
     except Exception as ex:
-        pass
+        if os.access(pidfile, os.W_OK) and os.path.isfile(pidfile):
+            os.unlink(pidfile)
+        return False
 
 
 def main(dbfile, pidfile, mode):
@@ -489,7 +493,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     pidfile, dbfile, mode = sys.argv[1:]
-    is_alive(pidfile)
+    if is_alive(pidfile):
+        sys.exit(1)
 
     # Double-fork stuff
     try:
