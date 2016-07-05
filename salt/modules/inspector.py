@@ -189,7 +189,7 @@ def build(format='qcow2', path='/tmp/'):
     try:
         _("collector").Inspector(cachedir=__opts__['cachedir'],
                                  piddir=os.path.dirname(__opts__['pidfile']),
-                                 pidfilename='').build(format=format, path=path)
+                                 pidfilename='').reuse_snapshot().build(format=format, path=path)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
@@ -218,7 +218,7 @@ def export(local=False, path="/tmp", format='qcow2'):
         raise CommandExecutionError('In order to export system, the minion should run as "root".')
     try:
         description = _("query").Query('all', cachedir=__opts__['cachedir'])()
-        return _("collector").Inspector().export(description, local=local, path=path, format=format)
+        return _("collector").Inspector().reuse_snapshot().export(description, local=local, path=path, format=format)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:

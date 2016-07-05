@@ -41,14 +41,7 @@ class DBHandleBase(object):
         '''
         Init the database, if required.
         '''
-        if new and os.path.exists(self._path):
-            os.unlink(self._path)  # As simple as that
-
-        if new:
-            self._db.new()
-        else:
-            self._db.open()
-
+        self._db.new() if new else self._db.open()
         self._run_init_queries()
 
     def _run_init_queries(self):
