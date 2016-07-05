@@ -54,11 +54,23 @@ class Inspector(EnvLoader):
     def __init__(self, cachedir=None, piddir=None, pidfilename=None):
         EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
 
-        # TODO: This is nasty. Need to do something with this better. ASAP!
-        try:
-            self.db.open()
-        except Exception as ex:
-            log.error('Unable to [re]open db. Already opened?')
+    def create_snapshot(self):
+        '''
+        Open new snapshot.
+
+        :return:
+        '''
+        self.db.open(new=True)
+        return self
+
+    def reuse_snapshot(self):
+        '''
+        Open an existing, latest snapshot.
+
+        :return:
+        '''
+        self.db.open()
+        return self
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
@@ -363,8 +375,7 @@ class Inspector(EnvLoader):
         '''
         Prepare full system scan by setting up the database etc.
         '''
-        self.db.purge()
-
+        self.db.open(new=True)
         # Add ignored filesystems
         ignored_fs = set()
         ignored_fs |= set(self.IGNORE_PATHS)
@@ -484,7 +495,7 @@ def main(dbfile, pidfile, mode):
     '''
     Main analyzer routine.
     '''
-    Inspector(dbfile, pidfile).snapshot(mode)
+    Inspector(dbfile, pidfile).reuse_snapshot().snapshot(mode)
 
 
 if __name__ == '__main__':
