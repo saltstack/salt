@@ -585,9 +585,10 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            io_loop = LOOP_CLASS.current()
+            if self.opts['transport'] == 'zeromq' and HAS_ZMQ:
+                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+            else:
+                io_loop = LOOP_CLASS.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
