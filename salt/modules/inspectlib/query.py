@@ -161,9 +161,14 @@ class Query(EnvLoader):
         :param scope:
         :return:
         '''
-        if scope not in self.SCOPES:
+        if scope and scope not in self.SCOPES:
             raise InspectorQueryException(
-                "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
+                "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES))
+            )
+        elif not scope:
+            raise InspectorQueryException(
+                "Scope cannot be empty. Must be one of: {0}".format(repr(scope), ", ".join(self.SCOPES))
+            )
         EnvLoader.__init__(self, cachedir=cachedir)
         self.scope = '_' + scope
         self.local_identity = dict()
