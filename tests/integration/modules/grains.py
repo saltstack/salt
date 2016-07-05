@@ -111,9 +111,14 @@ class TestModulesGrains(integration.ModuleCase):
         test to ensure some core grains are returned
         '''
         grains = ['os', 'os_family', 'osmajorrelease', 'osrelease', 'osfullname', 'id']
+        os = self.run_function('grains.get', ['os'])
+
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
-            self.assertTrue(get_grain, grain + "is not available")
+            if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
+                self.assertEqual(get_grain, '')
+                continue
+            self.assertTrue(get_grain)
 
 
 class GrainsAppendTestCase(integration.ModuleCase):
