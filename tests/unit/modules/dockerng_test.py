@@ -655,13 +655,14 @@ class DockerngTestCase(TestCase):
                 }
             })
 
+        ret = None
         with patch.dict(dockerng_mod.__salt__, {
                 'dockerng.start': docker_start_mock,
                 'dockerng.create': docker_create_mock,
                 'dockerng.stop': docker_stop_mock,
                 'dockerng.commit': docker_commit_mock,
                 'dockerng.sls': docker_sls_mock}):
-            dockerng_mod.sls_build(
+            ret = dockerng_mod.sls_build(
                 'foo',
                 mods='foo',
             )
@@ -672,8 +673,8 @@ class DockerngTestCase(TestCase):
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')
         docker_commit_mock.assert_called_once_with('ID', 'foo')
-
-
+        self.assertEqual(
+            {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
 
 
 if __name__ == '__main__':
