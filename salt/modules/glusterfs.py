@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 import sys
 import xml.etree.ElementTree as ET
-from xml.etree.ElementTree import ParseError
 
 # Import salt libs
 import salt.utils
@@ -80,7 +79,7 @@ def _gluster_xml(cmd):
 
     try:
         root = ET.fromstring(_gluster_output_cleanup(result))
-    except ParseError as e:
+    except ET.ParseError:
         raise CommandExecutionError('\n'.join(result.splitlines()[:-1]))
 
     if int(root.find('opRet').text) != 0:
