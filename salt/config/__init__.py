@@ -1072,9 +1072,9 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
-    'proxy_host': None,
-    'proxy_username': None,
-    'proxy_password': None,
+    'proxy_host': '',
+    'proxy_username': '',
+    'proxy_password': '',
     'proxy_port': None,
 }
 
