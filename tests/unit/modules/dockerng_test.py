@@ -16,6 +16,7 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
+from contextlib import nested
 
 ensure_in_syspath('../../')
 
@@ -25,6 +26,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
+dockerng_mod.__opts__ = {}
 
 
 def _docker_py_version():
@@ -675,6 +677,51 @@ class DockerngTestCase(TestCase):
         docker_commit_mock.assert_called_once_with('ID', 'foo')
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
+
+    def test_call_success(self):
+        '''
+        test module calling inside containers
+        '''
+        docker_run_all_mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{"retcode": 0, "comment": "container cmd"}',
+                'stderr': 'err',
+            })
+        docker_copy_to_mock = MagicMock(
+            return_value={
+                'retcode': 0
+            })
+        client = Mock()
+        client.put_archive = Mock()
+
+        with nested(
+                patch.dict(
+                    dockerng_mod.__opts__, {'cachedir': '/tmp'}),
+                patch.dict(
+                    dockerng_mod.__salt__, {
+                        'dockerng.run_all': docker_run_all_mock,
+                        'dockerng.copy_to': docker_copy_to_mock,
+                    }),
+                patch.dict(
+                    dockerng_mod.__context__, {
+                        'docker.client': client
+                    }
+                )
+        ):
+            ret = dockerng_mod.call(
+                'ID',
+                function='test.arg',
+                args=[1, 2],
+                kwargs={'arg1': 'val1'}
+            )
+        docker_run_all_mock.assert_called_with(
+            'ID',
+            "python /tmp/salt_thin/salt-call"
+            " --retcode-passthrough --local "
+            "--out json -l quiet -- test.arg 1 2")
+        self.assertEqual(
+            {"retcode": 0, "comment": "container cmd"}, ret)
 
 
 if __name__ == '__main__':

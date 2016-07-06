@@ -5635,7 +5635,7 @@ def call(name, function=None, args=[], **kwargs):
         _client_wrapper('put_archive', name, '/tmp/salt_thin', file)
 
     salt_argv = [
-        sys.executable,
+        'python',
         '/tmp/salt_thin/salt-call',
         '--retcode-passthrough',
         '--local',
@@ -5645,7 +5645,8 @@ def call(name, function=None, args=[], **kwargs):
         function
     ] + args
 
-    ret = __salt__['dockerng.run_all'](name, ' '.join(salt_argv))
+    ret = __salt__['dockerng.run_all'](name,
+                                       ' '.join(map(str, salt_argv)))
     # python not found
     if ret['retcode'] == 127:
         raise CommandExecutionError(ret['stderr'])
@@ -5657,7 +5658,8 @@ def call(name, function=None, args=[], **kwargs):
         data = salt.utils.find_json(ret['stdout'])
         return data.get('local', data)
     except ValueError:
-        return {'result': False, 'comment': ret}
+        return {'result': False,
+                'comment': 'Can\'t parse container command output'}
 
 
 def sls(name, mods=None, saltenv='base', **kwargs):
@@ -5694,10 +5696,12 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                                      '/tmp/salt_state.tgz',
                                      exec_driver='nsenter',
                                      overwrite=True)
+
         # Now execute the state into the container
         ret = __salt__['dockerng.call'](name, function='state.pkg',
                                         args=['/tmp/salt_state.tgz',
                                               trans_tar_sha256, 'sha256'])
+
         # set right exit code if any state failed
         __context__['retcode'] = 0
         for _, state in ret.iteritems():
@@ -5739,3 +5743,7 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
         __salt__['dockerng.stop'](id)
 
     return __salt__['dockerng.commit'](id, name)
+
+
+
+
