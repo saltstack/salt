@@ -265,6 +265,7 @@ import tempfile
 import time
 import base64
 import errno
+from subprocess import list2cmdline
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -5646,7 +5647,7 @@ def call(name, function=None, args=[], **kwargs):
     ] + args
 
     ret = __salt__['dockerng.run_all'](name,
-                                       ' '.join(map(str, salt_argv)))
+                                       list2cmdline(map(str, salt_argv)))
     # python not found
     if ret['retcode'] == 127:
         raise CommandExecutionError(ret['stderr'])
