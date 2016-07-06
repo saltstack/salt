@@ -81,7 +81,7 @@ def _gluster_xml(cmd):
     try:
         root = ET.fromstring(_gluster_output_cleanup(result))
     except ParseError as e:
-        raise CommandExecutionError(result)
+        raise CommandExecutionError('\n'.join(result.splitlines()[:-1]))
 
     if int(root.find('opRet').text) != 0:
         raise CommandExecutionError(root.find('opErrstr').text)
