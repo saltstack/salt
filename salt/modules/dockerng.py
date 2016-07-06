@@ -5747,7 +5747,3 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
         __salt__['dockerng.stop'](id)
 
     return __salt__['dockerng.commit'](id, name)
-
-
-
-
