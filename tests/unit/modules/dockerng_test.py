@@ -619,6 +619,62 @@ class DockerngTestCase(TestCase):
                                   'state': {'new': 'stopped',
                                             'old': 'stopped'}})
 
+    def test_sls_build(self, *args):
+        '''
+        test build sls image.
+        '''
+        docker_start_mock = MagicMock(
+            return_value={})
+        docker_create_mock = MagicMock(
+            return_value={'Id': 'ID', 'Name': 'NAME'})
+        docker_stop_mock = MagicMock(
+            return_value={'state': {'old': 'running', 'new': 'stopped'},
+                          'result': True})
+        docker_commit_mock = MagicMock(
+            return_value={'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42})
+
+        docker_sls_mock = MagicMock(
+            return_value={
+                "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
+                    "comment": "File /etc/test.sh is in the correct state",
+                    "name": "/etc/test.sh",
+                    "start_time": "07:04:26.834792",
+                    "result": True,
+                    "duration": 13.492,
+                    "__run_num__": 0,
+                    "changes": {}
+                },
+                "test_|-always-passes_|-foo_|-succeed_without_changes": {
+                    "comment": "Success!",
+                    "name": "foo",
+                    "start_time": "07:04:26.848915",
+                    "result": True,
+                    "duration": 0.363,
+                    "__run_num__": 1,
+                    "changes": {}
+                }
+            })
+
+        with patch.dict(dockerng_mod.__salt__, {
+                'dockerng.start': docker_start_mock,
+                'dockerng.create': docker_create_mock,
+                'dockerng.stop': docker_stop_mock,
+                'dockerng.commit': docker_commit_mock,
+                'dockerng.sls': docker_sls_mock}):
+            dockerng_mod.sls_build(
+                'foo',
+                mods='foo',
+            )
+        docker_create_mock.assert_called_once_with(
+            cmd='/usr/bin/sleep infinity',
+            image='fedora', interactive=True, tty=True)
+        docker_start_mock.assert_called_once_with('ID')
+        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_stop_mock.assert_called_once_with('ID')
+        docker_commit_mock.assert_called_once_with('ID', 'foo')
+
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
