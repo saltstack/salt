@@ -10,29 +10,23 @@ from __future__ import absolute_import
 
 # Salt libs
 import integration
-import salt.utils
 
 # Salttesting libs
-from salttesting import skipIf
 from salttesting.helpers import destructiveTest, ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 
-def _check_arch_linux():
-    with salt.utils.fopen('/etc/os-release', 'r') as f:
-        release = f.readline()
-        r = release.split('=')[1].strip().strip('"')
-        return r
-
-
 @destructiveTest
-@skipIf(_check_arch_linux() == 'Arch Linux', 'Network state not supported on Arch')
 class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate network state module
     '''
     def setUp(self):
+        os_family = self.run_function('grains.get', ['os_family'])
+        if os_family not in ('RedHat', 'Debian'):
+            self.skipTest('Network state only supported on RedHat and Debian based systems')
+
         self.run_function('cmd.run', ['ip link add name dummy0 type dummy'])
 
     def tearDown(self):
