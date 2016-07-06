@@ -5629,6 +5629,9 @@ def call(name, function=None, args=[], **kwargs):
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
+    if function is None:
+        raise CommandExecutionError('Missing function parameter')
+
     # move salt into the container
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'])
     import io
