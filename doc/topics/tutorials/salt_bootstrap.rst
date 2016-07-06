@@ -162,7 +162,7 @@ Downloading the script from develop branch:
 
 .. code-block:: bash
 
-    wget https://bootstrap.saltstack.com/develop
+    wget -O bootstrap_salt.sh https://bootstrap.saltstack.com/develop
     sudo sh bootstrap_salt.sh
 
 Installing a specific version from git using ``wget``:
