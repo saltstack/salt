@@ -486,9 +486,9 @@ class SaltEvent(object):
                     break
                 mtag, data = self.unpack(raw, self.serial)
                 ret = {'data': data, 'tag': mtag}
-            except (KeyboardInterrupt, RuntimeError):
+            except (KeyboardInterrupt):
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except tornado.iostream.StreamClosedError:
+            except (tornado.iostream.StreamClosedError, RuntimeError):
                 return None
 
             if not match_func(ret['tag'], tag):
