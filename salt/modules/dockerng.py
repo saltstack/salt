@@ -262,7 +262,6 @@ import re
 import shutil
 import string
 import sys
-import tempfile
 import time
 import base64
 import errno
