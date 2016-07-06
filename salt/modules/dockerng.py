@@ -252,6 +252,7 @@ import fnmatch
 import functools
 import gzip
 import inspect as inspect_module
+import io
 import json
 import logging
 import os
@@ -5634,7 +5635,6 @@ def call(name, function=None, args=[], **kwargs):
 
     # move salt into the container
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'])
-    import io
     with io.open(thin_path, 'rb') as file:
         _client_wrapper('put_archive', name, '/tmp/salt_thin', file)
 
