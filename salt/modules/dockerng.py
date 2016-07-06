@@ -5612,18 +5612,19 @@ def _gather_pillar(pillarenv, pillar_override, grains={}):
     return ret
 
 
-def call(name, function=None, args=[], **kwargs):
+def call(name, function, *args, **kwargs):
     '''
     Executes a salt function inside a container
 
     .. code-block:: bash
 
-        salt myminion dockerimage.call function=test.ping
+        salt myminion dockerng.call test.ping
+
+        salt myminion test.arg arg1 arg2 key1=val1
 
     The container does not need to have Salt installed, but Python
     is required.
 
-    TODO: support kwargs
     '''
     # put_archive reqires the path to exist
     ret = __salt__['dockerng.run_all'](name, 'mkdir -p /tmp/salt_thin')
@@ -5647,7 +5648,7 @@ def call(name, function=None, args=[], **kwargs):
         '-l', 'quiet',
         '--',
         function
-    ] + args
+    ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
 
     ret = __salt__['dockerng.run_all'](name,
                                        list2cmdline(map(str, salt_argv)))
@@ -5676,7 +5677,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     .. code-block:: bash
 
-        salt myminion dockerimage.sls compassionate_mirzakhani mods=rails,web
+        salt myminion dockerng.sls compassionate_mirzakhani mods=rails,web
 
     The container does not need to have Salt installed, but Python
     is required.
@@ -5727,7 +5728,7 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
 
     .. code-block:: bash
 
-        salt myminion dockerimage.build_image imgname mods=rails,web
+        salt myminion dockerng.build_image imgname mods=rails,web
 
     The base image does not need to have Salt installed, but Python
     is required.

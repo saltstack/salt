@@ -711,15 +711,14 @@ class DockerngTestCase(TestCase):
         ):
             ret = dockerng_mod.call(
                 'ID',
-                function='test.arg',
-                args=[1, 2],
-                kwargs={'arg1': 'val1'}
-            )
+                'test.arg',
+                1, 2,
+                arg1='val1')
         docker_run_all_mock.assert_called_with(
             'ID',
             "python /tmp/salt_thin/salt-call"
             " --retcode-passthrough --local "
-            "--out json -l quiet -- test.arg 1 2")
+            "--out json -l quiet -- test.arg 1 2 arg1=val1")
         self.assertEqual(
             {"retcode": 0, "comment": "container cmd"}, ret)
 
