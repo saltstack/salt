@@ -5624,6 +5624,8 @@ def call(name, function, *args, **kwargs):
     The container does not need to have Salt installed, but Python
     is required.
 
+    .. versionadded:: Carbon
+
     '''
     # put_archive reqires the path to exist
     ret = __salt__['dockerng.run_all'](name, 'mkdir -p /tmp/salt_thin')
@@ -5680,6 +5682,8 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     The container does not need to have Salt installed, but Python
     is required.
+
+    .. versionadded:: Carbon
     '''
     if mods is not None:
         mods = [x.strip() for x in mods.split(',')]
@@ -5731,6 +5735,8 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
 
     The base image does not need to have Salt installed, but Python
     is required.
+
+    .. versionadded:: Carbon
     '''
 
     # start a new container
