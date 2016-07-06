@@ -18,7 +18,7 @@
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import os
 import sys
 import re
@@ -27,6 +27,7 @@ import datetime
 import gzip
 import shutil
 from salt.utils.odict import OrderedDict
+from salt.ext.six.moves import zip
 
 
 class CsvDBEntity(object):
@@ -136,7 +137,7 @@ class CsvDB(object):
 
     def _load_table(self, table_name):
         with gzip.open(os.path.join(self.db_path, table_name), 'rb') as table:
-            return OrderedDict([tuple(elm.split(':')) for elm in csv.reader(table).next()])
+            return OrderedDict([tuple(elm.split(':')) for elm in next(csv.reader(table))])
 
     def open(self, dbname=None):
         '''
@@ -193,10 +194,8 @@ class CsvDB(object):
         :return:
         '''
         if distinct:
-            # pylint: disable=W1699
             fields = dict(zip(self._tables[obj._TABLE].keys(),
                               obj._serialize(self._tables[obj._TABLE])))
-            # pylint: enable=W1699
             db_obj = self.get(obj.__class__, eq=fields)
             if db_obj and distinct:
                 raise Exception("Object already in the database.")
