@@ -5591,7 +5591,7 @@ def _compile_state(mods=None, saltenv='base'):
     return st_.state.compile_high_data(high_data)
 
 
-def _gather_pillar(pillarenv, pillar_override, grains={}):
+def _gather_pillar(pillarenv, pillar_override, **grains):
     '''
     Gathers pillar with a custom set of grains, which should
     be first retrieved from the container
