@@ -49,8 +49,6 @@ def list_(name, add, match):
         __reg__[name] = {}
         __reg__[name]['val'] = []
     for event in __events__:
-        import pprint
-        pprint.pprint(event)
         if fnmatch.fnmatch(event['tag'], match):
             item = {}
             for key in add:
