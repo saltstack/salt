@@ -22,6 +22,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils
 from salt.grains import core
 
@@ -57,6 +58,10 @@ class CoreGrainsTestCase(TestCase):
         empty_mock = MagicMock(return_value={})
 
         orig_import = __import__
+        if six.PY2:
+            built_in = '__builtin__'
+        else:
+            built_in = 'builtins'
 
         def _import_mock(name, *args):
             if name == 'lsb_release':
@@ -72,7 +77,7 @@ class CoreGrainsTestCase(TestCase):
                 # Skip the init grain compilation (not pertinent)
                 with patch.object(os.path, 'exists', path_exists_mock):
                     # Ensure that lsb_release fails to import
-                    with patch('__builtin__.__import__',
+                    with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
@@ -150,6 +155,10 @@ class CoreGrainsTestCase(TestCase):
         os_release_mock = MagicMock(return_value=_os_release_map)
 
         orig_import = __import__
+        if six.PY2:
+            built_in = '__builtin__'
+        else:
+            built_in = 'builtins'
 
         def _import_mock(name, *args):
             if name == 'lsb_release':
@@ -165,7 +174,7 @@ class CoreGrainsTestCase(TestCase):
                 # Skip the init grain compilation (not pertinent)
                 with patch.object(os.path, 'exists', path_exists_mock):
                     # Ensure that lsb_release fails to import
-                    with patch('__builtin__.__import__',
+                    with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
@@ -193,6 +202,10 @@ class CoreGrainsTestCase(TestCase):
         os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file'))
 
         orig_import = __import__
+        if six.PY2:
+            built_in = '__builtin__'
+        else:
+            built_in = 'builtins'
 
         def _import_mock(name, *args):
             if name == 'lsb_release':
@@ -208,7 +221,7 @@ class CoreGrainsTestCase(TestCase):
                 # Skip the init grain compilation (not pertinent)
                 with patch.object(os.path, 'exists', path_isfile_mock):
                     # Ensure that lsb_release fails to import
-                    with patch('__builtin__.__import__',
+                    with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
