@@ -254,7 +254,9 @@ def absent(
             return ret
 
         for subscription in subscriptions:
-            unsubscribed = __salt__['boto_sns.unsubscribe'](name, subscription['SubscriptionArn'])
+            unsubscribed = __salt__['boto_sns.unsubscribe'](
+                name, subscription['SubscriptionArn'], region, key, keyid, profile
+            )
             if unsubscribed is False:
                 failed_unsubscribe_subscriptions.append(subscription)
 
