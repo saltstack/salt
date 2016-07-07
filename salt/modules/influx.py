@@ -490,7 +490,7 @@ def retention_policy_exists(database,
 
         salt '*' influxdb.retention_policy_exists metrics default
     '''
-    policy = retention_policy_get(name, database, user, password, host, port)
+    policy = retention_policy_get(database, name, user, password, host, port)
     return policy is not None
 
 
