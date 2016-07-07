@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,12 @@ def _gluster_xml(cmd):
         result = __salt__['cmd.run'](
             'gluster --xml --mode=script', stdin="{0}\n".format(cmd)
         )
-    root = ET.fromstring(_gluster_output_cleanup(result))
+
+    try:
+        root = ET.fromstring(_gluster_output_cleanup(result))
+    except ET.ParseError:
+        raise CommandExecutionError('\n'.join(result.splitlines()[:-1]))
+
     if _gluster_ok(root):
         output = root.find('output')
         if output:
@@ -84,6 +89,7 @@ def _gluster_xml(cmd):
             log.info('Gluster call "{0}" succeeded'.format(cmd))
     else:
         log.error('Failed gluster call: {0}: {1}'.format(cmd, root.find('opErrstr').text))
+
     return root
 
 
