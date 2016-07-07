@@ -4,12 +4,13 @@ master_port: 64506
 interface: 127.0.0.1
 tcp_pub_port: 64510
 tcp_pull_port: 64511
+sock_dir: minion_sock
 id: minion
 open_mode: True
 log_file: minion.log
 log_level_logfile: debug
 pidfile: minion.pid
-sock_dir: minion_sock
+ipc_mode: tcp
 
 # module extension
 test.foo: baz
