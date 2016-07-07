@@ -585,7 +585,8 @@ class SaltMinion(SaltDaemonScriptBase):
         return script_args
 
     def get_check_ports(self):
-        return set([self.config['id']])
+        return set([self.config['tcp_pub_port'],
+                    self.config['tcp_pull_port']])
 
 
 class SaltMaster(SaltDaemonScriptBase):
