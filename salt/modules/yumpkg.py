@@ -1228,10 +1228,10 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True,
-            skip_verify=False,
-            name=None,
+def upgrade(name=None,
             pkgs=None,
+            refresh=True,
+            skip_verify=False,
             normalize=True,
             **kwargs):
     '''
@@ -1314,7 +1314,7 @@ def upgrade(refresh=True,
 
         .. code-block:: bash
 
-            salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+            salt -G role:nsd pkg.upgrade gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
 
         .. versionadded:: 2016.3.0
 
@@ -1327,20 +1327,23 @@ def upgrade(refresh=True,
         refresh_db(**kwargs)
 
     old = list_pkgs()
-    try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](
-            name=name,
-            pkgs=pkgs,
-            sources=None,
-            normalize=normalize,
-            **kwargs)[0]
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
 
-    if pkg_params:
-        targets = [x for x in pkg_params]
-    else:
-        targets = None
+    targets = []
+    if name or pkgs:
+        try:
+            pkg_params = __salt__['pkg_resource.parse_targets'](
+                name=name,
+                pkgs=pkgs,
+                sources=None,
+                normalize=normalize,
+                **kwargs)[0]
+        except MinionError as exc:
+            raise CommandExecutionError(exc)
+
+        if pkg_params:
+            # Calling list.extend() on a dict will extend it using the
+            # dictionary's keys.
+            targets.extend(pkg_params)
 
     cmd = [_yum(), '--quiet', '-y']
     for args in (repo_arg, exclude_arg, branch_arg):
@@ -1349,8 +1352,7 @@ def upgrade(refresh=True,
     if skip_verify:
         cmd.append('--nogpgcheck')
     cmd.append('upgrade')
-    if targets:
-        cmd.extend(targets)
+    cmd.extend(targets)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
