@@ -1382,7 +1382,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_name,
             )
             if virtual_err is not None:
-                log.debug('Error loading {0}.{1}: {2}'.format(self.tag,
+                log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
                                                               module_name,
                                                               virtual_err,
                                                               ))

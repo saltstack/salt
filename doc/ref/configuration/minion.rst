@@ -1207,8 +1207,73 @@ environments is to isolate via the top file.
 
 .. code-block:: yaml
 
-    environment: None
+    environment: dev
 
+.. conf_minion:: top_file_merging_strategy
+
+``top_file_merging_strategy``
+-----------------------------
+
+Default: ``merge``
+
+When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
+for a :ref:`highstate <running-highstate>`, all environments' top files are
+inspected. This config option determines how the SLS targets in those top files
+are handled.
+
+When set to ``merge``, the targets for all SLS files in all environments are
+merged together. A given environment's SLS targets for the highstate will
+consist of the collective SLS targets specified for that environment in all top
+files. The environments will be merged in no specific order, for greater
+control over the order in which the environments are merged use
+:conf_minion:`env_order`.
+
+When set to ``same``, then for each environment, only that environment's top
+file is processed, with the others being ignored. For example, only the ``dev``
+environment's top file will be processed for the ``dev`` environment, and any
+SLS targets defined for ``dev`` in the ``base`` environment's (or any other
+environment's) top file will be ignored. If an environment does not have a top
+file, then the top file from the :conf_minion:`default_top` config parameter
+will be used as a fallback.
+
+.. code-block:: yaml
+
+    top_file_merging_strategy: same
+
+.. conf_minion:: env_order
+
+``env_order``
+-------------
+
+Default: ``[]``
+
+When :conf_minion:`top_file_merging_strategy` is set to ``merge``, and no
+environment is specified for a :ref:`highstate <running-highstate>`, this
+config option allows for the order in which top files are merged to be
+explicitly defined.
+
+.. code-block:: yaml
+
+    env_order:
+      - base
+      - dev
+      - qa
+
+.. conf_minion:: default_top
+
+``default_top``
+---------------
+
+Default: ``base``
+
+When :conf_minion:`top_file_merging_strategy` is set to ``same``, and no
+environment is specified for a :ref:`highstate <running-highstate>`, this
+config option specifies a fallback environment in which to look for a top file
+if an environment lacks one.
+
+.. code-block:: yaml
+
+    default_top: dev
 
 File Directory Settings
 =======================

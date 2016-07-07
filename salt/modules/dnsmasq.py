@@ -118,12 +118,16 @@ def get_config(config_file='/etc/dnsmasq.conf'):
     '''
     Dumps all options from the config file.
 
+    config_file
+        The location of the config file from which to obtain contents.
+        Defaults to ``/etc/dnsmasq.conf``.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' dnsmasq.get_config
-        salt '*' dnsmasq.get_config file=/etc/dnsmasq.conf
+        salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     '''
     dnsopts = _parse_dnamasq(config_file)
     if 'conf-dir' in dnsopts:
