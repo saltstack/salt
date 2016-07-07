@@ -37,44 +37,44 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-import integration
+# Import 3rd-party libs
+import pytest
 
 
-class SSHCustomModuleTest(integration.SSHCase):
+class TestSSHCustomModule(object):
     '''
     Test sls with custom module functionality using ssh
     '''
 
-    def test_ssh_regular_module(self):
+    def test_ssh_regular_module(self, session_salt_ssh):
         '''
         Test regular module work using SSHCase environment
         '''
         expected = 'hello'
-        cmd = self.run_function('test.echo', arg=['hello'])
-        self.assertEqual(expected, cmd)
+        cmd = session_salt_ssh.run_sync('test.echo', 'hello')
+        assert expected == cmd
 
-    def test_ssh_custom_module(self):
+    def test_ssh_custom_module(self, session_salt_ssh):
         '''
         Test custom module work using SSHCase environment
         '''
         expected = 'hello'[::-1]
-        cmd = self.run_function('test.recho', arg=['hello'])
-        self.assertEqual(expected, cmd)
+        cmd = session_salt_ssh.run_sync('test.recho', 'hello')
+        assert expected == cmd
 
-    def test_ssh_sls_with_custom_module(self):
+    def test_ssh_sls_with_custom_module(self, session_salt_ssh):
         '''
         Test sls with custom module work using SSHCase environment
         '''
         expected = {
             "module_|-regular-module_|-test.echo_|-run": 'hello',
             "module_|-custom-module_|-test.recho_|-run": 'olleh'}
-        cmd = self.run_function('state.sls', arg=['custom_module'])
-        for key in cmd:
-            if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
-                raise AssertionError('{0} is not a proper state return'
-                                     .format(cmd))
-            elif not cmd[key]['result']:
-                raise AssertionError(cmd[key]['comment'])
-            cmd_ret = cmd[key]['changes'].get('ret', None)
-            self.assertEqual(cmd_ret, expected[key])
+        cmd = session_salt_ssh.run_sync('state.sls', 'custom_module')
+        assert cmd.json is not None, '{0} is not a proper state return'.format(cmd.stdout)
+        for key in cmd.json:
+            if not isinstance(cmd.json[key], dict):
+                pytest.fail('{0} is not a proper state return'.format(cmd))
+            elif not cmd.json[key]['result']:
+                pytest.fail(cmd[key]['comment'])
+            cmd_ret = cmd.json[key]['changes'].get('ret', None)
+            assert cmd_ret == expected[key]
