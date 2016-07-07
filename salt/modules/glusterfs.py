@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
