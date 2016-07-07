@@ -654,13 +654,18 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def version_cmp(pkg1, pkg2):
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     .. versionadded:: 2015.5.4
 
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
+
+    ignore_epoch : False
+        Set to ``True`` to ignore the epoch when comparing versions
+
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 
@@ -669,7 +674,7 @@ def version_cmp(pkg1, pkg2):
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
 
-    return __salt__['lowpkg.version_cmp'](pkg1, pkg2)
+    return __salt__['lowpkg.version_cmp'](pkg1, pkg2, ignore_epoch=ignore_epoch)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
