@@ -395,7 +395,7 @@ class MinionBase(object):
         the pillar or grains changed
         '''
         if 'config.merge' in functions:
-            b_conf = functions['config.merge']('beacons')
+            b_conf = functions['config.merge']('beacons', self.opts['beacons'], omit_opts=True)
             if b_conf:
                 return self.beacons.process(b_conf)  # pylint: disable=no-member
         return []
