@@ -4,7 +4,7 @@ Return data to an elasticsearch server for indexing.
 
 :maintainer:    Jurnell Cockhren <jurnell.cockhren@sophicware.com>, Arnold Bechtoldt <mail@arnoldbechtoldt.com>
 :maturity:      New
-:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
+:depends:       `elasticsearch-py <https://elasticsearch-py.readthedocs.io/en/latest/>`_
 :platform:      all
 
 To enable this returner the elasticsearch python client must be installed
@@ -30,6 +30,22 @@ In order to have the returner apply to all minions:
 .. code-block:: yaml
 
     ext_job_cache: elasticsearch
+
+Minion configuration example:
+
+.. code-block:: yaml
+
+    elasticsearch:
+        hosts:
+          - "10.10.10.10:9200"
+          - "10.10.10.11:9200"
+          - "10.10.10.12:9200"
+        index_date: True
+        number_of_shards: 5
+        number_of_replicas: 1
+        functions_blacklist:
+          - "test.ping"
+
 '''
 
 # Import Python libs
@@ -82,7 +98,9 @@ def returner(ret):
     job_retcode = ret.get('retcode', 1)
 
     index = 'salt-{0}'.format(job_fun_escaped)
-    #index = 'salt-{0}-{1}'.format(job_fun_escaped, datetime.date.today().strftime('%Y.%m.%d')) #TODO prefer this? #TODO make it configurable!
+    if __salt__['config.option']('elasticsearch:index_date', False):
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
     functions_blacklist = __salt__['config.option'](
         'elasticsearch:functions_blacklist', [])
     doc_type_version = __salt__['config.option'](
@@ -143,6 +161,10 @@ def event_return(events):
         'default'
     )
 
+    if __salt__['config.option']('elasticsearch:index_date', False):
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
+
     _ensure_index(index)
 
     for event in events:
@@ -164,7 +186,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
 

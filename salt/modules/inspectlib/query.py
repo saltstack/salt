@@ -22,8 +22,9 @@ import logging
 
 # Import Salt Libs
 import salt.utils.network
-from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
+from salt.modules.inspectlib import EnvLoader
+from salt.modules.inspectlib.entities import (Package, PackageCfgFile, PayloadFile)
 
 log = logging.getLogger(__name__)
 
@@ -53,8 +54,8 @@ class SysInfo(object):
             log.error(msg)
             raise SIException(msg)
 
-        devpath, blocks, used, available, used_p, mountpoint = [elm for elm in out['stdout'].split(os.linesep)[-1].split(" ") if elm]
-
+        devpath, blocks, used, available, used_p, mountpoint = [elm for elm in
+                                                                out['stdout'].split(os.linesep)[-1].split(" ") if elm]
         return {
             'device': devpath, 'blocks': blocks, 'used': used,
             'available': available, 'used (%)': used_p, 'mounted': mountpoint,
@@ -135,7 +136,7 @@ class SysInfo(object):
         }
 
 
-class Query(object):
+class Query(EnvLoader):
     '''
     Query the system.
     This class is actually puts all Salt features together,
@@ -153,18 +154,23 @@ class Query(object):
 
     SCOPES = ["changes", "configuration", "identity", "system", "software", "services", "payload", "all"]
 
-    def __init__(self, scope):
+    def __init__(self, scope, cachedir=None):
         '''
         Constructor.
 
         :param scope:
         :return:
         '''
-        if scope not in self.SCOPES:
+        if scope and scope not in self.SCOPES:
             raise InspectorQueryException(
-                "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
+                "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES))
+            )
+        elif not scope:
+            raise InspectorQueryException(
+                "Scope cannot be empty. Must be one of: {0}".format(", ".join(self.SCOPES))
+            )
+        EnvLoader.__init__(self, cachedir=cachedir)
         self.scope = '_' + scope
-        self.db = DBHandle(globals()['__salt__']['config.get']('inspector.db', ''))
         self.local_identity = dict()
 
     def __call__(self, *args, **kwargs):
@@ -191,14 +197,11 @@ class Query(object):
 
         data = dict()
         self.db.open()
-        self.db.cursor.execute("SELECT id, name FROM inspector_pkg")
-        for pkg_id, pkg_name in self.db.cursor.fetchall():
-            self.db.cursor.execute("SELECT id, path FROM inspector_pkg_cfg_files WHERE pkgid=?", (pkg_id,))
+        for pkg in self.db.get(Package):
             configs = list()
-            for cnf_id, cnf_name in self.db.cursor.fetchall():
-                configs.append(cnf_name)
-            data[pkg_name] = configs
-        self.db.close()
+            for pkg_cfg in self.db.get(PackageCfgFile, eq={'pkgid': pkg.id}):
+                configs.append(pkg_cfg.path)
+            data[pkg.name] = configs
 
         if not data:
             raise InspectorQueryException("No inspected configuration yet available.")
@@ -404,7 +407,7 @@ class Query(object):
 
     def _payload(self, *args, **kwargs):
         '''
-        Find all unmanaged files.
+        Find all unmanaged files. Returns maximum 1000 values.
 
         Parameters:
 
@@ -416,6 +419,12 @@ class Query(object):
                       Values: name (default), id
         * **type**: Comma-separated type of included payload: dir (or directory), link and/or file.
         * **brief**: Return just a list of matches, if True. Default: False
+        * **offset**: Offset of the files
+        * **max**: Maximum returned values. Default 1000.
+
+        Options:
+
+        * **total**: Return a total amount of found payload files
         '''
         def _size_format(size, fmt):
             if fmt is None:
@@ -431,9 +440,8 @@ class Query(object):
             elif fmt == "gb":
                 return "{0} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
 
-        filter = None
-        if 'filter' in kwargs:
-            filter = kwargs['filter']
+        filter = kwargs.get('filter')
+        offset = kwargs.get('offset', 0)
 
         timeformat = kwargs.get("time", "tz")
         if timeformat not in ["ticks", "tz"]:
@@ -459,51 +467,28 @@ class Query(object):
                 raise InspectorQueryException('Unknown "{0}" values for parameter "type". '
                                               'Should be comma separated one or more of '
                                               'dir, file and/or link.'.format(", ".join(incl_type)))
-
-        where_clause = set()
-        for i_type in incl_type:
-            if i_type in ["file", "f"]:
-                where_clause.add("p_type = 'f'")
-            elif i_type in ["d", "dir", "directory"]:
-                where_clause.add("p_type = 'd'")
-            elif i_type in ["l", "link"]:
-                where_clause.add("p_type = 'l'")
-
-        if filter:
-            where_filter_clause = " AND path LIKE '{0}%'".format(filter)
-        else:
-            where_filter_clause = ""
-
         self.db.open()
-        self.db.cursor.execute("SELECT id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime "
-                               "FROM inspector_payload "
-                               "WHERE {0}{1}".format(" OR ".join(list(where_clause)),
-                                                     where_filter_clause))
+
+        if "total" in args:
+            return {'total': len(self.db.get(PayloadFile))}
 
         brief = kwargs.get("brief")
-        if brief:
-            data = list()
-        else:
-            data = dict()
-
-        for pld_data in self.db.cursor.fetchall():
-            p_id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime = pld_data
+        pld_files = list() if brief else dict()
+        for pld_data in self.db.get(PayloadFile)[offset:offset + kwargs.get('max', 1000)]:
             if brief:
-                data.append(path)
+                pld_files.append(pld_data.path)
             else:
-                data[path] = {
-                    'uid': self._id_resolv(uid, named=(owners == "id")),
-                    'gid': self._id_resolv(gid, named=(owners == "id"), uid=False),
-                    'size': _size_format(p_size, fmt=size_fmt),
-                    'mode': oct(mode),
-                    'accessed': tfmt(atime),
-                    'modified': tfmt(mtime),
-                    'created': tfmt(ctime),
+                pld_files[pld_data.path] = {
+                    'uid': self._id_resolv(pld_data.uid, named=(owners == "id")),
+                    'gid': self._id_resolv(pld_data.gid, named=(owners == "id"), uid=False),
+                    'size': _size_format(pld_data.p_size, fmt=size_fmt),
+                    'mode': oct(pld_data.mode),
+                    'accessed': tfmt(pld_data.atime),
+                    'modified': tfmt(pld_data.mtime),
+                    'created': tfmt(pld_data.ctime),
                 }
 
-        self.db.close()
-
-        return data
+        return pld_files
 
     def _all(self, *args, **kwargs):
         '''

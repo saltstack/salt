@@ -7,6 +7,7 @@ State module for Cisco NX OS Switches Proxy minions
 For documentation on setting up the nxos proxy minion look in the documentation
 for :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`.
 '''
+from __future__ import absolute_import
 import re
 
 

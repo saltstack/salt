@@ -120,7 +120,7 @@ def present(
 
     cache_node_type
         The compute and memory capacity of the nodes in the cache cluster.
-        cache.t1.micro, cache.m1.small, etc. See: http://boto.readthedocs.org/en/latest/ref/elasticache.html#boto.elasticache.layer1.ElastiCacheConnection.create_cache_cluster
+        cache.t1.micro, cache.m1.small, etc. See: https://boto.readthedocs.io/en/latest/ref/elasticache.html#boto.elasticache.layer1.ElastiCacheConnection.create_cache_cluster
 
     num_cache_nodes
         The number of cache nodes that the cache cluster will have.

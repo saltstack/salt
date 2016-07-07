@@ -53,7 +53,7 @@ def _get_keyring(keyfile):
     return keyring
 
 
-def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver):
+def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout):
     '''
     Create a DNS record. The nameserver must be an IP address and the master running
     this runner must have create privileges on that server.
@@ -62,13 +62,13 @@ def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver):
 
     .. code-block:: bash
 
-        salt-run ddns.create domain.com my-test-vm 3600 A 10.20.30.40 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
+        salt-run ddns.create domain.com my-test-vm 3600 A 10.20.30.40 5 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
     '''
     if zone in name:
         name = name.replace(zone, '').rstrip('.')
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
-    answer = dns.query.udp(request, nameserver)
+    answer = dns.query.udp(request, nameserver, timeout)
 
     rdata_value = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdata_value, data)
@@ -82,14 +82,14 @@ def create(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver):
     dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
     dns_update.add(name, ttl, rdata)
 
-    answer = dns.query.udp(dns_update, nameserver)
+    answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
         return {fqdn: 'Failed to create record of type \'{0}\''.format(rdtype)}
 
     return {fqdn: 'Created record of type \'{0}\': {1} -> {2}'.format(rdtype, fqdn, data)}
 
 
-def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, replace=False):
+def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, timeout, replace=False):
     '''
     Replace, or update a DNS record. The nameserver must be an IP address and the master running
     this runner must have update privileges on that server.
@@ -103,13 +103,13 @@ def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, replace=
 
     .. code-block:: bash
 
-        salt-run ddns.update domain.com my-test-vm 3600 A 10.20.30.40 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
+        salt-run ddns.update domain.com my-test-vm 3600 A 10.20.30.40 5 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
     '''
     if zone in name:
         name = name.replace(zone, '').rstrip('.')
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
-    answer = dns.query.udp(request, nameserver)
+    answer = dns.query.udp(request, nameserver, timeout)
     if not answer.answer:
         return {fqdn: 'No matching DNS record(s) found'}
 
@@ -131,14 +131,14 @@ def update(zone, name, ttl, rdtype, data, keyname, keyfile, nameserver, replace=
     dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
     dns_update.replace(name, ttl, rdata)
 
-    answer = dns.query.udp(dns_update, nameserver)
+    answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
         return {fqdn: 'Failed to update record of type \'{0}\''.format(rdtype)}
 
     return {fqdn: 'Updated record of type \'{0}\''.format(rdtype)}
 
 
-def delete(zone, name, keyname, keyfile, nameserver, rdtype=None, data=None):
+def delete(zone, name, keyname, keyfile, nameserver, timeout, rdtype=None, data=None):
     '''
     Delete a DNS record.
 
@@ -153,7 +153,7 @@ def delete(zone, name, keyname, keyfile, nameserver, rdtype=None, data=None):
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
 
-    answer = dns.query.udp(request, nameserver)
+    answer = dns.query.udp(request, nameserver, timeout)
     if not answer.answer:
         return {fqdn: 'No matching DNS record(s) found'}
 
@@ -171,14 +171,14 @@ def delete(zone, name, keyname, keyfile, nameserver, rdtype=None, data=None):
     else:
         dns_update.delete(name)
 
-    answer = dns.query.udp(dns_update, nameserver)
+    answer = dns.query.udp(dns_update, nameserver, timeout)
     if answer.rcode() > 0:
         return {fqdn: 'Failed to delete DNS record(s)'}
 
     return {fqdn: 'Deleted DNS record(s)'}
 
 
-def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver):
+def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver, timeout):
     '''
     Create both A and PTR (reverse) records for a host.
 
@@ -186,14 +186,14 @@ def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver):
 
     .. code-block:: bash
 
-        salt-run ddns.add_host domain.com my-test-vm 3600 10.20.30.40 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
+        salt-run ddns.add_host domain.com my-test-vm 3600 10.20.30.40 5 my-tsig-key /etc/salt/tsig.keyring 10.0.0.1
     '''
     res = []
     if zone in name:
         name = name.replace(zone, '').rstrip('.')
     fqdn = '{0}.{1}'.format(name, zone)
 
-    ret = create(zone, name, ttl, 'A', ip, keyname, keyfile, nameserver)
+    ret = create(zone, name, ttl, 'A', ip, keyname, keyfile, nameserver, timeout)
     res.append(ret[fqdn])
 
     parts = ip.split('.')[::-1]
@@ -209,7 +209,7 @@ def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver):
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
         rev_fqdn = '{0}.{1}'.format(name, zone)
-        ret = create(zone, name, ttl, 'PTR', "{0}.".format(fqdn), keyname, keyfile, nameserver)
+        ret = create(zone, name, ttl, 'PTR', "{0}.".format(fqdn), keyname, keyfile, nameserver, timeout)
 
         if "Created" in ret[rev_fqdn]:
             res.append(ret[rev_fqdn])
@@ -220,7 +220,7 @@ def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver):
     return {fqdn: res}
 
 
-def delete_host(zone, name, keyname, keyfile, nameserver):
+def delete_host(zone, name, keyname, keyfile, nameserver, timeout):
     '''
     Delete both forward (A) and reverse (PTR) records for a host only if the
     forward (A) record exists.
@@ -236,14 +236,14 @@ def delete_host(zone, name, keyname, keyfile, nameserver):
         name = name.replace(zone, '').rstrip('.')
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, 'A')
-    answer = dns.query.udp(request, nameserver)
+    answer = dns.query.udp(request, nameserver, timeout)
 
     try:
         ips = [i.address for i in answer.answer[0].items]
     except IndexError:
         ips = []
 
-    ret = delete(zone, name, keyname, keyfile, nameserver)
+    ret = delete(zone, name, keyname, keyfile, nameserver, timeout)
     res.append("{0} of type \'A\'".format(ret[fqdn]))
 
     for ip in ips:
@@ -259,7 +259,7 @@ def delete_host(zone, name, keyname, keyfile, nameserver):
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
             rev_fqdn = '{0}.{1}'.format(name, zone)
-            ret = delete(zone, name, keyname, keyfile, nameserver, 'PTR', "{0}.".format(fqdn))
+            ret = delete(zone, name, keyname, keyfile, nameserver, timeout, 'PTR', "{0}.".format(fqdn))
 
             if "Deleted" in ret[rev_fqdn]:
                 res.append("{0} of type \'PTR\'".format(ret[rev_fqdn]))

@@ -5,7 +5,7 @@ Connection module for Amazon CloudWatch
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
@@ -191,7 +191,7 @@ def create_or_update_alarm(
     Create or update a cloudwatch alarm.
 
     Params are the same as:
-        http://boto.readthedocs.org/en/latest/ref/cloudwatch.html#boto.ec2.cloudwatch.alarm.MetricAlarm.
+        https://boto.readthedocs.io/en/latest/ref/cloudwatch.html#boto.ec2.cloudwatch.alarm.MetricAlarm.
 
     Dimensions must be a dict. If the value of Dimensions is a string, it will
     be json decoded to produce a dict. alarm_actions, insufficient_data_actions,

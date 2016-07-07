@@ -240,11 +240,24 @@ def present(
         # TODO: Ensure image_id, key_name, security_groups and instance_profile
         # exist, or throw an invocation error.
         created = __salt__['boto_asg.create_launch_configuration'](
-            name, image_id, key_name, security_groups, user_data,
-            instance_type, kernel_id, ramdisk_id, block_device_mappings,
-            instance_monitoring, spot_price, instance_profile_name,
-            ebs_optimized, associate_public_ip_address,
-            region, key, keyid, profile)
+            name,
+            image_id,
+            key_name=key_name,
+            security_groups=security_groups,
+            user_data=user_data,
+            instance_type=instance_type,
+            kernel_id=kernel_id,
+            ramdisk_id=ramdisk_id,
+            block_device_mappings=block_device_mappings,
+            instance_monitoring=instance_monitoring,
+            spot_price=spot_price,
+            instance_profile_name=instance_profile_name,
+            ebs_optimized=ebs_optimized,
+            associate_public_ip_address=associate_public_ip_address,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile)
         if created:
             ret['changes']['old'] = None
             ret['changes']['new'] = name

@@ -24,7 +24,7 @@ requires very little. For example:
       verify: True
 
 The ``driver`` refers to the Consul module, all other options are optional.
-For option details see: http://python-consul.readthedocs.org/en/latest/#consul
+For option details see: https://python-consul.readthedocs.io/en/latest/#consul
 '''
 from __future__ import absolute_import
 

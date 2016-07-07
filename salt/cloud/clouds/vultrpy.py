@@ -341,9 +341,6 @@ def create(vm_):
         if str(data.get('default_password', '')) == '':
             time.sleep(1)
             return False
-        if '!' not in data['default_password']:
-            time.sleep(1)
-            return False
         return data['default_password']
 
     vm_['ssh_host'] = salt.utils.cloud.wait_for_fun(
@@ -361,7 +358,7 @@ def create(vm_):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default=15,
+        default=None,
     )
 
     # Bootstrap

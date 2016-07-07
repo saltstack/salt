@@ -5,7 +5,7 @@ Connection module for Amazon KMS
 .. versionadded:: 2015.8.0
 
 :configuration: This module accepts explicit kms credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at::
 

@@ -5,7 +5,7 @@ Connection module for Amazon SQS
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit sqs credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
@@ -81,7 +81,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a queue exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.exists myqueue region=us-east-1
     '''
@@ -97,7 +99,9 @@ def create(name, region=None, key=None, keyid=None, profile=None):
     '''
     Create an SQS queue.
 
-    CLI example to create a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.create myqueue region=us-east-1
     '''
@@ -118,7 +122,9 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an SQS queue.
 
-    CLI example to delete a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.delete myqueue region=us-east-1
     '''
@@ -134,11 +140,49 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     return True
 
 
+def get_all_queues(prefix=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of Queue() objects describing all visible queues.
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_sqs.get_all_queues region=us-east-1 --output yaml
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_all_queues(prefix=prefix)
+    except boto.exception.SQSError:
+        log.error('Error listing queues')
+        return []
+
+
+def list(prefix=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of the names of all visible queues.
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_sqs.list region=us-east-1
+    '''
+    return [r.name for r in get_all_queues(prefix=prefix, region=region, key=key,
+                                         keyid=keyid, profile=profile)]
+
+
 def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if attributes are set on an SQS queue.
+    Return attributes currently set on an SQS queue.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.get_attributes myqueue
     '''
@@ -157,7 +201,9 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     '''
     Set attributes on an SQS queue.
 
-    CLI example to set attributes on a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''

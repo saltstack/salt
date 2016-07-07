@@ -5,7 +5,7 @@ Connection module for Amazon Autoscale Groups
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit autoscale credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 
@@ -40,6 +40,7 @@ Connection module for Amazon Autoscale Groups
             region: us-east-1
 
 :depends: boto
+:depends: boto3
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -65,11 +66,17 @@ try:
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    import boto3  # pylint: disable=unused-import
+    from botocore.exceptions import ClientError
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
+
 # Import Salt libs
+import salt.utils.boto3
+import salt.utils.compat
 import salt.utils.odict as odict
 
 
@@ -84,6 +91,14 @@ def __virtual__():
     setattr(sys.modules[__name__], '_get_ec2_conn',
             __utils__['boto.get_connection_func']('ec2'))
     return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto3.assign_funcs'](
+            __name__, 'autoscaling',
+            get_conn_funcname='_get_conn_autoscaling_boto3')
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -582,6 +597,51 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
+def get_all_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
+
+    .. versionadded:: Carbon
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.get_all_groups region=us-east-1 --output yaml
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        next_token = ''
+        asgs = []
+        while next_token is not None:
+            ret = conn.get_all_groups(next_token=next_token)
+            asgs += [a for a in ret]
+            next_token = ret.next_token
+        return asgs
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_groups(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return all AutoScale Groups visible in the account
+    (as a list of names).
+
+    .. versionadded:: Carbon
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.list_groups region=us-east-1
+
+    '''
+    return [a.name for a in get_all_groups(region=region, key=key, keyid=keyid, profile=profile)]
+
+
 def get_instances(name, lifecycle_state="InService", health_status="Healthy",
                   attribute="private_ip_address", attributes=None, region=None,
                   key=None, keyid=None, profile=None):
@@ -620,3 +680,54 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
         # properly handle case when not all instances have the requested attribute
         return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
     return [getattr(instance, attribute).encode("ascii") for instance in instances]
+
+
+def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Switch desired instances to StandBy mode
+
+    CLI example::
+
+        salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    .. versionadded:: Carbon
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.enter_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name,
+            ShouldDecrementDesiredCapacity=should_decrement_desired_capacity)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])
+
+
+def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Exit desired instances from StandBy mode
+
+    CLI example::
+
+        salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    .. versionadded:: Carbon
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.exit_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])

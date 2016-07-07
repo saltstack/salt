@@ -11,7 +11,7 @@ services, and so may incur charges.
 This module uses boto, which can be installed via package, or pip.
 
 This module accepts explicit autoscale credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
 configuration is necessary. More Information available at:
 
@@ -326,7 +326,7 @@ def present(
 
     scaling_policies
         List of scaling policies.  Each policy is a dict of key-values described by
-        http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
+        https://boto.readthedocs.io/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
     scaling_policies_from_pillar:
         name of pillar dict that contains scaling policy settings.   Scaling policies defined for
@@ -436,6 +436,17 @@ def present(
             'keyid': keyid,
             'profile': profile
         }
+
+        if 'image_name' in launch_config:
+            image_name = launch_config['image_name']
+            args = {'ami_name': image_name, 'region': region, 'key': key,
+                    'keyid': keyid, 'profile': profile}
+            image_ids = __salt__['boto_ec2.find_images'](**args)
+            if len(image_ids):
+                launch_config['image_id'] = image_ids[0]
+            else:
+                launch_config['image_id'] = image_name
+            del launch_config['image_name']
 
         if vpc_id:
             log.debug('Auto Scaling Group {0} is a associated with a vpc')
