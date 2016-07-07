@@ -36,7 +36,7 @@ if not %errorLevel%==0 (
 :: Install Current Version of salt
 @echo  %0 :: Install Current Version of salt...
 @echo ---------------------
-"%PyDir%\python.exe" "%SrcDir%\setup.py" install --force
+"%PyDir%\python.exe" "%SrcDir%\setup.py" --quiet install --force
 
 :: Build the Salt Package
 @echo  %0 :: Build the Salt Package...
