@@ -5694,7 +5694,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     grains = __salt__['dockerng.call'](name, function='grains.items')
 
     # compile pillar with container grains
-    pillar = _gather_pillar(saltenv, {}, grains)
+    pillar = _gather_pillar(saltenv, {}, **grains)
 
     trans_tar = _prepare_trans_tar(mods=mods, saltenv=saltenv, pillar=pillar)
     ret = None
