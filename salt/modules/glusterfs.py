@@ -76,7 +76,11 @@ def _gluster_xml(cmd):
         result = __salt__['cmd.run'](
             'gluster --xml --mode=script', stdin="{0}\n".format(cmd)
         )
-    root = ET.fromstring(_gluster_output_cleanup(result))
+
+    try:
+        root = ET.fromstring(_gluster_output_cleanup(result))
+    except ET.ParseError:
+        raise CommandExecutionError('\n'.join(result.splitlines()[:-1]))
 
     if int(root.find('opRet').text) != 0:
         raise CommandExecutionError(root.find('opErrstr').text)
