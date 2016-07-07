@@ -62,6 +62,7 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
 import salt.log.setup
+import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
@@ -142,8 +143,7 @@ class SMaster(object):
 
 class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
-    A generalized maintenance process which performances maintenance
-    routines.
+    A generalized maintenance process which performs maintenance routines.
     '''
     def __init__(self, opts, log_queue=None):
         '''
@@ -955,21 +955,14 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
-        with salt.utils.fopen(pub_path, 'r') as fp_:
-            minion_pub = fp_.read()
-        tmp_pub = salt.utils.mkstemp()
-        with salt.utils.fopen(tmp_pub, 'w+') as fp_:
-            fp_.write(minion_pub)
 
-        pub = None
         try:
-            with salt.utils.fopen(tmp_pub) as fp_:
+            with salt.utils.fopen(pub_path, 'r') as fp_:
                 pub = RSA.importKey(fp_.read())
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, err))
+            log.error('Unable to load public key "{0}": {1}'
+                      .format(pub_path, err))
         try:
-            os.remove(tmp_pub)
             if salt.crypt.public_decrypt(pub, token) == b'salt':
                 return True
         except ValueError as err:
@@ -1685,7 +1678,7 @@ class ClearFuncs(object):
             log.warning(msg)
             return dict(error=dict(name='EauthAuthenticationError',
                                    message=msg))
-        if not self.loadauth.time_auth(clear_load):
+        if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
@@ -1975,14 +1968,16 @@ class ClearFuncs(object):
                 return ''
 
             # Compile list of authorized actions for the user
-            auth_list = []
-            # Add permissions for '*' or user-specific to the auth list
-            for user_key in ('*', token['name']):
-                auth_list.extend(eauth_config.get(user_key, []))
-            # Add any add'l permissions allowed by group membership
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            auth_list = token.get('auth_list')
+            if auth_list is None:
+                auth_list = []
+                # Add permissions for '*' or user-specific to the auth list
+                for user_key in ('*', token['name']):
+                    auth_list.extend(eauth_config.get(user_key, []))
+                # Add any add'l permissions allowed by group membership
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2007,10 +2002,11 @@ class ClearFuncs(object):
                     'Authentication failure of type "eauth" occurred.'
                 )
                 return ''
+            auth_list = None
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                if groups is None:
+                if groups is None or groups is False:
                     groups = []
                 group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
@@ -2048,7 +2044,10 @@ class ClearFuncs(object):
 
                 # Perform the actual authentication. If we fail here, do not
                 # continue.
-                if not self.loadauth.time_auth(extra):
+                auth_ret = self.loadauth.time_auth(extra)
+                if isinstance(auth_ret, list):
+                    auth_list = auth_ret
+                elif not auth_ret:
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2063,23 +2062,21 @@ class ClearFuncs(object):
                     type_, value_, traceback_))
                 return ''
 
-#            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
-
             # We now have an authenticated session and it is time to determine
             # what the user has access to.
-
-            auth_list = []
-            if '*' in self.opts['external_auth'][extra['eauth']]:
-                auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
-            if name in self.opts['external_auth'][extra['eauth']]:
-                auth_list = self.opts['external_auth'][extra['eauth']][name]
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(
-                        self.opts['external_auth'][extra['eauth']],
-                        groups,
-                        auth_list)
-            if extra['eauth'] == 'ldap':
-                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if auth_list is None:
+                auth_list = []
+                if '*' in self.opts['external_auth'][extra['eauth']]:
+                    auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
+                if name in self.opts['external_auth'][extra['eauth']]:
+                    auth_list = self.opts['external_auth'][extra['eauth']][name]
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(
+                            self.opts['external_auth'][extra['eauth']],
+                            groups,
+                            auth_list)
+                if extra['eauth'] == 'ldap':
+                    auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
@@ -2272,21 +2269,40 @@ class ClearFuncs(object):
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:
+            fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
+            save_load_func = True
+
+            # Get the returner's save_load arg_spec.
             try:
-                fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
-            except KeyError:
+                arg_spec = salt.utils.args.get_function_argspec(fstr)
+
+                # Check if 'minions' is included in returner's save_load arg_spec.
+                # This may be missing in custom returners, which we should warn about.
+                if 'minions' not in arg_spec.args:
+                    log.critical(
+                        'The specified returner used for the external job cache '
+                        '\'{0}\' does not have a \'minions\' kwarg in the returner\'s '
+                        'save_load function.'.format(
+                            self.opts['ext_job_cache']
+                        )
+                    )
+            except AttributeError:
+                save_load_func = False
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
                         self.opts['ext_job_cache']
                     )
                 )
-            except Exception:
-                log.critical(
-                    'The specified returner threw a stack trace:\n',
-                    exc_info=True
-                )
+
+            if save_load_func:
+                try:
+                    self.mminion.returners[fstr](clear_load['jid'], clear_load, minions=minions)
+                except Exception:
+                    log.critical(
+                        'The specified returner threw a stack trace:\n',
+                        exc_info=True
+                    )
 
         # always write out to the master job caches
         try:

@@ -121,10 +121,10 @@ def present(
         Name of the IAM role.
 
     policy_document
-        The policy that grants an entity permission to assume the role. (See http://boto.readthedocs.org/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
+        The policy that grants an entity permission to assume the role. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
 
     path
-        The path to the role/instance profile. (See http://boto.readthedocs.org/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
+        The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
 
     policies
         A dict of IAM role policies.

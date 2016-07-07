@@ -1,0 +1,19 @@
+<?xml version='1.0'?>
+<stream>
+  <message type="info">Loading repository data...</message>
+  <message type="info">Reading installed packages...</message>
+  <message type="warning">Argument resolves to no package: foo</message>
+  <progress id="" name="(1/1) /var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm"/>
+  <download-result>
+    <solvable>
+      <kind>package</kind>
+      <name>nmap</name>
+      <edition epoch="0" version="6.46" release="1.72"/>
+      <arch>x86_64</arch>
+      <repository name="SLE-12-x86_64-Pool" alias="SLE-12-x86_64-Pool"/>
+    </solvable>
+    <localfile path="/var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm"/>
+  </download-result>
+  <progress id="" name="(1/1) /var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm" done="0"/>
+  <message type="info">download: Done.</message>
+</stream>

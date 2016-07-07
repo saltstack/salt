@@ -30,6 +30,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.syspaths as syspaths
@@ -233,8 +234,9 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
-                            msg += '\'{0}\' changed from \'{1}\' to ' \
-                                   '\'{2}\'\n'.format(pkg, old, new)
+                            # This must be able to handle unicode as some package names contain
+                            # non-ascii characters like "Français" or "Español". See Issue #33605.
+                            msg += u'\'{0}\' changed from \'{1}\' to \'{2}\'\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
@@ -698,8 +700,21 @@ class State(object):
                 )
         ret = pillar.compile_pillar()
         if self._pillar_override:
+            merge_strategy = self.opts.get(
+                'pillar_source_merging_strategy',
+                'smart'
+            )
+            merge_lists = self.opts.get(
+                'pillar_merge_lists',
+                False
+            )
             if isinstance(self._pillar_override, dict):
-                ret.update(self._decrypt_pillar_override())
+                ret = salt.utils.dictupdate.merge(
+                    ret,
+                    self._decrypt_pillar_override(),
+                    strategy=merge_strategy,
+                    merge_lists=merge_lists
+                )
             else:
                 decrypted = yamlloader.load(
                     self._decrypt_pillar_override(),
@@ -710,7 +725,12 @@ class State(object):
                         'Decrypted pillar data did not render to a dictionary'
                     )
                 else:
-                    ret.update(decrypted)
+                    ret = salt.utils.dictupdate.merge(
+                        ret,
+                        decrypted,
+                        strategy=merge_strategy,
+                        merge_lists=merge_lists
+                    )
         return ret
 
     def _mod_init(self, low):
@@ -1916,7 +1936,13 @@ class State(object):
         chunk is evaluated an event will be set up to the master with the
         results.
         '''
-        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event) and self.opts.get('master_uri'):
+        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event):
+            if not self.opts.get('master_uri'):
+                ev_func = lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+                    self.opts, self.opts['sock_dir'], listen=False).fire_event(ret, tag)
+            else:
+                ev_func = self.functions['event.fire_master']
+
             ret = {'ret': chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
@@ -1932,7 +1958,7 @@ class State(object):
                         )
                 ret['len'] = length
             preload = {'jid': self.jid}
-            self.functions['event.fire_master'](ret, tag, preload=preload)
+            ev_func(ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
         '''
@@ -2493,16 +2519,18 @@ class BaseHighState(object):
             )
             if contents:
                 found = 1
-            tops[self.opts['environment']] = [
-                compile_template(
-                    contents,
-                    self.state.rend,
-                    self.state.opts['renderer'],
-                    self.state.opts['renderer_blacklist'],
-                    self.state.opts['renderer_whitelist'],
-                    self.opts['environment']
-                )
-            ]
+                tops[self.opts['environment']] = [
+                    compile_template(
+                        contents,
+                        self.state.rend,
+                        self.state.opts['renderer'],
+                        self.state.opts['renderer_blacklist'],
+                        self.state.opts['renderer_whitelist'],
+                        saltenv=self.opts['environment']
+                    )
+                ]
+            else:
+                tops[self.opts['environment']] = [{}]
         elif self.opts['top_file_merging_strategy'] == 'merge':
             found = 0
             if self.opts.get('state_top_saltenv', False):
@@ -2513,19 +2541,19 @@ class BaseHighState(object):
                 )
                 if contents:
                     found = found + 1
-                else:
-                    log.debug('No contents loaded for env: {0}'.format(saltenv))
-
-                tops[saltenv].append(
-                    compile_template(
-                        contents,
-                        self.state.rend,
-                        self.state.opts['renderer'],
-                        self.state.opts['renderer_blacklist'],
-                        self.state.opts['renderer_whitelist'],
-                        saltenv
+                    tops[saltenv].append(
+                        compile_template(
+                            contents,
+                            self.state.rend,
+                            self.state.opts['renderer'],
+                            self.state.opts['renderer_blacklist'],
+                            self.state.opts['renderer_whitelist'],
+                            saltenv=saltenv
+                        )
                     )
-                )
+                else:
+                    tops[saltenv].append({})
+                    log.debug('No contents loaded for env: {0}'.format(saltenv))
             else:
                 for saltenv in self._get_envs():
                     contents = self.client.cache_file(
@@ -2534,19 +2562,19 @@ class BaseHighState(object):
                     )
                     if contents:
                         found = found + 1
-                    else:
-                        log.debug('No contents loaded for env: {0}'.format(saltenv))
-
-                    tops[saltenv].append(
-                        compile_template(
-                            contents,
-                            self.state.rend,
-                            self.state.opts['renderer'],
-                            self.state.opts['renderer_blacklist'],
-                            self.state.opts['renderer_whitelist'],
-                            saltenv
+                        tops[saltenv].append(
+                            compile_template(
+                                contents,
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                self.state.opts['renderer_blacklist'],
+                                self.state.opts['renderer_whitelist'],
+                                saltenv=saltenv
+                            )
                         )
-                    )
+                    else:
+                        tops[saltenv].append({})
+                        log.debug('No contents loaded for env: {0}'.format(saltenv))
             if found > 1:
                 log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
                             'Top file merging order is undefined; '

@@ -2,12 +2,12 @@
 '''
 Manage Windows features via the ServerManager powershell module
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import json
 
-# Import python libs
-from distutils.version import LooseVersion
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -26,8 +26,7 @@ def __virtual__():
     Load only on windows with servermanager module
     '''
     if not salt.utils.is_windows():
-        return False, 'Failed to load win_servermanager module: ' \
-                      'Only available on Windows systems.'
+        return False
 
     if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
         return False, 'Failed to load win_servermanager module: ' \
@@ -84,8 +83,9 @@ def list_available():
         salt '*' win_servermanager.list_available
     '''
     cmd = 'Import-Module ServerManager; ' \
-          'Get-WindowsFeature -erroraction silentlycontinue ' \
-          '-warningaction silentlycontinue'
+          'Get-WindowsFeature ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'
     return __salt__['cmd.shell'](cmd, shell='powershell')
 
 
@@ -103,9 +103,10 @@ def list_installed():
 
         salt '*' win_servermanager.list_installed
     '''
-    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
-          '-warningaction silentlycontinue | ' \
-          'Select DisplayName,Name,Installed'
+    cmd = 'Get-WindowsFeature ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue ' \
+          '| Select DisplayName,Name,Installed'
     features = _pshell_json(cmd)
 
     ret = {}
@@ -116,7 +117,7 @@ def list_installed():
     return ret
 
 
-def install(feature, recurse=False, restart=False):
+def install(feature, recurse=False, restart=False, source=None, exclude=None):
     '''
     Install a feature
 
@@ -130,7 +131,21 @@ def install(feature, recurse=False, restart=False):
 
     :param str feature: The name of the feature to install
 
-    :param bool recurse: Install all sub-features
+    :param bool recurse: Install all sub-features. Default is False
+
+    :param str source: Path to the source files if missing from the target
+        system. None means that the system will use windows update services to
+        find the required files. Default is None
+
+    :param bool restart: Restarts the computer when installation is complete, if
+        required by the role/feature installed. Default is False
+
+    :param str exclude: The name of the feature to exclude when installing the
+        named feature.
+
+        ..note:: As there is no exclude option for the ``Add-WindowsFeature``
+            command, the feature will be installed with other sub-features and
+            will then be removed.
 
     :param bool restart: Restarts the computer when installation is complete, if required by the role feature installed.
 
@@ -143,6 +158,7 @@ def install(feature, recurse=False, restart=False):
 
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Service True
+        salt '*' win_servermanager.install TFTP-Client source=d:\\side-by-side
     '''
 
     # Use Install-WindowsFeature on Windows 8 (osversion 6.2) and later minions. Includes Windows 2012+.
@@ -150,7 +166,7 @@ def install(feature, recurse=False, restart=False):
     # The newer command makes management tools optional so add them for partity with old behavior.
     command = 'Add-WindowsFeature'
     management_tools = ''
-    if LooseVersion(__grains__['osversion']) >= LooseVersion('6.2'):
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
         command = 'Install-WindowsFeature'
         management_tools = '-IncludeManagementTools'
 
@@ -162,25 +178,37 @@ def install(feature, recurse=False, restart=False):
     if restart:
         rst = '-Restart'
 
-    cmd = '{0} -Name {1} {2} {3} {4} ' \
+    src = ''
+    if source is not None:
+        src = '-Source {0}'.format(source)
+
+    cmd = '{0} -Name {1} {2} {3} {4} {5}' \
           '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue'.format(command,
                                                    _cmd_quote(feature),
                                                    sub,
+                                                   src,
                                                    rst,
                                                    management_tools)
     out = _pshell_json(cmd)
 
-    ret = {'ExitCode': out['ExitCode'],
-           'DisplayName': out['FeatureResult'][0]['DisplayName'],
-           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
-           'Success': out['Success']}
+    if exclude is not None:
+        remove(exclude, restart=restart)
 
-    return ret
+    if out['FeatureResult']:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': out['FeatureResult'][0]['DisplayName'],
+                'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+                'Success': out['Success']}
+    else:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': '{0} (already installed)'.format(feature),
+                'RestartNeeded': False,
+                'Success': out['Success']}
 
 
-def remove(feature):
-    '''
+def remove(feature, remove_payload=False, restart=False):
+    r'''
     Remove an installed feature
 
     .. note::
@@ -192,6 +220,13 @@ def remove(feature):
 
     :param str feature: The name of the feature to remove
 
+    :param bool remove_payload: True will cause the feature to be removed from
+        the side-by-side store (``%SystemDrive%:\Windows\WinSxS``). Default is
+        False
+
+    :param bool restart: Restarts the computer when uninstall is complete, if
+        required by the role/feature removed. Default is False
+
     :return: A dictionary containing the results of the uninstall
     :rtype: dict
 
@@ -201,14 +236,31 @@ def remove(feature):
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    cmd = 'Remove-WindowsFeature -Name {0} ' \
+    mgmt_tools = ''
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
+        mgmt_tools = '-IncludeManagementTools'
+
+    rmv = ''
+    if remove_payload:
+        rmv = '-Remove'
+
+    rst = ''
+    if restart:
+        rst = '-Restart'
+
+    cmd = 'Remove-WindowsFeature -Name {0} {1} {2} {3} ' \
           '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature))
+          '-WarningAction SilentlyContinue'\
+          .format(_cmd_quote(feature), mgmt_tools, rmv, rst)
     out = _pshell_json(cmd)
 
-    ret = {'ExitCode': out['ExitCode'],
-           'DisplayName': out['FeatureResult'][0]['DisplayName'],
-           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
-           'Success': out['Success']}
-
-    return ret
+    if out['FeatureResult']:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': out['FeatureResult'][0]['DisplayName'],
+                'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+                'Success': out['Success']}
+    else:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': '{0} (not installed)'.format(feature),
+                'RestartNeeded': False,
+                'Success': out['Success']}

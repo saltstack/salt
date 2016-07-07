@@ -28,7 +28,6 @@ from functools import partial
 # Import salt libs
 import salt.config as config
 import salt.defaults.exitcodes
-import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.version as version
@@ -260,7 +259,18 @@ class OptionParser(optparse.OptionParser, object):
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener()
+        if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
+            msg = '{0}\n'.format(msg)
         optparse.OptionParser.exit(self, status, msg)
+
+    def error(self, msg):
+        """error(msg : string)
+
+        Print a usage message incorporating 'msg' to stderr and exit.
+        This keeps option parsing exit status uniform for all parsing errors.
+        """
+        self.print_usage(sys.stderr)
+        self.exit(salt.defaults.exitcodes.EX_USAGE, '{0}: error: {1}\n'.format(self.get_prog_name(), msg))
 
 
 class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
@@ -920,8 +930,13 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
         if self.check_pidfile():
             pid = self.get_pidfile()
-            if self.check_pidfile() and self.is_daemonized(pid) and not ppid == pid:
-                return True
+            if not salt.utils.is_windows():
+                if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+                    return True
+            else:
+                # We have no os.getppid() on Windows. Best effort.
+                if self.check_pidfile() and self.is_daemonized(pid):
+                    return True
         return False
 
     def is_daemonized(self, pid):
@@ -1211,18 +1226,13 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         )
         self.add_option_group(group)
 
-        outputters = loader.outputters(
-            config.minion_config(None)
-        )
-
         group.add_option(
             '--out', '--output',
             dest='output',
             help=(
                 'Print the output from the \'{0}\' command using the '
-                'specified outputter. The builtins are {1}.'.format(
+                'specified outputter.'.format(
                     self.get_prog_name(),
-                    ', '.join([repr(k) for k in outputters])
                 )
             )
         )
@@ -1686,8 +1696,14 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
+        opts = config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
                                     cache_minion_id=True)
+        # Optimization: disable multiprocessing logging if running as a
+        #               daemon, without engines and without multiprocessing
+        if not opts.get('engines') and not opts.get('multiprocessing', True) \
+                and self.options.daemon:  # pylint: disable=no-member
+            self._setup_mp_logging_listener_ = False
+        return opts
 
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
@@ -2071,7 +2087,7 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2523,7 +2539,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Requires function, --grains or --doc')
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2775,6 +2791,20 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Pass a JID to be used instead of generating one.'
         )
 
+        ports_group = optparse.OptionGroup(
+            self, 'Port Forwarding Options',
+            'Parameters for setting up SSH port forwarding.'
+        )
+        ports_group.add_option(
+            '--remote-port-forwards',
+            dest='ssh_remote_port_forwards',
+            help='Setup remote port forwarding using the same syntax as with '
+                 'the -R parameter of ssh. A comma separated list of port '
+                 'forwarding definitions will be translated into multiple '
+                 '-R parameters.'
+        )
+        self.add_option_group(ports_group)
+
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
             'Parameters affecting authentication.'
@@ -2870,7 +2900,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2883,7 +2913,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         self.config['argv'] = self.args[1:]
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
@@ -2994,7 +3024,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
         if len(self.args) <= 1:
             if not self.args or self.args[0] not in ('update_repo',):
                 self.print_help()
-                self.exit(salt.defaults.exitcodes.EX_USAGE)
+                self.error('Insufficient arguments')
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())

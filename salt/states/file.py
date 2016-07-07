@@ -922,7 +922,7 @@ def symlink(
             )
     if __salt__['file.is_link'](name):
         # The link exists, verify that it matches the target
-        if __salt__['file.readlink'](name) != target:
+        if os.path.normpath(__salt__['file.readlink'](name)) != os.path.normpath(target):
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -1135,7 +1135,10 @@ def managed(name,
 
     source
         The source file to download to the minion, this source file can be
-        hosted on either the salt master server, or on an HTTP or FTP server.
+        hosted on either the salt master server (``salt://``), the salt minion
+        local file system (``/``), or on an HTTP or FTP server (``http(s)://``,
+        ``ftp://``).
+
         Both HTTPS and HTTP are supported as well as downloading directly
         from Amazon S3 compatible URLs with both pre-configured and automatic
         IAM credentials. (see s3.get state documentation)
@@ -1911,31 +1914,31 @@ def directory(name,
         .. code-block:: yaml
 
             /var/log/httpd:
-                file.directory:
+              file.directory:
                 - user: root
                 - group: root
                 - dir_mode: 755
                 - file_mode: 644
                 - recurse:
-                    - user
-                    - group
-                    - mode
+                  - user
+                  - group
+                  - mode
 
         Leave files or directories unchanged:
 
         .. code-block:: yaml
 
             /var/log/httpd:
-                file.directory:
+              file.directory:
                 - user: root
                 - group: root
                 - dir_mode: 755
                 - file_mode: 644
                 - recurse:
-                    - user
-                    - group
-                    - mode
-                    - ignore_dirs
+                  - user
+                  - group
+                  - mode
+                  - ignore_dirs
 
         .. versionadded:: 2015.5.0
 
@@ -2425,7 +2428,7 @@ def recurse(name,
 
     for precheck in source_list:
         if not precheck.startswith('salt://'):
-            return _error(ret, ('Invalid source {0!r} '
+            return _error(ret, ('Invalid source \'{0}\' '
                                 '(must be a salt:// URI)'.format(precheck)))
 
     # Select the first source in source_list that exists
@@ -2445,8 +2448,8 @@ def recurse(name,
                          if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The directory {0!r} does not exist on the salt fileserver '
-            'in saltenv {1!r}'.format(source, __env__)
+            'The directory \'{0}\' does not exist on the salt fileserver '
+            'in saltenv \'{1}\''.format(source, __env__)
         )
         return ret
 
@@ -2480,7 +2483,6 @@ def recurse(name,
             ret['changes'][path] = _ret['changes']
 
     def manage_file(path, source):
-        source = salt.utils.url.escape(source)
         if clean and os.path.exists(path) and os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
@@ -3821,9 +3823,9 @@ def append(name,
               - append
               - template: jinja
               - sources:
-                  - salt://motd/devops-messages.tmpl
-                  - salt://motd/hr-messages.tmpl
-                  - salt://motd/general-messages.tmpl
+                - salt://motd/devops-messages.tmpl
+                - salt://motd/hr-messages.tmpl
+                - salt://motd/general-messages.tmpl
 
     .. versionadded:: 0.9.5
     '''
@@ -4013,9 +4015,9 @@ def prepend(name,
               - prepend
               - template: jinja
               - sources:
-                  - salt://motd/devops-messages.tmpl
-                  - salt://motd/hr-messages.tmpl
-                  - salt://motd/general-messages.tmpl
+                - salt://motd/devops-messages.tmpl
+                - salt://motd/hr-messages.tmpl
+                - salt://motd/general-messages.tmpl
 
     .. versionadded:: 2014.7.0
     '''
@@ -4237,7 +4239,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv {1!r}'
+        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
                           .format(source, __env__))
         return ret
 
@@ -4406,6 +4408,14 @@ def copy(
 
         If the name is a directory then place the file inside the named
         directory
+
+    .. note::
+        The copy function accepts paths that are local to the Salt minion.
+        This function does not support salt://, http://, or the other
+        additional file paths that are supported by :mod:`states.file.managed
+        <salt.states.file.managed>` and :mod:`states.file.recurse
+        <salt.states.file.recurse>`.
+
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -4719,44 +4729,6 @@ def accumulated(name, filename, text, **kwargs):
     return ret
 
 
-def _merge_dict(obj, k, v):
-    changes = {}
-    if k in obj:
-        if isinstance(obj[k], list):
-            if isinstance(v, list):
-                for a in v:
-                    if a not in obj[k]:
-                        changes[k] = a
-                        obj[k].append(a)
-            else:
-                if obj[k] != v:
-                    changes[k] = v
-                    obj[k] = v
-        elif isinstance(obj[k], dict):
-            if isinstance(v, dict):
-                for a, b in six.iteritems(v):
-                    if isinstance(b, dict) or isinstance(b, list):
-                        updates = _merge_dict(obj[k], a, b)
-                        for x, y in six.iteritems(updates):
-                            changes[k + "." + x] = y
-                    else:
-                        if a not in obj[k] or obj[k][a] != b:
-                            changes[k + "." + a] = b
-                            obj[k][a] = b
-            else:
-                if obj[k] != v:
-                    changes[k] = v
-                    obj[k] = v
-        else:
-            if obj[k] != v:
-                changes[k] = v
-                obj[k] = v
-    else:
-        changes[k] = v
-        obj[k] = v
-    return changes
-
-
 def serialize(name,
               dataset=None,
               dataset_pillar=None,
@@ -4907,37 +4879,38 @@ def serialize(name,
         group = user
 
     serializer_name = '{0}.serialize'.format(formatter)
-    if serializer_name in __serializers__:
-        serializer = __serializers__[serializer_name]
-        if merge_if_exists:
-            if os.path.isfile(name):
-                if '{0}.deserialize'.format(formatter) in __serializers__:
-                    with salt.utils.fopen(name, 'r') as fhr:
-                        existing_data = serializer.deserialize(fhr)
-                else:
-                    return {'changes': {},
-                            'comment': ('{0} format is not supported for merging'
-                                        .format(formatter.capitalize())),
-                            'name': name,
-                            'result': False}
+    deserializer_name = '{0}.deserialize'.format(formatter)
 
-                if existing_data is not None:
-                    for k, v in six.iteritems(dataset):
-                        if k in existing_data:
-                            ret['changes'].update(_merge_dict(existing_data, k, v))
-                        else:
-                            ret['changes'][k] = v
-                            existing_data[k] = v
-                    dataset = existing_data
-
-        contents = __serializers__[serializer_name](dataset)
-    else:
+    if serializer_name not in __serializers__:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
                     formatter.capitalize()),
                 'name': name,
                 'result': False
                 }
+
+    if merge_if_exists:
+        if os.path.isfile(name):
+            if '{0}.deserialize'.format(formatter) not in __serializers__:
+                return {'changes': {},
+                        'comment': ('{0} format is not supported for merging'
+                                    .format(formatter.capitalize())),
+                        'name': name,
+                        'result': False}
+
+            with salt.utils.fopen(name, 'r') as fhr:
+                existing_data = __serializers__[deserializer_name](fhr)
+
+            if existing_data is not None:
+                merged_data = existing_data.copy()
+                merged_data.update(dataset)
+                if existing_data == merged_data:
+                    ret['result'] = True
+                    ret['comment'] = 'The file {0} is in the correct state'.format(name)
+                    return ret
+                dataset = merged_data
+
+    contents = __serializers__[serializer_name](dataset)
 
     contents += '\n'
 
@@ -5045,12 +5018,12 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - group: root
             - mode: 660
 
-       /dev/fifo:
-         file.mknod:
-           - ntype: p
-           - user: root
-           - group: root
-           - mode: 660
+        /dev/fifo:
+          file.mknod:
+            - ntype: p
+            - user: root
+            - group: root
+            - mode: 660
 
     .. versionadded:: 0.17.0
     '''
@@ -5194,7 +5167,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     else:
         ret['comment'] = (
-            'Node type unavailable: {0!r}. Available node types are '
+            'Node type unavailable: \'{0}\'. Available node types are '
             'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
         )
 

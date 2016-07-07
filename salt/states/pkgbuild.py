@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 The pkgbuild state is the front of Salt package building backend. It
-automatically
+automatically builds DEB and RPM packages from specified sources
 
 .. versionadded:: 2015.8.0
 
@@ -116,6 +116,7 @@ def built(name,
         Run the spec file through a templating engine
 
         .. versionchanged:: 2015.8.2
+
             This argument is now optional, allowing for no templating engine to
             be used if none is desired.
 
@@ -132,8 +133,8 @@ def built(name,
 
         .. code-block:: yaml
 
-                - env:
-                    DEB_BUILD_OPTIONS: 'nocheck'
+            - env:
+                DEB_BUILD_OPTIONS: 'nocheck'
 
         .. warning::
 
@@ -215,7 +216,14 @@ def built(name,
         ret['result'] = False
         return ret
 
-    ret['changes'] = __salt__['pkgbuild.build'](
+    func = 'pkgbuild.build'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for res in results:
+            if res.endswith('.rpm'):
+                func = 'rpmbuild.build'
+                break
+
+    ret['changes'] = __salt__[func](
         runas,
         tgt,
         dest_dir,
@@ -237,7 +245,12 @@ def built(name,
     return ret
 
 
-def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='builder'):
+def repo(name,
+         keyid=None,
+         env=None,
+         use_passphrase=False,
+         gnupghome='/etc/salt/gpgkeys',
+         runas='builder'):
     '''
     Make a package repository and optionally sign it and packages present,
     the name is directory to turn into a repo. This state is best used
@@ -293,8 +306,8 @@ def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/
 
         .. code-block:: yaml
 
-                - env:
-                    OPTIONS: 'ask-passphrase'
+            - env:
+                OPTIONS: 'ask-passphrase'
 
         .. warning::
 
@@ -330,6 +343,7 @@ def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/
            'changes': {},
            'comment': '',
            'result': True}
+
     if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
@@ -342,6 +356,13 @@ def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/
                           'documentation.')
         return ret
 
-    __salt__['pkgbuild.make_repo'](name, keyid, env, use_passphrase, gnupghome, runas)
+    func = 'pkgbuild.make_repo'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for file in os.listdir(name):
+            if file.endswith('.rpm'):
+                func = 'rpmbuild.make_repo'
+                break
+
+    __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
     ret['changes'] = {'refresh': True}
     return ret

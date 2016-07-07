@@ -5,7 +5,7 @@ Connection module for Amazon S3 Buckets
 .. versionadded:: 2016.3.0
 
 :configuration: This module accepts explicit Lambda credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 
@@ -44,6 +44,8 @@ Connection module for Amazon S3 Buckets
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+# disable complaints about perfectly falid non-assignment code
+#pylint: disable=W0106
 
 # Import Python libs
 from __future__ import absolute_import
@@ -52,9 +54,11 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import json
 
 # Import Salt libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
 import salt.utils
-from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -175,10 +179,10 @@ def create(Bucket,
         return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
-def delete(Bucket,
-            region=None, key=None, keyid=None, profile=None):
+def delete(Bucket, MFA=None, RequestPayer=None, Force=False,
+           region=None, key=None, keyid=None, profile=None):
     '''
-    Given a bucket name, delete it.
+    Given a bucket name, delete it, optionally emptying it first.
 
     Returns {deleted: true} if the bucket was deleted and returns
     {deleted: false} if the bucket was not deleted.
@@ -193,10 +197,58 @@ def delete(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        if Force:
+            empty(Bucket, MFA=MFA, RequestPayer=RequestPayer, region=region,
+                  key=key, keyid=keyid, profile=profile)
         conn.delete_bucket(Bucket=Bucket)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
+
+
+def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete objects in a given S3 bucket.
+
+    Returns {deleted: true} if all objects were deleted
+    and {deleted: false, failed: [key, ...]} otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_objects mybucket '{Objects: [Key: myobject]}'
+
+    '''
+
+    if isinstance(Delete, six.string_types):
+        Delete = json.loads(Delete)
+    if not isinstance(Delete, dict):
+        raise SaltInvocationError("Malformed Delete request.")
+    if 'Objects' not in Delete:
+        raise SaltInvocationError("Malformed Delete request.")
+
+    failed = []
+    objs = Delete['Objects']
+    for i in range(0, len(objs), 1000):
+        chunk = objs[i:i+1000]
+        subset = {'Objects': chunk, 'Quiet': True}
+        try:
+            args = {'Bucket': Bucket}
+            args.update({'MFA': MFA}) if MFA else None
+            args.update({'RequestPayer': RequestPayer}) if RequestPayer else None
+            args.update({'Delete': subset})
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            ret = conn.delete_objects(**args)
+            failed += ret.get('Errors', [])
+        except ClientError as e:
+            return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
+
+    if len(failed):
+        return {'deleted': False, 'failed': failed}
+    else:
+        return {'deleted': True}
 
 
 def describe(Bucket,
@@ -264,6 +316,35 @@ def describe(Bucket,
         return {'error': __utils__['boto3.get_error'](e)}
 
 
+def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
+          keyid=None, profile=None):
+    '''
+    Delete all objects in a given S3 bucket.
+
+    Returns {deleted: true} if all objects were deleted
+    and {deleted: false, failed: [key, ...]} otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.empty mybucket
+
+    '''
+
+    stuff = list_object_versions(Bucket, region=region, key=key, keyid=keyid,
+                                 profile=profile)
+    Delete = {}
+    Delete['Objects'] = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
+    Delete['Objects'] += [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('DeleteMarkers', [])]
+    if len(Delete['Objects']):
+        ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
+                             region=region, key=key, keyid=keyid, profile=profile)
+        if len(ret.get('failed', [])):
+            return {'deleted': False, 'failed': ret[failed]}
+    return {'deleted': True}
+
+
 def list(region=None, key=None, keyid=None, profile=None):
     '''
     List all buckets owned by the authenticated sender of the request.
@@ -285,8 +366,82 @@ def list(region=None, key=None, keyid=None, profile=None):
         buckets = conn.list_buckets()
         if not bool(buckets.get('Buckets')):
             log.warning('No buckets found')
-        del buckets['ResponseMetadata']
+        if 'ResponseMetadata' in buckets:
+            del buckets['ResponseMetadata']
         return buckets
+    except ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+
+
+def list_object_versions(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
+                 region=None, key=None, keyid=None, profile=None):
+    '''
+    List objects in a given S3 bucket.
+
+    Returns a list of objects.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.list_object_versions mybucket
+
+    '''
+
+    try:
+        Versions = []
+        DeleteMarkers = []
+        args = {'Bucket': Bucket}
+        args.update({'Delimiter': Delimiter}) if Delimiter else None
+        args.update({'EncodingType': EncodingType}) if Delimiter else None
+        args.update({'Prefix': Prefix}) if Prefix else None
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        IsTruncated = True
+        while IsTruncated:
+            ret = conn.list_object_versions(**args)
+            IsTruncated = ret.get('IsTruncated', False)
+            if IsTruncated in ('True', 'true', True):
+                args['KeyMarker'] = ret['NextKeyMarker']
+                args['VersionIdMarker'] = ret['NextVersionIdMarker']
+            Versions += ret.get('Versions', [])
+            DeleteMarkers += ret.get('DeleteMarkers', [])
+        return {'Versions': Versions, 'DeleteMarkers': DeleteMarkers}
+    except ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+
+
+def list_objects(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
+                 FetchOwner=False, StartAfter=None, region=None, key=None,
+                 keyid=None, profile=None):
+    '''
+    List objects in a given S3 bucket.
+
+    Returns a list of objects.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.list_objects mybucket
+
+    '''
+
+    try:
+        Contents = []
+        args = {'Bucket': Bucket, 'FetchOwner': FetchOwner}
+        args.update({'Delimiter': Delimiter}) if Delimiter else None
+        args.update({'EncodingType': EncodingType}) if Delimiter else None
+        args.update({'Prefix': Prefix}) if Prefix else None
+        args.update({'StartAfter': StartAfter}) if StartAfter else None
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        IsTruncated = True
+        while IsTruncated:
+            ret = conn.list_objects_v2(**args)
+            IsTruncated = ret.get('IsTruncated', False)
+            if IsTruncated in ('True', 'true', True):
+                args['ContinuationToken'] = ret['NextContinuationToken']
+            Contents += ret.get('Contents', [])
+        return {'Contents': Contents}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
 
@@ -321,7 +476,7 @@ def put_acl(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         if AccessControlPolicy is not None:
-            if isinstance(AccessControlPolicy, string_types):
+            if isinstance(AccessControlPolicy, six.string_types):
                 AccessControlPolicy = json.loads(AccessControlPolicy)
             kwargs['AccessControlPolicy'] = AccessControlPolicy
         for arg in ('ACL',
@@ -361,7 +516,7 @@ def put_cors(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if CORSRules is not None and isinstance(CORSRules, string_types):
+        if CORSRules is not None and isinstance(CORSRules, six.string_types):
             CORSRules = json.loads(CORSRules)
         conn.put_bucket_cors(Bucket=Bucket, CORSConfiguration={'CORSRules': CORSRules})
         return {'updated': True, 'name': Bucket}
@@ -396,7 +551,7 @@ def put_lifecycle_configuration(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if Rules is not None and isinstance(Rules, string_types):
+        if Rules is not None and isinstance(Rules, six.string_types):
             Rules = json.loads(Rules)
         conn.put_bucket_lifecycle_configuration(Bucket=Bucket, LifecycleConfiguration={'Rules': Rules})
         return {'updated': True, 'name': Bucket}
@@ -435,7 +590,7 @@ def put_logging(Bucket,
             logstatus = {'LoggingEnabled': logstate}
         else:
             logstatus = {}
-        if TargetGrants is not None and isinstance(TargetGrants, string_types):
+        if TargetGrants is not None and isinstance(TargetGrants, six.string_types):
             TargetGrants = json.loads(TargetGrants)
         conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {'updated': True, 'name': Bucket}
@@ -468,15 +623,15 @@ def put_notification_configuration(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if TopicConfigurations is None:
             TopicConfigurations = []
-        elif isinstance(TopicConfigurations, string_types):
+        elif isinstance(TopicConfigurations, six.string_types):
             TopicConfigurations = json.loads(TopicConfigurations)
         if QueueConfigurations is None:
             QueueConfigurations = []
-        elif isinstance(QueueConfigurations, string_types):
+        elif isinstance(QueueConfigurations, six.string_types):
             QueueConfigurations = json.loads(QueueConfigurations)
         if LambdaFunctionConfigurations is None:
             LambdaFunctionConfigurations = []
-        elif isinstance(LambdaFunctionConfigurations, string_types):
+        elif isinstance(LambdaFunctionConfigurations, six.string_types):
             LambdaFunctionConfigurations = json.loads(LambdaFunctionConfigurations)
         # TODO allow the user to use simple names & substitute ARNs for those names
         conn.put_bucket_notification_configuration(Bucket=Bucket, NotificationConfiguration={
@@ -509,7 +664,7 @@ def put_policy(Bucket, Policy,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Policy is None:
             Policy = '{}'
-        elif not isinstance(Policy, string_types):
+        elif not isinstance(Policy, six.string_types):
             Policy = json.dumps(Policy)
         conn.put_bucket_policy(Bucket=Bucket, Policy=Policy)
         return {'updated': True, 'name': Bucket}
@@ -553,7 +708,7 @@ def put_replication(Bucket, Role, Rules,
                              region=region, key=key, keyid=keyid, profile=profile)
         if Rules is None:
             Rules = []
-        elif isinstance(Rules, string_types):
+        elif isinstance(Rules, six.string_types):
             Rules = json.loads(Rules)
         conn.put_bucket_replication(Bucket=Bucket, ReplicationConfiguration={
                 'Role': Role,
@@ -677,7 +832,7 @@ def put_website(Bucket, ErrorDocument=None, IndexDocument=None,
                     'RedirectAllRequestsTo', 'RoutingRules'):
             val = locals()[key]
             if val is not None:
-                if isinstance(val, string_types):
+                if isinstance(val, six.string_types):
                     WebsiteConfiguration[key] = json.loads(val)
                 else:
                     WebsiteConfiguration[key] = val

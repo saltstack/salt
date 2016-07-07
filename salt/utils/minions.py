@@ -527,7 +527,7 @@ class CkMinions(object):
                     engine_args = [target_info['pattern']]
                     if target_info['engine'] in ('G', 'P', 'I', 'J'):
                         engine_args.append(target_info['delimiter'] or ':')
-                    engine_args.append(True)
+                    engine_args.append(greedy)
 
                     results.append(str(set(engine(*engine_args))))
                     if unmatched and unmatched[-1] == '-':
@@ -654,13 +654,14 @@ class CkMinions(object):
 
         return set(self.check_minions(v_expr, v_matcher))
 
-    def validate_tgt(self, valid, expr, expr_form):
+    def validate_tgt(self, valid, expr, expr_form, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
         v_minions = self._expand_matching(valid)
-        minions = set(self.check_minions(expr, expr_form))
+        if minions is None:
+            minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
         if len(v_minions) == len(minions) and d_bool:
             return True
@@ -818,7 +819,8 @@ class CkMinions(object):
                    tgt,
                    tgt_type='glob',
                    groups=None,
-                   publish_validate=False):
+                   publish_validate=False,
+                   minions=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -860,7 +862,8 @@ class CkMinions(object):
                         if self.validate_tgt(
                             valid,
                             tgt,
-                            tgt_type):
+                            tgt_type,
+                            minions=minions):
                             # Minions are allowed, verify function in allowed list
                             if isinstance(ind[valid], six.string_types):
                                 if self.match_check(ind[valid], fun):
@@ -960,7 +963,7 @@ class CkMinions(object):
         for item in auth_list:
             if isinstance(item, six.string_types):
                 continue
-            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
         if ou_names:
             auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
@@ -1069,7 +1072,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     '''
     ret = {}
     serial = salt.payload.Serial(opts)
-    checker = salt.utils.minions.CkMinions(opts)
+    checker = CkMinions(opts)
     minions = checker.check_minions(
             tgt,
             tgt_type)

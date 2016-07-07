@@ -284,7 +284,7 @@ class _Zypper(object):
 __zypper__ = _Zypper()
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades on this system
 
@@ -303,7 +303,13 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = dict()
-    for update_node in __zypper__.nolock.xml.call('list-updates').getElementsByTagName('update'):
+    cmd = ['list-updates']
+    if 'fromrepo' in kwargs:
+        repo_name = kwargs['fromrepo']
+        if not isinstance(repo_name, six.string_types):
+            repo_name = str(repo_name)
+        cmd.extend(['--repo', repo_name])
+    for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
 
@@ -769,6 +775,8 @@ def mod_repo(repo, **kwargs):
 
     # Modify added or existing repo according to the options
     cmd_opt = []
+    global_cmd_opt = []
+    call_refresh = False
 
     if 'enabled' in kwargs:
         cmd_opt.append(kwargs['enabled'] and '--enable' or '--disable')
@@ -784,21 +792,27 @@ def mod_repo(repo, **kwargs):
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
 
-    if kwargs.get('gpgautoimport') is True:
-        cmd_opt.append('--gpg-auto-import-keys')
-
     if 'priority' in kwargs:
         cmd_opt.append("--priority={0}".format(kwargs.get('priority', DEFAULT_PRIORITY)))
 
     if 'humanname' in kwargs:
         cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))
 
-    if cmd_opt:
-        cmd_opt.append(repo)
-        __zypper__.refreshable.xml.call('mr', *cmd_opt)
+    if kwargs.get('gpgautoimport') is True:
+        global_cmd_opt.append('--gpg-auto-import-keys')
+        call_refresh = True
 
-    # If repo nor added neither modified, error should be thrown
-    if not added and not cmd_opt:
+    if cmd_opt:
+        cmd_opt = global_cmd_opt + ['mr'] + cmd_opt + [repo]
+        __zypper__.refreshable.xml.call(*cmd_opt)
+
+    if call_refresh:
+        # when used with "zypper ar --refresh" or "zypper mr --refresh"
+        # --gpg-auto-import-keys is not doing anything
+        # so we need to specifically refresh here with --gpg-auto-import-keys
+        refresh_opts = global_cmd_opt + ['refresh'] + [repo]
+        __zypper__.xml.call(*refresh_opts)
+    elif not added and not cmd_opt:
         raise CommandExecutionError(
             'Specified arguments did not result in modification of repo'
         )
@@ -947,7 +961,7 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
                     log.debug(targets)
                 else:
-                    msg = ('Invalid version string {0!r} for package {1!r}'.format(version_num, name))
+                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -965,7 +979,7 @@ def install(name=None,
         fromrepoopt = ''
     cmd_install = ['install', '--name', '--auto-agree-with-licenses']
     if not refresh:
-        cmd_install.append('--no-refresh')
+        cmd_install.insert(0, '--no-refresh')
     if skip_verify:
         cmd_install.append('--no-gpg-checks')
     if downloadonly:
@@ -1583,6 +1597,9 @@ def download(*packages, **kwargs):
         pkg_ret[key] = pkg_info
 
     if pkg_ret:
+        failed = [pkg for pkg in packages if pkg not in pkg_ret]
+        if failed:
+            pkg_ret['_error'] = ('The following package(s) failed to download: {0}'.format(', '.join(failed)))
         return pkg_ret
 
     raise CommandExecutionError(

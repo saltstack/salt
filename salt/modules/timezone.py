@@ -338,7 +338,26 @@ def get_hwclock():
 
         if 'Gentoo' in __grains__['os_family']:
             if not os.path.exists('/etc/adjtime'):
-                return 'UTC'
+                offset_file = '/etc/conf.d/hwclock'
+                try:
+                    with salt.utils.fopen(offset_file, 'r') as fp_:
+                        for line in fp_:
+                            if line.startswith('clock='):
+                                line = line.rstrip('\n')
+                                line = line.split('=')[-1].strip('\'"')
+                                if line == 'UTC':
+                                    return line
+                                if line == 'local':
+                                    return 'LOCAL'
+                        raise CommandExecutionError(
+                            'Correct offset value not found in {0}'
+                            .format(offset_file)
+                        )
+                except IOError as exc:
+                    raise CommandExecutionError(
+                        'Problem reading offset file {0}: {1}'
+                        .format(offset_file, exc.strerror)
+                    )
             cmd = ['tail', '-n', '1', '/etc/adjtime']
             return __salt__['cmd.run'](cmd, python_shell=False)
 
@@ -410,6 +429,12 @@ def set_hwclock(clock):
         elif clock == 'localtime':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
     elif 'Gentoo' in __grains__['os_family']:
+        if clock not in ('UTC', 'localtime'):
+            raise SaltInvocationError(
+                'Only \'UTC\' and \'localtime\' are allowed'
+            )
+        if clock == 'localtime':
+            clock = 'local'
         __salt__['file.sed'](
             '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 

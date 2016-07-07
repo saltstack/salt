@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import logging
 import random
 import string
 
@@ -16,9 +17,6 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
-
-# Import 3rd-party libs
-import logging
 
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
@@ -34,6 +32,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+from salt.ext.six.moves import range
 
 # pylint: enable=import-error,no-name-in-module,unused-import
 

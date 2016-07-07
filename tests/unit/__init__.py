@@ -4,6 +4,7 @@ A lightweight version of tests.integration for testing of unit tests
 
 This test class will not import the salt minion, runner and config modules.
 '''
+from __future__ import absolute_import
 from salttesting.case import TestCase
 from salttesting.parser import SaltTestcaseParser
 

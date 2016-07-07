@@ -41,6 +41,7 @@ config:
       boto_rds.present:
         - name: myrds
         - allocated_storage: 5
+        - storage_type: standard
         - db_instance_class: db.t2.micro
         - engine: MySQL
         - master_username: myuser
@@ -70,13 +71,7 @@ config:
             - region: eu-west-1
 .. note::
 
-    This state module uses ``boto.rds2``, which requires a different tagging syntax than
-    some of the other boto states. The ``tags`` key and value set noted in the example
-    above is the required yaml notation that ``rds2`` depends upon to function properly.
-    For more information, please see `Issue #28715`_.
-
-.. _Issue #28715: https://github.com/saltstack/salt/issues/28715
-
+:depends: boto3
 
 '''
 
@@ -87,7 +82,9 @@ import os
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.utils import exactly_one
+import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -106,12 +103,18 @@ def present(name,
             master_username,
             master_user_password,
             db_name=None,
+            storage_type=None,
             db_security_groups=None,
             vpc_security_group_ids=None,
             availability_zone=None,
             db_subnet_group_name=None,
             preferred_maintenance_window=None,
             db_parameter_group_name=None,
+            db_cluster_identifier=None,
+            tde_credential_arn=None,
+            tde_credential_password=None,
+            storage_encrypted=None,
+            kms_keyid=None,
             backup_retention_period=None,
             preferred_backup_window=None,
             port=None,
@@ -125,15 +128,21 @@ def present(name,
             publicly_accessible=None,
             wait_status=None,
             tags=None,
+            copy_tags_to_snapshot=None,
             region=None,
+            domain=None,
             key=None,
             keyid=None,
+            monitoring_interval=None,
+            monitoring_role_arn=None,
+            domain_iam_role_name=None,
+            promotion_tier=None,
             profile=None):
     '''
     Ensure RDS instance exists.
 
     name
-        Name of the RDS instance.
+        Name of the RDS state definition.
 
     allocated_storage
         The amount of storage (in gigabytes) to be initially allocated for the
@@ -144,10 +153,10 @@ def present(name,
 
     engine
         The name of the database engine to be used for this instance. Supported
-        engine types are: MySQL, oracle-se1, oracle-se, oracle-ee, sqlserver-ee,
-        sqlserver-se, sqlserver-ex, sqlserver-web, and postgres. For more
-        information, please see the ``engine`` argument in the boto_rds
-        `create_dbinstance`_ documentation.
+        engine types are: MySQL, mariadb, oracle-se1, oracle-se, oracle-ee, sqlserver-ee,
+        sqlserver-se, sqlserver-ex, sqlserver-web, postgres and aurora. For more
+        information, please see the ``engine`` argument in the Boto3 RDS
+        `create_db_instance`_ documentation.
 
     master_username
         The name of master user for the client DB instance.
@@ -157,7 +166,14 @@ def present(name,
         character except "/", '"', or "@".
 
     db_name
-        The database name for the restored DB instance.
+        The meaning of this parameter differs according to the database engine you use.
+        See the Boto3 RDS documentation to determine the appropriate value for your configuration.
+        https://boto3.readthedocs.io/en/latest/reference/services/rds.html#RDS.Client.create_db_instance
+
+    storage_type
+        Specifies the storage type to be associated with the DB instance.
+        Options are standard, gp2 and io1. If you specify io1, you must also include
+        a value for the Iops parameter.
 
     db_security_groups
         A list of DB security groups to associate with this DB instance.
@@ -175,6 +191,27 @@ def present(name,
     preferred_maintenance_window
         The weekly time range (in UTC) during which system maintenance can
         occur.
+
+    db_parameter_group_name
+        A DB parameter group to associate with this DB instance.
+
+    db_cluster_identifier
+        If the DB instance is a member of a DB cluster, contains the name of
+        the DB cluster that the DB instance is a member of.
+
+    tde_credential_arn
+        The ARN from the Key Store with which the instance is associated for
+        TDE encryption.
+
+    tde_credential_password
+        The password to use for TDE encryption if an encryption key is not used.
+
+    storage_encrypted
+        Specifies whether the DB instance is encrypted.
+
+    kms_keyid
+        If storage_encrypted is true, the KMS key identifier for the encrypted
+        DB instance.
 
     backup_retention_period
         The number of days for which automated backups are retained.
@@ -226,106 +263,107 @@ def present(name,
     tags
         A list of tags.
 
+    copy_tags_to_snapshot
+        Specifies whether tags are copied from the DB instance to snapshots of
+        the DB instance.
+
     region
         Region to connect to.
 
+    domain
+        The identifier of the Active Directory Domain.
+
     key
-        Secret key to be used.
+        AWS secret key to be used.
 
     keyid
-        Access key to be used.
+        AWS access key to be used.
+
+    monitoring_interval
+        The interval, in seconds, between points when Enhanced Monitoring
+        metrics are collected for the DB instance.
+
+    monitoring_role_arn
+        The ARN for the IAM role that permits RDS to send Enhanced Monitoring
+        metrics to CloudWatch Logs.
+
+    domain_iam_role_name
+        Specify the name of the IAM role to be used when making API calls to
+        the Directory Service.
+
+    promotion_tier
+        A value that specifies the order in which an Aurora Replica is
+        promoted to the primary instance after a failure of the existing
+        primary instance. For more information, see Fault Tolerance for an
+        Aurora DB Cluster .
 
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
+    .. _create_dbinstance: https://boto3.readthedocs.io/en/latest/reference/services/rds.html#RDS.Client.create_db_instance
     '''
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}
            }
-    _ret = _rds_present(name, allocated_storage,
-                        db_instance_class, engine,
-                        master_username, master_user_password, db_name,
-                        db_security_groups, vpc_security_group_ids,
-                        availability_zone, db_subnet_group_name,
-                        preferred_maintenance_window, db_parameter_group_name,
-                        backup_retention_period, preferred_backup_window, port,
-                        multi_az, engine_version, auto_minor_version_upgrade,
-                        license_model, iops, option_group_name,
-                        character_set_name, publicly_accessible, wait_status,
-                        tags, region, key, keyid, profile)
-    ret['changes'] = _ret['changes']
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
-            return ret
-    return ret
 
+    r = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
 
-def _rds_present(name, allocated_storage, db_instance_class,
-                 engine, master_username, master_user_password, db_name=None,
-                 db_security_groups=None, vpc_security_group_ids=None,
-                 availability_zone=None, db_subnet_group_name=None,
-                 preferred_maintenance_window=None,
-                 db_parameter_group_name=None, backup_retention_period=None,
-                 preferred_backup_window=None, port=None, multi_az=None,
-                 engine_version=None, auto_minor_version_upgrade=None,
-                 license_model=None, iops=None, option_group_name=None,
-                 character_set_name=None, publicly_accessible=None,
-                 wait_status=None, tags=None, region=None, key=None,
-                 keyid=None, profile=None):
-    ret = {'result': True,
-           'comment': '',
-           'changes': {}
-           }
-    exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
-                                         profile)
-    if not exists:
+    if not r.get('exists'):
         if __opts__['test']:
-            ret['comment'] = 'RDS {0} is set to be created.'.format(name)
+            ret['comment'] = 'RDS instance {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_rds.create'](name, allocated_storage,
-                                              db_instance_class,
-                                              engine, master_username,
-                                              master_user_password, db_name,
-                                              db_security_groups,
-                                              vpc_security_group_ids,
-                                              availability_zone,
-                                              db_subnet_group_name,
-                                              preferred_maintenance_window,
-                                              db_parameter_group_name,
-                                              backup_retention_period,
-                                              preferred_backup_window, port,
-                                              multi_az, engine_version,
-                                              auto_minor_version_upgrade,
-                                              license_model, iops,
-                                              option_group_name,
-                                              character_set_name,
-                                              publicly_accessible,
-                                              wait_status, tags, region, key,
-                                              keyid, profile)
-        if not created:
+
+        r = __salt__['boto_rds.create'](name, allocated_storage,
+                                        db_instance_class, engine,
+                                        master_username,
+                                        master_user_password,
+                                        db_name, db_security_groups,
+                                        vpc_security_group_ids,
+                                        availability_zone,
+                                        db_subnet_group_name,
+                                        preferred_maintenance_window,
+                                        db_parameter_group_name,
+                                        backup_retention_period,
+                                        preferred_backup_window,
+                                        port, multi_az, engine_version,
+                                        auto_minor_version_upgrade,
+                                        license_model, iops,
+                                        option_group_name,
+                                        character_set_name,
+                                        publicly_accessible, wait_status,
+                                        tags, db_cluster_identifier,
+                                        storage_type, tde_credential_arn,
+                                        tde_credential_password,
+                                        storage_encrypted, kms_keyid,
+                                        domain, copy_tags_to_snapshot,
+                                        monitoring_interval,
+                                        monitoring_role_arn,
+                                        domain_iam_role_name, region,
+                                        promotion_tier, key, keyid, profile)
+
+        if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create {0} RDS.'.format(name)
+            ret['comment'] = 'Failed to create RDS instance {0}.'.format(r['error']['message'])
             return ret
-        _describe = __salt__['boto_rds.describe'](name, tags, region, key,
-                                                  keyid, profile)
-        ret['changes']['old'] = {'rds': None}
-        ret['changes']['new'] = {'rds': _describe}
-        ret['comment'] = 'RDS {0} created.'.format(name)
+
+        _describe = __salt__['boto_rds.describe'](name, region, key, keyid, profile)
+        ret['changes']['old'] = {'instance': None}
+        ret['changes']['new'] = _describe
+        ret['comment'] = 'RDS instance {0} created.'.format(name)
     else:
-        ret['comment'] = 'RDS replica {0} exists.'.format(name)
+        ret['comment'] = 'RDS instance {0} exists.'.format(name)
     return ret
 
 
-def replica_present(name, source, db_instance_class=None, availability_zone=None, port=None,
-                    auto_minor_version_upgrade=None, iops=None, option_group_name=None,
-                    publicly_accessible=None, tags=None, region=None, key=None, keyid=None,
+def replica_present(name, source, db_instance_class=None,
+                    availability_zone=None, port=None,
+                    auto_minor_version_upgrade=None, iops=None,
+                    option_group_name=None, publicly_accessible=None,
+                    tags=None, region=None, key=None, keyid=None,
                     profile=None):
     '''
     Ensure RDS replica exists.
@@ -409,7 +447,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
-    if not exactly_one((subnet_ids, subnet_names)):
+    if not salt.utils.exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError('One (but not both) of subnet_ids or '
                                   'subnet_names must be provided.')
 
@@ -424,46 +462,54 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
 
     if subnet_names:
         for i in subnet_names:
-            r = __salt__['boto_vpc.get_resource_id']('subnet',
-                                                     name=i,
+            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i,
                                                      region=region,
-                                                     key=key,
-                                                     keyid=keyid,
+                                                     key=key, keyid=keyid,
                                                      profile=profile)
 
             if 'error' in r:
-                msg = 'Error looking up subnet ids: {0}'.format(
+                ret['comment'] = 'Error looking up subnet ids: {0}'.format(
                     r['error']['message'])
-                ret['comment'] = msg
                 ret['result'] = False
                 return ret
             if r['id'] is None:
-                msg = 'Subnet {0} does not exist.'.format(i)
-                ret['comment'] = msg
+                ret['comment'] = 'Subnet {0} does not exist.'.format(i)
                 ret['result'] = False
                 return ret
             subnet_ids.append(r['id'])
 
-    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
-    if not exists:
-        if __opts__['test']:
-            ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
-            ret['result'] = None
-            return ret
-        created = __salt__['boto_rds.create_subnet_group'](name=name, subnet_ids=subnet_ids,
-                                                           description=description, tags=tags, region=region,
-                                                           key=key, keyid=keyid, profile=profile)
-        if not created:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} subnet group.'.format(name)
-            return ret
-        ret['changes']['old'] = None
-        ret['changes']['new'] = name
-        ret['comment'] = 'Subnet {0} created.'.format(name)
+    for i in subnet_ids:
+        r = __salt__['boto_rds.create_subnet_group'](name=name,
+                                                     description=description,
+                                                     subnet_ids=subnet_ids,
+                                                     tags=tags, region=region,
+                                                     key=key, keyid=keyid,
+                                                     profile=profile)
+
+        if not r.get('exists'):
+            if __opts__['test']:
+                ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
+                ret['result'] = None
+                return ret
+            if not r.get('created'):
+                ret['result'] = False
+                ret['comment'] = 'Failed to create {0} subnet group.'.format(r['error']['message'])
+                return ret
+
+            _describe = __salt__['boto_rds.describe']('subnet',
+                                                      name=i,
+                                                      region=region,
+                                                      key=key,
+                                                      keyid=keyid,
+                                                      profile=profile)
+
+            ret['changes']['old'] = None
+            ret['changes']['new'] = _describe
+            ret['comment'] = 'Subnet {0} created.'.format(name)
+        else:
+            ret['comment'] = 'Subnet {0} present.'.format(name)
+
         return ret
-    ret['comment'] = 'Subnet present.'
-    return ret
 
 
 def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
@@ -500,7 +546,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
+    .. _create_db_instance: https://boto3.readthedocs.io/en/latest/reference/services/rds.html#RDS.Client.create_db_instance
 
     wait_for_deletion (bool)
         Wait for the RDS instance to be deleted completely before finishing

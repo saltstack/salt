@@ -126,7 +126,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=False, root=None):
+def list_upgrades(refresh=False, root=None, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
@@ -146,8 +146,8 @@ def list_upgrades(refresh=False, root=None):
         cmd.append('-y')
 
     call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
+                                   python_shell=False,
+                                   output_loglevel='trace')
 
     if call['retcode'] != 0:
         comment = ''
@@ -233,6 +233,155 @@ def list_pkgs(versions_as_list=False, **kwargs):
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+    return ret
+
+
+def group_list():
+    '''
+    .. versionadded:: Carbon
+
+    Lists all groups known by pacman on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_list
+    '''
+
+    ret = {'installed': [],
+        'partially_installed': [],
+        'available': []}
+
+    # find out what's available
+
+    cmd = ['pacman', '-Sgg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    available = {}
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            available.setdefault(group, []).append(pkg)
+
+    # now get what's installed
+
+    cmd = ['pacman', '-Qg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    installed = {}
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Qg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            installed.setdefault(group, []).append(pkg)
+
+    # move installed and partially-installed items from available to appropriate other places
+
+    for group in installed:
+        if group not in available:
+            log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
+            continue
+        if len(installed[group]) == len(available[group]):
+            ret['installed'].append(group)
+        else:
+            ret['partially_installed'].append(group)
+        available.pop(group)
+
+    # Now installed and partially installed are set, whatever is left is the available list.
+
+    ret['available'] = available.keys()
+
+    ret['installed'].sort()
+    ret['partially_installed'].sort()
+    ret['available'].sort()
+
+    return ret
+
+
+def group_info(name):
+    '''
+    .. versionadded:: Carbon
+
+    Lists all packages in the specified group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_info 'xorg'
+    '''
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = set()
+
+    cmd = ['pacman', '-Sgg', name]
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            pkg = line.split()[1]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            ret['default'].add(pkg)
+
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = sorted(ret[pkgtype])
+
+    return ret
+
+
+def group_diff(name):
+
+    '''
+    .. versionadded:: Carbon
+
+    Lists which of a group's packages are installed and which are not
+    installed
+
+    Compatible with yumpkg.group_diff for easy support of state.pkg.group_installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_diff 'xorg'
+    '''
+
+    # Use a compatible structure with yum, so we can leverage the existing state.group_installed
+    # In pacmanworld, everything is the default, but nothing is mandatory
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = {'installed': [], 'not installed': []}
+
+    # use indirect references to simplify unit testing
+    pkgs = __salt__['pkg.list_pkgs']()
+    group_pkgs = __salt__['pkg.group_info'](name)
+    for pkgtype in pkgtypes:
+        for member in group_pkgs.get(pkgtype, []):
+            if member in pkgs:
+                ret[pkgtype]['installed'].append(member)
+            else:
+                ret[pkgtype]['not installed'].append(member)
     return ret
 
 

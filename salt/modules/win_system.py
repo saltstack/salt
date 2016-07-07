@@ -30,7 +30,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.locales
-from salt.modules.reg import read_value
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ def halt(timeout=5, in_seconds=False):
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def init(runlevel):
+def init(runlevel):  # pylint: disable=unused-argument
     '''
     Change the system runlevel on sysV compatible systems
 
@@ -106,7 +105,7 @@ def init(runlevel):
     # ret = __salt__['cmd.run'](cmd, python_shell=False)
     # return ret
 
-    # TODO: Create a mapping of runlevels to
+    # TODO: Create a mapping of runlevels to  # pylint: disable=fixme
     #       corresponding Windows actions
 
     return 'Not implemented on Windows at this time.'
@@ -140,7 +139,8 @@ def poweroff(timeout=5, in_seconds=False):
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
+def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disable=redefined-outer-name
+           only_on_pending_reboot=False):
     '''
     Reboot a running system.
 
@@ -163,6 +163,14 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
 
         .. versionadded:: 2015.8.0
 
+    :param bool only_on_pending_reboot:
+
+        If this is set to True, then then the reboot will only proceed
+        if the system reports a pending reboot. Setting this paramater to
+        True could be useful when calling this function from a final housekeeping
+        state intended to be executed
+        at the end of a state run (using *order: last*).
+
     :return: True if successful
     :rtype: bool
 
@@ -172,9 +180,24 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
 
         salt '*' system.reboot 5
         salt '*' system.reboot 5 True
+
+    As example of invoking this function from within a final housekeeping state
+    is as follows:
+
+    Example:
+
+    .. code-block:: yaml
+
+        final housekeeping:
+           module.run:
+              - name: system.reboot
+              - only_on_pending_reboot: True
+              - order: last
+
     '''
 
-    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
+    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds,
+                   only_on_pending_reboot=only_on_pending_reboot)
 
     if wait_for_reboot:
         seconds = _convert_minutes_seconds(timeout, in_seconds)
@@ -183,7 +206,8 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     return ret
 
 
-def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds=False):
+def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint: disable=redefined-outer-name
+             in_seconds=False, only_on_pending_reboot=False):
     '''
     Shutdown a running system.
 
@@ -221,6 +245,10 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
         True restarts the computer immediately after shutdown.
         False caches to disk and safely powers down the system.
 
+    :param bool only_on_pending_reboot:
+        If this is set to True, then then shutdown will only proceed
+        if the system reports a pending reboot.
+
     :return: True if successful
     :rtype: bool
 
@@ -230,7 +258,10 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
 
         salt '*' system.shutdown 5
     '''
-    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    timeout = _convert_minutes_seconds(timeout, in_seconds)
+
+    if only_on_pending_reboot and not get_pending_reboot():
+        return True
 
     if message:
         message = message.decode('utf-8')
@@ -342,9 +373,10 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    pending = read_value('HKLM',
-                         r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
-                         'NV Hostname')['vdata']
+    pending = __salt__['reg.read_value'](
+                'HKLM',
+                r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
+                'NV Hostname')['vdata']
     if pending:
         return pending if pending != current else None
     return False
@@ -406,7 +438,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')
+set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
 
 
 def get_system_info():
@@ -422,8 +454,8 @@ def get_system_info():
                2: 'Domain Controller',
                3: 'Server'}
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    system = c.Win32_OperatingSystem()[0]
+    conn = wmi.WMI()
+    system = conn.Win32_OperatingSystem()[0]
     ret = {'name': get_computer_name(),
            'description': system.Description,
            'install_date': system.InstallDate,
@@ -440,13 +472,13 @@ def get_system_info():
            'system_drive': system.SystemDrive,
            'os_version': system.Version,
            'windows_directory': system.WindowsDirectory}
-    system = c.Win32_ComputerSystem()[0]
+    system = conn.Win32_ComputerSystem()[0]
     ret.update({'hardware_manufacturer': system.Manufacturer,
                 'hardware_model': system.Model,
                 'processors': system.NumberOfProcessors,
                 'processors_logical': system.NumberOfLogicalProcessors,
                 'system_type': system.SystemType})
-    system = c.Win32_BIOS()[0]
+    system = conn.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
                 'bios_manufacturer': system.Manufacturer,
                 'bios_version': system.Version,
@@ -474,7 +506,7 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
@@ -575,7 +607,10 @@ def join_domain(domain,
         ``ou=computers,ou=departm_432,dc=my-company,dc=com``
 
     :param bool account_exists:
-        Needs to be set to ``True`` to allow re-using an existing account
+        If set to ``True`` the computer will only join the domain if the account
+        already exists. If set to ``False`` the computer account will be created
+        if it does not exist, otherwise it will use the existing account.
+        Default is False
 
     :param bool restart: Restarts the computer after a successful join
 
@@ -609,10 +644,10 @@ def join_domain(domain,
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 
-    NETSETUP_JOIN_DOMAIN = 0x1
-    NETSETUP_ACCOUNT_CREATE = 0x2
-    NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20
-    NETSETUP_JOIN_WITH_NEW_NAME = 0x400
+    NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
+    NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
+    NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20  # pylint: disable=invalid-name
+    NETSETUP_JOIN_WITH_NEW_NAME = 0x400  # pylint: disable=invalid-name
 
     join_options = 0x0
     join_options |= NETSETUP_JOIN_DOMAIN
@@ -622,8 +657,8 @@ def join_domain(domain,
         join_options |= NETSETUP_ACCOUNT_CREATE
 
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    comp = c.Win32_ComputerSystem()[0]
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
     err = comp.JoinDomainOrWorkgroup(Name=domain,
                                      Password=password,
                                      UserName=username,
@@ -669,7 +704,8 @@ def unjoin_domain(username=None,
         .. versionadded:: 2015.8.2/2015.5.7
 
     :param bool disable:
-        Disable the user account in Active Directory. True to disable.
+        Disable the computer account in Active Directory. True to disable.
+        Default is False
 
     :param bool restart: Restart the computer after successful unjoin
 
@@ -702,15 +738,15 @@ def unjoin_domain(username=None,
     if username and password is None:
         return 'Must specify a password if you pass a username'
 
-    NETSETUP_ACCT_DELETE = 0x2
+    NETSETUP_ACCT_DELETE = 0x2  # pylint: disable=invalid-name
 
     unjoin_options = 0x0
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    comp = c.Win32_ComputerSystem()[0]
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,
                                        FUnjoinOptions=unjoin_options)
@@ -748,8 +784,8 @@ def get_domain_workgroup():
 
     '''
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    for computer in c.Win32_ComputerSystem():
+    conn = wmi.WMI()
+    for computer in conn.Win32_ComputerSystem():
         if computer.PartOfDomain:
             return {'Domain': computer.Domain}
         else:
@@ -829,17 +865,17 @@ def set_system_date_time(years=None,
         return False
 
     # Check for passed values. If not passed, use current values
-    if not years:
+    if years is None:
         years = date_time[0]
-    if not months:
+    if months is None:
         months = date_time[1]
-    if not days:
+    if days is None:
         days = date_time[3]
-    if not hours:
+    if hours is None:
         hours = date_time[4]
-    if not minutes:
+    if minutes is None:
         minutes = date_time[5]
-    if not seconds:
+    if seconds is None:
         seconds = date_time[6]
 
     # Create the time tuple to be passed to SetLocalTime, including day_of_week
@@ -952,7 +988,7 @@ def get_pending_component_servicing():
     vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -986,7 +1022,7 @@ def get_pending_domain_join():
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
 
-    avoid_reg_ret = read_value('HKLM', avoid_key, vname)
+    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
 
     if avoid_reg_ret['success']:
         log.debug('Found key: %s', avoid_key)
@@ -994,7 +1030,7 @@ def get_pending_domain_join():
     else:
         log.debug('Unable to access key: %s', avoid_key)
 
-    join_reg_ret = read_value('HKLM', join_key, vname)
+    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
 
     if join_reg_ret['success']:
         log.debug('Found key: %s', join_key)
@@ -1026,7 +1062,7 @@ def get_pending_file_rename():
     # then a reboot is pending.
 
     for vname in vnames:
-        reg_ret = read_value('HKLM', key, vname)
+        reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
         if reg_ret['success']:
             log.debug('Found key: %s', key)
@@ -1060,7 +1096,7 @@ def get_pending_servermanager():
     # the value data, and since an actual reboot wont be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     if reg_ret['success']:
         log.debug('Found key: %s', key)
@@ -1093,7 +1129,7 @@ def get_pending_update():
     vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -1102,6 +1138,82 @@ def get_pending_update():
     else:
         log.debug('Unable to access key: %s', key)
     return False
+
+
+MINION_VOLATILE_KEY = r'SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data'
+
+
+REBOOT_REQUIRED_NAME = 'Reboot required'
+
+
+def set_reboot_required_witnessed():
+    r'''
+    .. versionadded:: Carbon
+
+    This function is used to remember that
+    an event indicating that a reboot is required was witnessed.
+    This function relies on the salt-minion's ability to create the following
+    volatile registry key in the *HKLM* hive:
+
+       *SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data*
+
+    Because this registry key is volatile, it will not persist
+    beyond the current boot session.
+    Also, in the scope of this key, the name *'Reboot required'* will be
+    assigned the value of *1*.
+
+    (For the time being, this this function is being used
+    whenever an install completes with exit code 3010 and
+    this usage can be extended where appropriate in the future.)
+
+    :return: A boolean indicating whether or not the salt minion was
+       able to perform the necessary registry operations.
+
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_reboot_required_witnessed
+
+    '''
+    return __salt__['reg.set_value'](hive='HKLM',
+                                     key=MINION_VOLATILE_KEY,
+                                     volatile=True,
+                                     vname=REBOOT_REQUIRED_NAME,
+                                     vdata=1,
+                                     vtype='REG_DWORD')
+
+
+def get_reboot_required_witnessed():
+    '''
+    .. versionadded:: Carbon
+
+    This tells us if, at any time during the current boot session
+    the salt minion witnessed an event indicating
+    that a reboot is required.
+    (For the time being, this function will return True
+    if an install completed with exit code 3010 during the current
+    boot session and this usage can be extended where appropriate
+    in the future)
+
+    :return: a boolean which will be True if the salt-minion reported
+       a required reboot during the current boot session, otherwise False.
+
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_reboot_required_witnessed
+
+    '''
+    value_dict = __salt__['reg.read_value'](hive='HKLM',
+                                            key=MINION_VOLATILE_KEY,
+                                            vname=REBOOT_REQUIRED_NAME)
+    return value_dict['vdata'] == 1
 
 
 def get_pending_reboot():
@@ -1122,7 +1234,9 @@ def get_pending_reboot():
 
     # Order the checks for reboot pending in most to least likely.
     checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
-              get_pending_component_servicing, get_pending_computer_name,
+              get_pending_component_servicing,
+              get_reboot_required_witnessed,
+              get_pending_computer_name,
               get_pending_domain_join)
 
     for check in checks:

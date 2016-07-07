@@ -448,6 +448,12 @@ def image_schema(profile=None):
     '''
     Returns names and descriptions of the schema "image"'s
     properties for this profile's instance of glance
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glance.image_schema
     '''
     return schema_get('image', profile)
 
@@ -459,6 +465,13 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     - min_ram (in MB)
     - protected (bool)
     - visibility ('public' or 'private')
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glance.image_update id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
+        salt '*' glance.image_update name=f16-jeos
     '''
     if id:
         image = image_show(id=id, profile=profile)
@@ -512,6 +525,12 @@ def schema_get(name, profile=None):
       - images
       - member
       - members
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glance.schema_get name=f16-jeos
     '''
     g_client = _auth(profile)
     pformat = pprint.PrettyPrinter(indent=4).pformat

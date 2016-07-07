@@ -809,7 +809,11 @@ def recv_known_host(hostname,
         cmd.append('-H')
     cmd.extend(['-T', str(timeout)])
     cmd.append(hostname)
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    lines = None
+    attempts = 5
+    while not lines and attempts > 0:
+        attempts = attempts - 1
+        lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
@@ -1175,8 +1179,10 @@ def hash_known_hosts(user=None, config=None):
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
+    origmode = os.stat(full).st_mode
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
+    os.stat(full, origmode)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)

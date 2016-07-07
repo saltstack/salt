@@ -2,20 +2,22 @@
 '''
 Modules used to control the master itself
 '''
+
+# Import Python libs
 from __future__ import absolute_import
-#import python libs
-import os
 import collections
 
 # Import salt libs
-from salt import syspaths
+import salt.client.mixins
 import salt.config
 import salt.loader
-from salt.client import mixins
-from salt.utils.error import raise_error
+import salt.transport
+import salt.utils
+import salt.utils.error
 
 
-class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
+class WheelClient(salt.client.mixins.SyncClientMixin,
+                  salt.client.mixins.AsyncClientMixin, object):
     '''
     An interface to Salt's wheel modules
 
@@ -66,7 +68,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
-                raise_error(**ret['error'])
+                salt.utils.error.raise_error(**ret['error'])
         return ret
 
     def cmd_sync(self, low, timeout=None):

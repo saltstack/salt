@@ -498,7 +498,7 @@ def wait(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -629,7 +629,7 @@ def wait_script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -812,17 +812,18 @@ def run(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
-    cmd_kwargs = {'cwd': cwd,
-                  'runas': runas,
-                  'use_vt': use_vt,
-                  'shell': shell or __grains__['shell'],
-                  'env': env,
-                  'umask': umask,
-                  'output_loglevel': output_loglevel,
-                  'quiet': quiet}
+    cmd_kwargs = copy.deepcopy(kwargs)
+    cmd_kwargs.update({'cwd': cwd,
+                       'runas': runas,
+                       'use_vt': use_vt,
+                       'shell': shell or __grains__['shell'],
+                       'env': env,
+                       'umask': umask,
+                       'output_loglevel': output_loglevel,
+                       'quiet': quiet})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -1048,7 +1049,7 @@ def script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)
@@ -1089,7 +1090,7 @@ def script(name,
 
     if __opts__['test'] and not test_name:
         ret['result'] = None
-        ret['comment'] = 'Command {0!r} would have been ' \
+        ret['comment'] = 'Command \'{0}\' would have been ' \
                          'executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
@@ -1114,9 +1115,9 @@ def script(name,
         ret['result'] = not bool(cmd_all['retcode'])
     if ret.get('changes', {}).get('cache_error'):
         ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                         '{1!r}'.format(source, __env__)
+                         '\'{1}\''.format(source, __env__)
     else:
-        ret['comment'] = 'Command {0!r} run'.format(name)
+        ret['comment'] = 'Command \'{0}\' run'.format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:

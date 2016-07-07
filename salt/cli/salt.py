@@ -6,7 +6,6 @@ import os
 import sys
 
 # Import Salt libs
-import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
 from salt.utils.args import yamlify_arg
@@ -30,7 +29,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Execute the salt command line
         '''
-        import salt.auth
         import salt.client
         self.parse_args()
 
@@ -99,6 +97,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
             if 'token' not in kwargs and 'key' not in kwargs and self.options.eauth:
+                # This is expensive. Don't do it unless we need to.
+                import salt.auth
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -193,6 +193,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         # If using eauth and a token hasn't already been loaded into
         # kwargs, prompt the user to enter auth credentials
         if 'token' not in eauth and self.options.eauth:
+            # This is expensive. Don't do it unless we need to.
+            import salt.auth
             resolver = salt.auth.Resolver(self.config)
             res = resolver.cli(self.options.eauth)
             if self.options.mktoken and res:
@@ -213,7 +215,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if not self.options.batch:
                 self.config['batch'] = '100%'
 
-            batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+            try:
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+            except salt.exceptions.SaltClientError as exc:
+                sys.exit(2)
 
             ret = {}
 
@@ -232,7 +237,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             for res in batch.run():
                 if self.options.failhard:
                     for ret in six.itervalues(res):
-                        retcode = salt.utils.job.get_retcode(ret)
+                        retcode = self._get_retcode(ret)
                         if retcode != 0:
                             sys.stderr.write(
                                 '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
@@ -274,7 +279,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 not_return_minions.append(each_minion)
             else:
                 return_counter += 1
-                if salt.utils.job.get_retcode(ret[each_minion]):
+                if self._get_retcode(ret[each_minion]):
                     failed_minions.append(each_minion)
         print_cli('\n')
         print_cli('-------------------------------------------')
@@ -337,10 +342,23 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-            ret_retcode = salt.utils.job.get_retcode(data)
+            ret_retcode = self._get_retcode(data)
             if ret_retcode > retcode:
                 retcode = ret_retcode
         return ret, out, retcode
+
+    def _get_retcode(self, ret):
+        '''
+        Determine a retcode for a given return
+        '''
+        retcode = 0
+        # if there is a dict with retcode, use that
+        if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+            return ret['retcode']
+        # if its a boolean, False means 1
+        elif isinstance(ret, bool) and not ret:
+            return 1
+        return retcode
 
     def _format_error(self, minion_error):
         for minion, error_doc in six.iteritems(minion_error):

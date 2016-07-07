@@ -3,12 +3,18 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import logging
 import random
 import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -16,12 +22,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
-
-# Import 3rd-party libs
-import logging
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from unit.modules.boto_iot_test import BotoIoTTestCaseMixin

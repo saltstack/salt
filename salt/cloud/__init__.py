@@ -1206,7 +1206,7 @@ class Cloud(object):
         if deploy:
             if not make_master and 'master' not in minion_dict:
                 log.warning(
-                    'There\'s no master defined on the {0!r} VM settings.'.format(
+                    'There\'s no master defined on the \'{0}\' VM settings.'.format(
                         vm_['name']
                     )
                 )
@@ -1288,29 +1288,34 @@ class Cloud(object):
                     log.error('Bad option for sync_after_install')
                     return output
 
-                # a small pause makes the sync work reliably
+                # A small pause helps the sync work more reliably
                 time.sleep(3)
 
-                mopts_ = salt.config.DEFAULT_MINION_OPTS
-                conf_path = '/'.join(self.opts['conf_file'].split('/')[:-1])
-                mopts_.update(
-                    salt.config.minion_config(
-                        os.path.join(conf_path,
-                                     'minion')
+                start = int(time.time())
+                while int(time.time()) < start + 60:
+                    # We'll try every <timeout> seconds, up to a minute
+                    mopts_ = salt.config.DEFAULT_MINION_OPTS
+                    conf_path = '/'.join(self.opts['conf_file'].split('/')[:-1])
+                    mopts_.update(
+                        salt.config.minion_config(
+                            os.path.join(conf_path,
+                                         'minion')
+                        )
                     )
-                )
 
-                client = salt.client.get_local_client(mopts=self.opts)
+                    client = salt.client.get_local_client(mopts=self.opts)
 
-                ret = client.cmd(
-                    vm_['name'],
-                    'saltutil.sync_{0}'.format(self.opts['sync_after_install']),
-                    timeout=self.opts['timeout']
-                )
-                log.info(
-                    six.u('Synchronized the following dynamic modules: '
-                          '  {0}').format(ret)
-                )
+                    ret = client.cmd(
+                        vm_['name'],
+                        'saltutil.sync_{0}'.format(self.opts['sync_after_install']),
+                        timeout=self.opts['timeout']
+                    )
+                    if ret:
+                        log.info(
+                            six.u('Synchronized the following dynamic modules: '
+                                  '  {0}').format(ret)
+                        )
+                        break
         except KeyError as exc:
             log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
@@ -1755,7 +1760,7 @@ class Map(Cloud):
         if self.opts.get('map', None) is None:
             return {}
 
-        local_minion_opts = self.opts.copy.deepcopy()
+        local_minion_opts = copy.deepcopy(self.opts)
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
 

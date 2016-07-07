@@ -1569,6 +1569,29 @@ Defines which branch/tag should be used as the ``base`` environment.
     Ability to specify the base on a per-remote basis was added. See :ref:`here
     <gitfs-per-remote-config>` for more info.
 
+.. conf_master:: gitfs_saltenv
+
+``gitfs_saltenv``
+*****************
+
+.. versionadded:: Carbon
+
+Default: ``[]``
+
+Global settings for :ref:`per-saltenv configuration parameters
+<gitfs-per-saltenv-config>`. Though per-saltenv configuration parameters are
+typically one-off changes specific to a single gitfs remote, and thus more
+often configured on a per-remote basis, this parameter can be used to specify
+per-saltenv changes which should apply to all remotes. For example, the below
+configuration will map the ``develop`` branch to the ``dev`` saltenv for all
+gitfs remotes.
+
+.. code-block:: yaml
+
+    gitfs_saltenv:
+      - dev:
+        - ref: develop
+
 .. conf_master:: gitfs_env_whitelist
 
 ``gitfs_env_whitelist``
@@ -2273,6 +2296,26 @@ configuration is the same as :conf_master:`file_roots`:
       prod:
         - /srv/pillar/prod
 
+.. conf_master:: pillar_opts
+
+``pillar_opts``
+---------------
+
+Default: ``False``
+
+The ``pillar_opts`` option adds the master configuration file data to a dict in
+the pillar called ``master``. This can be used to set simple configurations in
+the master config file that can then be used on minions.
+
+Note that setting this option to ``True`` means the master config file will be
+included in all minion's pillars. While this makes global configuration of services
+and systems easy, it may not be desired if sensitive data is stored in the master
+configuration.
+
+.. code-block:: yaml
+
+    pillar_opts: False
+
 .. _master-configuration-ext-pillar:
 
 .. conf_master:: ext_pillar
@@ -2303,9 +2346,9 @@ There are additional details at :ref:`salt-pillars`
 .. conf_master:: pillar_roots_override_ext_pillar
 
 ``pillar_roots_override_ext_pillar``
---------------------
+------------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: Carbon
 
 Default: ``False``
 
@@ -3156,14 +3199,14 @@ The format of the console logging messages. See also
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
 :conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 .. conf_master:: log_granular_levels

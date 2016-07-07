@@ -7,7 +7,6 @@ LimitNOFILE=16384
 Type=notify
 NotifyAccess=all
 ExecStart=/usr/bin/salt-master
-KillMode=process
 
 [Install]
 WantedBy=multi-user.target

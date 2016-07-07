@@ -9,6 +9,7 @@ import os
 import warnings
 from salt.utils.verify import verify_log
 
+
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     'once',                 # Show once
@@ -233,10 +234,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.process_manager.stop_restarting()
-        self.minion.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.minion.process_manager.kill_children()
+        self.minion.stop(signum)
         super(Minion, self)._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
@@ -314,7 +312,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.shutdown(1)
 
         # TODO: AIO core is separate from transport
-        if self.config['transport'].lower() in ('zeromq', 'tcp'):
+        if self.config['transport'].lower() in ('zeromq', 'tcp', 'detect'):
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop
@@ -325,13 +323,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.set_pidfile()
             if self.config.get('master_type') == 'func':
                 salt.minion.eval_master_func(self.config)
-            if isinstance(self.config.get('master'), list):
-                if self.config.get('master_type') == 'failover':
-                    self.minion = salt.minion.Minion(self.config)
-                else:
-                    self.minion = salt.minion.MultiMinion(self.config)
-            else:
-                self.minion = salt.minion.Minion(self.config)
+            self.minion = salt.minion.MinionManager(self.config)
         else:
             import salt.daemons.flo
             self.daemonize_if_required()
@@ -426,7 +418,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         super(ProxyMinion, self).prepare()
 
         if not self.values.proxyid:
-            raise SaltSystemExit('salt-proxy requires --proxyid')
+            self.error('salt-proxy requires --proxyid')
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.
@@ -449,7 +441,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                         )
                 else:
                     confd = os.path.join(
-                        os.path.dirname(self.config['conf_file']), 'minion.d'
+                        os.path.dirname(self.config['conf_file']), 'proxy.d'
                     )
 
                 v_dirs = [
@@ -593,11 +585,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
-        # if its a multisyndic, do so
-        if isinstance(self.config.get('master'), list):
-            self.syndic = salt.minion.MultiSyndic(self.config)
-        else:
-            self.syndic = salt.minion.Syndic(self.config)
+        self.syndic = salt.minion.SyndicManager(self.config)
         self.set_pidfile()
 
     def start(self):

@@ -1101,7 +1101,7 @@ def remove(path, force=False):
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(path, file_attributes)
         raise CommandExecutionError(
-            'Could not remove {0!r}: {1}'.format(path, exc)
+            'Could not remove \'{0}\': {1}'.format(path, exc)
         )
 
     return True

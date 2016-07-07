@@ -283,6 +283,22 @@ command sent to minions as well as a runner function on the master::
 .. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
+
+A Note About Curl
+=================
+
+When sending passwords and data that might need to be urlencoded, you must set
+the ``-d`` flag to indicate the content type, and the ``--data-urlencode`` flag
+to urlencode the input.
+
+.. code-block:: bash
+
+    curl -ksi http://localhost:8000/login \\
+    -H "Accept: application/json" \\
+    -d username='myapiuser' \\
+    --data-urlencode password='1234+' \\
+    -d eauth='pam'
+
 '''
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
@@ -302,7 +318,6 @@ from multiprocessing import Process, Pipe
 # Import third-party libs
 # pylint: disable=import-error
 import cherrypy
-from cherrypy.lib import cpstats
 import yaml
 import salt.ext.six as six
 # pylint: enable=import-error
@@ -2302,6 +2317,13 @@ class Stats(object):
             :status 406: |406|
         '''
         if hasattr(logging, 'statistics'):
+            # Late import
+            try:
+                from cherrypy.lib import cpstats
+            except ImportError:
+                logger.error('Import of cherrypy.cpstats failed. Possible '
+                        'upstream bug here: https://github.com/cherrypy/cherrypy/issues/1444')
+                return {}
             return cpstats.extrapolate_statistics(logging.statistics)
 
         return {}

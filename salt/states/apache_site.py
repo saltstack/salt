@@ -9,15 +9,18 @@ Enable and disable apache sites.
 .. code-block:: yaml
 
     Enable default site:
-        apache_site.enable:
-            - name: default
+      apache_site.enabled:
+        - name: default
 
     Disable default site:
-        apache_site.disable:
-            - name: default
+      apache_site.disabled:
+        - name: default
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -61,6 +64,25 @@ def enabled(name):
     return ret
 
 
+def enable(name):
+    '''
+    Ensure an Apache site is enabled.
+
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
+
+    name
+        Name of the Apache site
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'apache_module.enable function has been renamed'
+        ' apache_module.enabled and will be removed in Salt Nitrogen'
+    )
+    return enabled(name)
+
+
 def disabled(name):
     '''
     Ensure an Apache site is disabled.
@@ -93,3 +115,22 @@ def disabled(name):
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
+
+
+def disable(name):
+    '''
+    Ensure an Apache site is disabled.
+
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
+
+    name
+        Name of the Apache site
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'apache_module.disable function has been renamed'
+        ' apache_module.disabled and will be removed in Salt Nitrogen'
+    )
+    return disabled(name)

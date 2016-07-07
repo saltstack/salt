@@ -173,7 +173,7 @@ fields that ``stormpath.create_account`` requires, including the ``password``.
 However, if a password changes for an existing account, it will NOT be updated
 by this state.
 
-.. code-block:: bash
+.. code-block:: yaml
 
   curly@example.com:
     stormpath_account.present:

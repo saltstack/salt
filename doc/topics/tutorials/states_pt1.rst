@@ -130,7 +130,7 @@ Next, let's run the state we created. Open a terminal on the master and run:
     salt '*' state.apply
 
 Our master is instructing all targeted minions to run :func:`state.apply
-<salt.modules.state.apply>`. When this function is executied without any SLS
+<salt.modules.state.apply>`. When this function is executed without any SLS
 targets, a minion will download the :ref:`top file <states-top>` and attempt to
 match the expressions within it. When the minion does match an expression the
 modules listed for it will be downloaded, compiled, and executed.

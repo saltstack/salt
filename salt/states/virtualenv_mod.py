@@ -144,7 +144,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file {0!r} not found'.format(
+                'comment': 'pip requirements file \'{0}\' not found'.format(
                     requirements
                 )
             })
@@ -189,7 +189,7 @@ def managed(name,
             )
         except CommandNotFoundError as err:
             ret['result'] = False
-            ret['comment'] = 'Failed to create virtualenv: {0}'.formar(err)
+            ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
             return ret
 
         if _ret['retcode'] != 0:

@@ -614,8 +614,10 @@ def set_(device, minor, flag, state):
     '''
     Changes a flag on the partition with number <minor>.
 
-    A flag can be either "on" or "off". Some or all of these flags will be
+    A flag can be either "on" or "off" (make sure to use proper quoting, see `YAML Idiosyncrasies`_). Some or all of these flags will be
     available, depending on what disk label you are using.
+
+    .. _`YAML Idiosyncrasies`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#true-false-yes-no-on-off
 
     Valid flags are: bios_grub, legacy_boot, boot, lba, root, swap, hidden, raid,
         LVM, PALO, PREP, DIAG
@@ -624,7 +626,7 @@ def set_(device, minor, flag, state):
 
     .. code-block:: bash
 
-        salt '*' partition.set /dev/sda 1 boot on
+        salt '*' partition.set /dev/sda 1 boot '"on"'
     '''
     _validate_device(device)
 

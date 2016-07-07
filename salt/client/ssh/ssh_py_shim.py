@@ -200,6 +200,7 @@ def main(argv):  # pylint: disable=W0613
     salt_argv = [
         sys.executable,
         salt_call_path,
+        '--retcode-passthrough',
         '--local',
         '--metadata',
         '--out', 'json',

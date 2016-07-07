@@ -23,7 +23,7 @@ option. This will give users a couple release cycles to modify their scripts,
 SLS files, etc. to use the new functionality, rather than forcing users to
 change everything immediately.
 
-In the **Carbon** release of Salt (due in 2016), this execution module will
+In the **Nitrogen** release of Salt (due in 2017), this execution module will
 take the place of the default Docker execution module, and backwards-compatible
 naming will be maintained for a couple releases after that to allow users time
 to replace references to ``dockerng`` with ``docker``.
@@ -293,17 +293,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 if container_port.endswith('/tcp'):
                     container_port = container_port[:-4]
                 for bind_data in bind_list:
-                    # Port range will have to be updated for future Docker
-                    # versions (see
-                    # https://github.com/docker/docker/issues/10220).  Note
-                    # that Docker 1.5.0 (released a few weeks after the fix
-                    # was merged) does not appear to have this fix in it,
-                    # so we're probably looking at 1.6.0 for this fix.
-                    if bind_data['HostPort'] == '' or \
-                            49153 <= int(bind_data['HostPort']) <= 65535:
-                        host_port = ''
-                    else:
-                        host_port = bind_data['HostPort']
+                    host_port = bind_data['HostPort']
                     if bind_data['HostIp'] in ('0.0.0.0', ''):
                         if host_port:
                             bind_def = (host_port, container_port)
@@ -432,6 +422,15 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+        elif item in ('cmd', 'command', 'entrypoint'):
+            if (actual_data is None and item not in create_kwargs and
+                    _image_get(config['image_path'])):
+                # It appears we can't blank values defined on Image layer,
+                # So ignore the diff.
+                continue
+            if actual_data != data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+            continue
 
         elif isinstance(data, list):
             # Compare two sorted lists of items. Won't work for "command"
@@ -2104,6 +2103,11 @@ def absent(name, force=False):
                           'forcibly remove it')
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
+        return ret
+
     try:
         ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
     except Exception as exc:
@@ -2313,6 +2317,10 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
     volume = _find_volume(name)
     if not volume:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+            return ret
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
@@ -2324,13 +2332,20 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             result = True
             ret['result'] = result
             return ret
-    # volume exits, check if driver is the same.
+    # volume exists, check if driver is the same.
     if driver is not None and volume['Driver'] != driver:
         if not force:
             ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
                              " does not match specified driver ('{2}')" \
                              " and force is False".format(
                                  name, volume['Driver'], driver)
+            ret['result'] = None if __opts__['test'] else False
+            return ret
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = "The volume '{0}' will be replaced with a" \
+                             " new one using the driver '{1}'".format(
+                                 name, volume)
             return ret
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
@@ -2351,7 +2366,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = True
+    ret['result'] = None if __opts__['test'] else True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 

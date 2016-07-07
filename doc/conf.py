@@ -7,6 +7,7 @@ import functools
 import sys
 import os
 import types
+import time
 
 from sphinx.directives import TocTree
 
@@ -19,7 +20,7 @@ class Mock(object):
     This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
-    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
     def __init__(self, *args, **kwargs):
         pass
@@ -211,11 +212,13 @@ project = 'Salt'
 copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2016.3.0'  # latest release
+latest_release = '2016.3.1'  # latest release
 previous_release = '2015.8.10'  # latest release from previous branch
 previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
+
+today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'develop'  # latest, previous, develop, next
@@ -279,11 +282,16 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-2-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
+.. |osxdownload| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -362,6 +370,7 @@ html_context = {
     'next_release_dir': next_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
+    'today': today,
 }
 
 html_use_index = True
@@ -405,10 +414,10 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'http://logstash.net/docs/latest/inputs/udp',
                     r'http://logstash.net/docs/latest/inputs/zeromq',
                     r'http://www.youtube.com/saltstack',
-                    r'http://raven.readthedocs.org',
+                    r'https://raven.readthedocs.io',
                     r'https://getsentry.com',
-                    r'http://salt-cloud.readthedocs.org',
-                    r'http://salt.readthedocs.org',
+                    r'https://salt-cloud.readthedocs.io',
+                    r'https://salt.readthedocs.io',
                     r'http://www.pip-installer.org/',
                     r'http://www.windowsazure.com/',
                     r'https://github.com/watching',

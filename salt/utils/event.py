@@ -70,7 +70,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.loader
 import salt.utils
 import salt.utils.async
 import salt.utils.cache
@@ -817,12 +816,10 @@ class AsyncEventPublisher(object):
 
     TODO: remove references to "minion_event" whenever we need to use this for other things
     '''
-    def __init__(self, opts, publish_handler, io_loop=None):
+    def __init__(self, opts, io_loop=None):
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
-
-        self.publish_handler = publish_handler
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self._closing = False
@@ -909,7 +906,6 @@ class AsyncEventPublisher(object):
         '''
         try:
             self.publisher.publish(package)
-            self.io_loop.spawn_callback(self.publish_handler, package)
             return package
         # Add an extra fallback in case a forked process leeks through
         except Exception:

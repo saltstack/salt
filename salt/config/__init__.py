@@ -38,7 +38,6 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-import salt.utils.sdb
 from salt.utils.locales import sdecode
 
 log = logging.getLogger(__name__)
@@ -47,7 +46,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 if salt.utils.is_windows():
@@ -495,6 +494,7 @@ VALID_OPTS = {
     'gitfs_env_blacklist': list,
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
+    'gitfs_saltenv': list,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -559,9 +559,9 @@ VALID_OPTS = {
     'preserve_minion_cache': bool,
     'syndic_master': (string_types, list),
 
-    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
-    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
-    # if 'ordered' the configured order will be used.
+    # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
+    # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
+    # order if 'ordered' the configured order will be used.
     'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
@@ -735,9 +735,6 @@ VALID_OPTS = {
 
     # The number of seconds for a syndic to poll for new messages that need to be forwarded
     'syndic_event_forward_timeout': float,
-
-    # The number of seconds for the syndic to spend polling the event bus
-    'syndic_max_event_process_time': float,
 
     # The length that the syndic event queue must hit before events are popped off and forwarded
     'syndic_jid_forward_cache_hwm': int,
@@ -938,6 +935,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -964,7 +962,7 @@ DEFAULT_MINION_OPTS = {
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'minion'),
-    'log_level': 'info',
+    'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
@@ -1133,6 +1131,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1217,7 +1216,7 @@ DEFAULT_MASTER_OPTS = {
     'tcp_master_publish_pull': 4514,
     'tcp_master_workers': 4515,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
-    'log_level': 'info',
+    'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
@@ -1282,7 +1281,6 @@ DEFAULT_MASTER_OPTS = {
     'transport': 'zeromq',
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
-    'syndic_max_event_process_time': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
     'ssh_passwd': '',
     'ssh_port': '22',
@@ -1339,6 +1337,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
+    'default_include': 'proxy.d/*.conf',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1357,7 +1356,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'cloud'),
-    'log_level': 'info',
+    'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
@@ -1377,12 +1376,12 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
+    'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': '/srv/spm/salt',
     'pillar_path': '/srv/spm/pillar',
     'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
-    'default_include': 'spm.d/*.conf',
+    'spm_default_include': 'spm.d/*.conf',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
@@ -1852,6 +1851,8 @@ def apply_sdb(opts, sdb_opts=None):
     '''
     Recurse for sdb:// links for opts
     '''
+    # Late load of SDB to keep CLI light
+    import salt.utils.sdb
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
@@ -2773,7 +2774,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
+                        'virtualbox', 'profitbricks']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
@@ -2901,7 +2903,7 @@ def get_id(opts, cache_minion_id=False):
                 bname = salt.utils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
                     name = salt.utils.to_str(bname.replace(codecs.BOM, '', 1))
-            if name:
+            if name and name != 'localhost':
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
         except (IOError, OSError):
@@ -2912,10 +2914,10 @@ def get_id(opts, cache_minion_id=False):
 
     newid = salt.utils.network.generate_minion_id()
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+        log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
-    is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
+    is_ipv4 = salt.utils.network.is_ipv4(newid)
     return newid, is_ipv4
 
 
@@ -2952,7 +2954,12 @@ def apply_minion_config(overrides=None,
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
-
+    # Make sure ext_mods gets set if it is an untrue value
+    # (here to catch older bad configs)
+    opts['extension_modules'] = (
+        opts.get('extension_modules') or
+        os.path.join(opts['cachedir'], 'extmods')
+    )
     # Set up the utils_dirs location from the extension_modules location
     opts['utils_dirs'] = (
         opts.get('utils_dirs') or
@@ -3244,9 +3251,9 @@ def spm_config(path):
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
-    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['conf_file'])
-    default_include = overrides.get('default_include',
-                                    defaults['default_include'])
+    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['spm_conf_file'])
+    default_include = overrides.get('spm_default_include',
+                                    defaults['spm_default_include'])
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False))

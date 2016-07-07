@@ -13,7 +13,6 @@ import logging
 import os
 import shutil
 import tempfile
-from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -64,38 +63,6 @@ def _unhandled_mock_read(filename):
     Raise an error because we should not be calling salt.utils.fopen()
     '''
     raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
-
-
-@contextmanager
-def _fopen_side_effect_etc_hostname(filename):
-    '''
-    Mock reading from /etc/hostname
-    '''
-    log.debug('Mock-reading {0}'.format(filename))
-    if filename == '/etc/hostname':
-        mock_open = MagicMock()
-        mock_open.read.return_value = MOCK_ETC_HOSTNAME
-        yield mock_open
-    elif filename == '/etc/hosts':
-        raise IOError(2, "No such file or directory: '{0}'".format(filename))
-    else:
-        _unhandled_mock_read(filename)
-
-
-@contextmanager
-def _fopen_side_effect_etc_hosts(filename):
-    '''
-    Mock /etc/hostname not existing, and falling back to reading /etc/hosts
-    '''
-    log.debug('Mock-reading {0}'.format(filename))
-    if filename == '/etc/hostname':
-        raise IOError(2, "No such file or directory: '{0}'".format(filename))
-    elif filename == '/etc/hosts':
-        mock_open = MagicMock()
-        mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
-        yield mock_open
-    else:
-        _unhandled_mock_read(filename)
 
 
 class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
@@ -391,28 +358,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
-
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hostname(self):
-        '''
-        Test calling salt.config.get_id() and falling back to looking at
-        /etc/hostname.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
-
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hosts(self):
-        '''
-        Test calling salt.config.get_id() and falling back all the way to
-        looking up data from /etc/hosts.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 

@@ -203,7 +203,8 @@ def _revoked_to_list(revs):
 def private_key_managed(name,
                         bits=2048,
                         new=False,
-                        backup=False):
+                        backup=False,
+                        verbose=True,):
     '''
     Manage a private key's existence.
 
@@ -221,6 +222,12 @@ def private_key_managed(name,
     backup:
         When replacing an existing file, backup the old file onthe minion.
         Default is False.
+
+    verbose:
+        Provide visual feedback on stdout, dots while key is generated.
+        Default is True.
+
+        .. versionadded:: Carbon
 
     Example:
 
@@ -268,7 +275,8 @@ def private_key_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    ret['comment'] = __salt__['x509.create_private_key'](path=name, bits=bits)
+    ret['comment'] = __salt__['x509.create_private_key'](
+        path=name, bits=bits, verbose=verbose)
     ret['result'] = True
 
     return ret

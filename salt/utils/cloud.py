@@ -832,7 +832,8 @@ def wait_for_winrm(host, port, username, password, timeout=900):
         trycount += 1
         try:
             s = winrm.Session(host, auth=(username, password), transport='ssl')
-            s.protocol.set_timeout(15)
+            if hasattr(s.protocol, 'set_timeout'):
+                s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
             r = s.run_cmd('sc query winrm')
             if r.status_code == 0:
@@ -2017,17 +2018,13 @@ def win_cmd(command, **kwargs):
 
         if logging_command is None:
             log.debug(
-                'Executing command(PID {0}): {1!r}'.format(
-                    proc.pid,
-                    command
-                )
+                'Executing command(PID %s): \'%s\'',
+                proc.pid, command
             )
         else:
             log.debug(
-                'Executing command(PID {0}): {1!r}'.format(
-                    proc.pid,
-                    logging_command
-                )
+                'Executing command(PID %s): \'%s\'',
+                proc.pid, logging_command
             )
 
         proc.poll_and_read_until_finish()
@@ -2035,7 +2032,7 @@ def win_cmd(command, **kwargs):
         return proc.returncode
     except Exception as err:
         log.error(
-            'Failed to execute command {0!r}: {1}\n'.format(
+            'Failed to execute command \'{0}\': {1}\n'.format(
                 logging_command,
                 err
             ),

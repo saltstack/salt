@@ -4,9 +4,12 @@ Classes for starting/stopping/status salt daemons, auxiliary
 scripts, generic commands.
 '''
 
+from __future__ import absolute_import
 import atexit
 import copy
 from datetime import datetime, timedelta
+import errno
+import getpass
 import logging
 import os
 import shutil
@@ -18,9 +21,12 @@ import time
 
 import yaml
 
-import salt.ext.six as six
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
+from salt.defaults import exitcodes
+from salt.ext import six
+
+from salttesting import TestCase
 
 import integration
 
@@ -34,6 +40,7 @@ if 'TimeoutError' not in __builtins__:
     __builtins__['TimeoutError'] = TimeoutError
 
 
+# pylint: disable=too-many-instance-attributes
 class TestProgram(object):
     '''
     Set up an arbitrary executable to run.
@@ -92,8 +99,7 @@ class TestProgram(object):
     def cleanup(self, *args, **kwargs):
         ''' Clean out scaffolding of setup() and any run-time generated files.'''
         # Unused for now
-        _ = args
-        _ = kwargs
+        _ = (args, kwargs)
 
         if self.process:
             try:
@@ -111,6 +117,9 @@ class TestProgram(object):
             with_retcode=False,
             timeout=None,
             raw=False,
+            env=None,
+            verbatim_args=False,
+            verbatim_env=False,
     ):
         '''
         Execute a command possibly using a supplied environment.
@@ -131,11 +140,16 @@ class TestProgram(object):
         :param env: A dictionary of environment key/value settings for the
             command.
 
-        :param shell: A boolean of whether the command is processed by the
-            shell or invoked with execv.
+        :param verbatim_args: A boolean whether to automatically add inferred arguments.
+
+        :param verbatim_env: A boolean whether to automatically add inferred
+            environment values.
 
         :return list: (stdout [,stderr] [,retcode])
         '''
+
+        # unused for now
+        _ = verbatim_args
 
         if not self._setup_done:
             self.setup()
@@ -144,8 +158,28 @@ class TestProgram(object):
         if args is None:
             args = []
 
+        if env is None:
+            env = {}
+
+        env_delta = {}
+        env_delta.update(self.env)
+        env_delta.update(env)
+
+        if not verbatim_env:
+            env_pypath = env_delta.get('PYTHONPATH', os.environ.get('PYTHONPATH'))
+            if not env_pypath:
+                env_pypath = ':'.join(sys.path)
+            else:
+                env_pypath = env_pypath.split(':')
+                for path in sys.path:
+                    if path not in env_pypath:
+                        env_pypath.append(path)
+                if integration.CODE_DIR not in env_pypath:
+                    env_pypath.append(integration.CODE_DIR)
+            env_delta['PYTHONPATH'] = ':'.join(env_pypath)
+
         cmd_env = dict(os.environ)
-        cmd_env.update(self.env)
+        cmd_env.update(env_delta)
 
         popen_kwargs = {
             'shell': self.shell,
@@ -172,6 +206,7 @@ class TestProgram(object):
 
         argv = [self.program]
         argv.extend(args)
+        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -195,7 +230,7 @@ class TestProgram(object):
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         process.wait()
                     except OSError as exc:
-                        if exc.errno != 3:
+                        if exc.errno != errno.ESRCH:
                             raise
 
                     out = process.stdout.read().splitlines()
@@ -309,14 +344,11 @@ class TestSaltProgramMeta(type):
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
-class TestSaltProgram(TestProgram):
+class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     '''
     This is like TestProgram but with some functions to run a salt-specific
     auxiliary program.
     '''
-
-    __metaclass__ = TestSaltProgramMeta
-
     script = ''
 
     def __init__(self, *args, **kwargs):
@@ -357,7 +389,7 @@ class TestSaltProgram(TestProgram):
             sdo.write(''.join(lines))
             sdo.flush()
 
-        os.chmod(self.script_path, 0755)
+        os.chmod(self.script_path, 0o755)
 
 
 class TestProgramSaltCall(TestSaltProgram):
@@ -382,8 +414,9 @@ class TestDaemon(TestProgram):
     def __init__(self, *args, **kwargs):
         self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
-        self.pid_file = kwargs.pop('pid_file', '{0}.pid'.format(self.script))
+        self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self.config_file = kwargs.pop('config_file', self.config_file)
+        self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
@@ -402,13 +435,12 @@ class TestDaemon(TestProgram):
     @property
     def daemon_pid(self):
         '''Return the daemon PID'''
-        return (
-            salt.utils.process.get_pidfile(self.pid_path)
-            if salt.utils.process.check_pidfile(self.pid_path)
-            else None
-        )
+        pid = None
+        if salt.utils.process.check_pidfile(self.pid_path):
+            pid = salt.utils.process.get_pidfile(self.pid_path)
+        return pid
 
-    def wait_for_daemon_pid(self, timeout=0):
+    def wait_for_daemon_pid(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
         endtime = time.time() + timeout
         while True:
@@ -417,24 +449,35 @@ class TestDaemon(TestProgram):
                 return pid
             if endtime < time.time():
                 raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(self.name, self.pid_path))
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     def is_running(self):
         '''Is the daemon running?'''
         ret = False
-        try:
-            pid = self.wait_for_daemon_pid()
-            ret = psutils.pid_exists(pid)
-        except TimeoutError:
-            pass
+        if not self._shutdown:
+            try:
+                pid = self.wait_for_daemon_pid()
+                ret = psutils.pid_exists(pid)
+            except TimeoutError:
+                pass
         return ret
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
-        if self.process:
-            pid = self.wait_for_daemon_pid()
-            os.kill(pid, signum)
-            salt.utils.process.clean_proc(pid, wait_for_kill=timeout)
+        if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
+            future = datetime.now() + timedelta(seconds=timeout)
+            pid = self.wait_for_daemon_pid(timeout)
+            while True:
+                try:
+                    os.kill(pid, signum)
+                except OSError as err:
+                    if errno.ESRCH == err.errno:
+                        break
+                    raise
+                if datetime.now() > future:
+                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
+                time.sleep(0.1)
+            self._shutdown = True
 
     @property
     def config_dir(self):
@@ -454,13 +497,21 @@ class TestDaemon(TestProgram):
             shutil.rmtree(self.root_dir)
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
+    @property
+    def config_path(self):
+        '''The full path of the configuration file.'''
+        return os.path.join(self.config_dir, self.config_file)
+
     def config_write(self):
         '''Write out the config to a file'''
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
-        config_path = os.path.join(self.config_dir, self.config_file)
-        with open(config_path, 'w') as cfo:
-            cfo.write(self.config_stringify())
+        with open(self.config_path, 'w') as cfo:
+            cfg = self.config_stringify()
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(
+                self.name, self.config_path, cfg
+            ))
+            cfo.write(cfg)
             cfo.flush()
 
     def make_dirtree(self):
@@ -520,13 +571,10 @@ class TestSaltDaemonMeta(TestSaltProgramMeta, type):
         return super(TestSaltDaemonMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
-class TestSaltDaemon(TestDaemon, TestSaltProgram):
+class TestSaltDaemon(six.with_metaclass(TestSaltDaemonMeta, TestDaemon, TestSaltProgram)):
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-
-    __metaclass__ = TestSaltDaemonMeta
-
     config_types = (dict,)
     config_attrs = {
         'root_dir': None,
@@ -565,6 +613,13 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
     def config_stringify(self):
         return yaml.safe_dump(self.config, default_flow_style=False)
 
+    def run(self, **kwargs):
+        if not kwargs.get('verbatim_args'):
+            args = kwargs.setdefault('args', [])
+            if '-c' not in args and '--config-dir' not in args:
+                args.extend(['--config-dir', self.config_dir])
+        return super(TestSaltDaemon, self).run(**kwargs)
+
 
 class TestDaemonSaltMaster(TestSaltDaemon):
     '''
@@ -572,6 +627,11 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     '''
 
     config_file = 'master'
+
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltMinion(TestSaltDaemon):
@@ -583,6 +643,11 @@ class TestDaemonSaltMinion(TestSaltDaemon):
         'id': 'name',
     }
     config_file = 'minion'
+
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltMinion, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltApi(TestSaltDaemon):
@@ -597,3 +662,65 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     Manager for salt-syndic daemon.
     '''
     pass
+
+
+class TestDaemonSaltProxy(TestSaltDaemon):
+    '''
+    Manager for salt-proxy daemon.
+    '''
+
+    config_file = 'proxy'
+    pid_file = 'salt-minion.pid'
+
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
+
+    def run(self, **kwargs):
+        if not kwargs.get('verbatim_args'):
+            args = kwargs.setdefault('args', [])
+            if '--proxyid' not in args:
+                args.extend(['--proxyid', self.name])
+        return super(TestDaemonSaltProxy, self).run(**kwargs)
+
+
+class TestProgramCase(TestCase):
+    '''
+    Utilities for unit tests that use TestProgram()
+    '''
+
+    def setUp(self):
+        # Setup for scripts
+        if not getattr(self, '_test_dir', None):
+            self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+        super(TestProgramCase, self).setUp()
+
+    def tearDown(self):
+        # shutdown for scripts
+        if self._test_dir and os.path.sep == self._test_dir[0]:
+            shutil.rmtree(self._test_dir)
+            self._test_dir = None
+        super(TestProgramCase, self).tearDown()
+
+    def assert_exit_status(self, status, ex_status, message=None, stdout=None, stderr=None):
+        '''
+        Helper function to verify exit status and emit failure information.
+        '''
+
+        ex_val = getattr(exitcodes, ex_status)
+        _message = '' if not message else ' ({0})'.format(message)
+        _stdout = '' if not stdout else '\nstdout: {0}'.format('\nstdout: '.join(stdout))
+        _stderr = '' if not stderr else '\nstderr: {0}'.format('\nstderr: '.join(stderr))
+        self.assertEqual(
+            status,
+            ex_val,
+            'Exit status was {0}, must be {1} (salt.default.exitcodes.{2}){3}{4}{5}'.format(
+                status,
+                ex_val,
+                ex_status,
+                _message,
+                _stderr,
+                _stderr,
+            )
+        )

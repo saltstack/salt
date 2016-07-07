@@ -18,7 +18,6 @@ import json
 import logging
 import numbers
 import os
-import pprint
 import random
 import re
 import shlex
@@ -150,6 +149,17 @@ def is_empty(filename):
         return os.stat(filename).st_size == 0
     except OSError:
         # Non-existent file or permission denied to the parent dir
+        return False
+
+
+def is_hex(value):
+    '''
+    Returns True if value is a hexidecimal string, otherwise returns False
+    '''
+    try:
+        int(value, 16)
+        return True
+    except (TypeError, ValueError):
         return False
 
 
@@ -2075,7 +2085,6 @@ def alias_function(fun, name, doc=None):
         alias_fun.__doc__ = doc
     else:
         orig_name = fun.__name__
-
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
         alias_fun.__doc__ = alias_msg + fun.__doc__
@@ -2399,6 +2408,21 @@ def compare_dicts(old=None, new=None):
     return ret
 
 
+def compare_lists(old=None, new=None):
+    '''
+    Compare before and after results from various salt functions, returning a
+    dict describing the changes that were made
+    '''
+    ret = dict()
+    for item in new:
+        if item not in old:
+            ret['new'] = item
+    for item in old:
+        if item not in new:
+            ret['old'] = item
+    return ret
+
+
 def argspec_report(functions, module=''):
     '''
     Pass in a functions dict as it is returned from the loader and return the
@@ -2563,7 +2587,11 @@ def is_dictlist(data):
     return False
 
 
-def repack_dictlist(data):
+def repack_dictlist(data,
+                    strict=False,
+                    recurse=False,
+                    key_cb=None,
+                    val_cb=None):
     '''
     Takes a list of one-element dicts (as found in many SLS schemas) and
     repacks into a single dictionary.
@@ -2575,23 +2603,58 @@ def repack_dictlist(data):
         except yaml.parser.ParserError as err:
             log.error(err)
             return {}
-    if not isinstance(data, list) \
-            or [x for x in data
-                if not isinstance(x, (six.string_types, int, float, dict))]:
-        log.error('Invalid input: {0}'.format(pprint.pformat(data)))
-        log.error('Input must be a list of strings/dicts')
+
+    if key_cb is None:
+        key_cb = lambda x: x
+    if val_cb is None:
+        val_cb = lambda x, y: y
+
+    valid_non_dict = (six.string_types, int, float)
+    if isinstance(data, list):
+        for element in data:
+            if isinstance(element, valid_non_dict):
+                continue
+            elif isinstance(element, dict):
+                if len(element) != 1:
+                    log.error(
+                        'Invalid input for repack_dictlist: key/value pairs '
+                        'must contain only one element (data passed: %s).',
+                        element
+                    )
+                    return {}
+            else:
+                log.error(
+                    'Invalid input for repack_dictlist: element %s is '
+                    'not a string/dict/numeric value', element
+                )
+                return {}
+    else:
+        log.error(
+            'Invalid input for repack_dictlist, data passed is not a list '
+            '(%s)', data
+        )
         return {}
+
     ret = {}
     for element in data:
-        if isinstance(element, (six.string_types, int, float)):
-            ret[element] = None
+        if isinstance(element, valid_non_dict):
+            ret[key_cb(element)] = None
         else:
-            if len(element) != 1:
-                log.error('Invalid input: key/value pairs must contain '
-                          'only one element (data passed: {0}).'
-                          .format(element))
-                return {}
-            ret.update(element)
+            key = next(iter(element))
+            val = element[key]
+            if is_dictlist(val):
+                if recurse:
+                    ret[key_cb(key)] = repack_dictlist(val, recurse=recurse)
+                elif strict:
+                    log.error(
+                        'Invalid input for repack_dictlist: nested dictlist '
+                        'found, but recurse is set to False'
+                    )
+                    return {}
+                else:
+                    ret[key_cb(key)] = val_cb(key, val)
+            else:
+                ret[key_cb(key)] = val_cb(key, val)
     return ret
 
 
@@ -2853,7 +2916,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -2884,7 +2947,7 @@ def to_unicode(s, encoding=None):
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)
+        return unicode(s)  # pylint: disable=incompatible-py3-code
 
 
 def is_list(value):

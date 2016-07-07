@@ -19,7 +19,7 @@ def gt(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] > value:
@@ -37,7 +37,7 @@ def gte(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] >= value:
@@ -55,7 +55,7 @@ def lt(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] < value:
@@ -73,7 +73,7 @@ def lte(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] <= value:
@@ -91,7 +91,7 @@ def eq(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] == value:
@@ -109,7 +109,7 @@ def ne(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] != value:
@@ -127,7 +127,7 @@ def contains(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     try:

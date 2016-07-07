@@ -97,6 +97,10 @@ def __virtual__():
     return 'boto_elasticsearch_domain' if 'boto_elasticsearch_domain.exists' in __salt__ else False
 
 
+def _compare_json(current, desired):
+    return __utils__['boto3.json_objs_equal'](current, desired)
+
+
 def present(name, DomainName,
             ElasticsearchClusterConfig=None,
             EBSOptions=None,
@@ -274,7 +278,7 @@ def present(name, DomainName,
         'SnapshotOptions': SnapshotOptions,
         'AdvancedOptions': AdvancedOptions
     }.iteritems():
-        if v != _describe[k]:
+        if not _compare_json(v, _describe[k]):
             need_update = True
             comm_args[k] = v
             ret['changes'].setdefault('new', {})[k] = v

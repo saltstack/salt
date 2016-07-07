@@ -309,7 +309,14 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
-    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    try:
+        cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
+
     if any((pkgs, sources)):
         if pkgs:
             desired = _repack_pkgs(pkgs)
@@ -637,6 +644,7 @@ def installed(
         normalize=True,
         ignore_epoch=False,
         reinstall=False,
+        update_holds=False,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -726,8 +734,22 @@ def installed(
                   - salt-minion: 2015.8.5-1.el6
 
     :param bool refresh:
-        Update the repo database of available packages prior to installing the
-        requested package.
+        This parameter controls whether or not the packge repo database is
+        updated prior to installing the requested package(s).
+
+        If ``True``, the package database will be refreshed (``apt-get
+        update`` or equivalent, depending on platform) before installing.
+
+        If ``False``, the package database will *not* be refreshed before
+        installing.
+
+        If unset, then Salt treats package database refreshes differently
+        depending on whether or not a ``pkg`` state has been executed already
+        during the current Salt run. Once a refresh has been performed in a
+        ``pkg`` state, for the remainder of that Salt run no other refreshes
+        will be performed for ``pkg`` states which do not explicitly set
+        ``refresh`` to ``True``. This prevents needless additional refreshes
+        from slowing down the Salt run.
 
     :param str fromrepo:
         Specify a repository from which to install
@@ -1017,9 +1039,20 @@ def installed(
 
     :param bool hold:
         Force the package to be held at the current installed version.
-        Currently works with YUM & APT based systems.
+        Currently works with YUM/DNF & APT based systems.
 
         .. versionadded:: 2014.7.0
+
+    :param bool update_holds:
+        If ``True``, and this function would update the package version, any
+        packages which are being held will be temporarily unheld so that they
+        can be updated. Otherwise, if this function attempts to update a held
+        package, the held package(s) will be skipped and the state will fail.
+        By default, this parameter is set to ``False``.
+
+        This option is currently supported only for YUM/DNF.
+
+        .. versionadded:: Carbon
 
     :param list names:
         A list of packages to install from a software repository. Each package
@@ -1058,6 +1091,34 @@ def installed(
               pkg.installed:
                 - only_upgrade: True
 
+        .. note::
+            If this parameter is set to True and the package is not already
+            installed, the state will fail.
+
+   :param bool report_reboot_exit_codes:
+       If the installer exits with a recognized exit code indicating that
+       a reboot is required, the module function
+
+           *win_system.set_reboot_required_witnessed*
+
+       will be called, preserving the knowledge of this event
+       for the remainder of the current boot session. For the time being,
+       ``3010`` is the only recognized exit code,
+       but this is subject to future refinement.
+       The value of this param
+       defaults to ``True``. This paramater has no effect
+       on non-Windows systems.
+
+       .. versionadded:: Carbon
+
+       .. code-block:: yaml
+
+           ms vcpp installed:
+             pkg.installed:
+               - name: ms-vcpp
+               - version: 10.0.40219
+               - report_reboot_exit_codes: False
+
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
@@ -1087,9 +1148,10 @@ def installed(
 
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
-    refresh = bool(salt.utils.is_true(refresh) or
-                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
-                   )
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1103,11 +1165,17 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name)
+        version = __salt__['pkg.latest_version'](name, **kwargs)
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
-            version = __salt__['pkg.version'](name)
+            try:
+                version = __salt__['pkg.version'](name)
+            except CommandExecutionError as exc:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
@@ -1161,18 +1229,18 @@ def installed(
 
                     if modified_hold:
                         for i in modified_hold:
-                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['comment'] += '.\n{0}'.format(i['comment'])
                             result['result'] = i['result']
                             result['changes'][i['name']] = i['changes']
 
                     if not_modified_hold:
                         for i in not_modified_hold:
-                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['comment'] += '.\n{0}'.format(i['comment'])
                             result['result'] = i['result']
 
                     if failed_hold:
                         for i in failed_hold:
-                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['comment'] += '.\n{0}'.format(i['comment'])
                             result['result'] = i['result']
         return result
 
@@ -1263,6 +1331,7 @@ def installed(
                                               sources=sources,
                                               reinstall=bool(to_reinstall),
                                               normalize=normalize,
+                                              update_holds=update_holds,
                                               **kwargs)
 
             if os.path.isfile(rtag) and refresh:
@@ -1542,8 +1611,24 @@ def latest(
         Skip the GPG verification check for the package to be installed
 
     refresh
-        Update the repo database of available packages prior to installing the
-        requested package.
+        This parameter controls whether or not the packge repo database is
+        updated prior to checking for the latest available version of the
+        requested packages.
+
+        If ``True``, the package database will be refreshed (``apt-get update``
+        or equivalent, depending on platform) before checking for the latest
+        available version of the requested packages.
+
+        If ``False``, the package database will *not* be refreshed before
+        checking.
+
+        If unset, then Salt treats package database refreshes differently
+        depending on whether or not a ``pkg`` state has been executed already
+        during the current Salt run. Once a refresh has been performed in a
+        ``pkg`` state, for the remainder of that Salt run no other refreshes
+        will be performed for ``pkg`` states which do not explicitly set
+        ``refresh`` to ``True``. This prevents needless additional refreshes
+        from slowing down the Salt run.
 
 
     Multiple Package Installation Options:
@@ -1586,11 +1671,38 @@ def latest(
           pkg.latest:
             - only_upgrade: True
 
+    .. note::
+        If this parameter is set to True and the package is not already
+        installed, the state will fail.
+
+   report_reboot_exit_codes
+        If the installer exits with a recognized exit code indicating that
+        a reboot is required, the module function
+
+           *win_system.set_reboot_required_witnessed*
+
+        will be called, preserving the knowledge of this event
+        for the remainder of the current boot session. For the time being,
+        ``3010`` is the only recognized exit code, but this
+        is subject to future refinement. The value of this param
+        defaults to ``True``. This paramater has no effect on
+        non-Windows systems.
+
+        .. versionadded:: Carbon
+
+        .. code-block:: yaml
+
+           ms vcpp installed:
+             pkg.latest:
+               - name: ms-vcpp
+               - report_reboot_exit_codes: False
+
     '''
     rtag = __gen_rtag()
-    refresh = bool(salt.utils.is_true(refresh) or
-                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
-                   )
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -1617,7 +1729,8 @@ def latest(
         else:
             desired_pkgs = [name]
 
-    cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
+    kwargs['saltenv'] = __env__
+
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                                fromrepo=fromrepo,
@@ -1630,6 +1743,14 @@ def latest(
                 'comment': 'An error was encountered while checking the '
                            'newest available version of package(s): {0}'
                            .format(exc)}
+
+    try:
+        cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': exc.strerror}
 
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
@@ -1650,7 +1771,7 @@ def latest(
     if minion_os == 'Gentoo' and watch_flags:
         for pkg in desired_pkgs:
             if not avail[pkg] and not cur[pkg]:
-                msg = 'No information found for {0!r}.'.format(pkg)
+                msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
             else:
@@ -2139,14 +2260,19 @@ def uptodate(name, refresh=False, **kwargs):
         ret['comment'] = 'State pkg.uptodate is not available'
         return ret
 
+    # emerge --update doesn't appear to support repo notation
+    if 'fromrepo' in kwargs and __grains__['os'] == 'Gentoo':
+        ret['comment'] = '\'fromrepo\' argument not supported on this platform'
+        return ret
+
     if isinstance(refresh, bool):
         try:
-            packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+            packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
     else:
-        ret['comment'] = 'refresh must be a boolean'
+        ret['comment'] = 'refresh must be either True or False'
         return ret
 
     if not packages:
@@ -2186,8 +2312,12 @@ def group_installed(name, skip=None, include=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
+    .. versionchanged:: Carbon
+        Added support in :mod:`pacman <salt.modules.pacman>`
+
     Ensure that an entire package group is installed. This state is currently
-    only supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
+    only supported for the :mod:`yum <salt.modules.yumpkg>` and :mod:`pacman <salt.modules.pacman>`
+    package managers.
 
     skip
         Packages that would normally be installed by the package group

@@ -12,7 +12,6 @@ as those returned here
 
 # Import python libs
 from __future__ import absolute_import
-import itertools
 import os
 import json
 import socket
@@ -36,6 +35,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
+import salt.utils.dns
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -992,6 +992,8 @@ _OS_NAME_MAP = {
     'debian': 'Debian',
     'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
+    'chapeau': 'Chapeau',
+    'korora': 'Korora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'enterprise': 'OEL',
@@ -1015,6 +1017,8 @@ _OS_NAME_MAP = {
 _OS_FAMILY_MAP = {
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
+    'Chapeau': 'RedHat',
+    'Korora': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
@@ -1038,6 +1042,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'SUSE',
     'openSUSE Leap': 'SUSE',
     'openSUSE Tumbleweed': 'SUSE',
+    'SLES_SAP': 'SUSE',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1156,6 +1161,23 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
+
+        if 'Server' in grains['osrelease']:
+            osrelease_info = grains['osrelease'].split('Server', 1)
+            osrelease_info[1] = osrelease_info[1].lstrip('R')
+        else:
+            osrelease_info = grains['osrelease'].split('.')
+
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
+
         return grains
     elif salt.utils.is_linux():
         # Add SELinux grain, if you have it
@@ -1266,6 +1288,14 @@ def os_data():
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                    if 'CPE_NAME' in os_release:
+                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                            grains['os'] = "SUSE"
+                            # openSUSE `osfullname` grain normalization
+                            if os_release.get("NAME") == "openSUSE Leap":
+                                grains['osfullname'] = "Leap"
+                            elif os_release.get("VERSION") == "Tumbleweed":
+                                grains['osfullname'] = os_release["VERSION"]
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     version = ''
@@ -1373,7 +1403,8 @@ def os_data():
         shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
         # traditional short names that Salt has used.
-        grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
+        if 'os' not in grains:
+            grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
@@ -1383,8 +1414,8 @@ def os_data():
             uname_v = os.uname()[3]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v[uname_v.index('_')+1:]
-        elif salt.utils.is_smartos_globalzone():
-            grains.update(_smartos_computenode_data())
+            if salt.utils.is_smartos_globalzone():
+                grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1481,6 +1512,8 @@ def os_data():
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
     elif grains.get('osfullname') == 'Ubuntu':
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'])
@@ -1490,7 +1523,7 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac'):
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian'):
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
@@ -1595,12 +1628,21 @@ def fqdn_ip4():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip4': addrs}
+
+
+def has_ipv6():
+    '''
+    Check whether IPv6 is supported on this platform.
+
+    .. versionadded:: Carbon
+    '''
+
+    return {'has_ipv6': socket.has_ipv6}
 
 
 def ip6():
@@ -1625,9 +1667,8 @@ def fqdn_ip6():
     addrs = []
     try:
         hostname_grains = hostname()
-        if hostname_grains['domain']:
-            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
-            addrs = list(set(item[4][0] for item in info))
+        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
+        addrs = list(set(item[4][0] for item in info))
     except socket.error:
         pass
     return {'fqdn_ip6': addrs}
@@ -1732,49 +1773,18 @@ def dns():
 
      .. versionadded:: 2016.3.0
     '''
-
+    # Provides:
+    #   dns
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
         return {}
 
-    ns4 = []
-    ns6 = []
-    search = []
-    domain = ''
+    resolv = salt.utils.dns.parse_resolv()
+    for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
+                'sortlist'):
+        if key in resolv:
+            resolv[key] = [str(i) for i in resolv[key]]
 
-    try:
-        with salt.utils.fopen('/etc/resolv.conf') as f:
-            for line in f:
-                line = line.strip().split()
-
-                try:
-                    (directive, arg) = (line[0].lower(), line[1:])
-                    if directive == 'nameserver':
-                        ip_addr = arg[0]
-                        if (salt.utils.network.is_ipv4(ip_addr) and
-                                ip_addr not in ns4):
-                            ns4.append(ip_addr)
-                        elif (salt.utils.network.is_ipv6(ip_addr) and
-                                ip_addr not in ns6):
-                            ns6.append(ip_addr)
-                    elif directive == 'domain':
-                        domain = arg[0]
-                    elif directive == 'search':
-                        search = list(itertools.takewhile(
-                            lambda x: x[0] not in ('#', ';'), arg))
-                except (IndexError, RuntimeError):
-                    continue
-
-        ret = {
-            'nameservers': ns4 + ns6,
-            'ip4_nameservers': ns4,
-            'ip6_nameservers': ns6,
-            'domain': domain,
-            'search': search
-        }
-
-        return {'dns': ret}
-    except IOError:
-        return {}
+    return {'dns': resolv} if resolv else {}
 
 
 def get_machine_id():

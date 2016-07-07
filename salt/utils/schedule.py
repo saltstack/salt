@@ -236,6 +236,10 @@ from being sent back to the Salt master.
           function: scheduled_job_function
           return_job: False
 
+Setting the ``return_job`` parameter to 'nocache' prevents the salt master
+from storing the job in the master cache. Still, an event is fired on the
+master event bus in the form 'salt/job/nocache/ret/myminion'.
+
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
 a scheduled job.  These values are not used in the execution of the job,
@@ -256,6 +260,7 @@ dictionary, othewise it will be ignored.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import os
+import sys
 import time
 import signal
 import datetime
@@ -308,7 +313,29 @@ class Schedule(object):
     '''
     Create a Schedule object, pass in the opts and the functions dict to use
     '''
-    def __init__(self, opts, functions, returners=None, intervals=None):
+    instance = None
+
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None):
+        '''
+        Only create one instance of Schedule
+        '''
+        if cls.instance is None:
+            log.debug('Initializing new Schedule')
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            cls.instance = object.__new__(cls)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup)
+        else:
+            log.debug('Re-using Schedule')
+        return cls.instance
+
+    # has to remain empty for singletons, since __init__ will *always* be called
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
         self.opts = opts
         self.functions = functions
         if isinstance(intervals, dict):
@@ -324,6 +351,9 @@ class Schedule(object):
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE
         clean_proc_dir(opts)
+        if cleanup:
+            for prefix in cleanup:
+                self.delete_job_prefix(prefix)
 
     def option(self, opt):
         '''
@@ -389,6 +419,38 @@ class Schedule(object):
         # remove from self.intervals
         if name in self.intervals:
             del self.intervals[name]
+
+        if persist:
+            self.persist()
+
+    def delete_job_prefix(self, name, persist=True, where=None):
+        '''
+        Deletes a job from the scheduler.
+        '''
+        if where is None or where != 'pillar':
+            # ensure job exists, then delete it
+            for job in list(self.opts['schedule'].keys()):
+                if job.startswith(name):
+                    del self.opts['schedule'][job]
+            schedule = self.opts['schedule']
+        else:
+            # If job is in pillar, delete it there too
+            if 'schedule' in self.opts['pillar']:
+                for job in list(self.opts['pillar']['schedule'].keys()):
+                    if job.startswith(name):
+                        del self.opts['pillar']['schedule'][job]
+            schedule = self.opts['pillar']['schedule']
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_delete_complete')
+
+        # remove from self.intervals
+        for job in list(self.intervals.keys()):
+            if job.startswith(name):
+                del self.intervals[job]
 
         if persist:
             self.persist()
@@ -562,17 +624,12 @@ class Schedule(object):
         '''
         Reload the schedule from saved schedule file.
         '''
-
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts:
-            if 'schedule' in schedule:
-                self.opts['schedule'].update(schedule['schedule'])
-            else:
-                self.opts['schedule'].update(schedule)
-        else:
-            self.opts['schedule'] = schedule
+        if 'schedule' in schedule:
+            schedule = schedule['schedule']
+        self.opts.setdefault('schedule', {}).update(schedule)
 
     def list(self, where):
         '''
@@ -723,10 +780,10 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
-                if 'returner_config' in data:
-                    ret['ret_config'] = data['returner_config']
-                if 'returner_kwargs' in data:
-                    ret['ret_kwargs'] = data['returner_kwargs']
+                if 'return_config' in data:
+                    ret['ret_config'] = data['return_config']
+                if 'return_kwargs' in data:
+                    ret['ret_kwargs'] = data['return_kwargs']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
@@ -771,6 +828,9 @@ class Schedule(object):
                         # Send back to master so the job is included in the job list
                         mret = ret.copy()
                         mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                         event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
                         load = {'cmd': '_return', 'id': self.opts['id']}
                         for key, value in six.iteritems(mret):
@@ -792,7 +852,7 @@ class Schedule(object):
             finally:
                 if multiprocessing_enabled:
                     # Let's make sure we exit the process!
-                    exit(salt.defaults.exitcodes.EX_GENERIC)
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def eval(self):
         '''

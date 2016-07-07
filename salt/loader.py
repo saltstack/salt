@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-We wanna be free to ride our machines without being hassled by The Man!
-And we wanna get loaded!
-And we wanna have a good time!
-And that's what we are gonna do. We are gonna have a good time...
+The Salt loader is the core to Salt's plugin system, the loader scans
+directories for python loadable code and organizes the code into the
+plugin interfaces used by Salt.
 '''
 
 # Import python libs
@@ -203,7 +202,8 @@ def minion_mods(
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         __grains__ = salt.loader.grains(__opts__)
         __opts__['grains'] = __grains__
-        __salt__ = salt.loader.minion_mods(__opts__)
+        __utils__ = salt.loader.utils(__opts__)
+        __salt__ = salt.loader.minion_mods(__opts__, utils=__utils__)
         __salt__['test.ping']()
     '''
     # TODO Publish documentation for module whitelisting
@@ -565,7 +565,8 @@ def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
-    pack = {'__salt__': functions}
+    pack = {'__salt__': functions,
+            '__grains__': opts.get('grains', {})}
     if states:
         pack['__states__'] = states
     ret = LazyLoader(
@@ -973,10 +974,25 @@ class FilterDictWrapper(MutableMapping):
 
 class LazyLoader(salt.utils.lazy.LazyDict):
     '''
-    Goals here:
-        - lazy loading
-        - minimize disk usage
+    A pseduo-dictionary which has a set of keys which are the
+    name of the module and function, delimited by a dot. When
+    the value of the key is accessed, the function is then loaded
+    from disk and into memory.
 
+    .. note::
+
+        Iterating over keys will cause all modules to be loaded.
+
+    :param list module_dirs: A list of directories on disk to search for modules
+    :param opts dict: The salt options dictionary.
+    :param tag str': The tag for the type of module to load
+    :param func mod_type_check: A function which can be used to verify files
+    :param dict pack: A dictionary of function to be packed into modules as they are loaded
+    :param list whitelist: A list of modules to whitelist
+    :param bool virtual_enable: Whether or not to respect the __virtual__ function when loading modules.
+
+    :returns: A LazyLoader object which functions as a dictionary. Keys are 'module.function' and values
+    are function references themselves which are loaded on-demand.
     # TODO:
         - move modules_max_memory into here
         - singletons (per tag)
@@ -1170,9 +1186,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         curr_ext = self.file_mapping[f_noext][1]
                         #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
                         if '' in (curr_ext, ext) and curr_ext != ext:
-                            log.error('Module/package collision: {0!r} and {1!r}'.format(
-                                fpath, self.file_mapping[f_noext][0]
-                            ))
+                            log.error(
+                                'Module/package collision: \'%s\' and \'%s\'',
+                                fpath,
+                                self.file_mapping[f_noext][0]
+                            )
                         if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
                             continue  # Next filename
 
@@ -1295,7 +1313,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         except IOError:
             raise
-        except ImportError:
+        except ImportError as exc:
+            if 'magic number' in str(exc):
+                log.warning('Failed to import {0} {1}. Bad magic number. If migrating '
+                        'from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name))
             log.debug(
                 'Failed to import {0} {1}:\n'.format(
                     self.tag, name

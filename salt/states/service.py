@@ -66,13 +66,21 @@ import time
 from salt.exceptions import CommandExecutionError
 import salt.utils
 
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only make these states available if a service provider has been detected or
     assigned for this minion
     '''
-    return 'service.start' in __salt__
+    if 'service.start' in __salt__:
+        return __virtualname__
+    else:
+        return (False, 'No service execution module loaded: '
+                'check support for service management on {0} '
+                ''.format(__grains__.get('osfinger', __grains__['os']))
+               )
 
 
 def _enabled_used_error(ret):
@@ -284,7 +292,7 @@ def _available(name, ret):
 
 def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
-    Verify that the service is running
+    Ensure that the service is running
 
     name
         The name of the init or rc script used to manage the service
@@ -478,7 +486,7 @@ def dead(name, enable=None, sig=None, **kwargs):
 
 def enabled(name, **kwargs):
     '''
-    Verify that the service is enabled on boot, only use this state if you
+    Ensure that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
     enable a running service to use the enable: True option for the running
     or dead function.
@@ -497,7 +505,7 @@ def enabled(name, **kwargs):
 
 def disabled(name, **kwargs):
     '''
-    Verify that the service is disabled on boot, only use this state if you
+    Ensure that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
     disable a service to use the enable: False option for the running or dead
     function.
@@ -529,8 +537,8 @@ def mod_watch(name,
         The name of the init or rc script used to manage the service
 
     sfun
-        The original function which triggered the mod_watch call
-        (`service.running`, for example).
+        Required.  The original function which triggered the mod_watch call.
+        Must be one of ``running`` or ``dead``.
 
     sig
         The string to search for when looking for the service process with ps
@@ -584,7 +592,7 @@ def mod_watch(name,
         if not past_participle:
             past_participle = verb + 'ed'
     else:
-        ret['comment'] = 'Unable to trigger watch for service.{0}'.format(sfun)
+        ret['comment'] = 'sfun must be set to either "running" or "dead"'
         ret['result'] = False
         return ret
 
@@ -592,6 +600,10 @@ def mod_watch(name,
         ret['result'] = None
         ret['comment'] = 'Service is set to be {0}'.format(past_participle)
         return ret
+
+    if verb == 'start' and 'service.stop' in __salt__:
+        # stop service before start
+        __salt__['service.stop'](name)
 
     result = func(name)
     if init_delay:

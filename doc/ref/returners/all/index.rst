@@ -1,8 +1,8 @@
 .. _all-salt.returners:
 
-=====================================
-Full list of builtin returner modules
-=====================================
+================
+returner modules
+================
 
 .. currentmodule:: salt.returners
 

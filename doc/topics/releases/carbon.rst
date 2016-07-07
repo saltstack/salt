@@ -9,6 +9,13 @@ Features
 
 - Minions can run in stand-alone mode to use beacons and engines without
   having to connect to a master. (Thanks @adelcast!)
+- Added a ``salt`` runner to allow running salt modules via salt-run.
+
+    .. code-block:: bash
+
+        salt-run salt.cmd test.ping
+        # call functions with arguments and keyword arguments
+        salt-run salt.cmd test.arg 1 2 3 a=1
 
 Config Changes
 ==============
@@ -38,6 +45,13 @@ Beacons Changes
 
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
+
+Returner Changes
+================
+
+- Any returner which implements a `save_load` function is now required to
+  accept a `minions` keyword argument. All returners which ship with Salt
+  have been modified to do so.
 
 External Module Packaging
 =========================

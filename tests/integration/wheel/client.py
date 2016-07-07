@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Import Salt Testing libs
+# Import Python libs
 from __future__ import absolute_import
+
+# Import Salt Testing libs
 import integration
 
 # Import Salt libs

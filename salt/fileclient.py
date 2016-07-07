@@ -813,10 +813,10 @@ class LocalClient(Client):
         ret = {}
         try:
             path = self._check_proto(path)
-        except MinionError:
+        except MinionError as err:
             if not os.path.isfile(path):
-                err = 'Specified file {0} is not present to generate hash'
-                log.warning(err.format(path))
+                msg = 'specified file {0} is not present to generate hash: {1}'
+                log.warning(msg.format(path, err))
                 return ret
             else:
                 opts_hash_type = self.opts.get('hash_type', 'md5')
@@ -1097,10 +1097,10 @@ class RemoteClient(Client):
         '''
         try:
             path = self._check_proto(path)
-        except MinionError:
+        except MinionError as err:
             if not os.path.isfile(path):
-                err = 'Specified file {0} is not present to generate hash'
-                log.warning(err.format(path))
+                msg = 'specified file {0} is not present to generate hash: {1}'
+                log.warning(msg.format(path, err))
                 return {}
             else:
                 ret = {}

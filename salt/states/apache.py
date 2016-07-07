@@ -33,7 +33,7 @@ the above word between angle brackets (<>).
                   - 127.0.0.1
                   - 192.168.100.0/24
                 Options:
-                  - +Indexes
+                  - Indexes
                   - FollowSymlinks
                 AllowOverride: All
 '''

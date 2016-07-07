@@ -134,7 +134,7 @@ class ChildContextDict(collections.MutableMapping):
         # merge self.global_data into self._data
         for k, v in six.iteritems(self.parent.global_data):
             if k not in self._data:
-                self._data[k] = copy.deepcopy(v)
+                self._data[k] = v
 
     def __setitem__(self, key, val):
         self._data[key] = val
@@ -199,3 +199,6 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
     def __deepcopy__(self, memo):
         return type(self)(copy.deepcopy(self.__dict, memo),
                           copy.deepcopy(self.pre_keys, memo))
+
+    def __str__(self):
+        return self._dict().__str__()

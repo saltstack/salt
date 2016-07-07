@@ -14,8 +14,6 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt import cloud, defaults
-
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
@@ -95,7 +93,7 @@ def minion_process():
         delay = randint(1, delay)
         log.info('waiting random_reauth_delay {0}s'.format(delay))
         time.sleep(delay)
-        exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+        sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
 
 
 def salt_minion():
@@ -156,7 +154,7 @@ def salt_minion():
         signal.signal(signal.SIGTERM, prev_sigterm_handler)
 
         if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
-            break
+            sys.exit(process.exitcode)
         # ontop of the random_reauth_delay already preformed
         # delay extra to reduce flooding and free resources
         # NOTE: values are static but should be fine.
@@ -199,14 +197,18 @@ def proxy_minion_process(queue):
 
     restart = False
     proxyminion = None
+    status = salt.defaults.exitcodes.EX_OK
     try:
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
+        # status is superfluous since the process will be restarted
+        status = salt.defaults.exitcodes.SALT_KEEPALIVE
     except SystemExit as exc:
         restart = False
+        status = exc.code
 
     if restart is True:
         log.warning('** Restarting proxy minion **')
@@ -220,6 +222,7 @@ def proxy_minion_process(queue):
         queue.put(random_delay)
     else:
         queue.put(0)
+    sys.exit(status)
 
 
 def salt_proxy_minion():
@@ -264,7 +267,7 @@ def salt_proxy_minion():
                 restart_delay = 60
             if restart_delay == 0:
                 # Minion process ended naturally, Ctrl+C, --version, etc.
-                break
+                sys.exit(process.exitcode)
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
         except KeyboardInterrupt:
@@ -420,6 +423,8 @@ def salt_cloud():
     The main function for salt-cloud
     '''
     try:
+        # Late-imports for CLI performance
+        import salt.cloud
         import salt.cloud.cli
         has_saltcloud = True
     except ImportError as e:
@@ -431,11 +436,11 @@ def salt_cloud():
 
     if not has_saltcloud:
         print('salt-cloud is not available in this system')
-        sys.exit(defaults.exitcodes.EX_UNAVAILABLE)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:
-        client = cloud.cli.SaltCloud()
+        client = salt.cloud.cli.SaltCloud()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()

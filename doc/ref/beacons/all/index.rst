@@ -1,8 +1,8 @@
 .. _all-salt.beacons:
 
-===================================
-Full list of builtin beacon modules
-===================================
+==============
+beacon modules
+==============
 
 .. currentmodule:: salt.beacons
 
@@ -19,6 +19,7 @@ Full list of builtin beacon modules
     load
     memusage
     network_info
+    network_settings
     pkg
     proxy_example
     ps

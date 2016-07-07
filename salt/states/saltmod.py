@@ -7,6 +7,15 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
+    .. versionadded: Carbon
+
+    Support for masterless minions was added to the ``salt.state`` function,
+    so they can run orchestration sls files. This is particularly useful when
+    the rendering of a state is dependent on the execution of another state.
+    Orchestration will render and execute each orchestration block
+    independently, while honoring requisites to ensure the states are applied
+    in the correct order.
+
 .. seealso:: More Orchestrate documentation
 
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
@@ -67,6 +76,11 @@ def state(
 
     tgt
         The target specification for the state run.
+
+        .. versionadded: Carbon
+
+        Masterless support: When running on a masterless minion, the ``tgt``
+        is ignored and will always be the local minion.
 
     tgt_type | expr_form
         The target type to resolve, defaults to glob
@@ -216,7 +230,21 @@ def state(
     if batch is not None:
         cmd_kw['batch'] = str(batch)
 
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    masterless = __opts__['__role'] == 'minion' and \
+                 __opts__['file_client'] == 'local'
+    if not masterless:
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    else:
+        if top:
+            cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
+        elif sls:
+            cmd_kw['mods'] = cmd_kw.pop('arg')
+        tmp_ret = __salt__[fun](**cmd_kw)
+        cmd_ret = {__opts__['id']: {
+            'ret': tmp_ret,
+            'out': tmp_ret.get('out', 'highstate') if
+                isinstance(tmp_ret, dict) else 'highstate'
+        }}
 
     changes = {}
     fail = set()

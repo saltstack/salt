@@ -374,6 +374,105 @@ In the example configuration above, the following is true:
 5. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+
+.. _gitfs-per-saltenv-config:
+
+Per-Saltenv Configuration Parameters
+===================================
+
+.. versionadded:: Carbon
+
+For more granular control, Salt allows the following three things to be
+overridden for individual saltenvs within a given repo:
+
+- The :ref:`mountpoint <gitfs-walkthrough-mountpoint>`
+- The :ref:`root <gitfs-walkthrough-root>`
+- The branch/tag to be used for a given saltenv
+
+Here is an example:
+
+.. code-block:: yaml
+
+    gitfs_root: salt
+
+    gitfs_saltenv:
+      - dev:
+        - mountpoint: salt://gitfs-dev
+        - ref: develop
+
+    gitfs_remotes:
+      - https://foo.com/bar.git:
+        - saltenv:
+          - staging:
+            - ref: qa
+            - mountpoint: salt://bar-staging
+          - dev:
+            - ref: development
+      - https://foo.com/baz.git:
+        - saltenv:
+          - staging:
+            - mountpoint: salt://baz-staging
+
+Given the above configuration, the following is true:
+
+1. For all gitfs remotes, files for the ``dev`` saltenv will be located under
+   ``salt://gitfs-dev``.
+
+2. For the ``dev`` saltenv, files from the first remote will be sourced from
+   the ``development`` branch, while files from the second remote will be
+   sourced from the ``develop`` branch.
+
+3. For the ``staging`` saltenv, files from the first remote will be located
+   under ``salt://bar-staging``, while files from the second remote will be
+   located under ``salt://baz-staging``.
+
+4. For all gitfs remotes, and in all saltenvs, files will be served from the
+   ``salt`` directory (and its subdirectories).
+
+
+Configuration Order of Precedence
+=================================
+
+The order of precedence for gitfs configuration is as follows (each level
+overrides all levels below it):
+
+1. Per-saltenv configuration (defined under a per-remote ``saltenv``
+   param)
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - saltenv:
+             - dev:
+               - mountpoint: salt://bar
+
+2. Global per-saltenv configuration (defined in :conf_master:`gitfs_saltenv`)
+
+   .. code-block:: yaml
+
+       gitfs_saltenv:
+         - saltenv:
+           - dev:
+             - mountpoint: salt://bar
+
+3. Per-remote configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - mountpoint: salt://bar
+
+4. Global configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_mountpoint: salt://bar
+
+
+.. _gitfs-walkthrough-root:
+
 Serving from a Subdirectory
 ===========================
 
@@ -411,6 +510,8 @@ the other files in the repository:
 The root can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+.. _gitfs-walkthrough-mountpoint:
 
 Mountpoints
 ===========
@@ -761,13 +862,29 @@ steps to this process:
          - 'salt/fileserver/gitfs/update':
            - /srv/reactor/update_fileserver.sls
 
-3. On the git server, add a `post-receive hook`_ with the following contents:
+3. On the git server, add a `post-receive hook`_
 
-   .. code-block:: bash
+   a. If the user executing `git push` is the same as the minion user, use the following hook:
 
-       #!/usr/bin/env sh
+     .. code-block:: bash
 
-       salt-call event.fire_master update salt/fileserver/gitfs/update
+         #!/usr/bin/env sh
+         salt-call event.fire_master update salt/fileserver/gitfs/update
+
+   b. To enable other git users to run the hook after a `push`, use sudo in the hook script: 
+     .. code-block:: bash
+
+         #!/usr/bin/env sh
+         sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
+
+4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
+   Add the following policy to the sudoers file on the git server.
+
+   .. code-block::
+
+       Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
+       Defaults!SALT_GIT_HOOK !requiretty
+       ALL ALL=(root) NOPASSWD: SALT_GIT_HOOK
 
 The ``update`` argument right after :mod:`event.fire_master
 <salt.modules.event.fire_master>` in this example can really be anything, as it
@@ -776,6 +893,9 @@ by this reactor.
 
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
+
+The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
+the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 

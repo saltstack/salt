@@ -6,6 +6,7 @@ Zeromq transport classes
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import sys
 import copy
 import errno
 import signal
@@ -577,7 +578,16 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
         except Exception as exc:
-            log.error('Bad load from minion: %s: %s', type(exc).__name__, exc)
+            exc_type = type(exc).__name__
+            if exc_type == 'AuthenticationError':
+                log.debug(
+                    'Minion failed to auth to master. Since the payload is '
+                    'encrypted, it is not known which minion failed to '
+                    'authenticate. It is likely that this is a transient '
+                    'failure due to the master rotating its public key.'
+                )
+            else:
+                log.error('Bad load from minion: %s: %s', exc_type, exc)
             stream.send(self.serial.dumps('bad load'))
             raise tornado.gen.Return()
 
@@ -632,7 +642,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(salt.defaults.exitcodes.EX_OK)
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):

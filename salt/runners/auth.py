@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
+'''
+Authentication runner for creating, deleting, and managing eauth tokens.
+
+.. versionadded:: Carbon
+
+'''
+
+# Import Python libs
+from __future__ import absolute_import
 import os
 
+# Import Salt libs
 import salt.auth
 import salt.exceptions
 import salt.netapi

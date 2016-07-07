@@ -80,7 +80,7 @@ Using these configuration profiles, multiple consul sources may also be used:
       - consul: my_consul_config
       - consul: my_other_consul_config
 
-Either the ``minion_id``, or the ``role`` grain  may be used in the ``root``
+Either the ``minion_id``, or the ``role``, or the ``environment`` grain  may be used in the ``root``
 path to expose minion-specific information stored in consul.
 
 .. code-block:: yaml
@@ -88,6 +88,7 @@ path to expose minion-specific information stored in consul.
     ext_pillar:
       - consul: my_consul_config root=/salt/%(minion_id)s
       - consul: my_consul_config root=/salt/%(role)s
+      - consul: my_consul_config root=/salt/%(environment)s
 
 Minion-specific values may override shared values when the minion-specific root
 appears after the shared root:
@@ -98,12 +99,13 @@ appears after the shared root:
       - consul: my_consul_config root=/salt-shared
       - consul: my_other_consul_config root=/salt-private/%(minion_id)s
 
-If using the ``role`` grain in the consul key path, be sure to define it using
+If using the ``role`` or ``environment`` grain in the consul key path, be sure to define it using
 `/etc/salt/grains`, or similar:
 
 .. code-block:: yaml
 
     role: my-minion-role
+    environment: dev
 
 '''
 from __future__ import absolute_import
@@ -156,17 +158,18 @@ def ext_pillar(minion_id,
         path = comps[1].replace('root=', '')
 
     role = __salt__['grains.get']('role')
+    environment = __salt__['grains.get']('environment')
     # put the minion's ID in the path if necessary
     path %= {
         'minion_id': minion_id,
-        'role': role
+        'role': role,
+        'environment': environment
     }
 
     try:
         pillar = fetch_tree(client, path)
     except KeyError:
-        log.error('No such key in consul profile {0}: {1}'
-                  .format(profile, path))
+        log.error('No such key in consul profile %s: %s', profile, path)
         pillar = {}
 
     return pillar
@@ -195,8 +198,8 @@ def fetch_tree(client, path):
         return ret
     for item in reversed(items):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
-        if key != "":
-            log.debug('key/path - {0}: {1}'.format(path, key))
+        if key != '':
+            log.debug('key/path - %s: %s', path, key)
             log.debug('has_children? %r', format(has_children.search(key)))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'])
@@ -247,10 +250,9 @@ def get_conn(opts, profile):
         conf = opts_merged
 
     params = {}
-    for key in ('host', 'port', 'token', 'scheme', 'consistency', 'dc', 'verify'):
-        prefixed_key = 'consul.{key}'.format(key=key)
-        if prefixed_key in conf:
-            params[key] = conf[prefixed_key]
+    for key in conf:
+        if key.startswith('consul.'):
+            params[key.split('.')[1]] = conf[key]
 
     if 'dc' in params:
         pillarenv = opts_merged.get('pillarenv') or 'base'
@@ -279,20 +281,16 @@ def _resolve_datacenter(dc, pillarenv):
     If none patterns matched return ``None`` which meanse us datacenter of
     conencted Consul agent.
     '''
-    log.debug("Resolving Consul datacenter based on: {dc}".format(dc=dc))
+    log.debug('Resolving Consul datacenter based on: %s', dc)
 
     try:
         mappings = dc.items()  # is it a dict?
     except AttributeError:
-        log.debug('Using pre-defined DC: {dc!r}'.format(dc=dc))
+        log.debug('Using pre-defined DC: \'%s\'', dc)
         return dc
 
-    log.debug(
-        'Selecting DC based on pillarenv using {num} pattern(s)'.format(
-            num=len(mappings)
-        )
-    )
-    log.debug('Pillarenv set to {env!r}'.format(env=pillarenv))
+    log.debug('Selecting DC based on pillarenv using %d pattern(s)', len(mappings))
+    log.debug('Pillarenv set to \'%s\'', pillarenv)
 
     # sort in reverse based on pattern length
     # but use alphabetic order within groups of patterns of same length
@@ -301,13 +299,12 @@ def _resolve_datacenter(dc, pillarenv):
     for pattern, target in sorted_mappings:
         match = re.match(pattern, pillarenv)
         if match:
-            log.debug('Matched pattern: {pattern!r}'.format(pattern=pattern))
+            log.debug('Matched pattern: \'%s\'', pattern)
             result = target.format(**match.groupdict())
-            log.debug('Resolved datacenter: {result!r}'.format(result=result))
+            log.debug('Resolved datacenter: \'%s\'', result)
             return result
 
     log.debug(
-        'None of following patterns matched pillarenv={env}: {lst}'.format(
-            env=pillarenv, lst=', '.join(repr(x) for x in mappings)
-        )
+        'None of following patterns matched pillarenv=%s: %s',
+        pillarenv, ', '.join(repr(x) for x in mappings)
     )

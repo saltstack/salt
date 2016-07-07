@@ -679,7 +679,7 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(salt.defaults.exitcodes.EX_OK)
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):

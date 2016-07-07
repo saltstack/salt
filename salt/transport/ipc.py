@@ -142,7 +142,7 @@ class IPCServer(object):
 
         :param IOStream stream: An IOStream for processing
 
-        See http://tornado.readthedocs.org/en/latest/iostream.html#tornado.iostream.IOStream
+        See https://tornado.readthedocs.io/en/latest/iostream.html#tornado.iostream.IOStream
         for additional details.
         '''
         @tornado.gen.coroutine

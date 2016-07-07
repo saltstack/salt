@@ -19,7 +19,7 @@ option. This will give users a couple release cycles to modify their scripts,
 SLS files, etc. to use the new functionality, rather than forcing users to
 change everything immediately.
 
-In the **Carbon** release of Salt (due in 2016), this execution module will
+In the **Nitrogen** release of Salt (due in 2017), this execution module will
 take the place of the default Docker execution module, and backwards-compatible
 naming will be maintained for a couple releases after that to allow users time
 to replace references to ``dockerng`` with ``docker``.
@@ -44,9 +44,14 @@ Docker_. docker-py can easily be installed using :py:func:`pip.install
 Authentication
 --------------
 
-To push or pull images, credentials must be configured. Because a password must
-be used, it is recommended to place this configuration in :ref:`Pillar
-<pillar>` data. The configuration schema is as follows:
+To push or pull images, credentials must be configured. By default dockerng will
+try to get the credentials from the default docker auth file, located under the
+home directory of the user running the salt-minion (HOME/.docker/config.json).
+Because a password must be used, it is recommended to place this configuration
+in :ref:`Pillar <pillar>` data. If pillar data specifies a registry already
+present in the default docker auth file, it will override.
+
+The configuration schema is as follows:
 
 .. code-block:: yaml
 
@@ -256,6 +261,8 @@ import shutil
 import string
 import sys
 import time
+import base64
+import errno
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -301,7 +308,7 @@ __func_alias__ = {
 }
 
 # Minimum supported versions
-MIN_DOCKER = (1, 4, 0)
+MIN_DOCKER = (1, 6, 0)
 MIN_DOCKER_PY = (1, 4, 0)
 
 VERSION_RE = r'([\d.]+)'
@@ -926,8 +933,38 @@ def _image_wrapper(attr, *args, **kwargs):
     catch_api_errors = kwargs.pop('catch_api_errors', True)
 
     if kwargs.pop('client_auth', False):
-        # Set credentials
-        registry_auth_config = __pillar__.get('docker-registries', {})
+        # Get credential from the home directory of the user running
+        # salt-minion, default auth file for docker (~/.docker/config.json)
+        registry_auth_config = {}
+        try:
+            home = os.path.expanduser("~")
+            docker_auth_file = os.path.join(home, '.docker', 'config.json')
+            with salt.utils.fopen(docker_auth_file) as fp:
+                try:
+                    docker_auth = json.load(fp)
+                    fp.close()
+                except (OSError, IOError) as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to read docker auth file %s: %s', docker_auth_file, exc)
+                        docker_auth = {}
+                if isinstance(docker_auth, dict):
+                    if 'auths' in docker_auth and isinstance(docker_auth['auths'], dict):
+                        for key, data in six.iteritems(docker_auth['auths']):
+                            if isinstance(data, dict):
+                                email = str(data.get('email', ''))
+                                b64_auth = base64.b64decode(data.get('auth', ''))
+                                username, password = b64_auth.split(':')
+                                registry = 'https://{registry}'.format(registry=key)
+                                registry_auth_config.update({registry: {
+                                    'username': username,
+                                    'password': password,
+                                    'email': email
+                                }})
+        except Exception as e:
+            log.debug('dockerng was unable to load credential from ~/.docker/config.json'
+                      ' trying with pillar now ({0})'.format(e))
+        # Set credentials from pillar - Overwrite auth from config.json
+        registry_auth_config.update(__pillar__.get('docker-registries', {}))
         for key, data in six.iteritems(__pillar__):
             if key.endswith('-docker-registries'):
                 registry_auth_config.update(data)
@@ -1255,7 +1292,7 @@ def _validate_input(kwargs,
     def _valid_ports():  # pylint: disable=unused-variable
         '''
         Format ports in the documented way:
-        http://docker-py.readthedocs.org/en/stable/port-bindings/
+        https://docker-py.readthedocs.io/en/stable/port-bindings/
 
         It's possible to pass this as a dict, and indeed it is returned as such
         in the inspect output. Passing port configurations as a dict will work
@@ -2982,9 +3019,9 @@ def create(image,
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
 
-    # Added to manage api change in 1.19.
-    # mem_limit and memswap_limit must be provided in host_config object
-    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+    # API v1.15 introduced HostConfig parameter
+    # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
         client = __context__['docker.client']
         host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
         create_kwargs['host_config'] = client.create_host_config(

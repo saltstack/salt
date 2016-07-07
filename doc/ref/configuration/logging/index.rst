@@ -62,10 +62,10 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``info``
+Default: ``warning``
 
-The level of log record messages to send to the console.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
+The level of log record messages to send to the console. One of ``all``,
+``garbage``, ``trace``, ``debug``, ``profile``, ``info``, ``warning``,
 ``error``, ``critical``, ``quiet``.
 
 .. code-block:: yaml
@@ -85,9 +85,9 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
 Default: ``info``
 
-The level of messages to send to the log file.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
-``error``, ``critical``, ``quiet``.
+The level of messages to send to the log file. One of ``all``, ``garbage``,
+``trace``, ``debug``, ``profile``, ``info``, ``warning``, ``error``,
+``critical``, ``quiet``.
 
 .. code-block:: yaml
 
@@ -162,7 +162,7 @@ also provides these custom LogRecord attributes to colorize console log output:
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. All standard python logging
 :ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
@@ -177,7 +177,7 @@ enclosing brackets ``[`` and ``]``:
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 

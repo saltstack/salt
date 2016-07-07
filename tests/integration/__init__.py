@@ -31,10 +31,6 @@ try:
     import pwd
 except ImportError:
     pass
-try:
-    import SocketServer as socketserver
-except ImportError:
-    import socketserver
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -83,6 +79,8 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
+import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
+
 if salt.utils.is_windows():
     import win32api
 
@@ -100,7 +98,7 @@ SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
     # for unix sockets: ``error: AF_UNIX path too long``
     # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    os.environ.get('TMPDIR', tempfile.gettempdir()) if salt.utils.is_darwin() else '/tmp'
+    os.environ.get('TMPDIR', tempfile.gettempdir()) if not salt.utils.is_darwin() else '/tmp'
 )
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
@@ -380,7 +378,7 @@ class SaltScriptBase(ScriptPathMixin):
         return []
 
 
-class SaltDaemonScriptBase(SaltScriptBase):
+class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
     '''
     Base class for Salt Daemon CLI scripts
     '''
@@ -506,13 +504,12 @@ class SaltDaemonScriptBase(SaltScriptBase):
         self._connectable.clear()
         time.sleep(0.0125)
         self._process.terminate()
-        self._process.join()
 
         if HAS_PSUTIL:
             # Lets log and kill any child processes which salt left behind
             for child in children[:]:
                 try:
-                    child.send_signal(signal.SIGTERM)
+                    child.send_signal(signal.SIGKILL)
                     log.info('Salt left behind the following child process: %s', child.as_dict())
                     try:
                         child.wait(timeout=5)
@@ -551,15 +548,21 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 self._connectable.set()
                 break
             for port in set(check_ports):
-                log.trace('Checking connectable status on port: %s', port)
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                conn = sock.connect_ex(('localhost', port))
-                if conn == 0:
-                    log.debug('Port %s is connectable!', port)
-                    check_ports.remove(port)
-                    sock.shutdown(socket.SHUT_RDWR)
-                    sock.close()
-                del sock
+                if isinstance(port, int):
+                    log.trace('Checking connectable status on port: %s', port)
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    conn = sock.connect_ex(('localhost', port))
+                    if conn == 0:
+                        log.debug('Port %s is connectable!', port)
+                        check_ports.remove(port)
+                        sock.shutdown(socket.SHUT_RDWR)
+                        sock.close()
+                    del sock
+                elif isinstance(port, str):
+                    joined = self.run_run('manage.joined', config_dir=self.config_dir)
+                    joined = [x.lstrip('- ') for x in joined]
+                    if port in joined:
+                        check_ports.remove(port)
             yield gen.sleep(0.125)
         # A final sleep to allow the ioloop to do other things
         yield gen.sleep(0.125)
@@ -581,7 +584,7 @@ class SaltMinion(SaltDaemonScriptBase):
         return script_args
 
     def get_check_ports(self):
-        return set([self.config['runtests_conn_check_port']])
+        return set([self.config['id']])
 
 
 class SaltMaster(SaltDaemonScriptBase):
@@ -614,7 +617,7 @@ class SaltSyndic(SaltDaemonScriptBase):
         return ['-l', 'quiet']
 
     def get_check_ports(self):
-        return set([self.config['runtests_conn_check_port']])
+        return set()
 
 
 class TestDaemon(object):
@@ -1791,11 +1794,11 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         arg_str = '-W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(self.get_config_dir(),
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
                                                   arg_str,
                                                   timeout=timeout,
                                                   async_flag=' --async' if async else '')
