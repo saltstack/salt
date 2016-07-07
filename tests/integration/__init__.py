@@ -1916,22 +1916,6 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         self.assertIn(parsed_version.string, out)
 
 
-@requires_sshd_server
-class SSHCase(ShellCase):
-    '''
-    Execute a command via salt-ssh
-    '''
-    def _arg_str(self, function, arg):
-        return '{0} {1}'.format(function, ' '.join(arg))
-
-    def run_function(self, function, arg=(), timeout=25, **kwargs):
-        ret = self.run_ssh(self._arg_str(function, arg))
-        try:
-            return json.loads(ret)['localhost']
-        except Exception:
-            return ret
-
-
 class SaltReturnAssertsMixIn(object):
 
     def assertReturnSaltType(self, ret):
