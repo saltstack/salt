@@ -149,17 +149,14 @@ do
         cmdpath=$(which $py_cmd 2>&1)
         if file $cmdpath | grep "shell script" > /dev/null
         then
-            ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
-                   'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
+            ex_vars='"PATH", "LD_LIBRARY_PATH", "MANPATH", "XDG_DATA_DIRS", "PKG_CONFIG_PATH"'
             export $($py_cmd -c \
-                  "from __future__ import print_function;
-                  import sys;
+                  "import sys;
                   import os;
-                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
-                  .format(x, os.environ[x]) for x in [$ex_vars]])")
-            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-                     MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
-                     PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
+                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} '.format(x, os.environ[x]) for x in [$ex_vars] if x in os.environ])")
+            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=${{{{LD_LIBRARY_PATH:-}}}} \
+                     MANPATH=${{{{MANPATH:-}}}} XDG_DATA_DIRS=${{{{XDG_DATA_DIRS:-}}}} \
+                     PKG_CONFIG_PATH=${{{{PKG_CONFIG_PATH:-}}}} \
                      "$py_cmd_path" -c \
                    'import base64;
                    exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
@@ -990,16 +987,16 @@ OPTIONS.wipe = {7}
 OPTIONS.tty = {8}
 OPTIONS.cmd_umask = {9}
 ARGS = {10}\n'''.format(self.minion_config,
-                         RSTR,
-                         self.thin_dir,
-                         thin_sum,
-                         'sha1',
-                         salt.version.__version__,
-                         self.mods.get('version', ''),
-                         self.wipe,
-                         self.tty,
-                         self.cmd_umask,
-                         self.argv)
+                        RSTR,
+                        self.thin_dir,
+                        thin_sum,
+                        'sha1',
+                        salt.version.__version__,
+                        self.mods.get('version', ''),
+                        self.wipe,
+                        self.tty,
+                        self.cmd_umask,
+                        self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         if six.PY2:
             py_code_enc = py_code.encode('base64')
@@ -1011,7 +1008,6 @@ ARGS = {10}\n'''.format(self.minion_config,
             SSH_PY_CODE=py_code_enc,
             HOST_PY_MAJOR=sys.version_info[0],
         )
-
         return cmd
 
     def shim_cmd(self, cmd_str):
