@@ -835,6 +835,13 @@ VALID_OPTS = {
     # Whether or not a minion should send the results of a command back to the master
     # Useful when a returner is the source of truth for a job result
     'pub_ret': bool,
+
+    # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
+    'proxy_host': str,
+    'proxy_username': str,
+    'proxy_password': str,
+    'proxy_port': int,
+
 }
 
 # default configurations
@@ -1065,6 +1072,10 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
+    'proxy_host': '',
+    'proxy_username': '',
+    'proxy_password': '',
+    'proxy_port': None,
 }
 
 DEFAULT_MASTER_OPTS = {
