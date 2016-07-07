@@ -29,7 +29,7 @@ from salt.ext.six.moves import range
 from salt.config import minion_config
 # pylint: enable=no-name-in-module,redefined-builtin
 
-from salt.loader import LazyLoader, _module_dirs, grains
+from salt.loader import LazyLoader, _module_dirs, grains, utils, proxy, minion_mods
 
 loader_template = '''
 import os
@@ -249,9 +249,15 @@ class LazyLoaderReloadingTest(TestCase):
 
         dirs = _module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
+        self.utils = utils(self.opts)
+        self.proxy = proxy(self.opts)
+        self.minion_mods = minion_mods(self.opts)
         self.loader = LazyLoader(dirs,
                                  self.opts,
-                                 tag='module')
+                                 tag='module',
+                                 pack={'__utils__': self.utils,
+                                       '__proxy__': self.proxy,
+                                       '__salt__': self.minion_mods})
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -376,9 +382,16 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
         dirs = _module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
+        self.utils = utils(self.opts)
+        self.proxy = proxy(self.opts)
+        self.minion_mods = minion_mods(self.opts)
         self.loader = LazyLoader(dirs,
                                  self.opts,
-                                 tag='module')
+                                 tag='module',
+                                 pack={'__utils__': self.utils,
+                                     '__proxy__': self.proxy,
+                                     '__salt__': self.minion_mods}
+                                 )
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -532,9 +545,16 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
         dirs = _module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
+        self.utils = utils(self.opts)
+        self.proxy = proxy(self.opts)
+        self.minion_mods = minion_mods(self.opts)
         self.loader = LazyLoader(dirs,
                                  self.opts,
-                                 tag='module')
+                                 tag='module',
+                                 pack={'__utils__': self.utils,
+                                       '__proxy__': self.proxy,
+                                       '__salt__': self.minion_mods}
+                                 )
 
     @property
     def module_dir(self):
