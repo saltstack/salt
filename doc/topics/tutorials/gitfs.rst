@@ -15,6 +15,11 @@ configuring one or more repositories in :conf_master:`gitfs_remotes`.
 
 Branches and tags become Salt fileserver environments.
 
+.. note::
+    Branching and tagging can result in a lot of potentially-conflicting
+    :ref:`top files <states-top>`, for this reason it may be useful to set
+    :conf_minion:`top_file_merging_strategy` to ``same`` in the minions' config
+    files if the top files are being managed in a GitFS repo.
 
 .. _gitfs-dependencies:
 
