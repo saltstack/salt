@@ -30,22 +30,22 @@ A Basic Example
 
 Top files have three components:
 
-    - Environment: A state tree directory containing a set of state files to
-      configure systems.
+- **Environment:** A state tree directory containing a set of state files to
+  configure systems.
 
-    - Target: A grouping of machines which will have a set of states applied
-      to them.
+- **Target:** A grouping of machines which will have a set of states applied to
+  them.
 
-    - State files: A list of state files to apply to a target. Each state
-      file describes one or more states to be configured and enforced
-      on the targeted machines.
+- **State files:** A list of state files to apply to a target. Each state file
+  describes one or more states to be configured and enforced on the targeted
+  machines.
 
 
 The relationship between these three components is nested as follows:
 
-    - Environments contain targets
+- Environments contain targets
 
-    - Targets contain states
+- Targets contain states
 
 
 Putting these concepts together, we can describe a scenario in which all
@@ -172,26 +172,28 @@ Choosing an Environment to Target
 
 The top file is used to assign a minion to an environment unless overridden
 using the methods described below. The environment in the top file must match
-an environment in :conf_master:`file_roots` in order for any states to be
-applied to that minion. The states that will be applied to a minion in a given
-environment can be viewed using the :py:func:`state.show_top
-<salt.modules.state.show_top>` execution function.
+valid fileserver environment (a.k.a. ``saltenv``) in order for any states to be
+applied to that minion. When using the default fileserver backend, environments
+are defined in :conf_master:`file_roots`.
 
-Minions may be pinned to a particular environment by setting the ``environment``
-value in the minion configuration file. In doing so, a minion will only
-request files from the environment to which it is assigned.
+The states that will be applied to a minion in a given environment can be
+viewed using the :py:func:`state.show_top <salt.modules.state.show_top>`
+function.
 
-The environment to use may also be dynamically selected at the time that
-a ``salt``, ``salt-call`` or ``salt-ssh`` by passing passing a flag to the
-execution module being called. This is most commonly done with
-functions in the ``state`` module by using the ``saltenv=`` argument. For
-example, to run a ``highstate`` on all minions, using the state files in
-the ``prod`` state tree, run: ``salt '*' state.highstate saltenv=prod``.
+Minions may be pinned to a particular environment by setting the
+:conf_minion:`environment` value in the minion configuration file. In doing so,
+a minion will only request files from the environment to which it is assigned.
+
+The environment may also be dynamically selected at runtime by passing it to
+the ``salt``, ``salt-call`` or ``salt-ssh`` command. This is most commonly done
+with functions in the ``state`` module by using the ``saltenv`` argument. For
+example, to run a ``highstate`` on all minions, using only the top file and SLS
+files in the ``prod`` environment, run: ``salt '*' state.highstate
+saltenv=prod``.
 
 .. note::
-    Not all functions accept ``saltenv`` as an argument See individual
-    function documentation to verify.
-
+    Not all functions accept ``saltenv`` as an argument, see the documentation
+    for an individual function documentation to verify.
 
 
 Shorthand
@@ -305,66 +307,132 @@ of matches you can perform:
 How Top Files Are Compiled
 ==========================
 
+When a :ref:`highstate <running-highstate>` is executed and an environment is
+specified (either using the :conf_minion:`environment` config option or by
+passing the saltenv when executing the :ref:`highstate <running-highstate>`),
+then that environment's top file is the only top file used to assign states to
+minions, and only states from the specified environment will be run.
+
+The remainder of this section applies to cases in which a :ref:`highstate
+<running-highstate>` is executed without an environment specified.
+
+With no environment specified, the minion will look for a top file in each
+environment, and each top file will be processed to determine the SLS files to
+run on the minions. By default, the top files from each environment will be
+merged together. In configurations with many environments, such as with
+:ref:`GitFS <tutorial-gitfs>` where each branch and tag is treated as a
+distinct environment, this may cause unexpected results as SLS files from older
+tags cause defunct SLS files to be included in the highstate. In cases like
+this, it can be helpful to set :conf_minion:`top_file_merging_strategy` to
+``same`` to force each environment to use its own top file.
+
+.. code-block:: yaml
+
+    top_file_merging_strategy: same
+
+With :ref:`GitFS <tutorial-gitfs>`, it can also be helpful to simply manage
+each environment's top file separately, and/or manually specify the environment
+when executing the highstate to avoid any complicated merging scenarios.
+:conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist` can
+also be used to hide unneeded branches and tags from GitFS to reduce the number
+of top files in play.
+
 When using multiple environments, it is not necessary to create a top file for
-each environment. The most common approach, and the easiest to maintain, is
-to use a single top file placed in only one environment.
+each environment. The easiest-to-maintain approach is to use a single top file
+placed in the ``base`` environment. This is often infeasible with :ref:`GitFS
+<tutorial-gitfs>` though, since branching/tagging can easily result in extra
+top files. However, when only the default (``roots``) fileserver backend is
+used, a single top file in the ``base`` environment is the most common way of
+configuring a :ref:`highstate <running-highstate>`.
 
-However, some workflows do call for multiple top files. In this case, top
-files may be merged together to create ``high data`` for the state compiler
-to use as a source to compile states on a minion.
+The following minion configuration options affect how top files are compiled
+when no environment is specified:
 
-For the following discussion of top file compilation, assume the following
-configuration:
+- :conf_minion:`top_file_merging_strategy`
+- :conf_minion:`env_order`
+- :conf_minion:`default_top`
 
+Top File Compilation Examples
+=============================
 
-``/etc/salt/master``:
+For the scenarios below, assume the following configuration:
+
+**/etc/salt/master**:
 
 .. code-block:: yaml
 
-    <snip>
     file_roots:
-      first_env:
-        - /srv/salt/first
-      second_env:
-        - /srv/salt/second
+      base:
+        - /srv/salt/base
+      dev:
+        - /srv/salt/dev
+      qa:
+        - /srv/salt/qa
 
-
-``/srv/salt/first/top.sls``:
+**/srv/salt/base/top.sls**:
 
 .. code-block:: yaml
 
-    first_env:
+    base:
       '*':
-        - first
-    second_env:
+        - base1
+    dev:
       '*':
-        - second
+        - dev1
+    qa:
+      '*':
+        - qa1
 
-The astute reader will ask how the state compiler resolves which should be
-an obvious conflict if a minion is not pinned to a particular environment
-and if no environment argument is passed into a state function.
+**/srv/salt/dev/top.sls**:
 
-Given the above, it is initially unclear whether ``first.sls`` will be applied
-or whether ``second.sls`` will be applied in a ``salt '*' state.highstate`` command.
+.. code-block:: yaml
 
-When conflicting keys arise, there are several configuration options which
-control the behaviour of salt:
+    base:
+      'minion1':
+        - base2
+    dev:
+      'minion2':
+        - dev2
+    qa:
+      '*':
+        - qa2
 
-    - ``env_order``
-        Setting ``env_order`` will set the order in which environments are processed
-        by the state compiler.
+.. note::
+    For the purposes of these examples, there is no top file in the ``qa``
+    environment.
 
-    - ``top_file_merging_strategy``
-        Can be set to ``same``, which will process only the top file from the environment
-        that the minion belongs to via the ``environment`` configuration setting or
-        the environment that is requested via the ``saltenv`` argument supported
-        by some functions in the ``state`` module.
+Scenario 1 - ``dev`` Environment Specified
+------------------------------------------
 
-        Can also be set to ``merge``. This is the default. When set to ``merge``,
-        top files will be merged together. The order in which top files are
-        merged together can be controlled with ``env_order``.
+In this scenario, the :ref:`highstate <running-highstate>` was either invoked
+with ``saltenv=dev`` or the minion has ``environment: dev`` set in the minion
+config file. The result will be that only the ``dev2`` SLS from the dev
+environment will be part of the :ref:`highstate <running-highstate>`, and it
+will be applied to minion2, while minion1 will have no states applied to it.
 
-    - ``default_top``
-        If ``top_file_merging_strategy`` is set to ``same`` and an environment does
-        not contain a top file, the top file in the environment specified by
-        ``default_top`` will be used instead.
+If the ``base`` environment were specified, the result would be that only the
+``base1`` SLS from the ``base`` environment would be part of the
+:ref:`highstate <running-highstate>`, and it would be applied to all minions.
+
+If the ``qa`` environment were specified, the :ref:`highstate
+<running-highstate>` would exit with an error.
+
+Scenario 2 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge"
+------------------------------------------------------------------------------------------
+
+In this scenario, ``base1`` from the ``base`` environment, ``dev1`` from the
+``dev`` environment, and ``qa1`` from the ``qa`` environment are applied to all
+minions. Additionally, ``base2`` from the ``base`` environment is applied to
+minion1, and ``dev2`` from the ``dev`` environment is applied to minion2.
+
+Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "same"
+-----------------------------------------------------------------------------------------
+
+In this scenario, ``base1`` from the ``base`` environment is applied to all
+minions. Additionally, ``dev2`` from the ``dev`` environment is applied to
+minion2.
+
+If :conf_minion:`default_top` is unset (or set to ``base``, which happens to be
+the default), then ``qa1`` from the ``qa`` environment will be applied to all
+minions. If :conf_minion:`default_top` were set to ``dev``, then ``qa2`` from
+the ``qa`` environment would be applied to all minions.
