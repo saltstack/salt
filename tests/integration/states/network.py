@@ -27,55 +27,42 @@ class NetworkTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if os_family not in ('RedHat', 'Debian'):
             self.skipTest('Network state only supported on RedHat and Debian based systems')
 
-        self.run_function('cmd.run', ['ip link add name dummy0 type dummy'])
-
-    def tearDown(self):
-        self.run_function('cmd.run', ['ip link delete dev dummy0'])
-
     def test_managed(self):
         '''
         network.managed
         '''
-        if_name = 'dummy0'
-        ipaddr = '10.1.0.1'
-        netmask = '255.255.255.0'
-        broadcast = '10.1.0.255'
-
-        expected_if_ret = [{
-                    "broadcast": broadcast,
-                    "netmask": netmask,
-                    "label": if_name,
-                    "address": ipaddr
-                }]
-
-        ret = self.run_function('state.sls', mods='network.managed')
-        self.assertSaltTrueReturn(ret)
-
-        interface = self.run_function('network.interface', [if_name])
-        self.assertEqual(interface, expected_if_ret)
-
+        state_key = 
+        ret = self.run_function('state.sls', mods='network.managed', test=True)
+                   
+        out = ret['network_|-dummy0_|-dummy0_|-managed']['comment'].split('\n')
+                   
+        self.assertIn('Interface dummy0 is set to be updated:', out)
+        self.assertIn(' DEVICE="dummy0"', out)
+        self.assertIn(' USERCTL="no"', out)
+        self.assertIn(' ONBOOT="yes"', out)
+        self.assertIn(' IPADDR="10.1.0.1"', out)
+                   
     def test_routes(self):
-        '''
+        '''        
         network.routes
-        '''
+        '''        
         state_key = 'network_|-routes_|-dummy0_|-routes'
-        expected_changes = {'network_routes': 'Added interface dummy0 routes.'}
-
-        ret = self.run_function('state.sls', mods='network.routes')
-
-        self.assertSaltTrueReturn(ret)
-        self.assertEqual(ret[state_key]['changes'], expected_changes)
-
+        expected_changes = 'Interface dummy0 routes are set to be added.'
+                   
+        ret = self.run_function('state.sls', mods='network.routes', test=True)
+        print(ret) 
+                   
+        self.assertEqual(ret[state_key]['comment'], expected_changes)
+                   
     def test_system(self):
-        '''
+        '''        
         network.system
-        '''
+        '''        
         state_key = 'network_|-system_|-system_|-system'
-
-        ret = self.run_function('state.sls', mods='network.system')
-
-        self.assertSaltTrueReturn(ret)
-        self.assertIn('network_settings', ret[state_key]['changes'])
+        comment_out = 'Global network settings are set to be updated:\n--- \n+++ \n@@ -1 +1,4 @@\n-# Created by anaconda\n+NETWORKING=yes\n+HOSTNAME=server1.example.com\n+GATEWAY=10.1.0.1\n+GATEWAYDEV=dummy0'
+                   
+        ret = self.run_function('state.sls', mods='network.system', test=True)
+        self.assertEqual(ret[state_key]['comment'], comment_out)
 
 
 if __name__ == '__main__':
