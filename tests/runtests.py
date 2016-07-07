@@ -403,7 +403,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print('interface: {0}'.format(minion_conf['interface']))
             print('master port: {0}'.format(minion_conf['master_port']))
             print('ipc mode: {0}'.format(minion_conf['ipc_mode']))
-            print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
             print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
             print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
             print('\n')
