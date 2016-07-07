@@ -13,7 +13,7 @@ if %errorLevel%==0 (
 )
 
 :: Define Variables
-@echo Defining Variables...
+@echo %0 :: Defining Variables...
 @echo ---------------------
 Set "PyDir=C:\Python27"
 Set "CurDir=%~dp0"
@@ -28,10 +28,22 @@ if [%1]==[] (
 :: Create Build Environment
 PowerShell.exe -ExecutionPolicy RemoteSigned -File "%CurDir%build_env.ps1" -Silent
 
+if not %errorLevel%==0 (
+    echo "%CurDir%build_env.ps1" returned errorlevel %errorLevel%. Aborting %0
+    goto eof
+)
+
 :: Install Current Version of salt
-"%PyDir%\python.exe" "%SrcDir%\setup.py" install --force
+@echo  %0 :: Install Current Version of salt...
+@echo ---------------------
+"%PyDir%\python.exe" "%SrcDir%\setup.py" --quiet install --force
 
 :: Build the Salt Package
+@echo  %0 :: Build the Salt Package...
+@echo ---------------------
 call "%CurDir%build_pkg.bat" "%Version%"
 
 :eof
+
+@echo  End of %0
+@echo ---------------------
