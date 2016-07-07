@@ -389,14 +389,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Salt daemons started')
             master_conf = TestDaemon.config('master')
             minion_conf = TestDaemon.config('minion')
+            sub_minion_conf = TestDaemon.config('sub_minion')
             syndic_conf = TestDaemon.config('syndic')
             syndic_master_conf = TestDaemon.config('syndic_master')
-
-            print_header(' * Syndic master configuration values', top=False)
-            print('interface: {0}'.format(syndic_master_conf['interface']))
-            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
-            print('return port: {0}'.format(syndic_master_conf['ret_port']))
-            print('\n')
 
             print_header(' * Master configuration values', top=True)
             print('interface: {0}'.format(master_conf['interface']))
@@ -406,6 +401,25 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
             print_header(' * Minion configuration values', top=True)
             print('interface: {0}'.format(minion_conf['interface']))
+            print('master port: {0}'.format(minion_conf['master_port']))
+            print('ipc mode: {0}'.format(minion_conf['ipc_mode']))
+            print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
+            print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
+            print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
+            print('\n')
+
+            print_header(' * Sub Minion configuration values', top=True)
+            print('interface: {0}'.format(sub_minion_conf['interface']))
+            print('master port: {0}'.format(sub_minion_conf['master_port']))
+            print('ipc mode: {0}'.format(sub_minion_conf['ipc_mode']))
+            print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
+            print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
+            print('\n')
+
+            print_header(' * Syndic master configuration values', top=False)
+            print('interface: {0}'.format(syndic_master_conf['interface']))
+            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
+            print('return port: {0}'.format(syndic_master_conf['ret_port']))
             print('\n')
 
             print_header(' * Syndic configuration values', top=True)
