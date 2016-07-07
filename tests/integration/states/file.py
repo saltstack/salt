@@ -10,6 +10,7 @@ from distutils.version import LooseVersion
 import glob
 import grp
 import os
+import re
 import pwd
 import sys
 import shutil
@@ -209,6 +210,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_managed_file_with_grains_data(self):
+        '''
+        Test to ensure we can render grains data into a managed
+        file.
+        '''
+        ret = self.run_function('state.sls', ['file-grainget'])
+        self.assertTrue(os.path.exists('/tmp/file-grain-test'))
+        file_contents = open('/tmp/file-grain-test', 'r').readlines()
+        self.assertTrue(re.match('^minion$', file_contents[0]))
 
     @destructiveTest
     def test_managed_file_with_pillar_sls(self):
