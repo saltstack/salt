@@ -170,7 +170,7 @@ def get_unused_localhost_port():
     usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    if port in (54505, 54506, 64505, 64506, 64510, 64511):
+    if port in (54505, 54506, 64505, 64506, 64510, 64511, 64520, 64521):
         # These ports are hardcoded in the test configuration
         port = get_unused_localhost_port()
         usock.close()
@@ -989,28 +989,31 @@ class TestDaemon(object):
             known_hosts.write('')
 
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
-        master_opts['user'] = running_tests_user
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['config_dir'] = TMP_CONF_DIR
         master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        #master_opts['pki_dir'] = os.path.join(TMP, 'rootdir','pki')
+        master_opts['user'] = running_tests_user
+        master_opts['config_dir'] = TMP_CONF_DIR
+        master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
 
         minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
         minion_opts['user'] = running_tests_user
         minion_opts['config_dir'] = TMP_CONF_DIR
-        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'minion')
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
         sub_minion_opts['user'] = running_tests_user
         sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
+        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
 
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
-        syndic_master_opts['user'] = running_tests_user
-        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
-        #syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki')
+        syndic_master_opts['user'] = running_tests_user
+        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
+        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
         # The syndic config file has an include setting to include the master configuration
         # Let's start with a copy of the syndic master configuration
