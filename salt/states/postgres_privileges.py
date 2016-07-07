@@ -90,7 +90,7 @@ def present(name,
     Grant the requested privilege(s) on the specified object to a role
 
     name
-        Name of the role to which privilages should be granted
+        Name of the role to which privileges should be granted
 
     object_name
        Name of the object on which the grant is to be performed
@@ -107,7 +107,7 @@ def present(name,
        - group
 
     privileges
-       Comma separated list of privilages to grant, from the list below:
+       List of privileges to grant, from the list below:
 
        - INSERT
        - CREATE
@@ -210,7 +210,7 @@ def absent(name,
     Revoke the requested privilege(s) on the specificed object(s)
 
     name
-        Name of the role whose privilages should be revoked
+        Name of the role whose privileges should be revoked
 
     object_name
        Name of the object on which the revoke is to be performed
@@ -227,7 +227,7 @@ def absent(name,
        - group
 
     privileges
-       Comma separated list of privilages to revoke, from the list below:
+       Comma separated list of privileges to revoke, from the list below:
 
        - INSERT
        - CREATE

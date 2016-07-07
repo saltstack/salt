@@ -10,6 +10,7 @@ also be used to coordinate between masters.
 from __future__ import absolute_import
 
 import logging
+import sys
 
 try:
     from kazoo.client import KazooClient
@@ -22,6 +23,7 @@ try:
     import kazoo.recipe.party
     from kazoo.exceptions import CancelledError
     from kazoo.exceptions import NoNodeError
+    from socket import gethostname
 
     # TODO: use the kazoo one, waiting for pull req:
     # https://github.com/python-zk/kazoo/pull/206
@@ -33,6 +35,7 @@ try:
                     max_leases=1,
                     ephemeral_lease=True,
                     ):
+            identifier = (identifier or gethostname())
             kazoo.recipe.lock.Semaphore.__init__(self,
                                                 client,
                                                 path,
@@ -134,7 +137,7 @@ def lock_holders(path,
         zookeeper connect string
 
     identifier
-        Name to identify this minion
+        Name to identify this minion, if unspecified defaults to hostname
 
     max_concurrency
         Maximum number of lock holders
@@ -180,7 +183,7 @@ def lock(path,
         zookeeper connect string
 
     identifier
-        Name to identify this minion
+        Name to identify this minion, if unspecified defaults to the hostname
 
     max_concurrency
         Maximum number of lock holders
@@ -211,6 +214,7 @@ def lock(path,
     # forcibly get the lock regardless of max_concurrency
     if force:
         SEMAPHORE_MAP[path].assured_path = True
+        SEMAPHORE_MAP[path].max_leases = sys.maxint
 
     # block waiting for lock acquisition
     if timeout:
@@ -239,7 +243,7 @@ def unlock(path,
         zookeeper connect string
 
     identifier
-        Name to identify this minion
+        Name to identify this minion, if unspecified defaults to hostname
 
     max_concurrency
         Maximum number of lock holders
