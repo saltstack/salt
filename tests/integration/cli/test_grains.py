@@ -4,13 +4,10 @@
 
 
     tests.integration.cli.test_grains
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test salt-ssh grains id work for localhost. (gh #16129)
+    Grains targeting tests
 
-    $ salt-ssh localhost grains.get id
-    localhost:
-        localhost
 '''
 # Import Python libs
 from __future__ import absolute_import
@@ -70,17 +67,3 @@ class GrainsTargetingTest(integration.ShellCase):
             self.assertEqual(ret, test_ret)
         finally:
             os.unlink(key_file)
-
-
-class SSHGrainsTest(integration.SSHCase):
-    '''
-    Test salt-ssh grains functionality
-    Depend on proper environment set by integration.SSHCase class
-    '''
-
-    def test_grains_id(self):
-        '''
-        Test salt-ssh grains id work for localhost.
-        '''
-        cmd = self.run_function('grains.get', ['id'])
-        self.assertEqual(cmd, 'localhost')
