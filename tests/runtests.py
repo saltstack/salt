@@ -401,6 +401,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
             print_header(' * Minion configuration values', top=True)
             print('interface: {0}'.format(minion_conf['interface']))
+            print('master: {0}'.format(minion_conf['master']))
             print('master port: {0}'.format(minion_conf['master_port']))
             print('ipc mode: {0}'.format(minion_conf['ipc_mode']))
             print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
@@ -409,21 +410,23 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
             print_header(' * Sub Minion configuration values', top=True)
             print('interface: {0}'.format(sub_minion_conf['interface']))
+            print('master: {0}'.format(sub_minion_conf['master']))
             print('master port: {0}'.format(sub_minion_conf['master_port']))
             print('ipc mode: {0}'.format(sub_minion_conf['ipc_mode']))
             print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
             print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
             print('\n')
 
+            print_header(' * Syndic configuration values', top=True)
+            print('interface: {0}'.format(syndic_conf['interface']))
+            print('syndic master: {0}'.format(syndic_conf['syndic_master']))
+            print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
+            print('\n')
+
             print_header(' * Syndic master configuration values', top=False)
             print('interface: {0}'.format(syndic_master_conf['interface']))
             print('publish port: {0}'.format(syndic_master_conf['publish_port']))
             print('return port: {0}'.format(syndic_master_conf['ret_port']))
-            print('\n')
-
-            print_header(' * Syndic configuration values', top=True)
-            print('interface: {0}'.format(syndic_conf['interface']))
-            print('syndic master port: {0}'.format(syndic_conf['syndic_master']))
             print('\n')
 
             print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
