@@ -1075,7 +1075,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_host': '',
     'proxy_username': '',
     'proxy_password': '',
-    'proxy_port': None,
+    'proxy_port': 0,
 }
 
 DEFAULT_MASTER_OPTS = {
