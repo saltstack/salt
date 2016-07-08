@@ -92,6 +92,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 
 log = logging.getLogger(__name__)
@@ -981,7 +982,7 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
         for i in routes:
             #_r = {k:i[k] for k in i if k in route_keys}
             _r = {}
-            for k, v in i.iteritems():
+            for k, v in six.iteritems(i):
                 if k in route_keys:
                     _r[k] = i[k]
             if i.get('internet_gateway_name'):
