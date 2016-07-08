@@ -430,7 +430,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print('\n')
 
             print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
-            print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+            print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
 
             while True:
                 time.sleep(1)
