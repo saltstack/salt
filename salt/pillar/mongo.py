@@ -51,6 +51,42 @@ want for a given node. They will be available directly inside the ``pillar``
 dict in your SLS templates.
 
 
+Using the Mongo ext_pillar
+==========================
+
+This ext_pillar allows you to include files from other pillars, for that
+to work you need to either have the field "include" in "fields" or use the
+whole document by not defining "fields".
+
+In the document you can define includes like this:
+
+.. code-block:: json
+
+  {
+    "include": [
+        "my_document"
+        "my_directory.my_document"
+    ]
+  }
+
+The files above will be included from the pillar base, you can also give the
+environment if you want to include them from another pillar.
+
+.. code-block:: json
+
+  {
+    "include": [
+        {
+            "file": "my_document",
+            "saltenv": "my_pillar"
+        },
+        {
+            "file": "my_directory.my_document",
+            "saltenv": "my_pillar"
+        },
+    ]
+  }
+
 Module Documentation
 ====================
 '''
@@ -59,6 +95,10 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import re
+
+# Import salt libs
+from salt.pillar import Pillar
+from salt.utils.dictupdate import merge
 
 # Import third party libs
 try:
@@ -73,6 +113,8 @@ __opts__ = {'mongo.db': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': ''}
+
+__grains__ = {}  # Will be overwritten by the salt.
 
 
 def __virtual__():
@@ -130,8 +172,9 @@ def ext_pillar(minion_id,
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
+    re_minion_id = minion_id
     if re_pattern:
-        minion_id = re.sub(re_pattern, re_replace, minion_id)
+        re_minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
         'ext_pillar.mongo: looking up pillar def for {{\'{0}\': \'{1}\'}} '
@@ -140,7 +183,10 @@ def ext_pillar(minion_id,
         )
     )
 
-    result = mdb[collection].find_one({id_field: minion_id}, projection=fields)
+    result = mdb[collection].find_one(
+        {id_field: re_minion_id},
+        projection=fields
+    )
     if result:
         if fields:
             log.debug(
@@ -151,6 +197,78 @@ def ext_pillar(minion_id,
             )
         else:
             log.debug('ext_pillar.mongo: found document, returning whole doc')
+
+        if 'include' in result:
+
+            if not isinstance(result['include'], list):
+                msg = ('MongoDB include in Document \'{0}\' '
+                       'is not formed as a list'.format(re_minion_id))
+                log.error(msg)
+            else:
+                included_data = {}
+
+                pillar_objects = {}
+                ext_pillars = [
+                    x for x in __opts__['ext_pillar'] if 'mongo' not in x
+                ]
+
+                mods = set()
+                for sub_sls in result.pop('include'):
+                    if isinstance(sub_sls, dict):
+                        if 'file' not in sub_sls:
+                            msg = ('MongoDB include from {0!r} malformed'
+                                   ', it doesn\'t contain '
+                                   'the file key.'.format(re_minion_id))
+                            log.error(msg)
+
+                        defaults = sub_sls.get('defaults', {})
+                        key = sub_sls.get('key', None)
+                        saltenv = sub_sls.get('saltenv', 'base')
+                        sub_sls = sub_sls['file']
+                    else:
+                        key = None
+                        defaults = None
+                        saltenv = 'base'
+
+                    pillar_obj = pillar_objects.get(saltenv, None)
+                    if pillar_obj is None:
+                        pillar_obj = Pillar(
+                            __opts__,
+                            __grains__,
+                            minion_id,
+                            saltenv,
+                            ext_pillars
+                        )
+                        pillar_objects[saltenv] = pillar_obj
+
+                    nstate, mods, err = pillar_obj.render_pstate(
+                        sub_sls,
+                        saltenv,
+                        mods,
+                        defaults
+                    )
+                    if nstate:
+                        if key:
+                            nstate = {
+                                key: nstate
+                            }
+
+                        included_data = merge(
+                            included_data,
+                            nstate,
+                            pillar_obj.merge_strategy,
+                            pillar_obj.opts.get('renderer', 'yaml'),
+                            pillar_obj.opts.get('pillar_merge_lists', False)
+                        )
+
+                result = merge(
+                    included_data,
+                    result,
+                    pillar_obj.merge_strategy,
+                    pillar_obj.opts.get('renderer', 'yaml'),
+                    pillar_obj.opts.get('pillar_merge_lists', False)
+                )
+
         if '_id' in result:
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
