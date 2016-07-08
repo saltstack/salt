@@ -1,4 +1,5 @@
 # basic config
+# Connects to master
 master: localhost
 master_port: 64506
 tcp_pub_port: 64520

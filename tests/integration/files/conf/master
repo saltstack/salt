@@ -1,3 +1,5 @@
+# Master Settings
+# Connects to syndic_master via syndic
 id: master
 publish_port: 64505
 ret_port: 64506
@@ -6,7 +8,6 @@ pidfile: master.pid
 sock_dir: master_sock
 timeout: 3
 open_mode: True
-syndic_master: localhost
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
 pillar_opts: True
