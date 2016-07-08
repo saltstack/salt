@@ -57,10 +57,8 @@ import json
 import yaml
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils
-from salt.ext.six import string_types
-
-# Import 3rd Party Libs
 
 log = logging.getLogger(__name__)
 
@@ -300,7 +298,7 @@ def _get_stage_variables(stage_variables):
     if stage_variables is None:
         return ret
 
-    if isinstance(stage_variables, string_types):
+    if isinstance(stage_variables, six.string_types):
         if stage_variables in __opts__:
             ret = __opts__[stage_variables]
         master_opts = __pillar__.get('master', {})
@@ -439,7 +437,7 @@ def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
     '''
     result = {}
     if isinstance(o, dict):
-        for k, v in o.iteritems():
+        for k, v in six.iteritems(o):
             if isinstance(v, dict):
                 reduced = v if k == 'variables' else _object_reducer(v, names)
                 if reduced or _name_matches(k, names):
@@ -701,13 +699,13 @@ class _Swagger(object):
         to handle response code mapping/integration
         '''
         for path, ops in paths:
-            for opname, opobj in ops.iteritems():
+            for opname, opobj in six.iteritems(ops):
                 if opname not in _Swagger.SWAGGER_OPERATION_NAMES:
                     continue
 
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
-                for rescode, resobj in opobj.get('responses').iteritems():
+                for rescode, resobj in six.iteritems(opobj.get('responses')):
                     if not self._is_http_error_rescode(str(rescode)):
                         continue
 
@@ -857,7 +855,7 @@ class _Swagger(object):
         for path in paths:
             if not path.startswith('/'):
                 raise ValueError('Path object {0} should start with /. Please fix it'.format(path))
-        return paths.iteritems()
+        return six.iteritems(paths)
 
     @property
     def basePath(self):
@@ -1258,7 +1256,7 @@ class _Swagger(object):
                 # need to walk each property object
                 properties = obj_schema.get('properties')
                 if properties:
-                    for _, prop_obj_schema in properties.iteritems():
+                    for _, prop_obj_schema in six.iteritems(properties):
                         dep_models_list.extend(self._build_dependent_model_list(prop_obj_schema))
         return list(set(dep_models_list))
 
@@ -1267,7 +1265,7 @@ class _Swagger(object):
         Helper function to build a map of model to their list of model reference dependencies
         '''
         ret = {}
-        for model, schema in self._models().iteritems():
+        for model, schema in six.iteritems(self._models()):
             dep_list = self._build_dependent_model_list(schema)
             ret[model] = dep_list
         return ret
@@ -1280,7 +1278,7 @@ class _Swagger(object):
         if not models_dict:
             return next_model
 
-        for model, dependencies in models_dict.iteritems():
+        for model, dependencies in six.iteritems(models_dict):
             if dependencies == []:
                 next_model = model
                 break
@@ -1291,7 +1289,7 @@ class _Swagger(object):
 
         # remove the model from other depednencies before returning
         models_dict.pop(next_model)
-        for model, dep_list in models_dict.iteritems():
+        for model, dep_list in six.iteritems(models_dict):
             if next_model in dep_list:
                 dep_list.remove(next_model)
 
@@ -1421,7 +1419,7 @@ class _Swagger(object):
     def _find_patterns(self, o):
         result = []
         if isinstance(o, dict):
-            for k, v in o.iteritems():
+            for k, v in six.iteritems(o):
                 if isinstance(v, dict):
                     result.extend(self._find_patterns(v))
                 else:
@@ -1547,7 +1545,7 @@ class _Swagger(object):
         ret = _log_changes(ret, '_deploy_method.create_api_integration', integration)
 
         if 'responses' in method_data:
-            for response, response_data in method_data['responses'].iteritems():
+            for response, response_data in six.iteritems(method_data['responses']):
                 httpStatus = str(response)
                 method_response = self._parse_method_response(method_name.lower(),
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
@@ -1612,7 +1610,7 @@ class _Swagger(object):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
             ret = _log_changes(ret, 'deploy_resources', resource)
-            for method, method_data in pathData.iteritems():
+            for method, method_data in six.iteritems(pathData):
                 if method in _Swagger.SWAGGER_OPERATION_NAMES:
                     ret = self._deploy_method(ret, path, method, method_data, api_key_required,
                                               lambda_integration_role, lambda_region, authorization_type)
