@@ -38,7 +38,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows()
+    return not salt.utils.is_windows() and 'inspector'
 
 
 def _(module):
@@ -86,9 +86,9 @@ def inspect(mode='all', priority=19, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' node.inspect
-        salt '*' node.inspect configuration
-        salt '*' node.inspect payload filter=/opt,/ext/oracle
+        salt '*' inspector.inspect
+        salt '*' inspector.inspect configuration
+        salt '*' inspector.inspect payload filter=/opt,/ext/oracle
     '''
     collector = _("collector")
     try:
@@ -102,7 +102,7 @@ def inspect(mode='all', priority=19, **kwargs):
         raise Exception(ex)
 
 
-def query(scope, **kwargs):
+def query(*args, **kwargs):
     '''
     Query the node for specific information.
 
@@ -154,12 +154,12 @@ def query(scope, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' node.query scope=os
-        salt '*' node.query payload type=file,link filter=/etc size=Kb brief=False
+        salt '*' inspector.query scope=system
+        salt '*' inspector.query scope=payload type=file,link filter=/etc size=Kb brief=False
     '''
     query = _("query")
     try:
-        return query.Query(scope, cachedir=__opts__['cachedir'])(**kwargs)
+        return query.Query(kwargs.get('scope'), cachedir=__opts__['cachedir'])(*args, **kwargs)
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
@@ -183,13 +183,13 @@ def build(format='qcow2', path='/tmp/'):
 
     .. code-block:: bash:
 
-        salt myminion node.build
-        salt myminion node.build format=iso path=/opt/builds/
+        salt myminion inspector.build
+        salt myminion inspector.build format=iso path=/opt/builds/
     '''
     try:
         _("collector").Inspector(cachedir=__opts__['cachedir'],
                                  piddir=os.path.dirname(__opts__['pidfile']),
-                                 pidfilename='').build(format=format, path=path)
+                                 pidfilename='').reuse_snapshot().build(format=format, path=path)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
@@ -211,16 +211,66 @@ def export(local=False, path="/tmp", format='qcow2'):
 
     .. code-block:: bash:
 
-        salt myminion node.export
-        salt myminion node.export format=iso path=/opt/builds/
+        salt myminion inspector.export
+        salt myminion inspector.export format=iso path=/opt/builds/
     '''
     if getpass.getuser() != 'root':
         raise CommandExecutionError('In order to export system, the minion should run as "root".')
     try:
         description = _("query").Query('all', cachedir=__opts__['cachedir'])()
-        return _("collector").Inspector().export(description, local=local, path=path, format=format)
+        return _("collector").Inspector().reuse_snapshot().export(description, local=local, path=path, format=format)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
         log.error(_get_error_message(ex))
         raise Exception(ex)
+
+
+def snapshots():
+    '''
+    List current description snapshots.
+
+    CLI Example:
+
+    .. code-block:: bash:
+
+        salt myminion inspector.snapshots
+    '''
+    try:
+        return _("collector").Inspector(cachedir=__opts__['cachedir'],
+                                        piddir=os.path.dirname(__opts__['pidfile'])).db.list()
+    except InspectorSnapshotException as err:
+        raise CommandExecutionError(err)
+    except Exception as err:
+        log.error(_get_error_message(err))
+        raise Exception(err)
+
+
+def delete(all=False, *databases):
+    '''
+    Remove description snapshots from the system.
+
+    ::parameter: all. Default: False. Remove all snapshots, if set to True.
+
+    CLI example:
+
+    .. code-block:: bash:
+
+        salt myminion inspector.delete <ID> <ID1> <ID2>..
+        salt myminion inspector.delete all=True
+    '''
+    if not all and not databases:
+        raise CommandExecutionError('At least one database ID required.')
+
+    try:
+        ret = dict()
+        inspector = _("collector").Inspector(cachedir=__opts__['cachedir'],
+                                             piddir=os.path.dirname(__opts__['pidfile']))
+        for dbid in all and inspector.db.list() or databases:
+            ret[dbid] = inspector.db._db.purge(str(dbid))
+        return ret
+    except InspectorSnapshotException as err:
+        raise CommandExecutionError(err)
+    except Exception as err:
+        log.error(_get_error_message(err))
+        raise Exception(err)

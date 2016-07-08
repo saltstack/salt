@@ -12,7 +12,7 @@ import salt.client
 def cmd(
         name,
         tgt,
-        fun,
+        func,
         arg=(),
         tgt_type='glob',
         ret='',
@@ -28,7 +28,7 @@ def cmd(
     local = salt.client.get_local_client(mopts=__opts__)
     jid = local.cmd_async(
                           tgt,
-                          fun,
+                          func,
                           arg,
                           expr_form=tgt_type,
                           ret=ret,

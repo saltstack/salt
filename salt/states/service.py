@@ -601,6 +601,10 @@ def mod_watch(name,
         ret['comment'] = 'Service is set to be {0}'.format(past_participle)
         return ret
 
+    if verb == 'start' and 'service.stop' in __salt__:
+        # stop service before start
+        __salt__['service.stop'](name)
+
     result = func(name)
     if init_delay:
         time.sleep(init_delay)

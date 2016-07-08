@@ -1946,7 +1946,7 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user)[0]
 
-        if remote_ref_type is 'hash' and __salt__['git.describe'](ref):
+        if remote_ref_type is 'hash' and __salt__['git.describe'](target, ref):
             # The ref is a hash and it exists locally so skip to checkout
             hash_exists_locally = True
         else:
@@ -2110,7 +2110,7 @@ def detached(name,
     #get refs and checkout
     checkout_commit_id = ''
     if remote_ref_type is 'hash':
-        if __salt__['git.describe'](ref):
+        if __salt__['git.describe'](target, ref):
             checkout_commit_id = ref
         else:
             return _fail(

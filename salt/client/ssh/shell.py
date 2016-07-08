@@ -217,27 +217,19 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
-        opts = ''
-        tty = self.tty
-        if ssh != 'ssh':
-            tty = False
-        if self.passwd:
-            opts = self._passwd_opts()
-        if self.priv:
-            opts = self._key_opts()
+        command = [ssh]
+        if ssh != 'scp':
+            command.append(self.host)
+        if self.tty and ssh == 'ssh':
+            command.append('-t -t')
+        if self.passwd or self.priv:
+            command.append(self.priv and self._key_opts() or self._passwd_opts())
+        if ssh != 'scp' and self.remote_port_forwards:
+            command.append(' '.join(['-R {0}'.format(item)
+                                     for item in self.remote_port_forwards.split(',')]))
+        command.append(cmd)
 
-        ports = ''
-        if self.remote_port_forwards:
-            port_forwards = self.remote_port_forwards.split(',')
-            ports = ' '.join(map(lambda x: '-R {0}'.format(x), port_forwards))
-
-        return "{0} {1} {2} {3} {4} {5}".format(
-                ssh,
-                '' if ssh == 'scp' else self.host,
-                '-t -t' if tty else '',
-                opts,
-                '' if ssh == 'scp' else ports,
-                cmd)
+        return ' '.join(command)
 
     def _old_run_cmd(self, cmd):
         '''

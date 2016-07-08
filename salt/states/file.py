@@ -3829,16 +3829,16 @@ def append(name,
 
     .. versionadded:: 0.9.5
     '''
-    name = os.path.expanduser(name)
-
-    ret = {
-            'name': name,
+    ret = {'name': name,
             'changes': {},
             'pchanges': {},
             'result': False,
             'comment': ''}
+
     if not name:
         return _error(ret, 'Must provide name to file.append')
+
+    name = os.path.expanduser(name)
 
     if sources is None:
         sources = []
@@ -3888,17 +3888,16 @@ def append(name,
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
+        slines = [item.rstrip() for item in slines]
 
-    count = 0
-    test_lines = []
-
+    append_lines = []
     try:
         for chunk in text:
             if ignore_whitespace:
                 if __salt__['file.search'](
-                    name,
-                    salt.utils.build_whitespace_split_regex(chunk),
-                    multiline=True):
+                        name,
+                        salt.utils.build_whitespace_split_regex(chunk),
+                        multiline=True):
                     continue
             elif __salt__['file.search'](
                     name,
@@ -3906,37 +3905,39 @@ def append(name,
                     multiline=True):
                 continue
 
-            lines = chunk.splitlines()
+            for line_item in chunk.splitlines():
+                append_lines.append('{0}'.format(line_item))
 
-            for line in lines:
-                if __opts__['test']:
-                    ret['comment'] = 'File {0} is set to be updated'.format(name)
-                    ret['result'] = None
-                    test_lines.append('{0}\n'.format(line))
-                else:
-                    __salt__['file.append'](name, line)
-                count += 1
     except TypeError:
         return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
-        nlines = slines + test_lines
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
+        nlines = list(slines)
+        nlines.extend(append_lines)
         if slines != nlines:
             if not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
                 ret['changes']['diff'] = (
-                    ''.join(difflib.unified_diff(slines, nlines))
+                    '\n'.join(difflib.unified_diff(slines, nlines))
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
             ret['result'] = True
         return ret
 
+    if append_lines:
+        __salt__['file.append'](name, args=append_lines)
+        ret['comment'] = 'Appended {0} lines'.format(len(append_lines))
+    else:
+        ret['comment'] = 'File {0} is in correct state'.format(name)
+
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
+        nlines = [item.rstrip(os.linesep) for item in nlines]
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -3944,14 +3945,10 @@ def append(name,
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
-            )
+                '\n'.join(difflib.unified_diff(slines, nlines)))
 
-    if count:
-        ret['comment'] = 'Appended {0} lines'.format(count)
-    else:
-        ret['comment'] = 'File {0} is in correct state'.format(name)
     ret['result'] = True
+
     return ret
 
 

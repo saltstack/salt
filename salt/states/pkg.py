@@ -1091,6 +1091,10 @@ def installed(
               pkg.installed:
                 - only_upgrade: True
 
+        .. note::
+            If this parameter is set to True and the package is not already
+            installed, the state will fail.
+
    :param bool report_reboot_exit_codes:
        If the installer exits with a recognized exit code indicating that
        a reboot is required, the module function
@@ -1161,7 +1165,7 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name)
+        version = __salt__['pkg.latest_version'](name, **kwargs)
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
@@ -1667,6 +1671,10 @@ def latest(
           pkg.latest:
             - only_upgrade: True
 
+    .. note::
+        If this parameter is set to True and the package is not already
+        installed, the state will fail.
+
    report_reboot_exit_codes
         If the installer exits with a recognized exit code indicating that
         a reboot is required, the module function
@@ -1721,6 +1729,8 @@ def latest(
         else:
             desired_pkgs = [name]
 
+    kwargs['saltenv'] = __env__
+
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                                fromrepo=fromrepo,
@@ -1755,31 +1765,18 @@ def latest(
 
     targets = {}
     problems = []
-    cmp_func = __salt__.get('pkg.version_cmp')
-    minion_os = __salt__['grains.item']('os')['os']
-
-    if minion_os == 'Gentoo' and watch_flags:
-        for pkg in desired_pkgs:
-            if not avail[pkg] and not cur[pkg]:
+    for pkg in desired_pkgs:
+        if not avail[pkg]:
+            if not cur[pkg]:
                 msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-            else:
-                if salt.utils.compare_versions(ver1=cur[pkg], oper='!=', ver2=avail[pkg], cmp_func=cmp_func):
-                    targets[pkg] = avail[pkg]
-                else:
-                    if not cur[pkg] or __salt__['portage_config.is_changed_uses'](pkg):
-                        targets[pkg] = avail[pkg]
-    else:
-        for pkg in desired_pkgs:
-            if pkg not in avail:
-                if not cur.get(pkg):
-                    msg = 'No information found for \'{0}\'.'.format(pkg)
-                    log.error(msg)
-                    problems.append(msg)
-            elif not cur.get(pkg) \
-                    or salt.utils.compare_versions(ver1=cur[pkg], oper='<', ver2=avail[pkg], cmp_func=cmp_func):
+            elif watch_flags \
+                    and __grains__.get('os') == 'Gentoo' \
+                    and __salt__['portage_config.is_changed_uses'](pkg):
                 targets[pkg] = avail[pkg]
+        else:
+            targets[pkg] = avail[pkg]
 
     if problems:
         return {

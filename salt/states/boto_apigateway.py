@@ -1505,8 +1505,10 @@ class _Swagger(object):
         method = self._parse_method_data(method_name.lower(), method_data)
 
         # for options method to enable CORS, api_key_required will be set to False always.
+        # authorization_type will be set to 'NONE' always.
         if method_name.lower() == 'options':
             api_key_required = False
+            authorization_type = 'NONE'
 
         m = __salt__['boto_apigateway.create_api_method'](restApiId=self.restApiId,
                                                           resourcePath=resource_path,

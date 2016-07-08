@@ -27,7 +27,7 @@ def set_(name, add, match):
         __reg__[name]['val'] = set()
     for event in __events__:
         if fnmatch.fnmatch(event['tag'], match):
-            val = event['data'].get(add)
+            val = event['data']['data'].get(add)
             if val is None:
                 val = 'None'
             ret['changes'][add] = val
@@ -52,8 +52,8 @@ def list_(name, add, match):
         if fnmatch.fnmatch(event['tag'], match):
             item = {}
             for key in add:
-                if key in event['data']:
-                    item[key] = event['data'][key]
+                if key in event['data']['data']:
+                    item[key] = event['data']['data'][key]
             __reg__[name]['val'].append(item)
     return ret
 
@@ -75,9 +75,9 @@ def mean(name, add, match):
         __reg__[name]['count'] = 0
     for event in __events__:
         if fnmatch.fnmatch(event['tag'], match):
-            if add in event['data']:
+            if add in event['data']['data']:
                 try:
-                    comp = int(event['data'])
+                    comp = int(event['data']['data'])
                 except ValueError:
                     continue
             __reg__[name]['total'] += comp

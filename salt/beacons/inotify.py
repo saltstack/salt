@@ -10,6 +10,9 @@ Watch files and translate the changes into salt events
             setting the `disable_during_state_run` flag to `True` in
             the beacon configuration.
 
+:note: The `inotify` beacon only works on OSes that have `inotify` kernel support.
+       Currently this excludes FreeBSD, Mac OS X, and Windows.
+
 '''
 # Import Python libs
 from __future__ import absolute_import
