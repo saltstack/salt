@@ -263,6 +263,7 @@ import shutil
 import string
 import sys
 import time
+import uuid
 import base64
 import errno
 from subprocess import list2cmdline
@@ -5551,6 +5552,12 @@ def _mk_fileclient():
                 salt.fileclient.get_file_client(__opts__)
 
 
+def _generate_tmp_path():
+    return os.path.join(
+        '/tmp',
+        'salt.dockerng.{0}'.format(uuid.uuid4().hex[:6]))
+
+
 def _prepare_trans_tar(mods=None, saltenv='base', pillar=None):
     '''
     Prepares a self contained tarball that has the state
@@ -5627,8 +5634,12 @@ def call(name, function, *args, **kwargs):
     .. versionadded:: Carbon
 
     '''
+    # where to put the salt-thin
+    thin_dest_path = _generate_tmp_path()
+    mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
+
     # put_archive reqires the path to exist
-    ret = __salt__['dockerng.run_all'](name, 'mkdir -p /tmp/salt_thin')
+    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
@@ -5638,34 +5649,38 @@ def call(name, function, *args, **kwargs):
     # move salt into the container
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'])
     with io.open(thin_path, 'rb') as file:
-        _client_wrapper('put_archive', name, '/tmp/salt_thin', file)
-
-    salt_argv = [
-        'python',
-        '/tmp/salt_thin/salt-call',
-        '--retcode-passthrough',
-        '--local',
-        '--out', 'json',
-        '-l', 'quiet',
-        '--',
-        function
-    ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
-
-    ret = __salt__['dockerng.run_all'](name,
-                                       list2cmdline(map(str, salt_argv)))
-    # python not found
-    if ret['retcode'] == 127:
-        raise CommandExecutionError(ret['stderr'])
-    elif ret['retcode'] != 0:
-        return {'result': False, 'comment': ret['stderr']}
-
-    # process "real" result in stdout
+        _client_wrapper('put_archive', name, thin_dest_path, file)
     try:
-        data = salt.utils.find_json(ret['stdout'])
-        return data.get('local', data)
-    except ValueError:
-        return {'result': False,
-                'comment': 'Can\'t parse container command output'}
+        salt_argv = [
+            'python',
+            os.path.join(thin_dest_path, 'salt-call'),
+            '--retcode-passthrough',
+            '--local',
+            '--out', 'json',
+            '-l', 'quiet',
+            '--',
+            function
+        ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
+
+        ret = __salt__['dockerng.run_all'](name,
+                                           list2cmdline(map(str, salt_argv)))
+        # python not found
+        if ret['retcode'] == 127:
+            raise CommandExecutionError(ret['stderr'])
+        elif ret['retcode'] != 0:
+            return {'result': False, 'comment': ret['stderr']}
+
+        # process "real" result in stdout
+        try:
+            data = salt.utils.find_json(ret['stdout'])
+            return data.get('local', data)
+        except ValueError:
+            return {'result': False,
+                    'comment': 'Can\'t parse container command output'}
+    finally:
+        # delete the thin dir so that it does not end in the image
+        rm_thin_argv = ['rm', '-rf', thin_dest_path]
+        __salt__['dockerng.run_all'](name, list2cmdline(rm_thin_argv))
 
 
 def sls(name, mods=None, saltenv='base', **kwargs):
