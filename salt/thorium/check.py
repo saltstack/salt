@@ -7,6 +7,7 @@ of having a command execution get gated by a check state via a requisite.
 '''
 # import python libs
 from __future__ import absolute_import
+import fnmatch
 
 
 def gt(name, value):
