@@ -998,12 +998,14 @@ class TestDaemon(object):
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
 
         minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
+        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         minion_opts['user'] = running_tests_user
         minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'minion')
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
+        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
         sub_minion_opts['user'] = running_tests_user
         sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
@@ -1023,6 +1025,7 @@ class TestDaemon(object):
         syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
         # Lets remove the include setting
         syndic_opts.pop('include')
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         syndic_opts['user'] = running_tests_user
         syndic_opts['config_dir'] = TMP_SYNDIC_MINION_CONF_DIR
 
