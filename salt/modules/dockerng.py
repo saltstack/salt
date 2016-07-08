@@ -5758,7 +5758,7 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
 
     .. code-block:: bash
 
-        salt myminion dockerng.build_image imgname mods=rails,web
+        salt myminion dockerng.sls_build imgname base=mybase mods=rails,web
 
     The base image does not need to have Salt installed, but Python
     is required.
