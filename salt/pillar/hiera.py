@@ -32,16 +32,15 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     Execute hiera and return the data
     '''
-    data = dict()
+    cmd = 'hiera -c {0}'.format(conf)
     for key, val in six.iteritems(__grains__):
-        cmd = 'hiera -c {0}'.format(conf)
         if isinstance(val, six.string_types):
-            cmd += ' {0} \'{1}\''.format(key, val)
-            try:
-                data[key] = yaml.safe_load(__salt__['cmd.run'](cmd))
-            except Exception:
-                log.critical(
-                        'Hiera YAML data failed to parse from conf {0}'.format(conf)
-                        )
-                return {}
+            cmd += ' {0}=\'{1}\''.format(key, val)
+    try:
+        data = yaml.safe_load(__salt__['cmd.run'](cmd))
+    except Exception:
+        log.critical(
+                'Hiera YAML data failed to parse from conf {0}'.format(conf)
+                )
+        return {}
     return data
