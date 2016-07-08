@@ -44,7 +44,8 @@ def __virtual__():
         'McAfee  OS Server',
         'Void',
         'Mint',
-        'Raspbian'
+        'Raspbian',
+        'XenServer'
     ))
     if __grains__.get('os', '') in disable:
         return (False, 'Your OS is on the disabled list')

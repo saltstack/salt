@@ -52,7 +52,7 @@ Import-Module $script_path\Modules\download-module.psm1
 Import-Module $script_path\Modules\get-settings.psm1
 Import-Module $script_path\Modules\uac-module.psm1
 Import-Module $script_path\Modules\zip-module.psm1
-
+Import-Module $script_path\Modules\start-process-and-test-exitcode.psm1
 #==============================================================================
 # Check for Elevated Privileges
 #==============================================================================
@@ -208,7 +208,7 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-$p = Start-Process "$($ini['Settings']['PythonDir'])\python.exe" -ArgumentList "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" -Wait -NoNewWindow -PassThru
+Start_Process_and_test_exitcode "$($ini['Settings']['PythonDir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 
 #==============================================================================
 # Install pypi resources using pip
@@ -216,7 +216,7 @@ $p = Start-Process "$($ini['Settings']['PythonDir'])\python.exe" -ArgumentList "
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-$p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install -r $($script_path)\req.txt" -Wait -NoNewWindow -PassThru
+Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
 
 #==============================================================================
 # Install PyYAML with CLoader
@@ -233,7 +233,7 @@ DownloadFileWithProgress $url $file
 
 # Install
 $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyYAML'])"
-$p = Start-Process "$($ini['Settings']['ScriptsDir'])\easy_install.exe" -ArgumentList "-Z $file " -Wait -NoNewWindow -PassThru
+Start_Process_and_test_exitcode "$($ini['Settings']['ScriptsDir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
 
 #==============================================================================
 # Install PyCrypto from wheel file
@@ -249,7 +249,7 @@ DownloadFileWithProgress $url $file
 
 # Install
 $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyCrypto'])"
-$p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " -Wait -NoNewWindow -PassThru
+Start_Process_and_test_exitcode  "$($ini['Settings']['ScriptsDir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory

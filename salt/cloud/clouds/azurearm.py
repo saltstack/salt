@@ -755,13 +755,8 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
-    if 'network_resource_group' in kwargs:
-        group = kwargs['network_resource_group']
-    else:
-        group = kwargs['resource_group']
-
     subnet_obj = netconn.subnets.get(
-        resource_group_name=group,
+        resource_group_name=kwargs['network_resource_group'],
         virtual_network_name=kwargs['network'],
         subnet_name=kwargs['subnet'],
     )
@@ -771,7 +766,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
-            resource_group_name=group,
+            resource_group_name=kwargs['resource_group'],
             public_ip_address_name=pub_ip_name,
             parameters=PublicIPAddress(
                 location=kwargs['location'],
@@ -783,7 +778,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         while True:
             try:
                 pub_ip_data = netconn.public_ip_addresses.get(
-                    group,
+                    kwargs['resource_group'],
                     pub_ip_name,
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
@@ -799,8 +794,8 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                         )
                     ]
                     break
-            except CloudError:
-                pass
+            except CloudError as exc:
+                log.error('There was a cloud error: {0}'.format(exc))
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
@@ -821,11 +816,10 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     poller = netconn.network_interfaces.create_or_update(
-        group, kwargs['iface_name'], iface_params
+        kwargs['resource_group'], kwargs['iface_name'], iface_params
     )
     poller.wait()
     count = 0
-    kwargs['resource_group'] = group
     while True:
         try:
             return show_interface(kwargs=kwargs)

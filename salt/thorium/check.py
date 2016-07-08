@@ -136,3 +136,32 @@ def contains(name, value):
     except TypeError:
         pass
     return ret
+
+
+def event(name):
+    '''
+    Chekcs for a specific event match and returns result True if the match
+    happens
+
+    USAGE::
+
+    code-block:: yaml
+
+        salt/foo/*/bar:
+          check.event
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: salt/foo/*/bar
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+    for event in __events__:
+        if fnmatch.fnmatch(event['tag'], name):
+            ret['result'] = True
+    return ret
