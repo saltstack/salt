@@ -310,7 +310,6 @@ import itertools
 import functools
 import logging
 import json
-import StringIO
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -1414,10 +1413,10 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = StringIO.StringIO()
+        fileobj = six.StringIO.StringIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, StringIO.StringIO(pub_key))
-        tarball.addfile(priv_key_file, StringIO.StringIO(priv_key))
+        tarball.addfile(pub_key_file, six.StringIO.StringIO(pub_key))
+        tarball.addfile(priv_key_file, six.StringIO.StringIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
