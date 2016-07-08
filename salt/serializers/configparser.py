@@ -8,12 +8,12 @@
     Implements a configparser serializer.
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 
-import StringIO
+# Import Salt Libs
+import salt.ext.six as six
 import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
-
-from salt.ext.six import string_types
 from salt.serializers import DeserializationError, SerializationError
 
 __all__ = ['deserialize', 'serialize', 'available']
@@ -32,11 +32,11 @@ def deserialize(stream_or_string, **options):
     cp = configparser.SafeConfigParser(**options)
 
     try:
-        if not isinstance(stream_or_string, (bytes, string_types)):
+        if not isinstance(stream_or_string, (bytes, six.string_types)):
             cp.readfp(stream_or_string)
         else:
             # python2's ConfigParser cannot parse a config from a string
-            cp.readfp(StringIO.StringIO(stream_or_string))
+            cp.readfp(six.moves.StringIO(stream_or_string))
         data = {}
         for section_name in cp.sections():
             section = {}
@@ -66,7 +66,7 @@ def serialize(obj, **options):
         if fp:
             return cp.write(fp)
         else:
-            s = StringIO.StringIO()
+            s = six.moves.StringIO()
             cp.write(s)
             return s.getvalue()
     except Exception as error:

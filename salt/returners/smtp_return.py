@@ -74,16 +74,16 @@ that prints any email it receives to the console.
 
     python -m smtpd -n -c DebuggingServer localhost:1025
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import smtplib
-import StringIO
 from email.utils import formatdate
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.jid
 import salt.returners
 import salt.loader
@@ -159,7 +159,7 @@ def returner(ret):
         if field in ret:
             subject += ' {0}'.format(ret[field])
     subject = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=subject, **ret)
-    if isinstance(subject, StringIO.StringIO):
+    if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
 
     log.debug("smtp_return: Subject is '{0}'".format(subject))
@@ -187,7 +187,7 @@ def returner(ret):
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
                     encrypted_data.status, encrypted_data.stderr)
 
-    if isinstance(content, StringIO.StringIO):
+    if isinstance(content, six.moves.StringIO):
         content = content.read()
 
     message = ('From: {0}\r\n'
