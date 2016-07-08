@@ -2462,7 +2462,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                       }
         for item in route_tables:
             route_table = {}
-            for outkey, inkey in keys.iteritems():
+            for outkey, inkey in six.iteritems(keys):
                 if inkey in item:
                     if outkey == 'routes':
                         route_table[outkey] = _key_remap(inkey, route_keys, item)
@@ -2546,7 +2546,7 @@ def _key_remap(key, keys, item):
     elements_list = []
     for r_item in item.get(key, []):
         element = {}
-        for r_outkey, r_inkey in keys.iteritems():
+        for r_outkey, r_inkey in six.iteritems(keys):
             if r_inkey in r_item:
                 element[r_outkey] = r_item.get(r_inkey)
         elements_list.append(element)
