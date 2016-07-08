@@ -5706,7 +5706,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         mods = []
 
     # gather grains from the container
-    grains = __salt__['dockerng.call'](name, function='grains.items')
+    grains = __salt__['dockerng.call'](name, 'grains.items')
 
     # compile pillar with container grains
     pillar = _gather_pillar(saltenv, {}, **grains)
@@ -5721,9 +5721,8 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                                      overwrite=True)
 
         # Now execute the state into the container
-        ret = __salt__['dockerng.call'](name, function='state.pkg',
-                                        args=['/tmp/salt_state.tgz',
-                                              trans_tar_sha256, 'sha256'])
+        ret = __salt__['dockerng.call'](name, 'state.pkg', '/tmp/salt_state.tgz',
+                                        trans_tar_sha256, 'sha256')
 
         # set right exit code if any state failed
         __context__['retcode'] = 0
