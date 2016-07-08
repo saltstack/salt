@@ -142,7 +142,7 @@ def action(func=None,
 
     .. code-block:: bash
 
-        salt-run cloud.actions start my-salt-vm
+        salt-run cloud.action start my-salt-vm
     '''
     client = _get_client()
     info = client.action(func, cloudmap, instances, provider, instance, kwargs)
