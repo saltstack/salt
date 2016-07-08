@@ -32,4 +32,4 @@ def render(template_file,
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in the wempy renderer'))
-    return six.StringIO.StringIO(tmp_data['data'])
+    return six.moves.StringIO(tmp_data['data'])

@@ -36,7 +36,7 @@ def deserialize(stream_or_string, **options):
             cp.readfp(stream_or_string)
         else:
             # python2's ConfigParser cannot parse a config from a string
-            cp.readfp(six.StringIO.StringIO(stream_or_string))
+            cp.readfp(six.moves.StringIO(stream_or_string))
         data = {}
         for section_name in cp.sections():
             section = {}
@@ -66,7 +66,7 @@ def serialize(obj, **options):
         if fp:
             return cp.write(fp)
         else:
-            s = six.StringIO.StringIO()
+            s = six.moves.StringIO()
             cp.write(s)
             return s.getvalue()
     except Exception as error:

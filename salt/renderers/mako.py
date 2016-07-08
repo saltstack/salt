@@ -32,4 +32,4 @@ def render(template_file, saltenv='base', sls='', context=None, tmplpath=None, *
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
-    return six.StringIO.StringIO(tmp_data['data'])
+    return six.moves.StringIO(tmp_data['data'])
