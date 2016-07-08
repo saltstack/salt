@@ -58,8 +58,13 @@ and each event tag has a list of reactor SLS files to be run.
         - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
 
       - 'myco/custom/event/tag':        # React to custom event tags
-        - salt://reactor/mycustom.sls   # Put reactor files under file_roots
+        - salt://reactor/mycustom.sls   # Reactor files can come from the salt fileserver
 
+.. note::
+    In the above example, ``salt://reactor/mycustom.sls`` refers to the
+    ``base`` environment. To pull this file from a different environment, use
+    the :ref:`querystring syntax <querystring-syntax>` (e.g.
+    ``salt://reactor/mycustom.sls?saltenv=reactor``).
 
 Reactor sls files are similar to state and pillar sls files.  They are
 by default yaml + Jinja templates and are passed familiar context variables.

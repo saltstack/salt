@@ -1204,6 +1204,10 @@ Example:
       - roots
       - git
 
+.. note::
+    For masterless Salt, this parameter must be specified in the minion config
+    file.
+
 .. conf_master:: fileserver_followsymlinks
 
 ``fileserver_followsymlinks``
@@ -1370,6 +1374,10 @@ Example:
       prod:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
+
+.. note::
+    For masterless Salt, this parameter must be specified in the minion config
+    file.
 
 git: Git Remote File Server Backend
 -----------------------------------
