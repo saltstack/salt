@@ -5740,7 +5740,15 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         rm_trans_argv = ['rm', '-rf', trans_dest_path]
         __salt__['dockerng.run_all'](name, list2cmdline(rm_trans_argv))
         # delete the local version of the trans tar
-        os.remove(trans_tar)
+        try:
+            os.remove(trans_tar)
+        except (IOError, OSError) as exc:
+            log.error(
+                'dockerng.sls: Unable to remove state tarball \'{0}\': {1}'.format(
+                    trans_tar,
+                    exc
+                )
+            )
     return ret
 
 
