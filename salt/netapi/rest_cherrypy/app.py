@@ -1413,10 +1413,10 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO.StringIO()
+        fileobj = six.moves.StringIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO.StringIO(priv_key))
+        tarball.addfile(pub_key_file, six.moves.StringIO(pub_key))
+        tarball.addfile(priv_key_file, six.moves.StringIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers

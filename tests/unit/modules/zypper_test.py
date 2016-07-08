@@ -443,7 +443,7 @@ class ZypperTestCase(TestCase):
         '''
         repos_cfg = configparser.ConfigParser()
         for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
-            repos_cfg.readfp(six.StringIO.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)

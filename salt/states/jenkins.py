@@ -43,7 +43,7 @@ def present(name,
 
     if _job_exists:
         _current_job_config = __salt__['jenkins.get_job_config'](name)
-        buf = six.StringIO.StringIO(_current_job_config)
+        buf = six.moves.StringIO(_current_job_config)
         _current_job_config = buf.readlines()
 
         cached_source_path = __salt__['cp.cache_file'](config, __env__)
@@ -63,7 +63,7 @@ def present(name,
 
         __salt__['jenkins.create_job'](name, config, __env__)
 
-        buf = six.StringIO.StringIO(new_config_xml)
+        buf = six.moves.StringIO(new_config_xml)
         _current_job_config = buf.readlines()
 
         diff = difflib.unified_diff('', buf, lineterm='')
