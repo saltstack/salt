@@ -200,8 +200,6 @@ import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
-
-# Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
@@ -530,7 +528,7 @@ def present(
                 if 'min_adjustment_step' not in policy:
                     policy['min_adjustment_step'] = None
         if scheduled_actions:
-            for s_name, action in scheduled_actions.iteritems():
+            for s_name, action in six.iteritems(scheduled_actions):
                 if 'end_time' not in action:
                     action['end_time'] = None
         config = {
@@ -558,7 +556,7 @@ def present(
         if scheduled_actions is None:
             config['scheduled_actions'] = {}
         # allow defaults on start_time
-        for s_name, action in scheduled_actions.iteritems():
+        for s_name, action in six.iteritems(scheduled_actions):
             if 'start_time' not in action:
                 asg_action = asg['scheduled_actions'].get(s_name, {})
                 if 'start_time' in asg_action:
