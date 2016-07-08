@@ -5730,7 +5730,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                                      overwrite=True)
 
         # Now execute the state into the container
-        ret = __salt__['dockerng.call'](name, 'state.pkg', os.path.join('salt_state.tgz'),
+        ret = __salt__['dockerng.call'](name, 'state.pkg', os.path.join(trans_dest_path, 'salt_state.tgz'),
                                         trans_tar_sha256, 'sha256')
 
         # set right exit code if any state failed
