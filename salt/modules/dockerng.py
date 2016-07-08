@@ -5712,16 +5712,25 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     pillar = _gather_pillar(saltenv, {}, **grains)
 
     trans_tar = _prepare_trans_tar(mods=mods, saltenv=saltenv, pillar=pillar)
+
+    # where to put the salt trans tar
+    trans_dest_path = _generate_tmp_path()
+    mkdirp_trans_argv = ['mkdir', '-p', trans_dest_path]
+    # put_archive requires the path to exist
+    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_trans_argv))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
     ret = None
     try:
         trans_tar_sha256 = salt.utils.get_hash(trans_tar, 'sha256')
         __salt__['dockerng.copy_to'](name, trans_tar,
-                                     '/tmp/salt_state.tgz',
+                                     os.path.join(trans_dest_path, 'salt_state.tgz'),
                                      exec_driver='nsenter',
                                      overwrite=True)
 
         # Now execute the state into the container
-        ret = __salt__['dockerng.call'](name, 'state.pkg', '/tmp/salt_state.tgz',
+        ret = __salt__['dockerng.call'](name, 'state.pkg', os.path.join('salt_state.tgz'),
                                         trans_tar_sha256, 'sha256')
 
         # set right exit code if any state failed
@@ -5730,6 +5739,10 @@ def sls(name, mods=None, saltenv='base', **kwargs):
             if not state['result']:
                 __context__['retcode'] = 1
     finally:
+        # delete the trans dir so that it does not end in the image
+        rm_trans_argv = ['rm', '-rf', trans_dest_path]
+        __salt__['dockerng.run_all'](name, list2cmdline(rm_trans_argv))
+        # delete the local version of the trans tar
         os.remove(trans_tar)
     return ret
 
