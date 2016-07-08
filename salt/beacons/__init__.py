@@ -70,6 +70,7 @@ class Beacon(object):
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
+                runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
                 if interval:
                     b_config = self._trim_config(b_config, mod, 'interval')
@@ -96,6 +97,8 @@ class Beacon(object):
                     if 'id' not in data:
                         data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
+                if runonce:
+                    self.disable_beacon(mod)
             else:
                 log.debug('Unable to process beacon {0}'.format(mod))
         return ret
