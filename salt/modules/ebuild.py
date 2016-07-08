@@ -953,7 +953,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def version_cmp(pkg1, pkg2):
+def version_cmp(pkg1, pkg2, **kwargs):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
@@ -965,6 +965,16 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     '''
+    # ignore_epoch is not supported here, but has to be included for API
+    # compatibility. Rather than putting this argument into the function
+    # definition (and thus have it show up in the docs), we just pop it out of
+    # the kwargs dict and then raise an exception if any kwargs other than
+    # ignore_epoch were passed.
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs.pop('ignore_epoch', None)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
     ver1 = re.match(regex, pkg1)
     ver2 = re.match(regex, pkg2)
