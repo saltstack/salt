@@ -5770,13 +5770,13 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
     ret = __salt__['dockerng.create'](image=base,
                                       cmd='/usr/bin/sleep infinity',
                                       interactive=True, tty=True)
-    id = ret['Id']
+    id_ = ret['Id']
     try:
-        __salt__['dockerng.start'](id)
+        __salt__['dockerng.start'](id_)
 
         # Now execute the state into the container
-        __salt__['dockerng.sls'](id, mods, saltenv, **kwargs)
+        __salt__['dockerng.sls'](id_, mods, saltenv, **kwargs)
     finally:
-        __salt__['dockerng.stop'](id)
+        __salt__['dockerng.stop'](id_)
 
-    return __salt__['dockerng.commit'](id, name)
+    return __salt__['dockerng.commit'](id_, name)
