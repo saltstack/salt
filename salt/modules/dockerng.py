@@ -5700,10 +5700,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     .. versionadded:: Carbon
     '''
-    if mods is not None:
-        mods = [x.strip() for x in mods.split(',')]
-    else:
-        mods = []
+    mods = [item.strip() for item in mods.split(',')] if mods else []
 
     # gather grains from the container
     grains = __salt__['dockerng.call'](name, 'grains.items')
