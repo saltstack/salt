@@ -5734,10 +5734,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                                         trans_tar_sha256, 'sha256')
 
         # set right exit code if any state failed
-        __context__['retcode'] = 0
-        for _, state in ret.iteritems():
-            if not state['result']:
-                __context__['retcode'] = 1
+        __context__['retcode'] = 1 if any(not state['result'] for state in six.itervalues(ret)) else 0
     finally:
         # delete the trans dir so that it does not end in the image
         rm_trans_argv = ['rm', '-rf', trans_dest_path]
