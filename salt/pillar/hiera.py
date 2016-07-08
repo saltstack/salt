@@ -43,4 +43,6 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
                 'Hiera YAML data failed to parse from conf {0}'.format(conf)
                 )
         return {}
+    if data == 'nil':
+        data = dict()
     return data
