@@ -1593,7 +1593,7 @@ class _Swagger(object):
 
         lambda_integration_role
             name of the IAM role or IAM role arn that Api Gateway will assume when executing
-            the associated lambda function`
+            the associated lambda function
 
         lambda_region
             the region for the lambda function that Api Gateway will integrate to.
