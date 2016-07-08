@@ -1,3 +1,5 @@
+# Master Settings
+# This is the Master of Masters
 id: syndic_master
 publish_port: 54505
 ret_port: 54506
@@ -6,10 +8,12 @@ pidfile: syndic_master.pid
 sock_dir: syndic_master_sock
 timeout: 1
 open_mode: True
-order_masters: True
 fileserver_list_cache_time: 0
 pillar_opts: True
 tcp_master_publish_pull: 33305
 tcp_master_workers: 33306
 log_file: syndic_master.log
 log_level_logfile: debug
+
+# Syndic Settings
+order_masters: True
