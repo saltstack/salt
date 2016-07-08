@@ -5,9 +5,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
+from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     Mock,
     MagicMock,
@@ -16,15 +18,13 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salt.exceptions import CommandExecutionError
-
-import os
-from salt.ext.six.moves import configparser
-import StringIO
-
-from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import configparser
+import salt.ext.six as six
 
 
 class ZyppCallMock(object):
@@ -443,7 +443,7 @@ class ZypperTestCase(TestCase):
         '''
         repos_cfg = configparser.ConfigParser()
         for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
-            repos_cfg.readfp(StringIO.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(six.StringIO.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)
