@@ -52,7 +52,7 @@ def present(name,
     '''
     Ensure that the named group is present with the specified privileges
     Please note that the user/group notion in postgresql is just abstract, we
-    have roles, where users can be seens as roles with the LOGIN privilege
+    have roles, where users can be seen as roles with the LOGIN privilege
     and groups the others.
 
     name
