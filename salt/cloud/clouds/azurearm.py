@@ -1095,7 +1095,6 @@ def create(vm_):
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure, SaltCloudSystemExit) as exc:
         try:
             log.warn(exc)
-            pass
         finally:
             raise SaltCloudSystemExit(str(exc))
 
