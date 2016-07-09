@@ -113,7 +113,7 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user
