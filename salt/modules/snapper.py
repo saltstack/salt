@@ -318,15 +318,35 @@ def _is_text_file(filename):
     return type_of_file.startswith('text')
 
 
-def run(function, config='root', args=None, description=None,
-        cleanup_algorithm='number', userdata=None, **kwargs):
+def run(function, *args, **kwargs):
     '''
     Runs a function from an execution module creating pre and post snapshots
     and associating the salt job id with those snapshots for easy undo and
     cleanup.
 
+    function
+        Salt function to call.
+
+    config
+        Configuration name. (default: "root")
+
+    description
+        A description for the snapshots. (default: None)
+
+    userdata
+        Data to include in the snapshot metadata. (default: None)
+
+    cleanup_algorithm
+        Snapper cleanup algorithm. (default: "number")
+
+    `*args`
+        args for the function to call. (default: None)
+
+    `**kwargs`
+        kwargs for the function to call (default: None)
+
     .. code-block:: bash
-        salt '*' snapper.run function=file.append args='["/etc/motd", "some text"]'
+        salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
 
     This  would run append text to /etc/motd using the file.append
     module, and will create two snapshots, pre and post with the associated
@@ -335,10 +355,13 @@ def run(function, config='root', args=None, description=None,
 
     You can immediately see the changes
     '''
-    if not args:
-        args = []
-    if not userdata:
-        userdata = {}
+    config = kwargs.get("config", "root")
+    description = kwargs.get("description", "snapper.run[%s]" % function)
+    cleanup_algorithm = kwargs.get("cleanup_algorithm", "number")
+    userdata = kwargs.get("userdata", {})
+
+    func_kwargs = {k:v for k,v in kwargs.items() if not k.startswith('__')}
+    kwargs = {k:v for k,v in kwargs.items() if k.startswith('__')}
 
     pre_nr = __salt__['snapper.create_snapshot'](
         config=config,
@@ -353,7 +376,10 @@ def run(function, config='root', args=None, description=None,
             'function "{0}" does not exist'.format(function)
         )
 
-    ret = __salt__[function](*args)
+    try:
+        ret = __salt__[function](*args, **func_kwargs)
+    except Exception as e:
+        ret = "\n".join([str(e), __salt__[function].__doc__])
 
     __salt__['snapper.create_snapshot'](
         config=config,
