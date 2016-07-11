@@ -84,11 +84,11 @@ import time
 import random
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
@@ -343,13 +343,13 @@ def update_function_config(FunctionName, Role=None, Handler=None,
     '''
 
     args = dict(FunctionName=FunctionName)
-    for val, var in {
-        'Handler': Handler,
-        'Description': Description,
-        'Timeout': Timeout,
-        'MemorySize': MemorySize,
-        'VpcConfig': VpcConfig,
-    }.iteritems():
+    options = {'Handler': Handler,
+               'Description': Description,
+               'Timeout': Timeout,
+               'MemorySize': MemorySize,
+               'VpcConfig': VpcConfig}
+
+    for val, var in six.iteritems(options):
         if var:
             args[val] = var
     if Role:
@@ -523,7 +523,7 @@ def get_permissions(FunctionName, Qualifier=None,
         policy = conn.get_policy(FunctionName=FunctionName,
                                    **kwargs)
         policy = policy.get('Policy', {})
-        if isinstance(policy, string_types):
+        if isinstance(policy, six.string_types):
             policy = json.loads(policy)
         if policy is None:
             policy = {}
