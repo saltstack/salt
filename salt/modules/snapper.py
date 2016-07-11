@@ -517,7 +517,10 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
     try:
         pre, post = _get_num_interval(config, num_pre, num_post)
 
-        files = changed_files(config, pre, post) if not filename else [filename]
+        files = changed_files(config, pre, post)
+        if filename:
+            files = [filename] if filename in files else []
+
         pre_mount = snapper.MountSnapshot(config, pre, False) if pre else ""
         post_mount = snapper.MountSnapshot(config, post, False) if post else ""
 
@@ -526,8 +529,19 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
             pre_file = pre_mount + f
             post_file = post_mount + f
 
-            pre_file_content = open(pre_file).readlines() if os.path.isfile(pre_file) else []
-            post_file_content = open(post_file).readlines() if os.path.isfile(post_file) else []
+            if os.path.isfile(pre_file):
+                pre_file_exists = True
+                pre_file_content = salt.utils.fopen(pre_file).readlines()
+            else:
+                pre_file_content = []
+                pre_file_exists = False
+
+            if os.path.isfile(post_file):
+                post_file_exists = True
+                post_file_content = salt.utils.fopen(post_file).readlines()
+            else:
+                post_file_content = []
+                post_file_exists = False
 
             if _is_text_file(pre_file) or _is_text_file(post_file):
                 files_diff[f] = {
@@ -536,23 +550,23 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
                                                          post_file_content,
                                                          fromfile=pre_file,
                                                          tofile=post_file))}
-                if pre_file_content and not post_file_content:
+
+                if pre_file_exists and not post_file_exists:
                     files_diff[f]['comment'] = "text file deleted"
-                if not pre_file_content and post_file_content:
+                if not pre_file_exists and post_file_exists:
                     files_diff[f]['comment'] = "text file created"
 
             elif not _is_text_file(pre_file) and not _is_text_file(post_file):
                 # This is a binary file
                 files_diff[f] = {'comment': "binary file changed"}
-                if pre_file_content and post_file_content:
+                if pre_file_exists:
                     files_diff[f]['old_sha256_digest'] = __salt__['hashutil.sha256_digest'](''.join(pre_file_content))
+                if post_file_exists:
                     files_diff[f]['new_sha256_digest'] = __salt__['hashutil.sha256_digest'](''.join(post_file_content))
-                elif post_file_content:
+                if post_file_exists and not pre_file_exists:
                     files_diff[f]['comment'] = "binary file created"
-                    files_diff[f]['new_sha256_digest'] = __salt__['hashutil.sha256_digest'](''.join(post_file_content))
-                elif pre_file_content:
+                if pre_file_exists and not post_file_exists:
                     files_diff[f]['comment'] = "binary file deleted"
-                    files_diff[f]['old_sha256_digest'] = __salt__['hashutil.sha256_digest'](''.join(pre_file_content))
 
         if pre:
             snapper.UmountSnapshot(config, pre, False)
