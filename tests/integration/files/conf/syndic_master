@@ -10,10 +10,15 @@ timeout: 1
 open_mode: True
 fileserver_list_cache_time: 0
 pillar_opts: True
-tcp_master_publish_pull: 33305
-tcp_master_workers: 33306
 log_file: syndic_master.log
 log_level_logfile: debug
+
+# These settings needed for tests on Windows which defaults
+# to ipc_mode: tcp
+tcp_master_pub_port: 54512
+tcp_master_pull_port: 54513
+tcp_master_publish_pull: 54514
+tcp_master_workers: 54515
 
 # Syndic Settings
 order_masters: True

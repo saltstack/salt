@@ -16,6 +16,13 @@ log_level_logfile: debug
 key_logfile: key.log
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 
+# These settings needed for tests on Windows which defaults
+# to ipc_mode: tcp
+tcp_master_pub_port: 64512
+tcp_master_pull_port: 64513
+tcp_master_publish_pull: 64514
+tcp_master_workers: 64515
+
 peer:
   '.*':
     - 'test.*'
