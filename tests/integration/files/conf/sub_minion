@@ -10,7 +10,6 @@ open_mode: True
 log_file: sub_minion.log
 log_level_logfile: debug
 pidfile: sub_minion.pid
-ipc_mode: tcp
 
 # module extension
 test.foo: baz
