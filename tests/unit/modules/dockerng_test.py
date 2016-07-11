@@ -63,6 +63,8 @@ class DockerngTestCase(TestCase):
                 all=True,
                 filters={'label': 'KEY'})
 
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
