@@ -466,8 +466,8 @@ def present(
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
-        for d in launch_config:
-            args.update(d)
+        for d, v in six.iteritems(launch_config):
+            args.update({d: v})
         if not __opts__['test']:
             lc_ret = __states__['boto_lc.present'](**args)
             if lc_ret['result'] is True and lc_ret['changes']:
