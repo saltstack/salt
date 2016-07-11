@@ -350,7 +350,7 @@ def create_api_resources(restApiId, path,
         salt myminion boto_apigateway.create_api_resources myapi_id resource_path
 
     '''
-    path_parts = string.split(path, '/')
+    path_parts = str.split(path, '/')
     created = []
     current_path = ''
     try:
