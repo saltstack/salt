@@ -504,7 +504,8 @@ def topic_rule_present(name, ruleName, sql, actions, description='',
         actions = json.loads(actions)
 
     need_update = False
-    r = cmp(_describe['actions'], actions)
+    # cmp() function is deprecated in Python 3: use the following as a substitute for 'r'.
+    r = (_describe['actions'] > actions) - (_describe['actions'] < actions)
     if bool(r):
         need_update = True
         ret['changes'].setdefault('new', {})['actions'] = actions
