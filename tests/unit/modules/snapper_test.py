@@ -65,11 +65,9 @@ FILE_CONTENT = {
         "post": "another foobar"
     },
     '/tmp/foo2': {
-        "pre": "",
         "post": "another foobar"
     }
 }
-
 
 MODULE_RET = {
     'SNAPSHOTS': [
@@ -277,13 +275,12 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value=""))
     @patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo", "/tmp/foo2"]))
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
-    @patch('os.path.isfile', MagicMock(side_effect=[True, True, True, True]))
+    @patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True]))
     @patch('os.path.isdir', MagicMock(return_value=False))
     def test_diff_text_files(self):
         fopen_effect = [
             mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,
             mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
-            mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['pre']).return_value,
             mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
         ]
         with patch('salt.utils.fopen') as fopen_mock:
