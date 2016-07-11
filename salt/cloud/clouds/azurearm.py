@@ -44,7 +44,11 @@ import salt.config as config
 import salt.utils.cloud
 import salt.ext.six as six
 import salt.version
-from salt.exceptions import SaltCloudSystemExit
+from salt.exceptions import (
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout,
+)
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -643,15 +647,21 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             'resource_group', {}, __opts__, search_global=True
         )
 
+    iface_name = kwargs.get('iface_name', kwargs.get('name'))
     iface = netconn.network_interfaces.get(
         kwargs['resource_group'],
-        kwargs.get('iface_name', kwargs.get('name'))
+        iface_name,
     )
     data = object_to_dict(iface)
     data['resource_group'] = kwargs['resource_group']
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
+        pubip = netconn.public_ip_addresses.get(
+            kwargs['resource_group'],
+            ip_.name,
+        )
+        data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
     return data
 
 
@@ -1054,19 +1064,43 @@ def create(vm_):
     if not compconn:
         compconn = get_conn()
 
-    data = request_instance(kwargs=vm_)
-    #resource_group = data.get('resource_group')
+    def _query_ip_address():
+        data = request_instance(kwargs=vm_)
+        ifaces = data['network_profile']['network_interfaces']
+        iface = ifaces.keys()[0]
+        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
 
-    ifaces = data['network_profile']['network_interfaces']
-    iface = ifaces.keys()[0]
-    ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        if vm_.get('public_ip') is True:
+            hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
+        else:
+            hostname = ifaces[iface]['ip_configurations'][ip_name]['private_ip_address']
 
-    if vm_.get('public_ip') is True:
-        hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
-    else:
-        hostname = ifaces[iface]['ip_configurations'][ip_name]['private_ip_address']
+        if isinstance(hostname, dict):
+            hostname = hostname.get('ip_address')
 
-    if not hostname:
+        if not isinstance(hostname, six.string_types):
+            return None
+        return hostname
+
+    try:
+        data = salt.utils.cloud.wait_for_ip(
+            _query_ip_address,
+            timeout=config.get_cloud_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+            interval=config.get_cloud_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure, SaltCloudSystemExit) as exc:
+        try:
+            log.warn(exc)
+        finally:
+            raise SaltCloudSystemExit(str(exc))
+
+    hostname = _query_ip_address()
+
+    if not hostname or not isinstance(hostname, six.string_types):
         log.error('Failed to get a value for the hostname.')
         return False
 
