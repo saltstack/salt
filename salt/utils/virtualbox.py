@@ -130,7 +130,7 @@ def vb_get_manager():
     @rtype: VirtualBoxManager
     """
     global _virtualboxManager
-    if _virtualboxManager is None:
+    if _virtualboxManager is None and HAS_LIBS:
         # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
         reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
