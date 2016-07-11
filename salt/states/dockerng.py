@@ -435,6 +435,8 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # "actual" dict sorted(somedict) still just gives you a sorted
             # list of the dictionary's keys. And we don't care about the
             # value for "volumes", just its keys.
+            if actual_data is None:
+                actual_data = []
             actual_data = sorted(actual_data)
             desired_data = sorted(data)
             log.trace('dockerng.running ({0}): munged actual value: {1}'
