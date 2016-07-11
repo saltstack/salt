@@ -78,7 +78,6 @@ Connection module for Amazon APIGateway
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import string
 import json
 import datetime
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
