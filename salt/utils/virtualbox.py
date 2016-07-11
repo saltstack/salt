@@ -28,7 +28,7 @@ try:
 
 except ImportError:
     VirtualBoxManager = None
-    log.exception("Couldn't import VirtualBox API")
+    log.trace("Couldn't import VirtualBox API")
 
 _virtualboxManager = None
 
