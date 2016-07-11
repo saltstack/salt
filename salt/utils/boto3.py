@@ -253,23 +253,27 @@ def get_error(e):
     # The returns from boto modules vary greatly between modules. We need to
     # assume that none of the data we're looking for exists.
     aws = {}
-    if hasattr(e, 'status'):
-        aws['status'] = e.status
-    if hasattr(e, 'reason'):
-        aws['reason'] = e.reason
-    if hasattr(e, 'message') and e.message != '':
-        aws['message'] = e.message
-    if hasattr(e, 'error_code') and e.error_code is not None:
-        aws['code'] = e.error_code
 
-    if 'message' in aws and 'reason' in aws:
-        message = '{0}: {1}'.format(aws['reason'], aws['message'])
-    elif 'message' in aws:
-        message = aws['message']
-    elif 'reason' in aws:
-        message = aws['reason']
-    else:
-        message = ''
+    message = ''
+    if six.PY2:
+        if hasattr(e, 'status'):
+            aws['status'] = e.status
+        if hasattr(e, 'reason'):
+            aws['reason'] = e.reason
+        if hasattr(e, 'message') and e.message != '':
+            aws['message'] = e.message
+        if hasattr(e, 'error_code') and e.error_code is not None:
+            aws['code'] = e.error_code
+
+        if 'message' in aws and 'reason' in aws:
+            message = '{0}: {1}'.format(aws['reason'], aws['message'])
+        elif 'message' in aws:
+            message = aws['message']
+        elif 'reason' in aws:
+            message = aws['reason']
+    elif six.PY3:
+        message = e.args[0]
+
     r = {'message': message}
     if aws:
         r['aws'] = aws
