@@ -132,6 +132,7 @@ class TestModulesGrains(integration.ModuleCase):
             self.assertIsInstance(get_grain, int,
                                   msg='grain: {0} is not an int or empty'.format(grain))
 
+
 class GrainsAppendTestCase(integration.ModuleCase):
     '''
     Tests written specifically for the grains.append function.
