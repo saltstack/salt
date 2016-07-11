@@ -26,6 +26,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 # Globals
 archive.__salt__ = {}
+archive.__grains__ = {'os': 'FooOS!'}
 archive.__opts__ = {"cachedir": "/tmp", "test": False}
 archive.__env__ = 'test'
 
