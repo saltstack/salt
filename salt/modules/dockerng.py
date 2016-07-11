@@ -770,8 +770,9 @@ def _get_client(timeout=None):
                 ca_cert=docker_machine_tls['CaCertPath'],
                 assert_hostname=False,
                 verify=True)
-        except:
-            return False
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Docker machine {0} failed: {1}'.format(docker_machine, exc))
 
     __context__['docker.client'] = docker.Client(**client_kwargs)
 
