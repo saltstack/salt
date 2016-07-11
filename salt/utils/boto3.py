@@ -46,6 +46,7 @@ from functools import partial
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
+import salt.utils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -128,7 +129,10 @@ def _get_profile(service, region, key, keyid, profile):
 
     label = 'boto_{0}:'.format(service)
     if keyid:
-        cxkey = label + hashlib.md5(region + keyid + key).hexdigest()
+        hash_string = region + keyid + key
+        if six.PY3:
+            hash_string = salt.utils.to_bytes(hash_string)
+        cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
 
