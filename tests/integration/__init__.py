@@ -6,7 +6,6 @@ Set up the Salt integration test suite
 
 # Import Python libs
 from __future__ import absolute_import, print_function
-import platform
 import os
 import re
 import sys
@@ -25,7 +24,6 @@ import tempfile
 import threading
 import subprocess
 import multiprocessing
-from hashlib import md5
 from datetime import datetime, timedelta
 try:
     import pwd
@@ -62,10 +60,9 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
-from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.process import MultiprocessingProcess, SignalHandlingMultiprocessingProcess
+from salt.utils.process import SignalHandlingMultiprocessingProcess
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
@@ -91,7 +88,6 @@ except ImportError:
     HAS_PSUTIL = False
 from tornado import gen
 from tornado import ioloop
-from tornado import concurrent
 
 
 SYS_TMP_DIR = os.path.realpath(
@@ -628,7 +624,7 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = get_colors(self.parser.options.no_colors is False)
+        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
         if salt.utils.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
