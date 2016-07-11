@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-:codeauthor:    Pablo Suarez Hernandez <psuarezhernandez@suse.de>
+:codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
+:codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 '''
 import sys
 import os
@@ -58,6 +59,18 @@ DBUS_RET = {
     ],
 }
 
+FILE_CONTENT = {
+    '/tmp/foo': {
+        "pre": "dummy text",
+        "post": "another foobar"
+    },
+    '/tmp/foo2': {
+        "pre": "",
+        "post": "another foobar"
+    }
+}
+
+
 MODULE_RET = {
     'SNAPSHOTS': [
         {
@@ -97,12 +110,20 @@ MODULE_RET = {
         '/var/cache/salt/minion/extmods/modules/snapper.pyc': {'status': ['modified']},
     },
     'DIFF': {
+        '/tmp/foo': {
+            'comment': 'text file changed',
+            'diff': "--- /.snapshots/55/snapshot/tmp/foo\n"
+                    "+++ /tmp/foo\n"
+                    "@@ -1 +1 @@\n"
+                    "-dummy text"
+                    "+another foobar"
+        },
         '/tmp/foo2': {
             'comment': 'text file created',
             'diff': "--- /.snapshots/55/snapshot/tmp/foo2\n"
                     "+++ /tmp/foo2\n"
                     "@@ -0,0 +1 @@\n"
-                    "+another foobar\n",
+                    "+another foobar",
         },
         '/var/cache/salt/minion/extmods/modules/snapper.pyc': {
             'comment': 'binary file changed',
@@ -238,6 +259,40 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper.undo', MagicMock(return_value='create:1 modify:1 delete:1'))
     def test_undo_jid(self):
         self.assertEqual(snapper.undo_jid(20160607130930720112), 'create:1 modify:1 delete:1')
+
+    @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43)))
+    @patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(side_effect=["/.snapshots/55/snapshot", ""]))
+    @patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value=""))
+    @patch('os.path.isdir', MagicMock(return_value=False))
+    @patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo2"]))
+    @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
+    @patch('os.path.isfile', MagicMock(side_effect=[False, True]))
+    @patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']))
+    def test_diff_text_file(self):
+        self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
+
+    @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(55, 0)))
+    @patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(
+        side_effect=["/.snapshots/55/snapshot", "", "/.snapshots/55/snapshot", ""]))
+    @patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value=""))
+    @patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo", "/tmp/foo2"]))
+    @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
+    @patch('os.path.isfile', MagicMock(side_effect=[True, True, True, True]))
+    @patch('os.path.isdir', MagicMock(return_value=False))
+    def test_diff_text_files(self):
+        fopen_effect = [
+            mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,
+            mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
+            mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['pre']).return_value,
+            mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
+        ]
+        with patch('salt.utils.fopen') as fopen_mock:
+            fopen_mock.side_effect=fopen_effect
+            module_ret = {
+                "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
+                "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
+            }
+            self.assertEqual(snapper.diff(), module_ret)
 
 
 if __name__ == '__main__':
