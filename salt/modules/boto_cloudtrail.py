@@ -51,6 +51,7 @@ import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
@@ -425,7 +426,7 @@ def add_tags(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
@@ -456,7 +457,7 @@ def remove_tags(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
