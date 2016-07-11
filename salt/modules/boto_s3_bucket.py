@@ -583,7 +583,7 @@ def put_logging(Bucket,
         logstate = {}
         targets = {'TargetBucket': TargetBucket,
                    'TargetGrants': TargetGrants,
-                   'TargetPrefix': TargetPrefix,}
+                   'TargetPrefix': TargetPrefix}
         for key, val in six.iteritems(targets):
             if val is not None:
                 logstate[key] = val
