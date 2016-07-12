@@ -6,6 +6,8 @@ Unit tests for the Snapper module
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 '''
 
+from __future__ import absolute_import
+
 from salttesting import TestCase
 from salttesting.mock import (
     MagicMock,
