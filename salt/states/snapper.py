@@ -94,10 +94,8 @@ and include this change.
 :platform:      Linux
 
 '''
-import logging
-import os
 
-log = logging.getLogger(__name__)
+import os
 
 
 def __virtual__():
@@ -107,7 +105,7 @@ def __virtual__():
     return 'snapper' if 'snapper.diff' in __salt__ else False
 
 
-def baseline_snapshot(name, number=None, config='root', ignore=[]):
+def baseline_snapshot(name, number=None, config='root', ignore=None):
     '''
     Enforces that no file is modified comparing against a previously
     defined snapshot identified by number.
@@ -115,6 +113,8 @@ def baseline_snapshot(name, number=None, config='root', ignore=[]):
     ignore
         List of files to ignore
     '''
+    if not ignore:
+        ignore = []
 
     ret = {'changes': {},
            'comment': '',
@@ -133,7 +133,8 @@ def baseline_snapshot(name, number=None, config='root', ignore=[]):
         if os.path.isfile(f):
             status.pop(f, None)
         elif os.path.isdir(f):
-            [status.pop(x, None) for x in status.keys() if x.startswith(f)]
+            for x in [x for x in status.keys() if x.startswith(f)]:
+                status.pop(x, None)
 
     for f in status:
         status[f]['actions'] = status[f].pop("status")

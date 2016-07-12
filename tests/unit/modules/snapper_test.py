@@ -3,8 +3,6 @@
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 '''
-import sys
-import os
 
 from salttesting import TestCase
 from salttesting.mock import (
@@ -128,6 +126,7 @@ MODULE_RET = {
         }
     }
 }
+
 
 class SnapperTestCase(TestCase):
     def setUp(self):

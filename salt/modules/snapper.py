@@ -4,11 +4,13 @@ Module to manage filesystem snapshots with snapper
 
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
+
 :depends:       ``dbus`` Python module.
 :depends:       ``snapper`` http://snapper.io, available in most distros
 :maturity:      new
 :platform:      Linux
 '''
+
 from __future__ import absolute_import
 
 import logging
@@ -42,7 +44,6 @@ def __virtual__():
     return 'snapper'
 
 if HAS_DBUS:
-    log = logging.getLogger(__name__)
     bus = dbus.SystemBus()
     snapper = dbus.Interface(bus.get_object('org.opensuse.Snapper',
                                             '/org/opensuse/Snapper'),
@@ -356,12 +357,12 @@ def run(function, *args, **kwargs):
     You can immediately see the changes
     '''
     config = kwargs.get("config", "root")
-    description = kwargs.get("description", "snapper.run[%s]" % function)
+    description = kwargs.get("description", "snapper.run[{0}]".format(function))
     cleanup_algorithm = kwargs.get("cleanup_algorithm", "number")
     userdata = kwargs.get("userdata", {})
 
-    func_kwargs = {k:v for k, v in kwargs.items() if not k.startswith('__')}
-    kwargs = {k:v for k, v in kwargs.items() if k.startswith('__')}
+    func_kwargs = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kwargs = dict((k, v) for k, v in kwargs.items() if k.startswith('__'))
 
     pre_nr = __salt__['snapper.create_snapshot'](
         config=config,
