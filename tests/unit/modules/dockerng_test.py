@@ -17,6 +17,7 @@ from salttesting.mock import (
     patch
 )
 from contextlib import nested
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
