@@ -233,6 +233,7 @@ class CoreGrainsTestCase(TestCase):
         self.assertEqual(os_grains.get('osfullname'), os_release_map['osfullname'])
         self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
+        self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
@@ -248,6 +249,7 @@ PATCHLEVEL = 3
             'oscodename': 'SUSE Linux Enterprise Server 11 SP3',
             'osfullname': "SLES",
             'osrelease': '11.3',
+            'osmajorrelease': '11',
             'osrelease_info': [11, 3],
             'files': ["/etc/SuSE-release"],
         }
@@ -271,6 +273,7 @@ PATCHLEVEL = 3
             'oscodename': 'SUSE Linux Enterprise Server 11 SP4',
             'osfullname': "SLES",
             'osrelease': '11.4',
+            'osmajorrelease': '11',
             'osrelease_info': [11, 4],
             'files': ["/etc/os-release"],
         }
@@ -294,6 +297,7 @@ PATCHLEVEL = 3
             'oscodename': 'SUSE Linux Enterprise Server 12',
             'osfullname': "SLES",
             'osrelease': '12',
+            'osmajorrelease': '12',
             'osrelease_info': [12],
             'files': ["/etc/os-release"],
         }
@@ -317,6 +321,7 @@ PATCHLEVEL = 3
             'oscodename': 'SUSE Linux Enterprise Server 12 SP1',
             'osfullname': "SLES",
             'osrelease': '12.1',
+            'osmajorrelease': '12',
             'osrelease_info': [12, 1],
             'files': ["/etc/os-release"],
         }
@@ -340,6 +345,7 @@ PATCHLEVEL = 3
             'oscodename': 'openSUSE Leap 42.1 (x86_64)',
             'osfullname': "Leap",
             'osrelease': '42.1',
+            'osmajorrelease': '42',
             'osrelease_info': [42, 1],
             'files': ["/etc/os-release"],
         }
@@ -363,6 +369,7 @@ PATCHLEVEL = 3
             'oscodename': 'openSUSE Tumbleweed (20160504) (x86_64)',
             'osfullname': "Tumbleweed",
             'osrelease': '20160504',
+            'osmajorrelease': '20160504',
             'osrelease_info': [20160504],
             'files': ["/etc/os-release"],
         }
