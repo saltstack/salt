@@ -78,6 +78,12 @@ environments, allowing them to be pushed to QA hosts and tested.
 Finally, if moved to the same relative path within ``/srv/salt/prod``, the
 files are now available in all three environments.
 
+Requesting files from specific fileserver environments
+======================================================
+
+See :ref:`here <file-server-environments>` for documentation on how to request
+files from specific environments.
+
 Practical Example
 =================
 

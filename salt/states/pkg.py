@@ -151,13 +151,13 @@ def _fulfills_version_spec(versions, oper, desired_version,
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
-    normalize = lambda x: x.split(':', 1)[-1] if ignore_epoch else x
     cmp_func = __salt__.get('pkg.version_cmp')
     for ver in versions:
-        if salt.utils.compare_versions(ver1=normalize(ver),
+        if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
-                                       ver2=normalize(desired_version),
-                                       cmp_func=cmp_func):
+                                       ver2=desired_version,
+                                       cmp_func=cmp_func,
+                                       ignore_epoch=ignore_epoch):
             return True
     return False
 
