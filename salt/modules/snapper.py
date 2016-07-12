@@ -24,7 +24,7 @@ import salt.utils
 
 
 try:
-    import dbus # pylint: disable=wrong-import-order
+    import dbus  # pylint: disable=wrong-import-order
     HAS_DBUS = True
 except ImportError:
     HAS_DBUS = False
@@ -43,11 +43,11 @@ DBUS_STATUS_MAP = {
 }
 
 
-log = logging.getLogger(__name__) # pylint: disable=invalid-name
+log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 if HAS_DBUS:
-    bus = dbus.SystemBus() # pylint: disable=invalid-name
-    snapper = dbus.Interface(bus.get_object('org.opensuse.Snapper', # pylint: disable=invalid-name
+    bus = dbus.SystemBus()  # pylint: disable=invalid-name
+    snapper = dbus.Interface(bus.get_object('org.opensuse.Snapper',  # pylint: disable=invalid-name
                                             '/org/opensuse/Snapper'),
                              dbus_interface='org.opensuse.Snapper')
 
