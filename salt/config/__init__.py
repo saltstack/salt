@@ -40,6 +40,7 @@ import salt.utils.xdg
 import salt.exceptions
 import salt.utils.sdb
 from salt.utils.locales import sdecode
+import salt.defaults.exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -1610,9 +1611,13 @@ def load_config(path, env_var, default_path=None):
                     out.write(ifile.read())
 
     if salt.utils.validate.path.is_readable(path):
-        opts = _read_conf_file(path)
-        opts['conf_file'] = path
-        return opts
+        try:
+            opts = _read_conf_file(path)
+            opts['conf_file'] = path
+            return opts
+        except salt.exceptions.SaltConfigurationError as error:
+            log.error(error.message)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     log.debug('Missing configuration file: {0}'.format(path))
     return {}
@@ -1657,7 +1662,7 @@ def include_config(include, orig_path, verbose):
             try:
                 opts = _read_conf_file(fn_)
             except salt.exceptions.SaltConfigurationError as error:
-                sys.exit(1)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
             include = opts.get('include', [])
             if include:
