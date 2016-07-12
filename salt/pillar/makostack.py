@@ -352,11 +352,28 @@ import logging
 from functools import partial
 
 import yaml
-from mako.lookup import TemplateLookup
-from mako import exceptions
+
+try:
+    from mako.lookup import TemplateLookup
+    from mako import exceptions
+    HAS_MAKO = True
+except ImportError:
+    HAS_MAKO = False
 
 log = logging.getLogger(__name__)
 strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
+
+__virtualname__ = 'makostack'
+
+
+# Only load in this module if the EC2 configurations are in place
+def __virtual__():
+    '''
+    Set up the libcloud functions and check for EC2 configurations
+    '''
+    if HAS_MAKO is True:
+        return __virtualname__
+    return False
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
