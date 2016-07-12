@@ -59,6 +59,7 @@ import fnmatch
 import hashlib
 import logging
 import datetime
+import re
 from collections import MutableMapping
 from multiprocessing.util import Finalize
 
@@ -1123,13 +1124,21 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Returns True if event should be stored, else False
         '''
         tag = event['tag']
-        if tag in self.opts['event_return_whitelist']:
-            if tag not in self.opts['event_return_blacklist']:
-                return True
-            else:
-                return False  # Event was whitelisted and blacklisted
-        elif tag in self.opts['event_return_blacklist']:
-            return False
+
+        # Check if tag is blacklisted
+        for blacklisted_tag in self.opts['event_return_blacklist']:
+            if re.match(blacklisted_tag, tag):
+                return False # Tag is blacklisted
+
+        for whitelisted_tag in self.opts['event_return_whitelist']:
+            if re.match(whitelisted_tag, tag):
+                return True # Tag is whitelisted
+
+        # If there is a whitelist defined, we should assume all else is 
+        # blacklisted. Otherwise, assume everything's whitelisted
+        # except those explicitly blacklisted (handled above)
+        if(len(self.opts['event_return_whitelist']) > 0):
+            return False 
         return True
 
 
