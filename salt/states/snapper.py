@@ -95,6 +95,8 @@ and include this change.
 :platform:      Linux
 '''
 
+from __future__ import absolute_import
+
 import os
 
 
