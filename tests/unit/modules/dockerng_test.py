@@ -709,16 +709,32 @@ class DockerngTestCase(TestCase):
                     }
                 )
         ):
-            ret = dockerng_mod.call(
-                'ID',
-                'test.arg',
-                1, 2,
-                arg1='val1')
-        docker_run_all_mock.assert_called_with(
-            'ID',
-            "python /tmp/salt_thin/salt-call"
-            " --retcode-passthrough --local "
-            "--out json -l quiet -- test.arg 1 2 arg1=val1")
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = dockerng_mod.call(
+                    'ID',
+                    'test.arg',
+                    1, 2,
+                    arg1='val1')
+
+        # Check that the directory is different each time
+        # [ call(name, [args]), ...
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
+                            docker_run_all_mock.mock_calls[3][1][1])
+
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
+
         self.assertEqual(
             {"retcode": 0, "comment": "container cmd"}, ret)
 
