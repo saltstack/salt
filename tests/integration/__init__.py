@@ -57,7 +57,6 @@ import salt.output
 import salt.version
 import salt.utils
 import salt.utils.process
-from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.exceptions import SaltClientError
@@ -176,7 +175,7 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = get_colors(self.parser.options.no_colors is False)
+        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
 
     def __enter__(self):
         '''
@@ -726,7 +725,7 @@ class TestDaemon(object):
         if self.parser.options.clean is False:
             def sumfile(fpath):
                 # Since we will be doing this for small files, it should be ok
-                fobj = fopen(fpath)
+                fobj = salt.utils.fopen(fpath)
                 m = md5()
                 while True:
                     d = fobj.read(8096)
