@@ -90,6 +90,7 @@ and include this change.
 
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
+
 :maturity:      new
 :platform:      Linux
 '''
