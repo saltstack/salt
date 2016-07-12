@@ -6,7 +6,6 @@ Set up the Salt integration test suite
 
 # Import Python libs
 from __future__ import absolute_import, print_function
-import platform
 import os
 import re
 import sys
@@ -58,7 +57,6 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
-from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.process import MultiprocessingProcess
@@ -178,7 +176,7 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = get_colors(self.parser.options.no_colors is False)
+        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
 
     def __enter__(self):
         '''
@@ -737,7 +735,7 @@ class TestDaemon(object):
         if self.parser.options.clean is False:
             def sumfile(fpath):
                 # Since we will be doing this for small files, it should be ok
-                fobj = fopen(fpath)
+                fobj = salt.utils.fopen(fpath)
                 m = md5()
                 while True:
                     d = fobj.read(8096)
