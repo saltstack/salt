@@ -489,10 +489,15 @@ def _get_jid_snapshots(jid, config='root'):
     Returns pre/post snapshots made by a given Salt jid
     '''
     jid_snapshots = [x for x in list_snapshots(config) if x['userdata'].get("salt_jid") == jid]
+    pre_snapshot = [x for x in jid_snapshots if x['type'] == "pre"]
+    post_snapshot = [x for x in jid_snapshots if x['type'] == "post"]
+
+    if not pre_snapshot or not post_snapshot:
+        raise CommandExecutionError("Jid '{0}' snapshots not found".format(jid))
 
     return (
-        [x for x in jid_snapshots if x['type'] == "pre"][0]['id'],
-        [x for x in jid_snapshots if x['type'] == "post"][0]['id']
+        pre_snapshot[0]['id'],
+        post_snapshot[0]['id']
     )
 
 
