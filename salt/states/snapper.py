@@ -101,7 +101,10 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return True
+    '''
+    Only load if the snapper module is available in __salt__
+    '''
+    return 'snapper' if 'snapper.diff' in __salt__ else False
 
 
 def baseline_snapshot(name, number=None, config='root', ignore=[]):
