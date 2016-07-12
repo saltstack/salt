@@ -254,6 +254,7 @@ def save_minions(jid, minions, syndic_id=None):
         ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
         minions
     )
+    minions = list(minions)
     serial = salt.payload.Serial(__opts__)
 
     jid_dir = _jid_dir(jid)
