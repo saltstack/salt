@@ -1605,8 +1605,10 @@ def include_config(include, orig_path, verbose):
 
         for fn_ in sorted(glob.glob(path)):
             log.debug('Including configuration from {0!r}'.format(fn_))
-            opts = _read_conf_file(fn_)
-
+            try:
+                opts = _read_conf_file(fn_)
+            except salt.exceptions.SaltConfigurationError as error:
+                sys.exit(1)
             include = opts.get('include', [])
             if include:
                 opts.update(include_config(include, fn_, verbose))
