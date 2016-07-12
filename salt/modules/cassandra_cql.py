@@ -31,16 +31,62 @@ Cassandra Database Module
             - 192.168.50.12
           port: 9000
           username: cas_admin
+
+.. versionchanged:: Carbon
+    Added support for ``ssl_options`` and ``protocol_version``.
+
+    Example configuration with
+    `ssl options <http://datastax.github.io/python-driver/api/cassandra/cluster.html#cassandra.cluster.Cluster.ssl_options>`_:
+
+    If ``ssl_options`` are present in cassandra config the cassandra_cql returner
+    will use SSL. SSL isn't used if ``ssl_options`` isn't specified.
+
+    .. code-block:: yaml
+
+        cassandra:
+          cluster:
+            - 192.168.50.10
+            - 192.168.50.11
+            - 192.168.50.12
+          port: 9000
+          username: cas_admin
+
+          ssl_options:
+            ca_certs: /etc/ssl/certs/ca-bundle.trust.crt
+
+            # SSL version should be one from the ssl module
+            # This is an optional parameter
+            ssl_version: PROTOCOL_TLSv1
+
+    Additionally you can also specify the ``protocol_version`` to
+    `use <http://datastax.github.io/python-driver/api/cassandra/cluster.html#cassandra.cluster.Cluster.ssl_options>`_.
+
+    .. code-block:: yaml
+
+        cassandra:
+          cluster:
+            - 192.168.50.10
+            - 192.168.50.11
+            - 192.168.50.12
+          port: 9000
+          username: cas_admin
+
+          # defaults to 4, if not set
+          protocol_version: 3
+
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 import logging
 import json
+import ssl
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
+
+SSL_VERSION = 'ssl_version'
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +129,7 @@ def _load_properties(property_name, config_option, set_default=False, default=No
     :param set_default:   Should a default be set if not found in config.
     :type  set_default:   bool
     :param default:       The default value to be set.
-    :type  default:       str
+    :type  default:       str or int
     :return:              The property fetched from the configuration or default.
     :rtype:               str or list of str
     '''
@@ -107,7 +153,39 @@ def _load_properties(property_name, config_option, set_default=False, default=No
     return property_name
 
 
-def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def _get_ssl_opts():
+    '''
+    Parse out ssl_options for Cassandra cluster connection.
+    Make sure that the ssl_version (if any specified) is valid.
+    '''
+    sslopts = __salt__['config.option']('cassandra').get('ssl_options', None)
+    ssl_opts = {}
+
+    if sslopts:
+        ssl_opts['ca_certs'] = sslopts['ca_certs']
+        if SSL_VERSION in sslopts:
+            if not sslopts[SSL_VERSION].startswith('PROTOCOL_'):
+                valid_opts = ', '.join(
+                    [x for x in dir(ssl) if x.startswith('PROTOCOL_')]
+                )
+                raise CommandExecutionError('Invalid protocol_version '
+                                            'specified! '
+                                            'Please make sure '
+                                            'that the ssl protocol'
+                                            'version is one from the SSL'
+                                            'module. '
+                                            'Valid options are '
+                                            '{0}'.format(valid_opts))
+            else:
+                ssl_opts[SSL_VERSION] = \
+                    getattr(ssl, sslopts[SSL_VERSION])
+        return ssl_opts
+    else:
+        return None
+
+
+def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
+             protocol_version=4):
     '''
     Connect to a Cassandra cluster.
 
@@ -118,6 +196,8 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :param cql_pass:       The Cassandra user password if authentication is turned on.
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
+    :type  port:           int
+    :param protocol_version:  Cassandra protocol version to use.
     :type  port:           int
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
@@ -145,10 +225,22 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
         port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
         cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
         cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
+        protocol_version = _load_properties(property_name=protocol_version,
+                                            config_option='protocol_version',
+                                            set_default=True, default=4)
 
         try:
             auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
-            cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
+            ssl_opts = _get_ssl_opts()
+            if ssl_opts:
+                cluster = Cluster(contact_points, port=port,
+                                  auth_provider=auth_provider,
+                                  ssl_options=ssl_opts,
+                                  protocol_version=protocol_version)
+            else:
+                cluster = Cluster(contact_points, port=port,
+                                  auth_provider=auth_provider,
+                                  protocol_version=protocol_version)
             session = cluster.connect()
             # TODO: Call cluster.shutdown() when the module is unloaded on shutdown.
             __context__['cassandra_cql_returner_cluster'] = cluster
