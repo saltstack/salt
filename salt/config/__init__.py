@@ -1709,9 +1709,13 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
             try:
                 opts = _read_conf_file(fn_)
             except salt.exceptions.SaltConfigurationError as error:
+<<<<<<< e30b32439438456aa0cf7e9d732c080cc4edeca2
                 log.error(error)
                 if exit_on_config_errors:
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+=======
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+>>>>>>> Use Salt default exit codes instead of hard-coded values
 
             include = opts.get('include', [])
             if include:
