@@ -128,6 +128,8 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'pyroute2',
+    'pyroute2.ipdb',
 ]
 
 for mod_name in MOCK_MODULES:
