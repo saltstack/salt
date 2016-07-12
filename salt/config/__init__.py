@@ -1516,18 +1516,18 @@ def _read_conf_file(path):
         try:
             conf_opts = yaml.safe_load(conf_file.read()) or {}
         except yaml.YAMLError as err:
-            log.error(
-                'Error parsing configuration file: {0} - {1}'.format(path, err)
-            )
-            conf_opts = {}
+            message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
+            log.error(message)
+            raise salt.exceptions.SaltConfigurationError(message)
+
         # only interpret documents as a valid conf, not things like strings,
         # which might have been caused by invalid yaml syntax
         if not isinstance(conf_opts, dict):
-            log.error(
-                'Error parsing configuration file: {0} - conf should be a '
-                'document, not {1}.'.format(path, type(conf_opts))
-            )
-            conf_opts = {}
+            message = 'Error parsing configuration file: {0} - conf ' \
+                      'should be a document, not {1}.'.format(path, type(conf_opts))
+            log.error(message)
+            raise salt.exceptions.SaltConfigurationError(message)
+
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             if not isinstance(conf_opts['id'], six.string_types):
