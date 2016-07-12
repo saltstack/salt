@@ -93,10 +93,12 @@ Module Documentation
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import logging
 import re
 
 # Import salt libs
+import salt.loader
 from salt.pillar import Pillar
 from salt.utils.dictupdate import merge
 
@@ -207,6 +209,12 @@ def ext_pillar(minion_id,
             else:
                 included_data = {}
 
+                opts = copy.deepcopy(__opts__)
+                result_no_include = copy.deepcopy(result)
+                del(result_no_include['include'])
+                del(result_no_include['_id'])
+                opts['pillar'] = result_no_include
+
                 pillar_objects = {}
                 ext_pillars = [
                     x for x in __opts__['ext_pillar'] if 'mongo' not in x
@@ -233,13 +241,19 @@ def ext_pillar(minion_id,
                     pillar_obj = pillar_objects.get(saltenv, None)
                     if pillar_obj is None:
                         pillar_obj = Pillar(
-                            __opts__,
+                            opts,
                             __grains__,
                             minion_id,
                             saltenv,
                             ext_pillars
                         )
                         pillar_objects[saltenv] = pillar_obj
+
+                    # Update renderers so they know the latest pillar data.
+                    pillar_obj.rend = salt.loader.render(
+                        opts,
+                        pillar_obj.functions
+                    )
 
                     nstate, mods, err = pillar_obj.render_pstate(
                         sub_sls,
@@ -261,13 +275,17 @@ def ext_pillar(minion_id,
                             pillar_obj.opts.get('pillar_merge_lists', False)
                         )
 
-                result = merge(
-                    included_data,
-                    result,
-                    pillar_obj.merge_strategy,
-                    pillar_obj.opts.get('renderer', 'yaml'),
-                    pillar_obj.opts.get('pillar_merge_lists', False)
-                )
+                        # Update the pillar var for the next include
+                        # with current data.
+                        opts['pillar'] = merge(
+                            included_data,
+                            result_no_include,
+                            pillar_obj.merge_strategy,
+                            pillar_obj.opts.get('renderer', 'yaml'),
+                            pillar_obj.opts.get('pillar_merge_lists', False)
+                        )
+
+                result = opts['pillar']
 
         if '_id' in result:
             # Converting _id to a string
