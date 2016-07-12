@@ -311,7 +311,9 @@ def eni_present(
             if __opts__['test']:
                 ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
             else:
-                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=allocate_eip,
+                
+                domain = 'vpc' if allocate_eip == 'vpc' else None
+                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=domain,
                                                                       region=region,
                                                                       key=key,
                                                                       keyid=keyid,
