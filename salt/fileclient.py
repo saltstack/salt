@@ -911,9 +911,8 @@ class RemoteClient(Client):
         hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
-                    saltenv, path
-                )
+                'Could not find file from saltenv \'%s\', \'%s\'',
+                saltenv, path
             )
             return False
 
@@ -924,32 +923,30 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
-                '\'{2}\''.format(saltenv, rel_path, path)
+                'In saltenv \'%s\', looking at rel_path \'%s\' to resolve '
+                '\'%s\'', saltenv, rel_path, path
             )
             with self._cache_loc(
                     rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
-            '\'{2}\''.format(saltenv, dest2check, path)
+            'In saltenv \'%s\', ** considering ** path \'%s\' to resolve '
+            '\'%s\'', saltenv, dest2check, path
         )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file from saltenv \'{0}\', ** skipped ** '
-                    'latest already in cache \'{1}\''.format(
-                        saltenv, path
-                    )
+                    'Fetching file from saltenv \'%s\', ** skipped ** '
+                    'latest already in cache \'%s\'', saltenv, path
                 )
                 return dest2check
 
         log.debug(
-            'Fetching file from saltenv \'{0}\', ** attempting ** '
-            '\'{1}\''.format(saltenv, path)
+            'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
+            saltenv, path
         )
         d_tries = 0
         transport_tries = 0
@@ -971,7 +968,7 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         else:
-            log.debug('No dest file found {0}'.format(dest))
+            log.debug('Dest file \'%s\' not found', dest)
 
         while True:
             if not fn_:
@@ -1003,8 +1000,10 @@ class RemoteClient(Client):
                         d_tries += 1
                         hsum = salt.utils.get_hash(dest, salt.utils.to_str(data.get('hash_type', b'md5')))
                         if hsum != data['hsum']:
-                            log.warning('Bad download of file {0}, attempt {1} '
-                                     'of 3'.format(path, d_tries))
+                            log.warning(
+                                'Bad download of file %s, attempt %d of 3',
+                                path, d_tries
+                            )
                             continue
                     break
                 if not fn_:
@@ -1023,31 +1022,37 @@ class RemoteClient(Client):
                 else:
                     data = data['data']
                 fn_.write(data)
-            except (TypeError, KeyError) as e:
+            except (TypeError, KeyError) as exc:
+                try:
+                    data_type = type(data).__name__
+                except AttributeError:
+                    # Shouldn't happen, but don't let this cause a traceback.
+                    data_type = str(type(data))
                 transport_tries += 1
-                log.warning('Data transport is broken, got: {0}, type: {1}, '
-                            'exception: {2}, attempt {3} of 3'.format(
-                                data, type(data), e, transport_tries)
-                            )
+                log.warning(
+                    'Data transport is broken, got: %s, type: %s, '
+                    'exception: %s, attempt %d of 3',
+                    data, data_type, exc, transport_tries
+                )
                 self._refresh_channel()
                 if transport_tries > 3:
-                    log.error('Data transport is broken, got: {0}, type: {1}, '
-                              'exception: {2}, '
-                              'Retry attempts exhausted'.format(
-                                data, type(data), e)
-                            )
+                    log.error(
+                        'Data transport is broken, got: %s, type: %s, '
+                        'exception: %s, retry attempts exhausted',
+                        data, data_type, exc
+                    )
                     break
 
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv \'{0}\', ** done ** '
-                '\'{1}\''.format(saltenv, path)
+                'Fetching file from saltenv \'%s\', ** done ** \'%s\'',
+                saltenv, path
             )
         else:
             log.debug(
-                'In saltenv \'{0}\', we are ** missing ** the file '
-                '\'{1}\''.format(saltenv, path)
+                'In saltenv \'%s\', we are ** missing ** the file \'%s\'',
+                saltenv, path
             )
 
         return dest
