@@ -732,8 +732,8 @@ class DockerngTestCase(TestCase):
         # check directory cleanup
         self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
         self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
-                            docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[5][1][1])
 
         self.assertEqual(
             {"retcode": 0, "comment": "container cmd"}, ret)
