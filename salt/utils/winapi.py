@@ -4,10 +4,31 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import pythoncom
 import threading
+from salt.loader import minion_mods
+
+try:
+    import pythoncom
+    HAS_LIBS = True
+except ImportError:
+    HAS_LIBS = False
 
 log = logging.getLogger(__name__)
+
+__salt__ = None
+
+
+def __virtual__():
+    '''
+    Only load if required libraries exist
+    '''
+    if not HAS_LIBS:
+        return False
+    else:
+        global __salt__
+        if not __salt__:
+            __salt__ = minion_mods(__opts__)
+        return True
 
 
 class Com(object):
