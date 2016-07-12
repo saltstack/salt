@@ -11,8 +11,6 @@ from salttesting.mock import (
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 from salt.exceptions import CommandExecutionError
@@ -284,7 +282,7 @@ class SnapperTestCase(TestCase):
             mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
         ]
         with patch('salt.utils.fopen') as fopen_mock:
-            fopen_mock.side_effect=fopen_effect
+            fopen_mock.side_effect = fopen_effect
             module_ret = {
                 "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                 "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
@@ -311,7 +309,7 @@ class SnapperTestCase(TestCase):
             mock_open(read_data="dummy binary").return_value,
         ]
         with patch('salt.utils.fopen') as fopen_mock:
-            fopen_mock.side_effect=fopen_effect
+            fopen_mock.side_effect = fopen_effect
             module_ret = {
                 "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
             }

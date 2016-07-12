@@ -360,8 +360,8 @@ def run(function, *args, **kwargs):
     cleanup_algorithm = kwargs.get("cleanup_algorithm", "number")
     userdata = kwargs.get("userdata", {})
 
-    func_kwargs = {k:v for k,v in kwargs.items() if not k.startswith('__')}
-    kwargs = {k:v for k,v in kwargs.items() if k.startswith('__')}
+    func_kwargs = {k:v for k, v in kwargs.items() if not k.startswith('__')}
+    kwargs = {k:v for k, v in kwargs.items() if k.startswith('__')}
 
     pre_nr = __salt__['snapper.create_snapshot'](
         config=config,
