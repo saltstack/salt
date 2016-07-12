@@ -110,17 +110,18 @@ Both methods can be combined; any registry configured under
 Configuration Options
 ---------------------
 
-The following options can be set in the :ref:`minion config
-<configuration-salt-minion>`:
+The following configuration options can be set to fine-tune how Salt uses
+Docker:
 
 - ``docker.url``: URL to the docker service (default: local socket).
-- ``docker.version``: API version to use (default: currently 1.4 API).
-- ``docker.exec_driver``: Execution driver to use, one of the following:
-    - nsenter
-    - lxc-attach
-    - docker-exec
+- ``docker.version``: API version to use
+- ``docker.exec_driver``: Execution driver to use, one of ``nsenter``,
+  ``lxc-attach``, or ``docker-exec``. See the :ref:`Executing Commands Within a
+  Running Container <docker-execution-driver>` section for more details on how
+  this config parameter is used.
 
-    See :ref:`Executing Commands Within a Running Container <docker-execution-driver>`.
+These configuration options are retrieved using :py:mod:`config.get
+<salt.modules.config.get>` (click the link for further information).
 
 Functions
 ---------
@@ -822,6 +823,14 @@ def _get_exec_driver():
         if driver.startswith('lxc-'):
             __context__[contextkey] = 'lxc-attach'
         elif driver.startswith('native-') and HAS_NSENTER:
+            __context__[contextkey] = 'nsenter'
+        elif not driver.strip() and HAS_NSENTER:
+            log.warning(
+                'ExecutionDriver from \'docker info\' is blank, falling '
+                'back to using \'nsenter\'. To squelch this warning, set '
+                'docker.exec_driver. See the Salt documentation for the '
+                'dockerng module for more information.'
+            )
             __context__[contextkey] = 'nsenter'
         else:
             raise NotImplementedError(

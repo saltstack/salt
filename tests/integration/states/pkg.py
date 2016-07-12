@@ -567,16 +567,23 @@ class PkgTest(integration.ModuleCase,
 
         # Now look for updates and try to run the state on a package which is
         # already up-to-date.
+        installed_pkgs = self.run_function('pkg.list_pkgs')
         updates = self.run_function('pkg.list_upgrades', refresh=False)
-        try:
-            target = next(iter(updates))
-        except StopIteration:
-            log.warning(
-                'No available upgrades, skipping only_upgrade=True test with '
-                'already-installed package. For best results run this test '
-                'on a machine with upgrades available.'
-            )
+
+        for pkgname in updates:
+            if pkgname in installed_pkgs:
+                target = pkgname
+                break
         else:
+            target = ''
+            log.warning(
+                'No available upgrades to installed packages, skipping '
+                'only_upgrade=True test with already-installed package. For '
+                'best results run this test on a machine with upgrades '
+                'available.'
+            )
+
+        if target:
             ret = self.run_state('pkg.latest', name=target, refresh=False,
                                  only_upgrade=True)
             self.assertSaltTrueReturn(ret)

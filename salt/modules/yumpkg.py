@@ -520,13 +520,18 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def version_cmp(pkg1, pkg2):
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     .. versionadded:: 2015.5.4
 
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
+
+    ignore_epoch : False
+        Set to ``True`` to ignore the epoch when comparing versions
+
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 
@@ -535,7 +540,7 @@ def version_cmp(pkg1, pkg2):
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
 
-    return __salt__['lowpkg.version_cmp'](pkg1, pkg2)
+    return __salt__['lowpkg.version_cmp'](pkg1, pkg2, ignore_epoch=ignore_epoch)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -1322,10 +1327,10 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True,
-            skip_verify=False,
-            name=None,
+def upgrade(name=None,
             pkgs=None,
+            refresh=True,
+            skip_verify=False,
             normalize=True,
             **kwargs):
     '''
@@ -1408,7 +1413,7 @@ def upgrade(refresh=True,
 
         .. code-block:: bash
 
-            salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+            salt -G role:nsd pkg.upgrade gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
 
         .. versionadded:: 2016.3.0
 
@@ -1421,20 +1426,23 @@ def upgrade(refresh=True,
         refresh_db(**kwargs)
 
     old = list_pkgs()
-    try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](
-            name=name,
-            pkgs=pkgs,
-            sources=None,
-            normalize=normalize,
-            **kwargs)[0]
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
 
-    if pkg_params:
-        targets = [x for x in pkg_params]
-    else:
-        targets = None
+    targets = []
+    if name or pkgs:
+        try:
+            pkg_params = __salt__['pkg_resource.parse_targets'](
+                name=name,
+                pkgs=pkgs,
+                sources=None,
+                normalize=normalize,
+                **kwargs)[0]
+        except MinionError as exc:
+            raise CommandExecutionError(exc)
+
+        if pkg_params:
+            # Calling list.extend() on a dict will extend it using the
+            # dictionary's keys.
+            targets.extend(pkg_params)
 
     cmd = [_yum(), '--quiet', '-y']
     for args in (repo_arg, exclude_arg, branch_arg):
@@ -1443,8 +1451,7 @@ def upgrade(refresh=True,
     if skip_verify:
         cmd.append('--nogpgcheck')
     cmd.append('upgrade')
-    if targets:
-        cmd.extend(targets)
+    cmd.extend(targets)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
