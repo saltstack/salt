@@ -208,7 +208,7 @@ def eni_present(
         the ENI.
 
     allocate_eip
-        'standard' or 'vpc' - allocate and associate an EIP to the ENI for region in EC2 region or VPC.   
+        'standard' or 'vpc' - allocate and associate an EIP to the ENI for region in EC2 region or VPC.
 
         .. versionadded:: 2016.3.0
 
