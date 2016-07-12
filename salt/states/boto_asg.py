@@ -227,6 +227,7 @@ def present(
         health_check_period=None,
         placement_group=None,
         vpc_zone_identifier=None,
+        subnet_names=None,
         tags=None,
         termination_policies=None,
         suspended_processes=None,
@@ -262,6 +263,24 @@ def present(
         that launch config.  The launch config name will be the
         ``launch_config_name`` followed by a hyphen followed by a hash
         of the ``launch_config`` dict contents.
+        Example:
+
+        .. code-block:: yaml
+
+            my_asg:
+              boto_asg.present:
+              - launch_config:
+                - ebs_optimized: false
+                - instance_profile_name: my_iam_profile
+                - kernel_id: ''
+                - ramdisk_id: ''
+                - key_name: my_ssh_key
+                - image_name: aws2015091-hvm
+                - instance_type: c3.xlarge
+                - instance_monitoring: false
+                - security_groups:
+                  - my_sec_group_01
+                  - my_sec_group_02
 
     availability_zones
         List of availability zones for the group.
@@ -297,6 +316,10 @@ def present(
 
     vpc_zone_identifier
         A list of the subnet identifiers of the Virtual Private Cloud.
+
+    subnet_names
+        For VPC, a list of subnet names (NOT subnet IDs) to deploy into.
+        Exclusive with vpc_zone_identifier.
 
     tags
         A list of tags. Example:
@@ -406,7 +429,24 @@ def present(
         ``notification_types`` defined for this specific state will override those
         from the pillar.
     '''
+    if vpc_zone_identifier and subnet_names:
+        raise SaltInvocationError('vpc_zone_identifier and subnet_names are '
+                                  'mutually exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if subnet_names:
+        vpc_zone_identifier = []
+        for i in subnet_names:
+            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i, region=region,
+                                                     key=key, keyid=keyid, profile=profile)
+            if 'error' in r:
+                ret['comment'] = 'Error looking up subnet ids: {0}'.format(r['error'])
+                ret['result'] = False
+                return ret
+            if 'id' not in r:
+                ret['comment'] = 'Subnet {0} does not exist.'.format(i)
+                ret['result'] = False
+                return ret
+            vpc_zone_identifier.append(r['id'])
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](
             vpc_zone_identifier,
@@ -435,16 +475,18 @@ def present(
             'profile': profile
         }
 
-        if 'image_name' in launch_config:
-            image_name = launch_config['image_name']
-            args = {'ami_name': image_name, 'region': region, 'key': key,
-                    'keyid': keyid, 'profile': profile}
-            image_ids = __salt__['boto_ec2.find_images'](**args)
-            if len(image_ids):
-                launch_config['image_id'] = image_ids[0]
-            else:
-                launch_config['image_id'] = image_name
-            del launch_config['image_name']
+        for index, item in enumerate(launch_config):
+            if 'image_name' in item:
+                image_name = item['image_name']
+                iargs = {'ami_name': image_name, 'region': region, 'key': key,
+                         'keyid': keyid, 'profile': profile}
+                image_ids = __salt__['boto_ec2.find_images'](**iargs)
+                if len(image_ids):
+                    launch_config[index]['image_id'] = image_ids[0]
+                else:
+                    launch_config[index]['image_id'] = image_name
+                del launch_config[index]['image_name']
+                break
 
         if vpc_id:
             log.debug('Auto Scaling Group {0} is a associated with a vpc')
@@ -456,7 +498,7 @@ def present(
                     break
             # if security groups exist within launch_config then convert
             # to group ids
-            if sg_index:
+            if sg_index is not None:
                 log.debug('security group associations found in launch config')
                 _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
                     launch_config[sg_index]['security_groups'], vpc_id=vpc_id,

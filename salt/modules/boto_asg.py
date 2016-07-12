@@ -499,6 +499,59 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         return False
 
 
+def get_all_launch_configurations(region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Fetch and return all Launch Configuration with details.
+
+    CLI example::
+
+        salt myminion boto_asg.get_all_launch_configurations
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_all_launch_configurations()
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def list_launch_configurations(region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    List all Launch Configurations.
+
+    CLI example::
+
+        salt myminion boto_asg.list_launch_configurations
+    '''
+    ret = get_all_launch_configurations(region, key, keyid, profile)
+    return [r.name for r in ret]
+
+
+def describe_launch_configuration(name, region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Dump details of a given launch configuration.
+
+    CLI example::
+
+        salt myminion boto_asg.describe_launch_configuration mylc
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return lc[0]
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return None
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return None
+
+
 def create_launch_configuration(name, image_id, key_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
