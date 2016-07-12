@@ -1083,6 +1083,105 @@ class DockerngTestCase(TestCase):
                                            name='cont',
                                            client_timeout=60)
 
+    def test_command_defined_on_image_layer_dont_diff_if_attempted_to_blank(self):
+        '''
+        Assuming the docker image has a command defined, like ``sh``.
+        Erasing this value on sls level will not delete the command
+        in the container. And such the diff shouldn't be reported.
+        Assuming also the container is already running.
+
+        1. define your sls
+
+        .. code-block:: yaml
+
+            cont:
+                dockerng.running:
+                    - image: image:latest
+
+
+        2. run state.highstate
+
+        No diff should be reported
+        '''
+        image_id = 'abcdefg'
+        dockerng_create = Mock(return_value=True)
+        dockerng_start = Mock()
+        dockerng_list_containers = Mock(return_value=['cont'])
+        dockerng_inspect_container = Mock(
+            side_effect=[{
+                'Config': {
+                    'Image': 'image:latest',
+                    'Tty': False,
+                    'Labels': {},
+                    'Domainname': '',
+                    'User': '',
+                    'AttachStderr': True,
+                    'AttachStdout': True,
+                    'Hostname': 'saltstack-container',
+                    'Env': [],
+                    'WorkingDir': '/',
+                    'Cmd': None,
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'OpenStdin': False,
+                },
+                'HostConfig': {
+                    'PublishAllPorts': False,
+                    'Dns': [],
+                    'Links': None,
+                    'CpusetCpus': '',
+                    'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+                    'CapAdd': None,
+                    'NetworkMode': 'default',
+                    'PidMode': '',
+                    'MemorySwap': 0,
+                    'ExtraHosts': None,
+                    'PortBindings': None,
+                    'LxcConf': None,
+                    'DnsSearch': [],
+                    'Privileged': False,
+                    'Binds': [],
+                    'Memory': 0,
+                    'VolumesFrom': None,
+                    'CpuShares': 0,
+                    'CapDrop': None,
+                },
+                'NetworkSettings': {
+                    'MacAddress': '00:00:00:00:00:01',
+                },
+                'Image': image_id}]
+        )
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],  # !!! Cmd defined on Image
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                },
+                })
+        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
+                    'dockerng.inspect_container': dockerng_inspect_container,
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.list_tags': MagicMock(side_effect=[['image:latest']]),
+                    'dockerng.state': MagicMock(side_effect=['running']),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.running(
+                'cont',
+                image='image:latest',
+                )
+        self.assertEqual(ret, {'name': 'cont',
+                               'comment': "Container 'cont' is already"
+                               " configured as specified",
+                               'changes': {},
+                               'result': True,
+                               })
 
 if __name__ == '__main__':
     from integration import run_tests
