@@ -131,13 +131,13 @@ MODULE_RET = {
 class SnapperTestCase(TestCase):
     def setUp(self):
         self.dbus_mock = MagicMock()
-        self.DBusExceptionMock = MagicMock()
+        self.DBusExceptionMock = MagicMock() # pylint: disable=invalid-name
         self.dbus_mock.configure_mock(DBusException=self.DBusExceptionMock)
         snapper.dbus = self.dbus_mock
         snapper.snapper = MagicMock()
 
     def test__snapshot_to_data(self):
-        data = snapper._snapshot_to_data(DBUS_RET['ListSnapshots'][0])
+        data = snapper._snapshot_to_data(DBUS_RET['ListSnapshots'][0]) # pylint: disable=protected-access
         self.assertEqual(data['id'], 42)
         self.assertNotIn('pre', data)
         self.assertEqual(data['type'], 'pre')
@@ -199,9 +199,9 @@ class SnapperTestCase(TestCase):
 
     @patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id': 42}))
     def test__get_num_interval(self):
-        self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=None), (42, 0))
-        self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=50), (42, 50))
-        self.assertEqual(snapper._get_num_interval(config=None, num_pre=42, num_post=50), (42, 50))
+        self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=None), (42, 0)) # pylint: disable=protected-access
+        self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=50), (42, 50)) # pylint: disable=protected-access
+        self.assertEqual(snapper._get_num_interval(config=None, num_pre=42, num_post=50), (42, 50)) # pylint: disable=protected-access
 
     def test_run(self):
         patch_dict = {
@@ -246,7 +246,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper.list_snapshots', MagicMock(return_value=MODULE_RET['SNAPSHOTS']))
     def test__get_jid_snapshots(self):
         self.assertEqual(
-            snapper._get_jid_snapshots("20160607130930720112"),
+            snapper._get_jid_snapshots("20160607130930720112"), # pylint: disable=protected-access
             (MODULE_RET['SNAPSHOTS'][0]['id'], MODULE_RET['SNAPSHOTS'][1]['id'])
         )
 

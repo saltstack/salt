@@ -89,10 +89,9 @@ and include this change.
     affect the result.
 
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
-:codeauthor:    Pablo Suarez Hernandez <psuarezhernandez@suse.de>
+:codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 :maturity:      new
 :platform:      Linux
-
 '''
 
 import os
@@ -129,21 +128,22 @@ def baseline_snapshot(name, number=None, config='root', ignore=None):
     status = __salt__['snapper.status'](
         config, num_pre=number, num_post=0)
 
-    for f in ignore:
-        if os.path.isfile(f):
-            status.pop(f, None)
-        elif os.path.isdir(f):
-            for x in [x for x in status.keys() if x.startswith(f)]:
-                status.pop(x, None)
+    for target in ignore:
+        if os.path.isfile(target):
+            status.pop(target, None)
+        elif os.path.isdir(target):
+            for target_file in [target_file for target_file in status.keys() if target_file.startswith(target)]:
+                status.pop(target_file, None)
 
-    for f in status:
-        status[f]['actions'] = status[f].pop("status")
+    for file in status:
+        status[file]['actions'] = status[file].pop("status")
 
         # Only include diff for modified files
-        if "modified" in status[f]['actions']:
-            status[f].update(__salt__['snapper.diff'](config,
-                                                      num_pre=0,
-                                                      num_post=number, filename=f)[f])
+        if "modified" in status[file]['actions']:
+            status[file].update(__salt__['snapper.diff'](config,
+                                                         num_pre=0,
+                                                         num_post=number,
+                                                         filename=file)[file])
 
     if __opts__['test'] and status:
         ret['pchanges'] = ret["changes"]
