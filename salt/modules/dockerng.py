@@ -5654,7 +5654,7 @@ def call(name, function, *args, **kwargs):
         salt_argv = [
             'python',
             os.path.join(thin_dest_path, 'salt-call'),
-            '--retcode-passthrough',
+            '--metadata',
             '--local',
             '--out', 'json',
             '-l', 'quiet',
@@ -5665,15 +5665,17 @@ def call(name, function, *args, **kwargs):
         ret = __salt__['dockerng.run_all'](name,
                                            list2cmdline(map(str, salt_argv)))
         # python not found
-        if ret['retcode'] == 127:
+        if ret['retcode'] != 0:
             raise CommandExecutionError(ret['stderr'])
-        elif ret['retcode'] != 0:
-            return {'result': False, 'comment': ret['stderr']}
 
         # process "real" result in stdout
         try:
             data = salt.utils.find_json(ret['stdout'])
-            return data.get('local', data)
+            local = data.get('local', data)
+            if isinstance(local, dict):
+                if 'retcode' in local:
+                    __context__['retcode'] = local['retcode']
+            return local.get('return', data)
         except ValueError:
             return {'result': False,
                     'comment': 'Can\'t parse container command output'}
@@ -5729,9 +5731,6 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         # Now execute the state into the container
         ret = __salt__['dockerng.call'](name, 'state.pkg', os.path.join(trans_dest_path, 'salt_state.tgz'),
                                         trans_tar_sha256, 'sha256')
-
-        # set right exit code if any state failed
-        __context__['retcode'] = 1 if any(not state['result'] for state in six.itervalues(ret)) else 0
     finally:
         # delete the trans dir so that it does not end in the image
         rm_trans_argv = ['rm', '-rf', trans_dest_path]
@@ -5746,6 +5745,12 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                     exc
                 )
             )
+    if not isinstance(ret, dict):
+        __context__['retcode'] = 1
+    elif not salt.utils.check_state_result(ret):
+        __context__['retcode'] = 2
+    else:
+        __context__['retcode'] = 0
     return ret
 
 
@@ -5777,7 +5782,10 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
         __salt__['dockerng.start'](id_)
 
         # Now execute the state into the container
-        __salt__['dockerng.sls'](id_, mods, saltenv, **kwargs)
+        ret = __salt__['dockerng.sls'](id_, mods, saltenv, **kwargs)
+        # fail if the state was not successful
+        if not salt.utils.check_state_result(ret):
+            raise CommandExecutionError(ret)
     finally:
         __salt__['dockerng.stop'](id_)
 
