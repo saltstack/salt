@@ -359,6 +359,7 @@ class ZfsTestCase(TestCase):
             self.assertEqual(zfs.promote('myzpool/yesterday'), res)
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    @patch('salt.utils.which', MagicMock(return_value='/usr/bin/man'))
     def test_bookmark_success(self):
         '''
         Tests zfs bookmark success
