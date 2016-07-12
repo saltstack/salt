@@ -123,10 +123,10 @@ MODULE_RET = {
                     "@@ -0,0 +1 @@\n"
                     "+another foobar",
         },
-        '/var/cache/salt/minion/extmods/modules/snapper.pyc': {
+        '/tmp/foo3': {
             'comment': 'binary file changed',
-            'new_sha256_digest': 'f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa',
             'old_sha256_digest': 'e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b',
+            'new_sha256_digest': 'f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa',
         }
     }
 }
@@ -288,6 +288,32 @@ class SnapperTestCase(TestCase):
             module_ret = {
                 "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                 "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
+            }
+            self.assertEqual(snapper.diff(), module_ret)
+
+    @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(55, 0)))
+    @patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(
+        side_effect=["/.snapshots/55/snapshot", "", "/.snapshots/55/snapshot", ""]))
+    @patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value=""))
+    @patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo3"]))
+    @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(side_effect=[True, True]))
+    @patch('os.path.isdir', MagicMock(return_value=False))
+    @patch.dict(snapper.__salt__, {
+        'hashutil.sha256_digest': MagicMock(side_effect=[
+            "e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b",
+            "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
+        ])
+    })
+    def test_diff_binary_files(self):
+        fopen_effect = [
+            mock_open(read_data="dummy binary").return_value,
+            mock_open(read_data="dummy binary").return_value,
+        ]
+        with patch('salt.utils.fopen') as fopen_mock:
+            fopen_mock.side_effect=fopen_effect
+            module_ret = {
+                "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
             }
             self.assertEqual(snapper.diff(), module_ret)
 
