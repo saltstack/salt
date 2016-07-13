@@ -2066,8 +2066,7 @@ def query_instance(vm_=None, call=None):
 
         if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
             log.error(
-                'Public IP not detected.  If private IP is meant for bootstrap you must specify '
-                '"ssh_interface: private_ips" in your profile.'
+                'Public IP not detected.'
             )
             return data
         if ssh_interface(vm_) == 'private_ips' and \
