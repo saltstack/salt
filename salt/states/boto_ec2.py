@@ -171,7 +171,7 @@ def eni_present(
         description=None,
         groups=None,
         source_dest_check=True,
-        allocate_eip=False,
+        allocate_eip=None,
         arecords=None,
         region=None,
         key=None,
@@ -208,7 +208,9 @@ def eni_present(
         the ENI.
 
     allocate_eip
-        True/False - allocate and associate an EIP to the ENI
+        allocate and associate an EIP to the ENI. Could be 'standard' to
+        allocate Elastic IP to EC2 region or 'vpc' to get it for 
+        particular VPC
 
         .. versionadded:: 2016.3.0
 
@@ -311,7 +313,8 @@ def eni_present(
             if __opts__['test']:
                 ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
             else:
-                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=None,
+                domain = 'vpc' if allocate_eip == 'vpc' else None
+                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=domain,
                                                                       region=region,
                                                                       key=key,
                                                                       keyid=keyid,
