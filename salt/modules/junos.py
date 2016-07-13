@@ -7,11 +7,14 @@ from __future__ import absolute_import
 # Import python libraries
 import logging
 import json
-from lxml import etree
+
+try:
+    from lxml import etree
+except ImportError:
+    from salt._compat import ElementTree as etree
+
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
-
-
 try:
     # pylint: disable=W0611
     from jnpr.junos import Device
