@@ -5548,8 +5548,7 @@ def _mk_fileclient():
     Create a file client and add it to the context.
     '''
     if 'cp.fileclient' not in __context__:
-        __context__['cp.fileclient'] = \
-                salt.fileclient.get_file_client(__opts__)
+        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
 
 
 def _generate_tmp_path():
