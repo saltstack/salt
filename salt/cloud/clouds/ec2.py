@@ -1702,7 +1702,7 @@ def request_instance(vm_=None, call=None):
         blacklist = __opts__['renderer_blacklist']
         whitelist = __opts__['renderer_whitelist']
         userdata = compile_template(
-            userdata, rend, renderer, blacklist, whitelist
+            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
         )
 
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
