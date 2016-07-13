@@ -73,7 +73,7 @@ def _get_driver(profile):
     key = config.get('key')
     secret = config.get('secret', None)
     secure = config.get('secure', True)
-    host = config.get('jost', None)
+    host = config.get('host', None)
     port = config.get('port', None)
     return cls(key, secret, secure, host, port)
 
