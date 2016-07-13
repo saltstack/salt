@@ -202,6 +202,54 @@ def del_password(name):
     return not uinfo['passwd']
 
 
+def lock_password(name):
+    '''
+    .. versionadded:: Carbon
+
+    Lock the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.lock_password username
+    '''
+    pre_info = info(name)
+    if pre_info['passwd'][0] == '!':
+        return True
+
+    cmd = 'passwd -l {0}'.format(name)
+    __salt__['cmd.run'](cmd, python_shell=False)
+
+    post_info = info(name)
+
+    return post_info['passwd'][0] == '!'
+
+
+def unlock_password(name):
+    '''
+    .. versionadded:: Carbon
+
+    Unlock the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.unlock_password username
+    '''
+    pre_info = info(name)
+    if pre_info['passwd'][0] != '!':
+        return True
+
+    cmd = 'passwd -u {0}'.format(name)
+    __salt__['cmd.run'](cmd, python_shell=False)
+
+    post_info = info(name)
+
+    return post_info['passwd'][0] != '!'
+
+
 def set_password(name, password, use_usermod=False):
     '''
     Set the password for a named user. The password must be a properly defined
