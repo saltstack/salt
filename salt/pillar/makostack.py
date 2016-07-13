@@ -77,6 +77,31 @@ Here is an example of such a configuration, which should speak by itself:
           opts:custom:opt:
             value: /path/to/stack0.cfg
 
+
+Grafting data from files to arbitrary namespaces
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An extended syntax for config files permits defining "graft points" on a
+per-config-file basis.  As an example, if the file foo.cfg would produce
+the following:
+
+.. code:: yaml
+
+    foo:
+      - bar
+      - baz
+
+and you specified the cfg file as /path/to/foo.cfg:yummy:fur, the following
+would actually end up in pillar after all merging was complete:
+
+.. code:: yaml
+
+    yummy:
+      fur:
+        foo:
+          - bar
+          - baz
+
 MakoStack configuration files
 -------------------------------
 
@@ -378,15 +403,19 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             cfgs = [cfgs]
         stack_config_files += cfgs
     for cfg in stack_config_files:
+        if ':' in cfg:
+            cfg, namespace = cfg.split(':', 1)
+        else:
+            namespace = None
         if not os.path.isfile(cfg):
             log.warning('Ignoring pillar stack cfg "{0}": '
-                     'file does not exist'.format(cfg))
+                        'file does not exist'.format(cfg))
             continue
-        stack = _process_stack_cfg(cfg, stack, minion_id, pillar)
+        stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace)
     return stack
 
 
-def _process_stack_cfg(cfg, stack, minion_id, pillar):
+def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
     basedir, filename = os.path.split(cfg)
     lookup = TemplateLookup(directories=[basedir])
     tops = lookup.get_template(filename).render(__opts__=__opts__,
@@ -406,6 +435,9 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                 log.info('Ignoring pillar stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))
                 continue
+            if namespace:
+                for sub in namespace.split(':')[::-1]:
+                    obj = {sub: obj}
             stack = _merge_dict(stack, obj)
         except exceptions.TopLevelLookupException as e:
             log.info('Stack template "{0}" not found.'.format(path))
