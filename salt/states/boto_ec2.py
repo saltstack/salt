@@ -209,7 +209,7 @@ def eni_present(
 
     allocate_eip
         allocate and associate an EIP to the ENI. Could be 'standard' to
-        allocate Elastic IP to EC2 region or 'vpc' to get it for 
+        allocate Elastic IP to EC2 region or 'vpc' to get it for
         particular VPC
 
         .. versionadded:: 2016.3.0
