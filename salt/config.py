@@ -1567,7 +1567,7 @@ def load_config(path, env_var, default_path=None):
             opts['conf_file'] = path
             return opts
         except salt.exceptions.SaltConfigurationError as error:
-            log.error(error.message)
+            log.error(error)
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     log.debug('Missing configuration file: {0}'.format(path))
@@ -1613,6 +1613,7 @@ def include_config(include, orig_path, verbose):
             try:
                 opts = _read_conf_file(fn_)
             except salt.exceptions.SaltConfigurationError as error:
+                log.error(error)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             include = opts.get('include', [])
             if include:
