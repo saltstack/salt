@@ -1502,8 +1502,8 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=True)
+        return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
+                                    cache_minion_id=True, ignore_config_errors=False)
 
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,

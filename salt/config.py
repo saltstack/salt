@@ -1574,7 +1574,7 @@ def load_config(path, env_var, default_path=None):
     return {}
 
 
-def include_config(include, orig_path, verbose):
+def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     '''
     Parses extra configuration file(s) specified in an include list in the
     main config file.
@@ -1614,7 +1614,9 @@ def include_config(include, orig_path, verbose):
                 opts = _read_conf_file(fn_)
             except salt.exceptions.SaltConfigurationError as error:
                 log.error(error)
-                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                if exit_on_config_errors:
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
             include = opts.get('include', [])
             if include:
                 opts.update(include_config(include, fn_, verbose))
@@ -1656,7 +1658,8 @@ def insert_system_path(opts, paths):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  cache_minion_id=False):
+                  cache_minion_id=False,
+                  ignore_config_errors=True):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -1691,8 +1694,10 @@ def minion_config(path,
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False))
-    overrides.update(include_config(include, path, verbose=True))
+    overrides.update(include_config(default_include, path, verbose=False,
+                                    exit_on_config_errors=not ignore_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                                    exit_on_config_errors=not ignore_config_errors))
 
     opts = apply_minion_config(overrides, defaults, cache_minion_id=cache_minion_id)
     _validate_opts(opts)
