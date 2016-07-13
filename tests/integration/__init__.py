@@ -30,6 +30,11 @@ try:
 except ImportError:
     pass
 
+try:
+    import salt.ext.six.moves.socketserver as socketserver
+except ImportError:
+    import socketserver
+
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
@@ -165,7 +170,7 @@ def get_unused_localhost_port():
     usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    if port in (54505, 54506, 64505, 64506, 64510, 64511):
+    if port in (54505, 54506, 64505, 64506, 64510, 64511, 64520, 64521):
         # These ports are hardcoded in the test configuration
         port = get_unused_localhost_port()
         usock.close()
@@ -580,7 +585,11 @@ class SaltMinion(SaltDaemonScriptBase):
         return script_args
 
     def get_check_ports(self):
-        return set([self.config['id']])
+        if salt.utils.is_windows():
+            return set([self.config['tcp_pub_port'],
+                        self.config['tcp_pull_port']])
+        else:
+            return set([self.config['id']])
 
 
 class SaltMaster(SaltDaemonScriptBase):
@@ -978,40 +987,52 @@ class TestDaemon(object):
             running_tests_user = win32api.GetUserName()
         else:
             running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
-        master_opts['user'] = running_tests_user
+
         tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
+
+        # This master connects to syndic_master via a syndic
+        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['conf_dir'] = TMP_CONF_DIR
+        master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        master_opts['user'] = running_tests_user
+        master_opts['config_dir'] = TMP_CONF_DIR
+        master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
 
-        minion_config_path = os.path.join(CONF_DIR, 'minion')
-        minion_opts = salt.config._read_conf_file(minion_config_path)
-        minion_opts['user'] = running_tests_user
-        minion_opts['conf_dir'] = TMP_CONF_DIR
-
-        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-
-        sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
-        sub_minion_opts['user'] = running_tests_user
-        sub_minion_opts['conf_dir'] = TMP_SUB_MINION_CONF_DIR
-        sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
-
-        syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
-        syndic_master_opts['user'] = running_tests_user
-        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
-
-        # The syndic config file has an include setting to include the master configuration
+        # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
         syndic_opts = copy.deepcopy(master_opts)
         # Let's update with the syndic configuration
         syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
-        # Lets remove the include setting
-        syndic_opts.pop('include')
-        syndic_opts['user'] = running_tests_user
-        syndic_opts['conf_dir'] = TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = TMP_SYNDIC_MINION_CONF_DIR
+
+        # This minion connects to master
+        minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
+        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        minion_opts['user'] = running_tests_user
+        minion_opts['config_dir'] = TMP_CONF_DIR
+        minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'minion')
+
+        # This sub_minion also connects to master
+        sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
+        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
+        sub_minion_opts['user'] = running_tests_user
+        sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
+        sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
+        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
+
+        # This is the master of masters
+        syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
+        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
+        syndic_master_opts['user'] = running_tests_user
+        syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
+        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
+
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
