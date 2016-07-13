@@ -142,7 +142,7 @@ def get_zone():
         for family in ('RedHat', 'SUSE'):
             if family in os_family:
                 return _get_zone_sysconfig()
-        for family in ('Debian', 'Gentoo'):
+        for family in ('Debian', 'Gentoo', 'NILinuxRT'):
             if family in os_family:
                 return _get_zone_etc_timezone()
         if os_family in ('FreeBSD', 'OpenBSD', 'NetBSD'):
