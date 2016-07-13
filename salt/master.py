@@ -878,9 +878,9 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
-            self.opts,
-            self.key,
-            )
+           self.opts,
+           self.key,
+           )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.reinit_crypto()
         self.__bind()
@@ -912,7 +912,9 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         self.__setup_fileserver()
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
 
@@ -1595,7 +1597,9 @@ class ClearFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object

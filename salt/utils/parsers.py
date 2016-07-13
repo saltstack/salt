@@ -1690,7 +1690,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
-                                    cache_minion_id=True)
+                                    cache_minion_id=True, ignore_config_errors=False)
 
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
