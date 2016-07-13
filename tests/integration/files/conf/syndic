@@ -1,5 +1,6 @@
 # Syndic Settings
 id: syndic
+interface: 127.0.0.1
 syndic_master: localhost
 syndic_master_port: 54506
 syndic_log_file: syndic.log
