@@ -5558,7 +5558,7 @@ def _generate_tmp_path():
         'salt.dockerng.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(mods=None, saltenv='base', pillar=None):
+def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
@@ -5570,7 +5570,7 @@ def _prepare_trans_tar(mods=None, saltenv='base', pillar=None):
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
         __context__['cp.fileclient'],
-        chunks, refs, pillar=pillar)
+        chunks, refs, pillar=pillar, id_=name)
     return trans_tar
 
 
@@ -5710,7 +5710,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     # compile pillar with container grains
     pillar = _gather_pillar(saltenv, {}, **grains)
 
-    trans_tar = _prepare_trans_tar(mods=mods, saltenv=saltenv, pillar=pillar)
+    trans_tar = _prepare_trans_tar(name, mods=mods, saltenv=saltenv, pillar=pillar)
 
     # where to put the salt trans tar
     trans_dest_path = _generate_tmp_path()
@@ -5790,3 +5790,4 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
         __salt__['dockerng.stop'](id_)
 
     return __salt__['dockerng.commit'](id_, name)
+
