@@ -22,10 +22,7 @@ import logging
 import json
 
 import salt.returners
-<<<<<<< HEAD
 import salt.utils
-=======
->>>>>>> Added rawfile_json returner
 
 log = logging.getLogger(__name__)
 
