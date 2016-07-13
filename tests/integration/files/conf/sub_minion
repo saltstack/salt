@@ -1,6 +1,7 @@
 # basic config
 # Connects to master
 master: localhost
+interface: 127.0.0.1
 master_port: 64506
 tcp_pub_port: 64520
 tcp_pull_port: 64521
