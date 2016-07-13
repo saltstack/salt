@@ -50,7 +50,6 @@ from __future__ import absolute_import
 import logging
 import time
 import json
-from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
@@ -65,6 +64,7 @@ try:
     import boto
     import boto.ec2
     # pylint: enable=unused-import
+    from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
