@@ -64,7 +64,22 @@ def __virtual__():
 
 def _snapshot_to_data(snapshot):
     '''
-    Returns snapshot data from a D-Bus response
+    Returns snapshot data from a D-Bus response.
+
+    A snapshot D-Bus response is a dbus.Struct containing the
+    information related to a snapshot:
+
+    [id, type, pre_snapshot, timestamp, user, description,
+     cleanup_algorithm, userdata]
+
+    id: dbus.UInt32
+    type: dbus.UInt16
+    pre_snapshot: dbus.UInt32
+    timestamp: dbus.Int64
+    user: dbus.UInt32
+    description: dbus.String
+    cleaup_algorithm: dbus.String
+    userdata: dbus.Dictionary
     '''
     data = {}
 
@@ -76,7 +91,7 @@ def _snapshot_to_data(snapshot):
     if snapshot[3] != -1:
         data['timestamp'] = snapshot[3]
     else:
-        data['timestamp'] = time.time()
+        data['timestamp'] = int(time.time())
 
     data['user'] = getpwuid(snapshot[4])[0]
     data['description'] = snapshot[5]
@@ -197,6 +212,9 @@ def set_config(name='root', **kwargs):
 
 
 def _get_last_snapshot(config='root'):
+    '''
+    Returns the last existing created snapshot
+    '''
     snapshot_list = sorted(list_snapshots(config), key=lambda x: x['id'])
     return snapshot_list[-1]
 
@@ -272,7 +290,7 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
     if not userdata:
         userdata = {}
 
-    jid = kwargs.get('__pub_jid', None)
+    jid = kwargs.get('__pub_jid')
     if description is None and jid is not None:
         description = 'salt job {0}'.format(jid)
 
@@ -306,6 +324,9 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
 
 
 def _get_num_interval(config, num_pre, num_post):
+    '''
+    Returns numerical interval based on optionals num_pre, num_post values
+    '''
     post = int(num_post) if num_post else 0
     pre = int(num_pre) if num_pre is not None else _get_last_snapshot(config)['id']
     return pre, post
@@ -356,10 +377,10 @@ def run(function, *args, **kwargs):
 
     You can immediately see the changes
     '''
-    config = kwargs.get("config", "root")
-    description = kwargs.get("description", "snapper.run[{0}]".format(function))
-    cleanup_algorithm = kwargs.get("cleanup_algorithm", "number")
-    userdata = kwargs.get("userdata", {})
+    config = kwargs.pop("config", "root")
+    description = kwargs.pop("description", "snapper.run[{0}]".format(function))
+    cleanup_algorithm = kwargs.pop("cleanup_algorithm", "number")
+    userdata = kwargs.pop("userdata", {})
 
     func_kwargs = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
     kwargs = dict((k, v) for k, v in kwargs.items() if k.startswith('__'))
@@ -488,6 +509,9 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
 def _get_jid_snapshots(jid, config='root'):
     '''
     Returns pre/post snapshots made by a given Salt jid
+
+    Looks for 'salt_jid' entries into snapshots userdata which are created
+    when 'snapper.run' is executed.
     '''
     jid_snapshots = [x for x in list_snapshots(config) if x['userdata'].get("salt_jid") == jid]
     pre_snapshot = [x for x in jid_snapshots if x['type'] == "pre"]
