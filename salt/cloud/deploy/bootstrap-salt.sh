@@ -18,11 +18,11 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2016.06.27"
+__ScriptVersion="2016.07.07"
 __ScriptName="bootstrap-salt.sh"
 
-__ScriptFullName="${0}"
-__ScriptArgs="${*}"
+__ScriptFullName="$0"
+__ScriptArgs="$*"
 
 #======================================================================================================================
 #  Environment variables taken into account.
@@ -630,7 +630,7 @@ fi
 
 echoinfo "Running version: ${__ScriptVersion}"
 echoinfo "Executed by: ${CALLER}"
-echoinfo "Command line: \"${__ScriptFullName} ${__ScriptArgs}\""
+echoinfo "Command line: '${__ScriptFullName} ${__ScriptArgs}'"
 #echowarn "Running the unstable version of ${__ScriptName}"
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -1180,6 +1180,7 @@ __ubuntu_derivatives_translation() {
 
     linuxmint_16_ubuntu_base="13.10"
     linuxmint_17_ubuntu_base="14.04"
+    linuxmint_18_ubuntu_base="16.04"
     linaro_12_ubuntu_base="12.04"
     elementary_os_02_ubuntu_base="12.04"
 
@@ -2366,6 +2367,11 @@ install_ubuntu_stable_deps() {
                 set -o nounset
             fi
 
+            # Make sure https transport is available
+            if [ "$HTTP_VAL" = "https" ] ; then
+                __apt_get_install_noinput ca-certificates apt-transport-https || return 1
+            fi
+
             # Make sure wget is available
             __apt_get_install_noinput wget
 
@@ -2714,6 +2720,8 @@ install_debian_7_deps() {
     if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
         if [ "$CPU_ARCH_L" = "amd64" ] || [ "$CPU_ARCH_L" = "x86_64" ]; then
             repo_arch="amd64"
+        elif [ "$CPU_ARCH_L" = "armv7l" ]; then
+            repo_arch="armhf"
         elif [ "$CPU_ARCH_L" = "i386" ] || [ "$CPU_ARCH_L" = "i686" ]; then
             echoerror "repo.saltstack.com likely doesn't have 32-bit packages for Debian (yet?)"
             repo_arch="i386"
@@ -2790,6 +2798,8 @@ install_debian_8_deps() {
     if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
         if [ "$CPU_ARCH_L" = "amd64" ] || [ "$CPU_ARCH_L" = "x86_64" ]; then
             repo_arch="amd64"
+        elif [ "$CPU_ARCH_L" = "armv7l" ]; then
+            repo_arch="armhf"
         elif [ "$CPU_ARCH_L" = "i386" ] || [ "$CPU_ARCH_L" = "i686" ]; then
             echoerror "repo.saltstack.com likely doesn't have 32-bit packages for Debian (yet?)"
             repo_arch="i386"
@@ -3113,7 +3123,13 @@ install_fedora_deps() {
         __install_saltstack_copr_salt_repository || return 1
     fi
 
-    __PACKAGES="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
+    __PACKAGES="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-zmq"
+
+    if [ "$DISTRO_MAJOR_VERSION" -ge 23 ]; then
+        __PACKAGES="${__PACKAGES} python2-msgpack python2-requests"
+    else
+        __PACKAGES="${__PACKAGES} python-msgpack python-requests"
+    fi
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} python-libcloud"
@@ -4082,6 +4098,14 @@ _eof
 }
 
 install_amazon_linux_ami_git_deps() {
+
+    # When installing from git, this variable might not be set yet for amazon linux. Set this
+    # to "latest" in order to set up the SaltStack repository and avoid a malformed baseurl
+    # and gpgkey reference in the install_amazon_linux_amI_deps function.
+    if [ "$STABLE_REV" = "" ]; then
+        STABLE_REV="latest"
+    fi
+
     install_amazon_linux_ami_deps || return 1
 
     if ! __check_command_exists git; then
@@ -4097,7 +4121,6 @@ install_amazon_linux_ami_git_deps() {
             yum install -y python-tornado
         fi
     fi
-
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -4410,7 +4433,7 @@ __configure_freebsd_pkg_details() {
         echo "    url: \"${SALTPKGCONFURL}\","
         echo "    mirror_type: \"http\","
         echo "    enabled: true"
-        echo "    prioroity: 10"
+        echo "    priority: 10"
         echo "}"
     } > $salt_conf_file
     FROM_SALTSTACK="-r SaltStack"
@@ -5204,7 +5227,16 @@ install_opensuse_git_post() {
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /bin/systemctl ]; then
+            use_usr_lib=$BS_FALSE
             if [ "${DISTRO_MAJOR_VERSION}" -gt 13 ] || ([ "${DISTRO_MAJOR_VERSION}" -eq 13 ] && [ "${DISTRO_MINOR_VERSION}" -ge 2 ]); then
+                use_usr_lib=$BS_TRUE
+            fi
+
+            if [ "${DISTRO_MAJOR_VERSION}" -eq 12 ] && [ -d "/usr/lib/systemd/" ]; then
+                use_usr_lib=$BS_TRUE
+            fi
+
+            if [ "${use_usr_lib}" -eq $BS_TRUE ]; then
                 __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" "/usr/lib/systemd/system/salt-${fname}.service"
             else
                 __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
@@ -5371,7 +5403,7 @@ install_suse_12_stable_deps() {
 }
 
 install_suse_12_git_deps() {
-    install_suse_11_stable_deps || return 1
+    install_suse_12_stable_deps || return 1
 
     if ! __check_command_exists git; then
         __zypper_install git  || return 1

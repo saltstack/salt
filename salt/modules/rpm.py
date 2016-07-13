@@ -608,7 +608,7 @@ def info(*packages, **attr):
     return ret
 
 
-def version_cmp(ver1, ver2):
+def version_cmp(ver1, ver2, ignore_epoch=False):
     '''
     .. versionadded:: 2015.8.9
 
@@ -616,12 +616,21 @@ def version_cmp(ver1, ver2):
     ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
     making the comparison.
 
+    ignore_epoch : False
+        Set to ``True`` to ignore the epoch when comparing versions
+
+        .. versionadded:: 2015.8.10,2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
+    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    ver1 = normalize(ver1)
+    ver2 = normalize(ver2)
+
     try:
         cmp_func = None
         if HAS_RPM:
@@ -694,7 +703,10 @@ def version_cmp(ver1, ver2):
             ver1, ver2, exc
         )
 
-    return salt.utils.version_cmp(ver1, ver2)
+    # We would already have normalized the versions at the beginning of this
+    # function if ignore_epoch=True, so avoid unnecessary work and just pass
+    # False for this value.
+    return salt.utils.version_cmp(ver1, ver2, ignore_epoch=False)
 
 
 def checksum(*paths):
