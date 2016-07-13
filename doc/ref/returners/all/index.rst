@@ -34,6 +34,7 @@ returner modules
     postgres
     postgres_local_cache
     pushover_returner
+    rawfile_json
     redis_return
     sentry_return
     slack_returner
