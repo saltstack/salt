@@ -2,16 +2,17 @@
 '''
 Retrieve Pillar data by doing a SQLite3 query
 
-sqlite3 is included in the stdlib since python2.5.
+.. versionadded:: 2015.8.0
+
+``sqlite3`` is included in the stdlib since Python 2.5.
 
 This module is a concrete implementation of the sql_base ext_pillar for
 SQLite3.
 
-:maturity: new
 :platform: all
 
 Configuring the sqlite3 ext_pillar
-=====================================
+==================================
 
 Use the 'sqlite3' key under ext_pillar for configuration of queries.
 
@@ -25,10 +26,10 @@ Note, timeout is in seconds.
     sqlite3.database: /var/lib/salt/pillar.db
     sqlite3.timeout: 5.0
 
-Legacy compatibility
+Legacy Compatibility
 ====================
 
-SQLite3 database connection configuration previouly had keys under
+SQLite3 database connection configuration previously had keys under
 pillar.
 
 .. code-block:: yaml
@@ -36,12 +37,12 @@ pillar.
     pillar.sqlite3.database: /var/lib/salt/pillar.db
     pillar.sqlite3.timeout: 5.0
 
-This has been depreciated in salt Boran and will be removed in salt
+This has been deprecated in 2016.3.0 and will be removed in Salt
 Nitrogen.
 
 
-Complete example
-=====================================
+Complete Example
+================
 
 .. code-block:: yaml
 
