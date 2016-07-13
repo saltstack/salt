@@ -62,7 +62,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
             libcloud_dns.__init__(None)
-            dunder.assert_called_with()
+            dunder.assert_called_with('salt.modules.libcloud_dns')
 
 
 if __name__ == '__main__':
