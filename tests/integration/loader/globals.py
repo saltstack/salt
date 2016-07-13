@@ -25,7 +25,6 @@ import copy
 import salt.ext.six as six
 
 
-
 class LoaderGlobalsTest(integration.ModuleCase):
     '''
     Test all of the globals that the loader is responsible for adding to modules
@@ -35,7 +34,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
 
     This is intended as a shorter term way of testing these so we don't break the loader
     '''
-    
+
     def setUp(self):
         # Poor man's classSetUp (not supported in 2.6)
         if not hasattr(self, 'minion_mods'):
