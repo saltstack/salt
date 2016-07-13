@@ -301,6 +301,7 @@ class SaltWheelError(SaltException):
     Problem in wheel
     '''
 
+
 class SaltConfigurationError(SaltException):
     '''
     Configuration error
