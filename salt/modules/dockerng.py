@@ -526,8 +526,12 @@ def __virtual__():
     Only load if docker libs are present
     '''
     if HAS_DOCKER_PY:
-        docker_py_versioninfo = _get_docker_py_versioninfo()
-
+        try:
+            docker_py_versioninfo = _get_docker_py_versioninfo()
+        except Exception:
+            # May fail if we try to connect to a docker daemon but can't
+            return (False, 'Docker module found, but no version could be'
+                    ' extracted')
         # Don't let a failure to interpret the version keep this module from
         # loading. Log a warning (log happens in _get_docker_py_versioninfo()).
         if docker_py_versioninfo is None:
@@ -536,7 +540,7 @@ def __virtual__():
         if docker_py_versioninfo >= MIN_DOCKER_PY:
             try:
                 docker_versioninfo = version().get('VersionInfo')
-            except CommandExecutionError:
+            except Exception:
                 docker_versioninfo = None
 
             if docker_versioninfo is None or docker_versioninfo >= MIN_DOCKER:
