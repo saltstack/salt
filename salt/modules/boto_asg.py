@@ -512,8 +512,8 @@ def get_all_launch_configurations(region=None, key=None, keyid=None,
     try:
         return conn.get_all_launch_configurations()
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+        log.error(e)
+        return []
 
 
 def list_launch_configurations(region=None, key=None, keyid=None,
@@ -548,7 +548,7 @@ def describe_launch_configuration(name, region=None, key=None, keyid=None,
             log.debug(msg)
             return None
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return None
 
 
