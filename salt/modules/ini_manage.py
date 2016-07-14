@@ -13,6 +13,7 @@ Edit ini files
 # Import Python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import os
 import re
 import json
 from salt.utils.odict import OrderedDict
@@ -210,13 +211,13 @@ class _Section(OrderedDict):
         unknown_count = 1
         curr_indent = ''
         inicontents = inicontents or self.inicontents
-        inicontents = inicontents.strip('\n')
+        inicontents = inicontents.strip(os.linesep)
 
         if not inicontents:
             return
         for opt in self:
             self.pop(opt)
-        for opt_str in inicontents.split('\n'):
+        for opt_str in inicontents.split(os.linesep):
             # Match comments
             com_match = com_regx.match(opt_str)
             if com_match:
@@ -234,7 +235,7 @@ class _Section(OrderedDict):
                     if options:
                         prev_opt = options[-1]
                         value = self.get(prev_opt)
-                        self.update({prev_opt: '\n'.join((value, opt_str))})
+                        self.update({prev_opt: os.linesep.join((value, opt_str))})
                     continue
             # Match normal key+value lines.
             opt_match = self.opt_regx.match(opt_str)
@@ -311,21 +312,22 @@ class _Section(OrderedDict):
         return changes
 
     def gen_ini(self):
-        yield '\n[{0}]\n'.format(self.name)
+        yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
         for name, value in self.iteritems():
             if com_regx.match(name):
-                yield '{0}\n'.format(value)
+                yield '{0}{1}'.format(value, os.linesep)
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
             else:
-                yield '{0}{1}{2}\n'.format(
+                yield '{0}{1}{2}{3}'.format(
                     name,
                     (
                         ' {0} '.format(self.sep) if self.sep != ' '
                         else self.sep
                     ),
-                    value
+                    value,
+                    os.linesep
                 )
         for name, value in sections_dict.iteritems():
             for line in value.gen_ini():
@@ -343,7 +345,7 @@ class _Section(OrderedDict):
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return '\n'.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
 
     def __str__(self):
         return json.dumps(self, indent=4)
