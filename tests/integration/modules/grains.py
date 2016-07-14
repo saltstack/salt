@@ -120,6 +120,18 @@ class TestModulesGrains(integration.ModuleCase):
                 continue
             self.assertTrue(get_grain)
 
+    def test_get_grains_int(self):
+        '''
+        test to ensure int grains
+        are returned as integers
+        '''
+        grains = ['num_cpus', 'mem_total', 'num_gpus', 'uid']
+        for grain in grains:
+            get_grain = self.run_function('grains.get', [grain])
+
+            self.assertIsInstance(get_grain, int,
+                                  msg='grain: {0} is not an int or empty'.format(grain))
+
 
 class GrainsAppendTestCase(integration.ModuleCase):
     '''
