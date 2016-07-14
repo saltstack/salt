@@ -67,6 +67,24 @@ else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
 
+def _gather_buffer_space():
+    '''
+    Gather some system data and then calculate
+    buffer space.
+
+    Result is in bytes.
+    '''
+    if HAS_PSUTIL:
+        # Oh good, we have psutil. This will be quick.
+        total_mem = psutil.virtual_memory().total
+    else:
+        # We need to load up some grains. This will be slow.
+        os_data = salt.grains.core.os_data()
+        grains = salt.grains.core._memdata(os_data)
+        total_mem = grains['mem_total']
+    # Return the higher number between 5% of the system memory and 100MB
+    return min([total_mem * 0.05, 100 << 20])
+
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
 _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
@@ -459,7 +477,7 @@ VALID_OPTS = {
 
     # IPC buffer size
     # Refs https://github.com/saltstack/salt/issues/34215
-    'ipc_write_buffer': _DEFLT_IPC_WBUFFER,
+    'ipc_write_buffer': int,
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
@@ -1193,6 +1211,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
@@ -1557,23 +1576,6 @@ def _read_conf_file(path):
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
-def _gather_buffer_space():
-    '''
-    Gather some system data and then calculate
-    buffer space.
-
-    Result is in bytes.
-    '''
-    if HAS_PSUTIL:
-        # Oh good, we have psutil. This will be quick.
-        total_mem = psutil.virtual_memory().total
-    else:
-        # We need to load up some grains. This will be slow.
-        os_data = salt.grains.core.os_data()
-        grains = salt.grains.core._memdata(os_data)
-        total_mem = grains['mem_total']
-    # Return the higher number between 5% of the system memory and 100MB
-    return min([total_mem * 0.05, 100 << 20])
 
 
 def _absolute_path(path, relative_to=None):

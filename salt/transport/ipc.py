@@ -431,9 +431,10 @@ class IPCMessagePublisher(object):
     A Tornado IPC Publisher similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, socket_path, io_loop=None):
+    def __init__(self, opts, socket_path, io_loop=None):
         '''
         Create a new Tornado IPC server
+        :param dict opts: Salt options
         :param str/int socket_path: Path on the filesystem for the
                                     socket to bind to. This socket does
                                     not need to exist prior to calling
@@ -444,6 +445,7 @@ class IPCMessagePublisher(object):
                                     for a tcp localhost connection.
         :param IOLoop io_loop: A Tornado ioloop to handle scheduling
         '''
+        self.opts = opts
         self.socket_path = socket_path
         self._started = False
 
@@ -505,10 +507,12 @@ class IPCMessagePublisher(object):
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
+        log.debug('BUFFER SET: {0}'.format(self.opts['ipc_write_buffer']))
         try:
             stream = IOStream(
                 connection,
                 io_loop=self.io_loop,
+                max__buffer_size = self.opts['ipc_write_buffer']
             )
             self.streams.add(stream)
         except Exception as exc:
