@@ -784,6 +784,8 @@ def list_repos(profile='github'):
     profile
         The name of the profile configuration to use. Defaults to ``github``.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion github.list_repos
@@ -801,6 +803,8 @@ def list_private_repos(profile='github'):
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -822,6 +826,8 @@ def list_public_repos(profile='github'):
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
 
     .. code-block:: bash
 
