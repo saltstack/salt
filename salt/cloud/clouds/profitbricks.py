@@ -445,7 +445,7 @@ def get_node(conn, name):
             node = {'id': item['id']}
             node.update(item['properties'])
             salt.utils.cloud.cache_node(
-                salt.utils.cloud.simple_types_filter(node),
+                salt.utils.simple_types_filter(node),
                 __active_provider_name__,
                 __opts__
             )

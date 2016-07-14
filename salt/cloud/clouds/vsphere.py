@@ -105,6 +105,7 @@ import logging
 import time
 
 # Import salt libs
+import salt.utils
 import salt.utils.cloud
 import salt.utils.xmlutil
 from salt.exceptions import SaltCloudSystemExit
@@ -526,7 +527,7 @@ def _get_instance_properties(instance, from_cache=True):
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
 
-    ret = salt.utils.cloud.simple_types_filter(ret)
+    ret = salt.utils.simple_types_filter(ret)
     return ret
 
 
