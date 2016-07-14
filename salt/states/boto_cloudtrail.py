@@ -55,6 +55,7 @@ import os
 import os.path
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -222,16 +223,18 @@ def present(name, Name,
     _describe['LoggingEnabled'] = r.get('trail', {}).get('IsLogging', False)
 
     need_update = False
-    for invar, outvar in {'S3BucketName': 'S3BucketName',
-                'S3KeyPrefix': 'S3KeyPrefix',
-                'SnsTopicName': 'SnsTopicName',
-                'IncludeGlobalServiceEvents': 'IncludeGlobalServiceEvents',
-                'IsMultiRegionTrail': 'IsMultiRegionTrail',
-                'EnableLogFileValidation': 'LogFileValidationEnabled',
-                'CloudWatchLogsLogGroupArn': 'CloudWatchLogsLogGroupArn',
-                'CloudWatchLogsRoleArn': 'CloudWatchLogsRoleArn',
-                'KmsKeyId': 'KmsKeyId',
-                'LoggingEnabled': 'LoggingEnabled'}.iteritems():
+    bucket_vars = {'S3BucketName': 'S3BucketName',
+                   'S3KeyPrefix': 'S3KeyPrefix',
+                   'SnsTopicName': 'SnsTopicName',
+                   'IncludeGlobalServiceEvents': 'IncludeGlobalServiceEvents',
+                   'IsMultiRegionTrail': 'IsMultiRegionTrail',
+                   'EnableLogFileValidation': 'LogFileValidationEnabled',
+                   'CloudWatchLogsLogGroupArn': 'CloudWatchLogsLogGroupArn',
+                   'CloudWatchLogsRoleArn': 'CloudWatchLogsRoleArn',
+                   'KmsKeyId': 'KmsKeyId',
+                   'LoggingEnabled': 'LoggingEnabled'}
+
+    for invar, outvar in six.iteritems(bucket_vars):
         if _describe[outvar] != locals()[invar]:
             need_update = True
             ret['changes'].setdefault('new', {})[invar] = locals()[invar]
@@ -291,7 +294,7 @@ def present(name, Name,
         if bool(tagchange):
             adds = {}
             removes = {}
-            for k, diff in tagchange.iteritems():
+            for k, diff in six.iteritems(tagchange):
                 if diff.get('new', '') != '':
                     # there's an update for this key
                     adds[k] = Tags[k]
