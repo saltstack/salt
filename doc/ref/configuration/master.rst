@@ -515,7 +515,7 @@ By default, events are not queued.
 
 Default: ``[]``
 
-Only return events matching tags in a whitelist.
+Only return events where the tag matches a regex in the whitelist.
 
 .. code-block:: yaml
 
@@ -532,7 +532,7 @@ Only return events matching tags in a whitelist.
 
 Default: ``[]``
 
-Store all event returns _except_ the tags in a blacklist.
+Return events where the tag does not match a regex in blacklist.
 
 .. code-block:: yaml
 
