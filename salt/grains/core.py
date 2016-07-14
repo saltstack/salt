@@ -1461,6 +1461,7 @@ def os_data():
             # freebsd-version was introduced in 10.0.
             # derive osrelease from kernelversion prior to that
             grains['osrelease'] = grains['kernelrelease'].split('-')[0]
+        grains.update(_bsd_cpudata(grains))
     if grains['kernel'] in ('OpenBSD', 'NetBSD'):
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
