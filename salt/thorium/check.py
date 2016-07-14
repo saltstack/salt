@@ -7,7 +7,7 @@ of having a command execution get gated by a check state via a requisite.
 '''
 # import python libs
 from __future__ import absolute_import
-import fnmatch
+import salt.utils
 
 
 def gt(name, value):
@@ -162,7 +162,9 @@ def event(name):
            'changes': {},
            'comment': '',
            'result': False}
+
     for event in __events__:
-        if fnmatch.fnmatch(event['tag'], name):
+        if salt.utils.expr_match(event['tag'], name):
             ret['result'] = True
+
     return ret
