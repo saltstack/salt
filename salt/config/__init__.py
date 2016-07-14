@@ -41,6 +41,13 @@ import salt.exceptions
 import salt.utils.sdb
 from salt.utils.locales import sdecode
 
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+    import salt.grains.core
+
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
@@ -59,6 +66,12 @@ if salt.utils.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
+
+# For the time being this will be a fixed calculation
+# TODO: Allow user configuration
+_DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
+# TODO: Reserved for future use
+_DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -443,6 +456,10 @@ VALID_OPTS = {
     'salt_event_pub_hwm': int,
     # ZMQ HWM for EventPublisher pub socket
     'event_publisher_pub_hwm': int,
+
+    # IPC buffer size
+    # Refs https://github.com/saltstack/salt/issues/34215
+    'ipc_write_buffer': _DEFLT_IPC_WBUFFER,
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
@@ -1539,6 +1556,24 @@ def _read_conf_file(path):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
+
+def _gather_buffer_space():
+    '''
+    Gather some system data and then calculate
+    buffer space.
+
+    Result is in bytes.
+    '''
+    if HAS_PSUTIL:
+        # Oh good, we have psutil. This will be quick.
+        total_mem = psutil.virtual_memory().total
+    else:
+        # We need to load up some grains. This will be slow.
+        os_data = salt.grains.core.os_data()
+        grains = salt.grains.core._memdata(os_data)
+        total_mem = grains['mem_total']
+    # Return the higher number between 5% of the system memory and 100MB
+    return min([total_mem * 0.05, 100 << 20])
 
 
 def _absolute_path(path, relative_to=None):
