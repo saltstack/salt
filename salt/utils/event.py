@@ -1107,14 +1107,19 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Returns True if event should be stored, else False
         '''
         tag = event['tag']
-        if tag in self.opts['event_return_whitelist']:
-            if tag not in self.opts['event_return_blacklist']:
-                return True
-            else:
-                return False  # Event was whitelisted and blacklisted
-        elif tag in self.opts['event_return_blacklist']:
-            return False
-        return True
+        if self.opts['event_return_whitelist']:
+            ret = False
+        else:
+            ret = True
+        for whitelist_match in self.opts['event_return_whitelist']:
+            if fnmatch.fnmatch(tag, whitelist_match):
+                ret = True
+                break
+        for blacklist_match in self.opts['event_return_blacklist']:
+            if fnmatch.fnmatch(tag, blacklist_match):
+                ret = False
+                break
+        return ret
 
 
 class StateFire(object):
