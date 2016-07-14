@@ -19,7 +19,6 @@ import integration
 import salt.loader
 import inspect
 import yaml
-import copy
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -34,15 +33,6 @@ class LoaderGlobalsTest(integration.ModuleCase):
 
     This is intended as a shorter term way of testing these so we don't break the loader
     '''
-
-    def setUp(self):
-        # Poor man's classSetUp (not supported in 2.6)
-        if not hasattr(self, 'minion_mods'):
-            self.opts = dict(copy.deepcopy(self.master_opts))
-            self.opts['grains'] = salt.loader.grains(self.opts)
-            self.utils = salt.loader.utils(self.opts)
-            self.minion_mods = salt.loader.minion_mods(self.opts, utils=self.utils)
-
     def _verify_globals(self, mod_dict):
         '''
         Verify that the globals listed in the doc string (from the test) are in these modules
@@ -74,7 +64,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __salt__
             - __context__
         '''
-        self._verify_globals(salt.loader.auth(self.opts))
+        self._verify_globals(salt.loader.auth(self.master_opts))
 
     def test_runners(self):
         '''
@@ -85,7 +75,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.runner(self.opts))
+        self._verify_globals(salt.loader.runner(self.master_opts))
 
     def test_returners(self):
         '''
@@ -96,7 +86,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.returners(self.opts, {}))
+        self._verify_globals(salt.loader.returners(self.master_opts, {}))
 
     def test_pillars(self):
         '''
@@ -107,13 +97,13 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.pillars(self.opts, {}))
+        self._verify_globals(salt.loader.pillars(self.master_opts, {}))
 
     def test_tops(self):
         '''
         Test that tops have: []
         '''
-        self._verify_globals(salt.loader.tops(self.opts))
+        self._verify_globals(salt.loader.tops(self.master_opts))
 
     def test_outputters(self):
         '''
@@ -123,13 +113,13 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.outputters(self.opts))
+        self._verify_globals(salt.loader.outputters(self.master_opts))
 
     def test_serializers(self):
         '''
         Test that serializers have: []
         '''
-        self._verify_globals(salt.loader.serializers(self.opts))
+        self._verify_globals(salt.loader.serializers(self.master_opts))
 
     def test_states(self):
         '''
@@ -140,7 +130,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.states(self.opts, self.minion_mods, {}))
+        self._verify_globals(salt.loader.states(self.master_opts, {}, {}))
 
     def test_renderers(self):
         '''
@@ -151,7 +141,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __opts__    # Minion configuration options
             - __context__ # Context dict shared amongst all modules of the same type
         '''
-        self._verify_globals(salt.loader.render(self.opts, {}))
+        self._verify_globals(salt.loader.render(self.master_opts, {}))
 
 
 if __name__ == '__main__':
