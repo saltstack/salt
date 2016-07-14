@@ -46,6 +46,7 @@ from functools import partial
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
+import salt.utils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -128,7 +129,10 @@ def _get_profile(service, region, key, keyid, profile):
 
     label = 'boto_{0}:'.format(service)
     if keyid:
-        cxkey = label + hashlib.md5(region + keyid + key).hexdigest()
+        hash_string = region + keyid + key
+        if six.PY3:
+            hash_string = salt.utils.to_bytes(hash_string)
+        cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
 
@@ -249,23 +253,27 @@ def get_error(e):
     # The returns from boto modules vary greatly between modules. We need to
     # assume that none of the data we're looking for exists.
     aws = {}
-    if hasattr(e, 'status'):
-        aws['status'] = e.status
-    if hasattr(e, 'reason'):
-        aws['reason'] = e.reason
-    if hasattr(e, 'message') and e.message != '':
-        aws['message'] = e.message
-    if hasattr(e, 'error_code') and e.error_code is not None:
-        aws['code'] = e.error_code
 
-    if 'message' in aws and 'reason' in aws:
-        message = '{0}: {1}'.format(aws['reason'], aws['message'])
-    elif 'message' in aws:
-        message = aws['message']
-    elif 'reason' in aws:
-        message = aws['reason']
-    else:
-        message = ''
+    message = ''
+    if six.PY2:
+        if hasattr(e, 'status'):
+            aws['status'] = e.status
+        if hasattr(e, 'reason'):
+            aws['reason'] = e.reason
+        if hasattr(e, 'message') and e.message != '':
+            aws['message'] = e.message
+        if hasattr(e, 'error_code') and e.error_code is not None:
+            aws['code'] = e.error_code
+
+        if 'message' in aws and 'reason' in aws:
+            message = '{0}: {1}'.format(aws['reason'], aws['message'])
+        elif 'message' in aws:
+            message = aws['message']
+        elif 'reason' in aws:
+            message = aws['reason']
+    elif six.PY3:
+        message = e.args[0]
+
     r = {'message': message}
     if aws:
         r['aws'] = aws
