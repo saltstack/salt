@@ -107,7 +107,19 @@ def __virtual__():
     return 'snapper' if 'snapper.diff' in __salt__ else False
 
 
-def baseline_snapshot(name, number=None, config='root', ignore=None):
+def _get_baseline_from_tag(tag):
+    '''
+    Returns the last created baseline snapshot marked with `tag`
+    '''
+    last_snapshot = None
+    for snapshot in __salt__['snapper.list_snapshots']():
+        if tag == snapshot['userdata'].get("baseline_tag"):
+            if not last_snapshot or last_snapshot['timestamp'] < snapshot['timestamp']:
+                last_snapshot = snapshot
+    return last_snapshot
+
+
+def baseline_snapshot(name, number=None, tag=None, config='root', ignore=None):
     '''
     Enforces that no file is modified comparing against a previously
     defined snapshot identified by number.
@@ -123,10 +135,23 @@ def baseline_snapshot(name, number=None, config='root', ignore=None):
            'name': name,
            'result': True}
 
-    if number is None:
+    if number is None and tag is None:
         ret.update({'result': False,
-                    'comment': 'Snapshot number needs to be specified'})
+                    'comment': 'Snapshot tag or number must be specified'})
         return ret
+
+    if number and tag:
+        ret.update({'result': False,
+                    'comment': 'Cannot use snapshot tag and number at the same time'})
+        return ret
+
+    if tag:
+        snapshot = _get_baseline_from_tag(tag)
+        if not snapshot:
+            ret.update({'result': False,
+                        'comment': 'Baseline tag "{0}" not found'.format(tag)})
+            return ret
+        number = snapshot['id']
 
     status = __salt__['snapper.status'](
         config, num_pre=number, num_post=0)
