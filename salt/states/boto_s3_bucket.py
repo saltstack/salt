@@ -486,7 +486,7 @@ def present(name, Bucket,
         return ret
 
     # bucket exists, ensure config matches
-    ret['comment'] = os.linesep.join([ret['comment'], 'S3 bucket {0} is present.'.format(Bucket)])
+    ret['comment'] = ' '.join([ret['comment'], 'S3 bucket {0} is present.'.format(Bucket)])
     ret['changes'] = {}
     _describe = __salt__['boto_s3_bucket.describe'](Bucket=Bucket,
                                  region=region, key=key, keyid=keyid, profile=profile)
