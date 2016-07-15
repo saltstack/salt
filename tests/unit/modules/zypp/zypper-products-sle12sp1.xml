@@ -32,7 +32,7 @@ provisioning.</description></product>
       SUSE Manager Tools provide packages required to connect to a
       SUSE Manager Server.
 	&lt;p&gt;</description></product>
-<product name="SLES" version="12.1" release="0" epoch="0" arch="x86_64" vendor="SUSE" summary="SUSE Linux Enterprise Server 12 SP1" repo="@System" productline="sles" registerrelease="" shortname="SLES12-SP1" flavor="DVD" isbase="true" installed="true"><endoflife time_t="1730332800" text="2024-10-31T01:00:00+01"/><registerflavor/><description>SUSE Linux Enterprise offers a comprehensive
+<product name="SLES" version="12.1" release="0" epoch="0" arch="x86_64" vendor="SUSE" summary="SUSE Linux Enterprise Server 12 SP1" repo="@System" productline="sles" registerrelease="123" shortname="SLES12-SP1" flavor="DVD" isbase="true" installed="true"><endoflife time_t="1730332800" text="2024-10-31T01:00:00+01"/><registerflavor/><description>SUSE Linux Enterprise offers a comprehensive
         suite of products built on a single code base.
         The platform addresses business needs from
         the smallest thin-client devices to the world&apos;s
