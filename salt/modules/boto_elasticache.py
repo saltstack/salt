@@ -49,7 +49,11 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import time
+
+# Import Salt libs
 import salt.ext.six as six
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)
 
@@ -64,8 +68,6 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-import salt.utils.odict as odict
 
 
 def __virtual__():
@@ -146,6 +148,30 @@ def create_replication_group(name, primary_cluster_id, replication_group_descrip
         log.error(msg)
         log.debug(e)
         return {}
+
+
+def delete_replication_group(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete an ElastiCache replication group.
+
+    CLI example::
+
+        salt myminion boto_elasticache.delete_replication_group my-replication-group \
+                region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    try:
+        conn.delete_replication_group(name)
+        msg = 'Deleted ElastiCache replication group {0}.'.format(name)
+        log.info(msg)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete ElastiCache replication group {0}'.format(name)
+        log.error(msg)
+        return False
 
 
 def describe_replication_group(name, region=None, key=None, keyid=None,
@@ -353,22 +379,35 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None, prof
         return False
 
 
-def create_subnet_group(name, description, subnet_ids, tags=None, region=None,
-                        key=None, keyid=None, profile=None):
+def create_subnet_group(name, description, subnet_ids=None, subnet_names=None, tags=None,
+                        region=None, key=None, keyid=None, profile=None):
     '''
     Create an ElastiCache subnet group
 
     CLI example to create an ElastiCache subnet group::
 
         salt myminion boto_elasticache.create_subnet_group my-subnet-group \
-            "group description" '[subnet-12345678, subnet-87654321]' \
+            "group description" subnet_ids='[subnet-12345678, subnet-87654321]' \
             region=us-east-1
     '''
+    if not _exactly_one((subnet_ids, subnet_names)):
+        raise SaltInvocationError("Exactly one of either 'subnet_ids' or "
+                                  "'subnet_names' must be provided.")
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     if subnet_group_exists(name, tags, region, key, keyid, profile):
         return True
+    if subnet_names:
+        subnet_ids = []
+        for n in subnet_names:
+            r = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
+                                                     region=region, key=key,
+                                                     keyid=keyid, profile=profile)
+            if 'id' not in r:
+                log.error('Couldn\'t resolve subnet name {0} to an ID.'.format(subnet_name))
+                return False
+            subnet_ids += [r['id']]
     try:
         ec = conn.create_cache_subnet_group(name, description, subnet_ids)
         if not ec:
