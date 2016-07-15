@@ -6,7 +6,7 @@ values are stored and computed, such as averages etc.
 
 # import python libs
 from __future__ import absolute_import, division
-import fnmatch
+import salt.utils
 
 __func_alias__ = {
     'set_': 'set',
@@ -26,7 +26,7 @@ def set_(name, add, match):
         __reg__[name] = {}
         __reg__[name]['val'] = set()
     for event in __events__:
-        if fnmatch.fnmatch(event['tag'], match):
+        if salt.utils.expr_match(event['tag'], match):
             val = event['data']['data'].get(add)
             if val is None:
                 val = 'None'
@@ -61,7 +61,7 @@ def list_(name, add, match, stamp=False):
         __reg__[name] = {}
         __reg__[name]['val'] = []
     for event in __events__:
-        if fnmatch.fnmatch(event['tag'], match):
+        if salt.utils.expr_match(event['tag'], match):
             item = {}
             for key in add:
                 if key in event['data']['data']:
@@ -88,7 +88,7 @@ def mean(name, add, match):
         __reg__[name]['total'] = 0
         __reg__[name]['count'] = 0
     for event in __events__:
-        if fnmatch.fnmatch(event['tag'], match):
+        if salt.utils.expr_match(event['tag'], match):
             if add in event['data']['data']:
                 try:
                     comp = int(event['data']['data'])
