@@ -42,21 +42,28 @@ DBUS_STATUS_MAP = {
     256: "ACL info changed",
 }
 
+SNAPPER_DBUS_OBJECT = 'org.opensuse.Snapper'
+SNAPPER_DBUS_PATH = '/org/opensuse/Snapper'
+SNAPPER_DBUS_INTERFACE = 'org.opensuse.Snapper'
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+bus = None  # pylint: disable=invalid-name
+snapper = None  # pylint: disable=invalid-name
+
 if HAS_DBUS:
     bus = dbus.SystemBus()  # pylint: disable=invalid-name
-    snapper = dbus.Interface(bus.get_object('org.opensuse.Snapper',  # pylint: disable=invalid-name
-                                            '/org/opensuse/Snapper'),
-                             dbus_interface='org.opensuse.Snapper')
+    if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
+        snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
+                                                SNAPPER_DBUS_PATH),
+                                 dbus_interface=SNAPPER_DBUS_INTERFACE)
 
 
 def __virtual__():
     if not HAS_DBUS:
         return (False, 'The snapper module cannot be loaded:'
                 ' missing python dbus module')
-    if not salt.utils.which('snapper'):
+    elif not snapper:
         return (False, 'The snapper module cannot be loaded:'
                 ' missing snapper')
     return 'snapper'
