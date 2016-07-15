@@ -35,9 +35,17 @@ def set_(name, add, match):
     return ret
 
 
-def list_(name, add, match):
+def list_(name, add, match, stamp=False):
     '''
-    Add to the named list the specified values
+    Add the specified values to the named list
+
+    If ``stamp`` is True, then the timestamp from the event will also be added
+
+    foo:
+      reg.list:
+        - add: bar
+        - match: my/custom/event
+        - stamp: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -54,6 +62,8 @@ def list_(name, add, match):
             for key in add:
                 if key in event['data']['data']:
                     item[key] = event['data']['data'][key]
+                    if stamp is True:
+                        item['time'] = event['data']['_stamp']
             __reg__[name]['val'].append(item)
     return ret
 
