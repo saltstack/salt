@@ -661,3 +661,27 @@ def diff_jid(jid, config='root'):
     '''
     pre_snapshot, post_snapshot = _get_jid_snapshots(jid, config=config)
     return diff(config, num_pre=pre_snapshot, num_post=post_snapshot)
+
+
+def create_baseline(tag="baseline", config='root'):
+    '''
+    Creates a snapshot marked as baseline
+
+    tag
+        Tag name for the baseline
+
+    config
+        Configuration name.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.create_baseline
+        salt '*' snapper.create_baseline my_custom_baseline
+    '''
+    return __salt__['snapper.create_snapshot'](config=config,
+                                               snapshot_type='single',
+                                               description="baseline snapshot",
+                                               cleanup_algorithm="number",
+                                               userdata={"baseline_tag": tag})
