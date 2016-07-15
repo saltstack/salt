@@ -52,7 +52,7 @@ import time
 
 # Import Salt libs
 import salt.ext.six as six
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)

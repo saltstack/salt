@@ -76,6 +76,9 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -301,7 +304,7 @@ def subnet_group_present(name, subnet_ids=None, subnet_groups=None, description=
             ret['result'] = None
             return ret
         created = __salt__['boto_elasticache.create_subnet_group'](name=name, subnet_ids=subnet_ids,
-                                                                   subnet_names=subnet_nanes,
+                                                                   subnet_names=subnet_names,
                                                                    description=description, tags=tags,
                                                                    region=region, key=key, keyid=keyid,
                                                                    profile=profile)
@@ -485,4 +488,3 @@ def replication_group_absent(name, tags=None, region=None, key=None, keyid=None,
     ret['comment'] = 'ElastiCache replication group {0} deleted.'.format(name)
     log.info(ret['comment'])
     return ret
-
