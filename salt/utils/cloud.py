@@ -2343,43 +2343,6 @@ def wait_for_ip(update_callback,
                      'now {0}s.'.format(interval))
 
 
-def simple_types_filter(data):
-    '''
-    Convert the data list, dictionary into simple types, i.e., int, float, string,
-    bool, etc.
-    '''
-    if data is None:
-        return data
-
-    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
-    simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
-
-    if isinstance(data, (list, tuple)):
-        simplearray = []
-        for value in data:
-            if value is not None:
-                if isinstance(value, (dict, list)):
-                    value = simple_types_filter(value)
-                elif not isinstance(value, simpletypes_values):
-                    value = repr(value)
-            simplearray.append(value)
-        return simplearray
-
-    if isinstance(data, dict):
-        simpledict = {}
-        for key, value in six.iteritems(data):
-            if key is not None and not isinstance(key, simpletypes_keys):
-                key = repr(key)
-            if value is not None and isinstance(value, (dict, list, tuple)):
-                value = simple_types_filter(value)
-            elif value is not None and not isinstance(value, simpletypes_values):
-                value = repr(value)
-            simpledict[key] = value
-        return simpledict
-
-    return data
-
-
 def list_nodes_select(nodes, selection, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields

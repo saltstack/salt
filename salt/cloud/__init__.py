@@ -252,7 +252,7 @@ class CloudClient(object):
         List all available sizes in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.size_list(provider)
         )
 
@@ -261,7 +261,7 @@ class CloudClient(object):
         List all available images in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.image_list(provider)
         )
 
@@ -270,7 +270,7 @@ class CloudClient(object):
         List all available locations in configured cloud systems
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.location_list(provider)
         )
 
@@ -344,7 +344,7 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
         if isinstance(names, str):
             names = names.split(',')
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.run_profile(profile, names, vm_overrides=vm_overrides)
         )
 
@@ -356,7 +356,7 @@ class CloudClient(object):
         kwarg.update(kwargs)
         mapper = salt.cloud.Map(self._opts_defaults(**kwarg))
         dmap = mapper.map_data()
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.run_map(dmap)
         )
 
@@ -367,7 +367,7 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults(destroy=True))
         if isinstance(names, str):
             names = names.split(',')
-        return salt.utils.cloud.simple_types_filter(
+        return salt.utils.simple_types_filter(
             mapper.destroy(names)
         )
 
@@ -404,7 +404,7 @@ class CloudClient(object):
             vm_['name'] = name
             vm_['driver'] = provider
             vm_['profile'] = None
-            ret[name] = salt.utils.cloud.simple_types_filter(
+            ret[name] = salt.utils.simple_types_filter(
                 mapper.create(vm_))
         return ret
 
@@ -439,7 +439,7 @@ class CloudClient(object):
             extra_['provider'] = provider
             extra_['profile'] = None
             extra_['action'] = action
-            ret[name] = salt.utils.cloud.simple_types_filter(
+            ret[name] = salt.utils.simple_types_filter(
                 mapper.extras(extra_)
             )
         return ret
@@ -2320,7 +2320,7 @@ def create_multiprocessing(parallel_data, queue=None):
         output.pop('deploy_kwargs', None)
 
     return {
-        parallel_data['name']: salt.utils.cloud.simple_types_filter(output)
+        parallel_data['name']: salt.utils.simple_types_filter(output)
     }
 
 
@@ -2356,7 +2356,7 @@ def destroy_multiprocessing(parallel_data, queue=None):
         return {parallel_data['name']: {'Error': str(exc)}}
 
     return {
-        parallel_data['name']: salt.utils.cloud.simple_types_filter(output)
+        parallel_data['name']: salt.utils.simple_types_filter(output)
     }
 
 
@@ -2379,7 +2379,7 @@ def run_parallel_map_providers_query(data, queue=None):
             return (
                 data['alias'],
                 data['driver'],
-                salt.utils.cloud.simple_types_filter(
+                salt.utils.simple_types_filter(
                     cloud.clouds[data['fun']]()
                 )
             )
