@@ -44,13 +44,13 @@ the default location. For example:
     alternative.smtp.password: saltdev
     alternative.smtp.tls: True
 
-To use the SMTP returner, append '--return smtp' to the salt command.
+To use the SMTP returner, append '--return smtp' to the ``salt`` command.
 
 .. code-block:: bash
 
     salt '*' test.ping --return smtp
 
-To use the alternative configuration, append '--return_config alternative' to the salt command.
+To use the alternative configuration, append '--return_config alternative' to the ``salt`` command.
 
 .. versionadded:: 2015.5.0
 
@@ -58,7 +58,8 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
-To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the
+``salt`` command.
 
 .. versionadded:: 2016.3.0
 
@@ -73,6 +74,35 @@ that prints any email it receives to the console.
 .. code-block:: python
 
     python -m smtpd -n -c DebuggingServer localhost:1025
+
+.. versionadded:: Carbon
+
+It is possible to send emails with selected Salt events by configuring ``event_return`` option
+for Salt Master. For example:
+
+.. code-block:: yaml
+
+    event_return: smtp
+
+    event_return_whitelist:
+      - salt/key
+
+    smtp.from: me@example.net
+    smtp.to: you@example.com
+    smtp.host: localhost
+    smtp.subject: 'Salt Master {{act}}ed key from Minion ID: {{id}}'
+    smtp.template: /srv/salt/templates/email.j2
+
+Also you need to create additional file with email body template:
+
+.. code-block:: yaml
+
+    # /srv/salt/templates/email.j2
+    act: {{act}}
+    id: {{id}}
+    result: {{result}}
+
+This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 '''
 
 # Import python libs
@@ -220,3 +250,15 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def event_return(events):
+    '''
+    Return event data via SMTP
+    '''
+
+    for event in events:
+        ret = event.get('data', False)
+
+        if ret:
+            returner(ret)
