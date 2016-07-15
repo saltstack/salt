@@ -16,6 +16,8 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
+from contextlib import nested
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
@@ -25,6 +27,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
+dockerng_mod.__opts__ = {}
 
 
 def _docker_py_version():
@@ -619,6 +622,123 @@ class DockerngTestCase(TestCase):
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
                                             'old': 'stopped'}})
+
+    def test_sls_build(self, *args):
+        '''
+        test build sls image.
+        '''
+        docker_start_mock = MagicMock(
+            return_value={})
+        docker_create_mock = MagicMock(
+            return_value={'Id': 'ID', 'Name': 'NAME'})
+        docker_stop_mock = MagicMock(
+            return_value={'state': {'old': 'running', 'new': 'stopped'},
+                          'result': True})
+        docker_commit_mock = MagicMock(
+            return_value={'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42})
+
+        docker_sls_mock = MagicMock(
+            return_value={
+                "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
+                    "comment": "File /etc/test.sh is in the correct state",
+                    "name": "/etc/test.sh",
+                    "start_time": "07:04:26.834792",
+                    "result": True,
+                    "duration": 13.492,
+                    "__run_num__": 0,
+                    "changes": {}
+                },
+                "test_|-always-passes_|-foo_|-succeed_without_changes": {
+                    "comment": "Success!",
+                    "name": "foo",
+                    "start_time": "07:04:26.848915",
+                    "result": True,
+                    "duration": 0.363,
+                    "__run_num__": 1,
+                    "changes": {}
+                }
+            })
+
+        ret = None
+        with patch.dict(dockerng_mod.__salt__, {
+                'dockerng.start': docker_start_mock,
+                'dockerng.create': docker_create_mock,
+                'dockerng.stop': docker_stop_mock,
+                'dockerng.commit': docker_commit_mock,
+                'dockerng.sls': docker_sls_mock}):
+            ret = dockerng_mod.sls_build(
+                'foo',
+                mods='foo',
+            )
+        docker_create_mock.assert_called_once_with(
+            cmd='/usr/bin/sleep infinity',
+            image='fedora', interactive=True, tty=True)
+        docker_start_mock.assert_called_once_with('ID')
+        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_stop_mock.assert_called_once_with('ID')
+        docker_commit_mock.assert_called_once_with('ID', 'foo')
+        self.assertEqual(
+            {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
+
+    def test_call_success(self):
+        '''
+        test module calling inside containers
+        '''
+        docker_run_all_mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{"retcode": 0, "comment": "container cmd"}',
+                'stderr': 'err',
+            })
+        docker_copy_to_mock = MagicMock(
+            return_value={
+                'retcode': 0
+            })
+        client = Mock()
+        client.put_archive = Mock()
+
+        with nested(
+                patch.dict(
+                    dockerng_mod.__opts__, {'cachedir': '/tmp'}),
+                patch.dict(
+                    dockerng_mod.__salt__, {
+                        'dockerng.run_all': docker_run_all_mock,
+                        'dockerng.copy_to': docker_copy_to_mock,
+                    }),
+                patch.dict(
+                    dockerng_mod.__context__, {
+                        'docker.client': client
+                    }
+                )
+        ):
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = dockerng_mod.call(
+                    'ID',
+                    'test.arg',
+                    1, 2,
+                    arg1='val1')
+
+        # Check that the directory is different each time
+        # [ call(name, [args]), ...
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
+                            docker_run_all_mock.mock_calls[3][1][1])
+
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[5][1][1])
+
+        self.assertEqual(
+            {"retcode": 0, "comment": "container cmd"}, ret)
 
 
 if __name__ == '__main__':

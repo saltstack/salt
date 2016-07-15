@@ -253,17 +253,21 @@ import fnmatch
 import functools
 import gzip
 import inspect as inspect_module
+import io
 import json
 import logging
 import os
+import os.path
 import pipes
 import re
 import shutil
 import string
 import sys
 import time
+import uuid
 import base64
 import errno
+from subprocess import list2cmdline
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -271,6 +275,14 @@ from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-bui
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
+import salt.utils.thin
+import salt.pillar
+import salt.exceptions
+import salt.fileclient
+
+from salt.state import HighState
+import salt.client.ssh.state
+
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -5542,3 +5554,252 @@ def script_retcode(name,
                    ignore_retcode=ignore_retcode,
                    use_vt=use_vt,
                    keep_env=keep_env)['retcode']
+
+
+def _mk_fileclient():
+    '''
+    Create a file client and add it to the context.
+    '''
+    if 'cp.fileclient' not in __context__:
+        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+
+
+def _generate_tmp_path():
+    return os.path.join(
+        '/tmp',
+        'salt.dockerng.{0}'.format(uuid.uuid4().hex[:6]))
+
+
+def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
+    '''
+    Prepares a self contained tarball that has the state
+    to be applied in the container
+    '''
+    chunks = _compile_state(mods, saltenv)
+    # reuse it from salt.ssh, however this function should
+    # be somewhere else
+    refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    _mk_fileclient()
+    trans_tar = salt.client.ssh.state.prep_trans_tar(
+        __context__['cp.fileclient'],
+        chunks, refs, pillar=pillar, id_=name)
+    return trans_tar
+
+
+def _compile_state(mods=None, saltenv='base'):
+    '''
+    Generates the chunks of lowdata from the list of modules
+    '''
+    st_ = HighState(__opts__)
+
+    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
+    errors += ext_errors
+    errors += st_.state.verify_high(high_data)
+    if errors:
+        return errors
+
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
+    errors += req_in_errors
+    high_data = st_.state.apply_exclude(high_data)
+    # Verify that the high data is structurally sound
+    if errors:
+        return errors
+
+    # Compile and verify the raw chunks
+    return st_.state.compile_high_data(high_data)
+
+
+def _gather_pillar(pillarenv, pillar_override, **grains):
+    '''
+    Gathers pillar with a custom set of grains, which should
+    be first retrieved from the container
+    '''
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        grains,
+        # Not sure if these two are correct
+        __opts__['id'],
+        __opts__['environment'],
+        pillar=pillar_override,
+        pillarenv=pillarenv
+    )
+    ret = pillar.compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        ret.update(pillar_override)
+    return ret
+
+
+def call(name, function, *args, **kwargs):
+    '''
+    Executes a salt function inside a container
+
+    .. code-block:: bash
+
+        salt myminion dockerng.call test.ping
+
+        salt myminion test.arg arg1 arg2 key1=val1
+
+    The container does not need to have Salt installed, but Python
+    is required.
+
+    .. versionadded:: Carbon
+
+    '''
+    # where to put the salt-thin
+    thin_dest_path = _generate_tmp_path()
+    mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
+
+    # put_archive reqires the path to exist
+    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_thin_argv))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
+    if function is None:
+        raise CommandExecutionError('Missing function parameter')
+
+    # move salt into the container
+    thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'])
+    with io.open(thin_path, 'rb') as file:
+        _client_wrapper('put_archive', name, thin_dest_path, file)
+    try:
+        salt_argv = [
+            'python',
+            os.path.join(thin_dest_path, 'salt-call'),
+            '--metadata',
+            '--local',
+            '--out', 'json',
+            '-l', 'quiet',
+            '--',
+            function
+        ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
+
+        ret = __salt__['dockerng.run_all'](name,
+                                           list2cmdline(map(str, salt_argv)))
+        # python not found
+        if ret['retcode'] != 0:
+            raise CommandExecutionError(ret['stderr'])
+
+        # process "real" result in stdout
+        try:
+            data = salt.utils.find_json(ret['stdout'])
+            local = data.get('local', data)
+            if isinstance(local, dict):
+                if 'retcode' in local:
+                    __context__['retcode'] = local['retcode']
+            return local.get('return', data)
+        except ValueError:
+            return {'result': False,
+                    'comment': 'Can\'t parse container command output'}
+    finally:
+        # delete the thin dir so that it does not end in the image
+        rm_thin_argv = ['rm', '-rf', thin_dest_path]
+        __salt__['dockerng.run_all'](name, list2cmdline(rm_thin_argv))
+
+
+def sls(name, mods=None, saltenv='base', **kwargs):
+    '''
+    Apply the highstate defined by the specified modules.
+
+    For example, if your master defines the states ``web`` and ``rails``, you
+    can apply them to a container:
+    states by doing:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.sls compassionate_mirzakhani mods=rails,web
+
+    The container does not need to have Salt installed, but Python
+    is required.
+
+    .. versionadded:: Carbon
+    '''
+    mods = [item.strip() for item in mods.split(',')] if mods else []
+
+    # gather grains from the container
+    grains = __salt__['dockerng.call'](name, 'grains.items')
+
+    # compile pillar with container grains
+    pillar = _gather_pillar(saltenv, {}, **grains)
+
+    trans_tar = _prepare_trans_tar(name, mods=mods, saltenv=saltenv, pillar=pillar)
+
+    # where to put the salt trans tar
+    trans_dest_path = _generate_tmp_path()
+    mkdirp_trans_argv = ['mkdir', '-p', trans_dest_path]
+    # put_archive requires the path to exist
+    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_trans_argv))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
+    ret = None
+    try:
+        trans_tar_sha256 = salt.utils.get_hash(trans_tar, 'sha256')
+        __salt__['dockerng.copy_to'](name, trans_tar,
+                                     os.path.join(trans_dest_path, 'salt_state.tgz'),
+                                     exec_driver='nsenter',
+                                     overwrite=True)
+
+        # Now execute the state into the container
+        ret = __salt__['dockerng.call'](name, 'state.pkg', os.path.join(trans_dest_path, 'salt_state.tgz'),
+                                        trans_tar_sha256, 'sha256')
+    finally:
+        # delete the trans dir so that it does not end in the image
+        rm_trans_argv = ['rm', '-rf', trans_dest_path]
+        __salt__['dockerng.run_all'](name, list2cmdline(rm_trans_argv))
+        # delete the local version of the trans tar
+        try:
+            os.remove(trans_tar)
+        except (IOError, OSError) as exc:
+            log.error(
+                'dockerng.sls: Unable to remove state tarball \'{0}\': {1}'.format(
+                    trans_tar,
+                    exc
+                )
+            )
+    if not isinstance(ret, dict):
+        __context__['retcode'] = 1
+    elif not salt.utils.check_state_result(ret):
+        __context__['retcode'] = 2
+    else:
+        __context__['retcode'] = 0
+    return ret
+
+
+def sls_build(name, base='fedora', mods=None, saltenv='base',
+              **kwargs):
+    '''
+    Build a docker image using the specified sls modules and base image.
+
+    For example, if your master defines the states ``web`` and ``rails``, you
+    can build a docker image inside myminion that results of applying those
+    states by doing:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.sls_build imgname base=mybase mods=rails,web
+
+    The base image does not need to have Salt installed, but Python
+    is required.
+
+    .. versionadded:: Carbon
+    '''
+
+    # start a new container
+    ret = __salt__['dockerng.create'](image=base,
+                                      cmd='/usr/bin/sleep infinity',
+                                      interactive=True, tty=True)
+    id_ = ret['Id']
+    try:
+        __salt__['dockerng.start'](id_)
+
+        # Now execute the state into the container
+        ret = __salt__['dockerng.sls'](id_, mods, saltenv, **kwargs)
+        # fail if the state was not successful
+        if not salt.utils.check_state_result(ret):
+            raise CommandExecutionError(ret)
+    finally:
+        __salt__['dockerng.stop'](id_)
+
+    return __salt__['dockerng.commit'](id_, name)
+
