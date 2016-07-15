@@ -41,11 +41,15 @@ def list_(name, add, match, stamp=False):
 
     If ``stamp`` is True, then the timestamp from the event will also be added
 
-    foo:
-      reg.list:
-        - add: bar
-        - match: my/custom/event
-        - stamp: True
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.list:
+            - add: bar
+            - match: my/custom/event
+            - stamp: True
     '''
     ret = {'name': name,
            'changes': {},
