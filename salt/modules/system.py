@@ -127,7 +127,7 @@ def _date_bin_set_datetime(new_date):
     # This will modify the new_date to be the equivalent time in UTC
     if new_date.utcoffset() is not None:
         new_date = new_date - new_date.utcoffset()
-        new_date = new_date.replace(tzinfo=FixedOffset(0))
+        new_date = new_date.replace(tzinfo=_FixedOffset(0))
         cmd.append('-u')
 
     # the date can be set in the following format:
@@ -203,7 +203,7 @@ def _get_offset_time(utc_offset):
         minutes = _offset_to_min(utc_offset)
         offset = timedelta(minutes=minutes)
         offset_time = datetime.utcnow() + offset
-        offset_time = offset_time.replace(tzinfo=FixedOffset(minutes))
+        offset_time = offset_time.replace(tzinfo=_FixedOffset(minutes))
     else:
         offset_time = datetime.now()
     return offset_time
@@ -409,9 +409,9 @@ def set_system_date(newdate, utc_offset=None):
 # Class from: <https://docs.python.org/2.7/library/datetime.html>
 
 # A class building tzinfo objects for fixed-offset time zones.
-# Note that FixedOffset(0) is a way to build a UTC tzinfo object.
+# Note that _FixedOffset(0) is a way to build a UTC tzinfo object.
 
-class FixedOffset(tzinfo):
+class _FixedOffset(tzinfo):
     """
     Fixed offset in minutes east from UTC.
     """
