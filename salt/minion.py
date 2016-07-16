@@ -397,7 +397,7 @@ class MinionBase(object):
         if 'config.merge' in functions:
             b_conf = functions['config.merge']('beacons', self.opts['beacons'], omit_opts=True)
             if b_conf:
-                return self.beacons.process(b_conf)  # pylint: disable=no-member
+                return self.beacons.process(b_conf, self.opts['grains'])  # pylint: disable=no-member
         return []
 
     @tornado.gen.coroutine
