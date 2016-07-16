@@ -12,7 +12,7 @@ Module to import docker-compose via saltstack
 
 Introduction
 ------------
-This module allows to deal with docker-compose file in a directory.
+This module allows one to deal with docker-compose file in a directory.
 
 This is  a first version only, the following commands are missing at the moment
 but will be built later on if the community is interested in this module:
@@ -93,7 +93,7 @@ Functions
 - Manage containers image:
     - :py:func:`dockercompose.pull <salt.modules.dockercompose.pull>`
     - :py:func:`dockercompose.build <salt.modules.dockercompose.build>`
-- Gather informations about containers:
+- Gather information about containers:
     - :py:func:`dockercompose.ps <salt.modules.dockercompose.ps>`
 
 Detailed Function Documentation
@@ -357,7 +357,7 @@ def build(path, service_names=None):
     python list, if omitted build images for all containers. Please note
     that at the moment the module does not allow you to upload your Dockerfile,
     nor any other file you could need with your docker-compose.yml, you will
-    have to make sure the files you need are actually in the directory sepcified
+    have to make sure the files you need are actually in the directory specified
     in the `build` keyword
 
     path
