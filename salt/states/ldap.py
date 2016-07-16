@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 
 def managed(name, entries, connect_spec=None):
-    '''Ensure the existance (or not) of LDAP entries and their attributes
+    '''Ensure the existence (or not) of LDAP entries and their attributes
 
     Example:
 

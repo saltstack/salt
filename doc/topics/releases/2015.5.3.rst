@@ -45,7 +45,7 @@ Changes:
   * a983942 Merge pull request `#25095`_ from jfindlay/win_groupadd_test
   * 564dffd depend on win libs rather than mocking them
 
-  * 9b9aeb8 resolved all erors.
+  * 9b9aeb8 resolved all errors.
 
   * aaf8935 adding win_groupadd unit test case.
 
