@@ -518,7 +518,7 @@ def faulty():
 
 def healthy():
     '''
-    Return wether fmadm is reporting faults
+    Return whether fmadm is reporting faults
 
     CLI Example:
 

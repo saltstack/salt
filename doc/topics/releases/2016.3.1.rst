@@ -34,7 +34,7 @@ Changes:
 
 - **PR** `#33851`_: (*ticosax*) [dockerng] Add support for edge case when `Cmd` and `Entrypoint` can't be blanked
 
-- **PR** `#33821`_: (*cachedout*) Restore deafault log level to warning
+- **PR** `#33821`_: (*cachedout*) Restore default log level to warning
 
 - **PR** `#33767`_: (*amontalban*) Fix `#33604`_ implementation when 'geom disk list' does not output rotat…
 

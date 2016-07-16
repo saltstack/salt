@@ -515,7 +515,7 @@ authentication every ten seconds by default.
 
 .. code-block:: yaml
 
-    {# Ink server faild to authenticate -- remove accepted key #}
+    {# Ink server failed to authenticate -- remove accepted key #}
     {% if not data['result'] and data['id'].startswith('ink') %}
     minion_remove:
       wheel.key.delete:

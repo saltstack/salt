@@ -345,7 +345,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
         optional zpool
 
     .. note::
-        multiple storage pool can be provded as a space seperated list
+        multiple storage pool can be provded as a space separated list
 
     CLI Example:
 
@@ -1085,7 +1085,7 @@ def import_(zpool=None, new_name=None, **kwargs):
     altroot : string
         equivalent to "-o cachefile=none,altroot=root"
     dir : string
-        searches for devices or files in dir, mutiple dirs can be specified as follows:: dir="dir1,dir2"
+        searches for devices or files in dir, multiple dirs can be specified as follows:: dir="dir1,dir2"
     no_mount : boolean
         import the pool without mounting any file systems.
     only_destroyed : boolean

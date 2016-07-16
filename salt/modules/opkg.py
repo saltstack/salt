@@ -12,7 +12,7 @@ Support for Opkg
 
 .. note::
 
-    For version comparision support, the ``opkg-utils`` package must be
+    For version comparison support, the ``opkg-utils`` package must be
     installed.
 
 '''
