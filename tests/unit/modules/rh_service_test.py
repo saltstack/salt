@@ -103,7 +103,7 @@ class RhServiceTestCase(TestCase):
             '''.format(name))
         xinetd_out = textwrap.dedent('''\
             xinetd based services:
-                    {0}:  on
+                    {0}  on
             '''.format(name))
 
         with patch.object(rh_service, '_runlevel', MagicMock(return_value=3)):
