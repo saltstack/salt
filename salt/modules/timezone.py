@@ -142,10 +142,10 @@ def get_zone():
         for family in ('RedHat', 'SUSE'):
             if family in os_family:
                 return _get_zone_sysconfig()
-        for family in ('Debian', 'Gentoo', 'NILinuxRT'):
+        for family in ('Debian', 'Gentoo'):
             if family in os_family:
                 return _get_zone_etc_timezone()
-        if os_family in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if os_family in ('FreeBSD', 'OpenBSD', 'NetBSD', 'NILinuxRT'):
             return _get_zone_etc_localtime()
         elif 'Solaris' in os_family:
             return _get_zone_solaris()
