@@ -291,6 +291,8 @@ def present(name,
 
     special
         A special keyword to specify periodicity (eg. @reboot, @hourly...)
+
+        .. versionadded:: 2016.3.0
     '''
     name = ' '.join(name.strip().split())
     if identifier is False:
