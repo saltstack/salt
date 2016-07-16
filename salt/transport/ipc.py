@@ -512,7 +512,7 @@ class IPCMessagePublisher(object):
             stream = IOStream(
                 connection,
                 io_loop=self.io_loop,
-                max_write_buffer_size = self.opts['ipc_write_buffer']
+                max_write_buffer_size=self.opts['ipc_write_buffer']
             )
             self.streams.add(stream)
         except Exception as exc:

@@ -67,6 +67,7 @@ else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
 
+
 def _gather_buffer_space():
     '''
     Gather some system data and then calculate
@@ -1575,7 +1576,6 @@ def _read_conf_file(path):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
-
 
 
 def _absolute_path(path, relative_to=None):
