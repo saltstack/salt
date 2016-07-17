@@ -419,3 +419,42 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
                         containers.append(value)
 
     return proxy_lists
+
+
+def valid():
+    '''
+    List valid entries in mine configuration.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.valid
+    '''
+    m_data = __salt__['config.merge']('mine_functions', {})
+    # If we don't have any mine functions configured, then we should just bail out
+    if not m_data:
+        return
+
+    data = {}
+    for func in m_data:
+        if m_data[func] and isinstance(m_data[func], dict):
+            mine_func = m_data[func].pop('mine_function', func)
+            if not _mine_function_available(mine_func):
+                continue
+            data[func] = {mine_func: m_data[func]}
+        elif m_data[func] and isinstance(m_data[func], list):
+            mine_func = func
+            if isinstance(m_data[func][0], dict) and 'mine_function' in m_data[func][0]:
+                mine_func = m_data[func][0]['mine_function']
+                m_data[func].pop(0)
+
+            if not _mine_function_available(mine_func):
+                continue
+            data[func] = {mine_func: m_data[func]}
+        else:
+            if not _mine_function_available(func):
+                continue
+            data[func] = m_data[func]
+
+    return data
