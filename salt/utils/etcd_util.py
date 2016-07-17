@@ -50,6 +50,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
@@ -205,7 +206,7 @@ class EtcdClient(object):
             return {path: {}}
         path = path.strip('/')
         flat = {}
-        for k, v in data.iteritems():
+        for k, v in six.iteritems(data):
             k = k.strip('/')
             if path:
                 p = '/{0}/{1}'.format(path, k)
@@ -224,7 +225,7 @@ class EtcdClient(object):
             return None
         fields = self._flatten(fields, path)
         keys = {}
-        for k, v in fields.iteritems():
+        for k, v in six.iteritems(fields):
             is_dir = False
             if isinstance(v, dict):
                 is_dir = True
