@@ -1615,7 +1615,7 @@ def _get_status_descr_by_id(status_id):
     status_id
         linode VM status ID
     '''
-    for status_name, status_data in LINODE_STATUS.iteritems():
+    for status_name, status_data in six.iteritems(LINODE_STATUS):
         if status_data['code'] == int(status_id):
             return status_data['descr']
     return LINODE_STATUS.get(status_id, None)
