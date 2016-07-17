@@ -1064,7 +1064,11 @@ def check_extra_requirements(pkgname, pkgver):
     else:
         return True
 
-    cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
+    try:
+        cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
+    except portage.exception.InvalidAtom as iae:
+        log.error('Unable to find a matching package for {0}: ({1})'.format(atom, iae))
+        return False
 
     if cpv == '':
         return False
