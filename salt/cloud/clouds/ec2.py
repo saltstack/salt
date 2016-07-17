@@ -1434,7 +1434,7 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
 
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
               'NetworkInterfaceId': eni_id}
-    for k, v in properties.iteritems():
+    for k, v in six.iteritems(properties):
         params[k] = v
 
     retries = 5
