@@ -302,6 +302,12 @@ class SaltWheelError(SaltException):
     '''
 
 
+class SaltConfigurationError(SaltException):
+    '''
+    Configuration error
+    '''
+
+
 class SaltSystemExit(SystemExit):
     '''
     This exception is raised when an unsolvable problem is found. There's
