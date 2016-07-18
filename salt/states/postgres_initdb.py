@@ -7,10 +7,11 @@ The postgres_initdb module is used to initialize the postgresql
 data directory.
 
 **NOTE:** On some Linux distributions, if you've installed postgresql
-from the official postgres repositories, this state will report that the  
-*initdb* command can't be found in your path. 
-You can create a symlink from /usr/pgsql-<version>/bin/initdb
-to /usr/bin/initdb.
+from the official postgres repositories, this state will report that the
+*initdb* command can't be found in your path.
+
+You can create a symlink from ``/usr/pgsql-<version>/bin/initdb``
+to ``/usr/bin/initdb``.
 
 .. versionadded:: 2016.3.0
 
