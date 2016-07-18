@@ -331,28 +331,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
 
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hostname(self):
-        '''
-        Test calling salt.config.get_id() and falling back to looking at
-        /etc/hostname.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
-
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
-    def test_get_id_etc_hosts(self):
-        '''
-        Test calling salt.config.get_id() and falling back all the way to
-        looking up data from /etc/hosts.
-        '''
-        with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
-            self.assertEqual(
-                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
-            )
-
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
     # cloud_config tests
