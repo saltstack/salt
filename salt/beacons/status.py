@@ -29,4 +29,10 @@ def beacon(config):
     Just say that we are ok!
     '''
     ctime = datetime.datetime.utcnow().isoformat()
-    return [{'tag': ctime}]
+    data = {'loadavg': __salt__.status.loadavg(),
+            'cpustats': __salt__.status.cpustats(),
+            'meminfo': __salt__.status.meminfo(),
+            'vmstats': __salt__.status.vmstats(),
+            'time': __salt__.status.time(),
+            }
+    return [{'tag': ctime, 'data': data}]
