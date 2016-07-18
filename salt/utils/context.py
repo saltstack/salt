@@ -69,14 +69,14 @@ class ContextDict(collections.MutableMapping):
     def __init__(self, **data):
         # state should be thread local, so this object can be threadsafe
         self._state = threading.local()
-        # variable for the overriden data
+        # variable for the overridden data
         self._state.data = None
         self.global_data = {}
 
     @property
     def active(self):
-        '''Determine if this ContextDict is currently overriden
-        Since the ContextDict can be overriden in each thread, we check whether
+        '''Determine if this ContextDict is currently overridden
+        Since the ContextDict can be overridden in each thread, we check whether
         the _state.data is set or not.
         '''
         try:

@@ -77,8 +77,8 @@ You can also provide a list of config files:
 Select config files through grains|pillar|opts matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can also opt for a much more flexible configuration: PillarStack allows to
-select the config files for the current minion based on matching values from
+You can also opt for a much more flexible configuration: PillarStack allows one
+to select the config files for the current minion based on matching values from
 either grains, or pillar, or opts objects.
 
 Here is an example of such a configuration, which should speak by itself:

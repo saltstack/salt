@@ -406,10 +406,10 @@ def lookup(search=None, order=None, one=False):
 
 def sysrq(vm, action='nmi', key='uuid'):
     '''
-    Send non-maskable interupt to vm or capture a screenshot
+    Send non-maskable interrupt to vm or capture a screenshot
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     action : string
         nmi or screenshot -- Default: nmi
     key : string [uuid|alias|hostname]
@@ -490,7 +490,7 @@ def get(vm, key='uuid'):
     Output the JSON object describing a VM
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     key : string [uuid|alias|hostname]
         value type of 'vm' parameter
 
@@ -527,7 +527,7 @@ def info(vm, info_type='all', key='uuid'):
     Lookup info on running kvm
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     info_type : string [all|block|blockstats|chardev|cpus|kvm|pci|spice|version|vnc]
         info type to return
     key : string [uuid|alias|hostname]
@@ -572,7 +572,7 @@ def create_snapshot(vm, name, key='uuid'):
     Create snapshot of a vm
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     name : string
         snapshot name
             The snapname must be 64 characters or less
@@ -625,7 +625,7 @@ def delete_snapshot(vm, name, key='uuid'):
     Delete snapshot of a vm
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     name : string
         snapshot name
             The snapname must be 64 characters or less
@@ -675,7 +675,7 @@ def rollback_snapshot(vm, name, key='uuid'):
     Rollback snapshot of a vm
 
     vm : string
-        vm to be targetted
+        vm to be targeted
     name : string
         snapshot name
             The snapname must be 64 characters or less

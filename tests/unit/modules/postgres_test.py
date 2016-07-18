@@ -937,7 +937,7 @@ class PostgresTestCase(TestCase):
     @patch('salt.modules.postgres.language_exists', Mock(return_value=True))
     def test_language_exists(self):
         '''
-        Test language existance check
+        Test language existence check
         '''
         ret = postgres.language_exists(
             'sql',

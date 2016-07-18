@@ -18,7 +18,7 @@ Installation from the SUSE Repository
 Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
 With the release of SUSE manager 3 a new repository setup has been created.
 The new repo will by systemsmanagement:saltstack, which is the source
-for newer stable packages. For backward compatibilty a linkpackage will be
+for newer stable packages. For backward compatibility a linkpackage will be
 created to the old devel:language:python repo.
 All development of suse packages will be done in systemsmanagement:saltstack:testing.
 This will ensure that salt will be in mainline suse repo's, a stable release
