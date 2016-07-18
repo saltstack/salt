@@ -116,10 +116,8 @@ def clear(name):
            'changes': {},
            'comment': '',
            'result': True}
-    if name in __reg__ and isinstance(__reg__[name], set):
-        __reg__[name] = {'val': set()}
-    else:
-        __reg__[name] = {'val': []}
+    if name in __reg__:
+        __reg__[name].clear()
     return ret
 
 
