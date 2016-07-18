@@ -2493,6 +2493,9 @@ def mod_aggregate(low, chunks, running):
             # Check for the same function
             if chunk.get('fun') != low.get('fun'):
                 continue
+            # Check for the same repo
+            if chunk.get('fromrepo') != low.get('fromrepo'):
+                continue
             # Pull out the pkg names!
             if 'pkgs' in chunk:
                 pkgs.extend(chunk['pkgs'])
