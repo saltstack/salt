@@ -510,7 +510,10 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             # Lets log and kill any child processes which salt left behind
             for child in children[:]:
                 try:
-                    child.send_signal(signal.SIGKILL)
+                    if sys.platform.startswith('win'):
+                        child.kill()
+                    else:
+                        child.send_signal(signal.SIGKILL)
                     log.info('Salt left behind the following child process: %s', child.as_dict())
                     try:
                         child.wait(timeout=5)
