@@ -36,6 +36,7 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+import salt.ext.six as six
 import salt.utils.http
 
 # Import third party libs
@@ -705,7 +706,7 @@ def get_milestone(number=None,
 
     else:
         milestones = get_milestones(repo_name=repo_name, profile=profile, output=output)
-        for key, val in milestones.iteritems():
+        for key, val in six.iteritems(milestones):
             if val.get('title') == name:
                 ret[key] = val
                 return ret
