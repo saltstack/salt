@@ -520,7 +520,7 @@ def create_task_from_xml(name,
     (C:\Windows\System32\tasks).
 
     :param str xml_text: A string of xml representing the task to be created.
-    This will be overriden by `xml_path` if passed.
+    This will be overridden by `xml_path` if passed.
 
     :param str xml_path: The path to an XML file on the local system containing
     the xml that defines the task. This will override `xml_text`
