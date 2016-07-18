@@ -18,7 +18,7 @@ from contextlib import contextmanager
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
 
 ensure_in_syspath('../')
@@ -363,34 +363,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
-
-    def test_issue_6714_parsing_errors_logged(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-            test_config = os.path.join(tempdir, 'config')
-
-            # Let's populate a master configuration file with some basic
-            # settings
-            salt.utils.fopen(test_config, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {0}/foo.log\n'.format(tempdir) +
-                '\n\n\n'
-                'blah:false\n'
-            )
-
-            with TestsLoggingHandler() as handler:
-                # Let's load the configuration
-                config = sconfig.master_config(test_config)
-                for message in handler.messages:
-                    if message.startswith('ERROR:Error parsing configuration'):
-                        break
-                else:
-                    raise AssertionError(
-                        'No parsing error message was logged'
-                    )
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
     def test_get_id_etc_hostname(self):
