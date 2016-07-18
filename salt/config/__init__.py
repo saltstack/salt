@@ -969,6 +969,7 @@ DEFAULT_MINION_OPTS = {
     'mine_return_job': False,
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
