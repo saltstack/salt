@@ -98,3 +98,45 @@ def mean(name, add, match):
             __reg__[name]['count'] += 1
             __reg__[name]['val'] = __reg__[name]['total'] / __reg__[name]['count']
     return ret
+
+
+def clear(name):
+    '''
+    Clear the namespace from the register
+
+    USAGE::
+
+    code-block:: yaml
+
+        clearns:
+          reg.clear:
+            - name: myregister
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': True}
+    if name in __reg__:
+        __reg__[name].clear()
+    return ret
+
+
+def delete(name):
+    '''
+    Delete the namespace from the register
+
+    USAGE::
+
+    code-block:: yaml
+
+        deletens:
+          reg.delete:
+            - name: myregister
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': True}
+    if name in __reg__:
+        del __reg__[name]
+    return ret
