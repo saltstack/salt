@@ -597,6 +597,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                      additional_info=None, tenancy=None,
                      instance_profile_arn=None, instance_profile_name=None,
                      ebs_optimized=None, network_interfaces=None,
+                     network_interface_name = None,
+                     network_interface_id = None,
                      attributes=None, target_state=None, public_ip=None,
                      allocation_id=None, allocate_eip=False, region=None,
                      key=None, keyid=None, profile=None):
@@ -698,6 +700,12 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
         NetworkInterfaceCollection data structure containing the ENI
         specifications for the instance.
+    network_interface_name
+         (string) - The name of Elastic Network Interface to attach
+    .. versionadded:: Carbon
+    network_interface_id 
+         (string) - The id of Elastic Network Interface to attach
+    .. versionadded:: Carbon
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
@@ -801,6 +809,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                      instance_profile_arn=instance_profile_arn,
                                      instance_profile_name=instance_profile_name,
                                      ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
+                                     network_interface_name = network_interface_name,
+                                     network_interface_id = network_interface_id,
                                      region=region, key=key, keyid=keyid, profile=profile)
         if not r or 'instance_id' not in r:
             ret['result'] = False
