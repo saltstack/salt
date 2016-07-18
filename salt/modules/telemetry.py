@@ -155,7 +155,7 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
 def get_notification_channel_id(notify_channel, profile="telemetry"):
     '''
     Given an email address, creates a notification-channels
-    if one is not found and also returns the corresponsing
+    if one is not found and also returns the corresponding
     notification channel id.
 
     notify_channel
