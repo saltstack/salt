@@ -16,8 +16,11 @@ from __future__ import absolute_import
 import os
 import re
 import json
+
+# Import Salt libs
+import salt.ext.six as six
+import salt.utils
 from salt.utils.odict import OrderedDict
-from salt.utils import fopen as _fopen
 
 
 __virtualname__ = 'ini'
@@ -154,7 +157,7 @@ def get_section(file_name, section, separator='='):
     '''
     inifile = _Ini.get_ini_file(file_name, separator=separator)
     ret = {}
-    for key, value in inifile.get(section, {}).iteritems():
+    for key, value in six.iteritems(inifile.get(section, {})):
         if key[0] != '#':
             ret.update({key: value})
     return ret
@@ -185,7 +188,7 @@ def remove_section(file_name, section, separator='='):
     section = inifile.pop(section, {})
     inifile.flush()
     ret = {}
-    for key, value in section.iteritems():
+    for key, value in six.iteritems(section):
         if key[0] != '#':
             ret.update({key: value})
     return ret
@@ -257,7 +260,7 @@ class _Section(OrderedDict):
         # and to make sure options without sectons go above any section
         options_backup = OrderedDict()
         comment_index = None
-        for key, value in self.iteritems():
+        for key, value in six.iteritems(self):
             if comment_index is not None:
                 options_backup.update({key: value})
                 continue
@@ -270,12 +273,12 @@ class _Section(OrderedDict):
             self.pop(key)
         self.pop(comment_index, None)
         super(_Section, self).update({opt_key: None})
-        for key, value in options_backup.iteritems():
+        for key, value in six.iteritems(options_backup):
             super(_Section, self).update({key: value})
 
     def update(self, update_dict):
         changes = {}
-        for key, value in update_dict.iteritems():
+        for key, value in six.iteritems(update_dict):
             # Ensure the value is either a _Section or a string
             if hasattr(value, 'iteritems'):
                 sect = _Section(
@@ -314,7 +317,7 @@ class _Section(OrderedDict):
     def gen_ini(self):
         yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
-        for name, value in self.iteritems():
+        for name, value in six.iteritems(self):
             if com_regx.match(name):
                 yield '{0}{1}'.format(value, os.linesep)
             elif isinstance(value, _Section):
@@ -329,7 +332,7 @@ class _Section(OrderedDict):
                     value,
                     os.linesep
                 )
-        for name, value in sections_dict.iteritems():
+        for name, value in six.iteritems(sections_dict):
             for line in value.gen_ini():
                 yield line
 
@@ -364,7 +367,7 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
-        inicontents = inicontents or _fopen(self.name).read()
+        inicontents = inicontents or salt.utils.fopen(self.name).read()
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
@@ -383,7 +386,7 @@ class _Ini(_Section):
             self.update({sect_obj.name: sect_obj})
 
     def flush(self):
-        with _fopen(self.name, 'w') as outfile:
+        with salt.utils.fopen(self.name, 'w') as outfile:
             ini_gen = self.gen_ini()
             next(ini_gen)
             outfile.writelines(ini_gen)
