@@ -102,7 +102,15 @@ def mean(name, add, match):
 
 def clear(name):
     '''
-    Clear the register
+    Clear the namespace from the register
+
+    USAGE::
+
+    code-block:: yaml
+
+        clearns:
+          reg.clear:
+            - name: myregister
     '''
     ret = {'name': name,
            'changes': {},
@@ -117,7 +125,15 @@ def clear(name):
 
 def delete(name):
     '''
-    Clear the register
+    Delete the namespace from the register
+
+    USAGE::
+
+    code-block:: yaml
+
+        deletens:
+          reg.delete:
+            - name: myregister
     '''
     ret = {'name': name,
            'changes': {},
