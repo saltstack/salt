@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 A module that adds data to the Pillar structure retrieved by an http request
 
 
@@ -19,23 +19,26 @@ Set the following Salt config to setup Foreman as external pillar source:
 
 Module Documentation
 ====================
-"""
-from __future__ import absolute_import
+'''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt libs
+import salt.ext.six as six
 
 
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                url=None):
-    """
+    '''
     Read pillar data from HTTP response.
 
     :param url String to make request
     :returns dict with pillar data to add
     :returns empty if error
-    """
+    '''
     # Set up logging
     log = logging.getLogger(__name__)
 
@@ -46,7 +49,7 @@ def ext_pillar(minion_id,
 
     log.error('Error caught on query to' + url + '\nMore Info:\n')
 
-    for k, v in data.iteritems():
+    for k, v in six.iteritems(data):
         log.error(k + ' : ' + v)
 
     return {}
