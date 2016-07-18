@@ -664,6 +664,45 @@ def get_all_groups(path_prefix='/', region=None, key=None, keyid=None,
     return groups
 
 
+def get_all_instance_profiles(path_prefix='/', region=None, key=None,
+                              keyid=None, profile=None):
+    '''
+    Get and return all IAM instance profiles, starting at the optional path.
+
+    .. versionadded:: carbon
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_instance_profiles
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    marker = False
+    profiles = []
+    while marker is not None:
+        marker = marker if marker else None
+        p = conn.list_instance_profiles(path_prefix=path_prefix,
+                                                   marker=marker)
+        res = p.list_instance_profiles_response.list_instance_profiles_result
+        profiles += res.instance_profiles
+        marker = getattr(res, 'marker', None)
+    return profiles
+
+
+def list_instance_profiles(path_prefix='/', region=None, key=None,
+                           keyid=None, profile=None):
+    '''
+    List all IAM instance profiles, starting at the optional path.
+
+    .. versionadded:: carbon
+
+    CLI Example:
+
+        salt-call boto_iam.list_instance_profiles
+    '''
+    p = get_all_instance_profiles(path_prefix, region, key, keyid, profile)
+    return [i['instance_profile_name'] for i in p]
+
+
 def get_all_group_policies(group_name, region=None, key=None, keyid=None,
                            profile=None):
     '''
