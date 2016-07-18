@@ -98,3 +98,31 @@ def mean(name, add, match):
             __reg__[name]['count'] += 1
             __reg__[name]['val'] = __reg__[name]['total'] / __reg__[name]['count']
     return ret
+
+
+def clear(name):
+    '''
+    Clear the register
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': True}
+    if name in __reg__ and isinstance(__reg__[name], set):
+        __reg__[name] = {'val': set()}
+    else:
+        __reg__[name] = {'val': []}
+    return ret
+
+
+def delete(name):
+    '''
+    Clear the register
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': True}
+    if name in __reg__:
+        del __reg__[name]
+    return ret
