@@ -768,6 +768,7 @@ def get_template(vm_):
         )
 
 
+
 def get_vm_id(kwargs=None, call=None):
     '''
     Returns a virtual machine's ID from the given virtual machine's name.
@@ -861,11 +862,11 @@ def create(vm_):
     vcpu
         Optional - Amount of vCPUs to allocate
 
-    CLI Example:
+     CLI Example:
 
-    .. code-block:: bash
+     .. code-block:: bash
 
-        salt-cloud -p my-opennebula-profile vm_name
+         salt-cloud -p my-opennebula-profile vm_name
 
         salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
 
@@ -927,6 +928,7 @@ def create(vm_):
     if vm_.get('vcpu'):
         template.append('VCPU={0}'.format(vm_.get('vcpu')))
     template_args = "\n".join(template)
+
     try:
         server, user, password = _get_xml_rpc()
         auth = ':'.join([user, password])
