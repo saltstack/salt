@@ -78,6 +78,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.config as config
+import salt.ext.six as six
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -317,7 +318,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in images.iteritems():
+    for key, value in six.iteritems(images):
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -494,7 +495,7 @@ def create_network_interfaces(conn, datacenter_id, server_id, vm_):
     if 'private_lan' in vm_:
         lans['private_lan'] = vm_['private_lan']
 
-    for lan, lan_id in lans.iteritems():
+    for lan, lan_id in six.iteritems(lans):
         response = None
         nic = NIC(lan=lan_id, name=lan.split('_')[0])
         try:

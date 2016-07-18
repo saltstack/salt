@@ -42,6 +42,7 @@ import urllib
 
 # Import salt cloud libs
 import salt.config as config
+import salt.ext.six as six
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -89,15 +90,15 @@ def _cache_provider_details(conn=None):
     images = avail_images(conn)
     sizes = avail_sizes(conn)
 
-    for key, location in locations.iteritems():
+    for key, location in six.iteritems(locations):
         DETAILS['avail_locations'][location['name']] = location
         DETAILS['avail_locations'][key] = location
 
-    for key, image in images.iteritems():
+    for key, image in six.iteritems(images):
         DETAILS['avail_images'][image['name']] = image
         DETAILS['avail_images'][key] = image
 
-    for key, vm_size in sizes.iteritems():
+    for key, vm_size in six.iteritems(sizes):
         DETAILS['avail_sizes'][vm_size['name']] = vm_size
         DETAILS['avail_sizes'][key] = vm_size
 
