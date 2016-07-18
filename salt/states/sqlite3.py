@@ -79,7 +79,11 @@ Here is an example of removing a row from a table:
           - sqlite3: users
 """
 
+# Import Python libs
 from __future__ import absolute_import
+
+# Import Salt libs
+import salt.ext.six as six
 
 try:
     import sqlite3
@@ -229,7 +233,7 @@ def row_present(name,
             changes['result'] = False
             changes['comment'] = 'More than one row matched the specified query'
         elif len(rows) == 1:
-            for key, value in data.iteritems():
+            for key, value in six.iteritems(data):
                 if key in rows[0] and rows[0][key] != value:
                     if update:
                         if __opts__['test']:
@@ -239,7 +243,7 @@ def row_present(name,
                         else:
                             columns = []
                             params = []
-                            for key, value in data.iteritems():
+                            for key, value in six.iteritems(data):
                                 columns.append("`" + key + "`=?")
                                 params.append(value)
 
@@ -278,7 +282,7 @@ def row_present(name,
                 columns = []
                 value_stmt = []
                 values = []
-                for key, value in data.iteritems():
+                for key, value in six.iteritems(data):
                     value_stmt.append('?')
                     values.append(value)
                     columns.append("`" + key + "`")
