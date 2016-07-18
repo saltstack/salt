@@ -476,6 +476,7 @@ def modify(connect_spec, dn, directives):
                 'method': 'simple',
                 'password': 'secret'}
         }" dn='cn=admin,dc=example,dc=com'
+        directives="('add', 'example', ['example_val'])"
     '''
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
