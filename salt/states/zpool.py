@@ -171,7 +171,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         layout_result = {}
         for root_dev in layout:
             if '-' in root_dev:
-                if root_dev.split('-')[0] not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                if root_dev.split('-')[0] not in ['disk', 'mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
                     layout_valid = False
                     layout_result[root_dev] = 'not a valid vdev type'
                 layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
