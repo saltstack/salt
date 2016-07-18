@@ -1033,7 +1033,6 @@ class TestDaemon(object):
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
-
         if transport == 'raet':
             master_opts['transport'] = 'raet'
             master_opts['raet_port'] = 64506
