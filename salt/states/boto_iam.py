@@ -211,11 +211,11 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
             for k in keys:
                 if __opts__['test']:
-                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} is set to be deleted.'.format(k['access_key_id'])])
+                    ret['comment'] = ' '.join([ret['comment'], 'Key {0} is set to be deleted.'.format(k['access_key_id'])])
                     ret['result'] = None
                 else:
                     if _delete_key(ret, k['access_key_id'], name, region, key, keyid, profile):
-                        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
+                        ret['comment'] = ' '.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
                         ret['changes'][k['access_key_id']] = 'deleted'
     # delete the user's MFA tokens
     if delete_mfa_devices:
@@ -224,23 +224,23 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             for d in devices:
                 serial = d['serial_number']
                 if __opts__['test']:
-                    ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
+                    ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
                     ret['result'] = None
                 else:
                     mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
                     if mfa_deleted:
-                        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
+                        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
     # delete the user's login profile
     if delete_profile:
         if __opts__['test']:
-            ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} login profile is set to be deleted.'.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} login profile is set to be deleted.'.format(name)])
             ret['result'] = None
         else:
             profile_deleted = __salt__['boto_iam.delete_login_profile'](name, region, key, keyid, profile)
             if profile_deleted:
-                ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} login profile is deleted.'.format(name)])
+                ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} login profile is deleted.'.format(name)])
     if __opts__['test']:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} policies are set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} policies are set to be deleted.'.format(name)])
         ret['result'] = None
     else:
         _ret = _user_policies_detached(name, region, key, keyid, profile)
@@ -251,12 +251,12 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
                 return ret
     # finally, actually delete the user
     if __opts__['test']:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} is set to be deleted.'.format(name)])
         ret['result'] = None
         return ret
     deleted = __salt__['boto_iam.delete_user'](name, region, key, keyid, profile)
     if deleted is True:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} is deleted.'.format(name)])
         ret['result'] = True
         ret['changes']['deleted'] = name
         return ret
@@ -395,7 +395,7 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
     log.debug('Keys for user {1} are : {0}.'.format(keys, user_name))
     if isinstance(keys, str):
         log.debug('Keys {0} are a string. Something went wrong.'.format(keys))
-        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
+        ret['comment'] = ' '.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
         return ret
     keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
     for k in keys:
@@ -408,12 +408,12 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
             deleted = __salt__['boto_iam.delete_access_key'](access_key_id, user_name, region, key,
                                                              keyid, profile)
             if deleted:
-                ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(access_key_id)])
+                ret['comment'] = ' '.join([ret['comment'], 'Key {0} has been deleted.'.format(access_key_id)])
                 ret['changes'][access_key_id] = 'deleted'
                 return ret
-            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
+            ret['comment'] = ' '.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
             return ret
-        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
+        ret['comment'] = ' '.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
         return ret
 
 
@@ -486,14 +486,14 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
         created = __salt__['boto_iam.create_user'](name, path, region, key, keyid, profile)
         if created:
             ret['changes']['user'] = created
-            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been created.'.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
                 ret = _case_password(ret, name, password, region, key, keyid, profile)
             _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     else:
-        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is present.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
         _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
@@ -711,13 +711,13 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
     log.debug('Login is : {0}.'.format(login))
     if login:
         if 'Conflict' in login:
-            ret['comment'] = os.linesep.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
         else:
-            ret['comment'] = os.linesep.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
             ret['changes']['password'] = 'REDACTED'
     else:
         ret['result'] = False
-        ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
     return ret
 
 
@@ -750,7 +750,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
         ret['comment'] = 'IAM Group {0} does not exist.'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} policies are set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} policies are set to be deleted.'.format(name)])
         ret['result'] = None
     else:
         _ret = _group_policies_detached(name, region, key, keyid, profile)
@@ -759,7 +759,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
             ret['result'] = _ret['result']
             if ret['result'] is False:
                 return ret
-    ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} users are set to be removed.'.format(name)])
+    ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} users are set to be removed.'.format(name)])
     existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
     ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -769,12 +769,12 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
         return ret
     # finally, actually delete the group
     if __opts__['test']:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} is set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} is set to be deleted.'.format(name)])
         ret['result'] = None
         return ret
     deleted = __salt__['boto_iam.delete_group'](name, region, key, keyid, profile)
     if deleted is True:
-        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} is deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} is deleted.'.format(name)])
         ret['result'] = True
         ret['changes']['deleted'] = name
         return ret
@@ -851,9 +851,9 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
             ret['result'] = False
             return ret
         ret['changes']['group'] = created
-        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Group {0} has been created.'.format(name)])
     else:
-        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} is present.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Group {0} is present.'.format(name)])
     # Group exists, ensure group policies and users are set.
     _ret = _group_policies_present(
         name, _policies, region, key, keyid, profile
@@ -885,7 +885,7 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
         log.debug('users are {0}'.format(user))
         if user in _users:
             log.debug('user exists')
-            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(user, group_name)])
+            ret['comment'] = ' '.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(user, group_name)])
             continue
         else:
             log.debug('user is set to be added {0}'.format(user))
@@ -894,17 +894,17 @@ def _case_group(ret, users, group_name, existing_users, region, key, keyid, prof
                 ret['result'] = None
             else:
                 __salt__['boto_iam.add_user_to_group'](user, group_name, region, key, keyid, profile)
-                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(user, group_name)])
+                ret['comment'] = ' '.join([ret['comment'], 'User {0} has been added to group {1}.'.format(user, group_name)])
                 ret['changes'][user] = group_name
     for user in _users:
         if user not in users:
             if __opts__['test']:
-                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is set to be removed from group {1}.'.format(user, group_name)])
+                ret['comment'] = ' '.join([ret['comment'], 'User {0} is set to be removed from group {1}.'.format(user, group_name)])
                 ret['result'] = None
             else:
                 __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
                                                             key=key, keyid=keyid, profile=profile)
-                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, group_name)])
+                ret['comment'] = ' '.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, group_name)])
                 ret['changes'][user] = 'Removed from group {0}.'.format(group_name)
     return ret
 
@@ -1177,7 +1177,7 @@ def account_policy(name=None, allow_users_to_change_password=None,
         if key in ('region', 'key', 'keyid', 'profile', 'name'):
             continue
         if value is not None and str(info[key]) != str(value).lower():
-            ret['comment'] = os.linesep.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
+            ret['comment'] = ' '.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
             ret['changes'][key] = str(value).lower()
     if not ret['changes']:
         ret['comment'] = 'Account policy is not changed.'
@@ -1366,7 +1366,7 @@ def policy_present(name, policy_document, path=None, description=None,
         created = __salt__['boto_iam.create_policy'](name, policy_document, path, description, region, key, keyid, profile)
         if created:
             ret['changes']['policy'] = created
-            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to update policy.'
@@ -1374,7 +1374,7 @@ def policy_present(name, policy_document, path=None, description=None,
             return ret
     else:
         policy = policy.get('policy', {})
-        ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Policy {0} is present.'.format(name)])
         _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
                                                        region, key, keyid, profile).get('policy_version', {})
         if isinstance(_describe['document'], string_types):
@@ -1394,7 +1394,7 @@ def policy_present(name, policy_document, path=None, description=None,
                 ret['result'] = None
                 return ret
 
-            ret['comment'] = os.linesep.join([ret['comment'], 'Policy to be modified'])
+            ret['comment'] = ' '.join([ret['comment'], 'Policy to be modified'])
             policy_document = json.dumps(policy_document)
 
             r = __salt__['boto_iam.create_policy_version'](policy_name=name,
