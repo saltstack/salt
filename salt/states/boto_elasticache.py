@@ -76,7 +76,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -255,7 +258,8 @@ def present(
     return ret
 
 
-def subnet_group_present(name, subnet_ids=None, subnet_groups=None, description=None, tags=None, region=None,
+def subnet_group_present(name, subnet_ids=None, subnet_names=None,
+                         description=None, tags=None, region=None,
                          key=None, keyid=None, profile=None):
     '''
     Ensure ElastiCache subnet group exists.
