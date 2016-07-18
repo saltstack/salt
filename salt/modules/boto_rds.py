@@ -880,7 +880,7 @@ def modify_db_instance(name,
 def _tag_doc(tags):
     taglist = []
     if tags is not None:
-        for k, v in tags.iteritems():
+        for k, v in six.iteritems(tags):
             if str(k).startswith('__'):
                 continue
             taglist.append({'Key': str(k), 'Value': str(v)})

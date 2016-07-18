@@ -686,7 +686,7 @@ def _to_blockdev_map(thing):
         return None
 
     bdm = BlockDeviceMapping()
-    for d, t in thing.iteritems():
+    for d, t in six.iteritems(thing):
         bdt = BlockDeviceType(ephemeral_name=t.get('ephemeral_name'),
                               no_device=t.get('no_device', False),
                               volume_id=t.get('volume_id'),
