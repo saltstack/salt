@@ -113,7 +113,7 @@ class GroupAddTestCase(TestCase):
         Tests if specified user gets added in the group.
         '''
         os_version_list = [
-            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': 5},
              'cmd': ('gpasswd', '-a', 'root', 'test')},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
@@ -140,7 +140,7 @@ class GroupAddTestCase(TestCase):
         Tests if specified user gets deleted from the group.
         '''
         os_version_list = [
-            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': 5},
              'cmd': ('gpasswd', '-d', 'root', 'test')},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
@@ -175,7 +175,7 @@ class GroupAddTestCase(TestCase):
         Tests if members of the group, get replaced with a provided list.
         '''
         os_version_list = [
-            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': 5},
              'cmd': ('gpasswd', '-M', 'foo', 'test')},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
