@@ -347,6 +347,21 @@ Default: ``nested``
 
 Set the default outputter used by the salt command.
 
+.. conf_master:: output_file
+
+``output_file``
+---------------
+
+Default: None
+
+# Set the default output file used by the salt command. Default is to output
+# to the CLI and not to a file. Functions the same way as the "--out-file"
+CLI option, only sets this to a single file for all salt commands.
+
+.. code-block:: yaml
+
+    output_file: /path/output/file
+
 .. conf_master:: color
 
 ``color``
