@@ -1472,7 +1472,7 @@ def ifacestartswith(cidr):
     intfnames = []
     pattern = str(cidr)
     size = len(pattern)
-    for ifname, ifval in net_list.iteritems():
+    for ifname, ifval in six.iteritems(net_list):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:

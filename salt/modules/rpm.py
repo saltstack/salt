@@ -526,7 +526,7 @@ def info(*packages, **attr):
             attr.append('edition')
             query.append(attr_map['edition'])
     else:
-        for attr_k, attr_v in attr_map.iteritems():
+        for attr_k, attr_v in six.iteritems(attr_map):
             if attr_k != 'description':
                 query.append(attr_v)
     if attr and 'description' in attr or not attr:

@@ -996,7 +996,7 @@ def remove(name=None,
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         if pkg[0].find("/") > 0:
             origin = pkg[0]
-            pkg = [k for k, v in old.iteritems() if v['origin'] == origin][0]
+            pkg = [k for k, v in six.iteritems(old) if v['origin'] == origin][0]
 
         if pkg[0] in old:
             targets.append(pkg[0])
