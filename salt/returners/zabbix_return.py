@@ -13,9 +13,16 @@ Key: salt.trap.disaster
   .. code-block:: bash
     salt '*' test.ping --return zabbix
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import os
+
+# Import Salt libs
+import salt.ext.six as six
+
+# Get logging started
 log = logging.getLogger(__name__)
 
 
@@ -54,7 +61,7 @@ def returner(ret):
     host = job_minion_id.split('.')[0]
 
     if type(ret['return']) is dict:
-        for state, item in ret['return'].iteritems():
+        for state, item in six.iteritems(ret['return']):
             if 'comment' in item and 'name' in item and not item['result']:
                 errors = True
                 zabbix_send("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
