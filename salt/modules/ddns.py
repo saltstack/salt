@@ -198,7 +198,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', port=53,
 
 
 def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
-           port='53', timeout=5, **kwargs):
+           port=53, timeout=5, **kwargs):
     '''
     Delete a DNS record.
 
