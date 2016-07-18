@@ -57,7 +57,7 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
 
     perm_need_change = False
     for vhost_perms in newperms:
-        for vhost, perms in vhost_perms.iteritems():
+        for vhost, perms in six.iteritems(vhost_perms):
             if vhost in existing:
                 existing_vhost = existing[vhost]
                 if perms != existing_vhost:
