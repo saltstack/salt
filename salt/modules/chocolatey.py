@@ -813,10 +813,10 @@ def add_source(name, source_location, username=None, password=None):
         Location of the source you want to work with.
 
     username
-        Provide username for chocolatey sources that need authentification credentials.
+        Provide username for chocolatey sources that need authentication credentials.
 
     password
-        Provide password for chocolatey sources that need authentification credentials.
+        Provide password for chocolatey sources that need authentication credentials.
 
     CLI Example:
 

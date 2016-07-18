@@ -2910,7 +2910,7 @@ class GitPillar(GitBase):
     def __init__(self, opts):
         self.role = 'git_pillar'
         # Dulwich has no function to check out a branch/tag, so this will be
-        # limited to GitPython and Pygit2 for the forseeable future.
+        # limited to GitPython and Pygit2 for the foreseeable future.
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'))
@@ -2951,7 +2951,7 @@ class WinRepo(GitBase):
     def __init__(self, opts, winrepo_dir):
         self.role = 'winrepo'
         # Dulwich has no function to check out a branch/tag, so this will be
-        # limited to GitPython and Pygit2 for the forseeable future.
+        # limited to GitPython and Pygit2 for the foreseeable future.
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'),

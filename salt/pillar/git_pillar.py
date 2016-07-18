@@ -125,7 +125,7 @@ Configuring git_pillar for Salt releases 2015.8.0 and later
     will also be logged.
 
 Beginning with Salt version 2015.8.0, pygit2_ is now supported in addition to
-GitPython_ (Dulwich_ will not be supported for the forseeable future). The
+GitPython_ (Dulwich_ will not be supported for the foreseeable future). The
 requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
 :ref:`here <gitfs-dependencies>`.
 
