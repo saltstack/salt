@@ -24,6 +24,21 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       password: JHGhgsayu32jsa
       driver: opennebula
 
+This driver supports accessing new VM instances via DNS entry instead
+of IP address.  To enable this feature, in the provider or profile file
+add `fqdn_base` with a value matching the base of your fully-qualified
+domain name.  Example:
+
+.. code-block:: yaml
+
+    my-opennebula-config:
+      [...]
+      fqdn_base: <my.basedomain.com>
+      [...]
+
+The driver will prepend the hostname to the fqdn_base and do a DNS lookup
+to find the IP of the new VM.
+
 .. note:
 
     Whenever ``data`` is provided as a kwarg to a function and the
@@ -766,7 +781,6 @@ def get_template(vm_):
         raise SaltCloudNotFound(
             'The specified template, \'{0}\', could not be found.'.format(vm_template)
         )
-
 
 
 def get_vm_id(kwargs=None, call=None):
