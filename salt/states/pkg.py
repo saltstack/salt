@@ -1054,7 +1054,16 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name)
+        version = __salt__['pkg.latest_version'](name,
+                                                 fromrepo=fromrepo,
+                                                 refresh=refresh)
+
+        # Ensure that refresh doesn't occur again for the remainder of the salt run
+        # (unless overriden)
+        if os.path.isfile(rtag) and refresh:
+           os.remove(rtag)
+        refresh=False
+
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
@@ -1067,6 +1076,13 @@ def installed(
                         'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
+
+    # if windows and a refresh
+    # is required, we will have to do a refresh when _find_install_targets
+    # calls pkg.list_pkgs
+    if salt.utils.is_windows():
+        kwargs['refresh'] = refresh
+
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
@@ -1074,6 +1090,14 @@ def installed(
                                    normalize=normalize,
                                    ignore_epoch=ignore_epoch,
                                    **kwargs)
+
+    if salt.utils.is_windows():
+       # Ensure that a refresh does not re-occur for the rest of the salt run
+       # (unless overriden)
+       if os.path.isfile(rtag) and refresh:
+          os.remove(rtag)
+       kwargs.pop('refresh')
+       refresh = False
 
     try:
         (desired, targets, to_unpurge,
