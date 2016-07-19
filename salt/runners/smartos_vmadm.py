@@ -5,7 +5,7 @@ Runner for SmartOS minions control vmadm
 from __future__ import absolute_import
 from __future__ import print_function
 # Import python libs
-import salt.client
+#import salt.client
 import salt.key
 from salt.exceptions import SaltClientError
 from salt.utils.odict import OrderedDict
@@ -23,28 +23,29 @@ def __virtual__():
     '''
     Provides vmadm runner
     '''
-    have_computenodes = False
-
-    ## check if there are computenode minions
-    client = salt.client.get_local_client(__opts__['conf_file'])
-    try:
-        for cn in client.cmd_iter('G@virtual:physical and G@os:smartos', 'test.ping', expr_form='compound'):
-            if not cn:
-                continue
-            else:
-                have_computenodes = True
-    except SaltClientError as client_error:
-        pass
-
-    if have_computenodes:
-        return __virtualname__
-    else:
-        return (
-            False,
-            '{0} runner can only be loaded when there are SmartOS computed nodes'.format(
-                __virtualname__
-            )
-        )
+    return __virtualname__
+#    have_computenodes = False
+#
+#    ## check if there are computenode minions
+#    client = salt.client.get_local_client(__opts__['conf_file'])
+#    try:
+#        for cn in client.cmd_iter('G@virtual:physical and G@os:smartos', 'test.ping', expr_form='compound'):
+#            if not cn:
+#                continue
+#            else:
+#                have_computenodes = True
+#    except SaltClientError as client_error:
+#        pass
+#
+#    if have_computenodes:
+#        return __virtualname__
+#    else:
+#        return (
+#            False,
+#            '{0} runner can only be loaded when there are SmartOS computed nodes'.format(
+#                __virtualname__
+#            )
+#        )
 
 
 def _action(action='get', search=None, one=True, force=False):
