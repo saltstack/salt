@@ -660,7 +660,7 @@ def create(zpool, *vdevs, **kwargs):
     # make sure files are present on filesystem
     ret[zpool] = {}
     for vdev in vdevs:
-        if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+        if vdev not in ['disk', 'mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
             if not os.path.exists(vdev):
                 ret[zpool][vdev] = 'not present on filesystem'
                 continue
