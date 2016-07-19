@@ -1228,10 +1228,7 @@ def installed(
                                               reinstall=reinstall,
                                               normalize=normalize,
                                               **kwargs)
-
             refreshed = refreshed or refresh
-            if os.path.isfile(rtag) and refreshed:
-                os.remove(rtag)
         except CommandExecutionError as exc:
             ret = {'name': name,
                    'changes': {},
@@ -1286,6 +1283,9 @@ def installed(
                                              and hold_ret[x]['result']]
                         failed_hold = [hold_ret[x] for x in hold_ret
                                        if not hold_ret[x]['result']]
+
+    if os.path.isfile(rtag) and refreshed:
+        os.remove(rtag)
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
