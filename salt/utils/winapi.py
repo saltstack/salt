@@ -15,8 +15,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__salt__ = None
-
 
 def __virtual__():
     '''
@@ -25,9 +23,6 @@ def __virtual__():
     if not HAS_LIBS:
         return False
     else:
-        global __salt__
-        if not __salt__:
-            __salt__ = minion_mods(__opts__)
         return True
 
 
