@@ -30,6 +30,17 @@ Management zpool
               /dev/disk2
               /dev/disk3
 
+    simplepool:
+      zpool.present:
+        - config:
+            import: false
+            force: true
+        - properties:
+            comment: another salty storage pool
+        - layout:
+            - /dev/disk0
+            - /dev/disk1
+
 .. warning::
 
     The layout will never be updated, it will only be used at time of creation.
@@ -171,7 +182,9 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         layout_result = {}
         for root_dev in layout:
             if '-' in root_dev:
-                if root_dev.split('-')[0] not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                # NOTE: people seem to be confused a lot and want to use the 'disk' vdev which does not exist
+                #       we try to accomidate them in the state module by faking it.
+                if root_dev.split('-')[0] not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare', 'disk']:
                     layout_valid = False
                     layout_result[root_dev] = 'not a valid vdev type'
                 layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
@@ -267,8 +280,10 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                     params.append(name)
                     for root_dev in layout:
                         if '-' in root_dev:  # special device
-                            params.append(root_dev.split('-')[0])  # add the type by stripping the ID
-                            if root_dev.split('-')[0] in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                            # NOTE: accomidate non existing 'disk' vdev
+                            if root_dev.split('-')[0] in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare', 'disk']:
+                                if root_dev.split('-')[0] != 'disk':
+                                    params.append(root_dev.split('-')[0])  # add the type by stripping the ID
                                 for sub_dev in layout[root_dev]:  # add all sub devices
                                     if '/' not in sub_dev and config['device_dir'] and os.path.exists(config['device_dir']):
                                         sub_dev = os.path.join(config['device_dir'], sub_dev)
