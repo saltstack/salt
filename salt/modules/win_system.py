@@ -22,6 +22,7 @@ try:
     import win32api
     import win32con
     import pywintypes
+    import ctypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -911,17 +912,29 @@ def set_system_date_time(years=None,
     if seconds is None:
         seconds = date_time[6]
 
-    # Create the time tuple to be passed to SetLocalTime, including day_of_week
-    time_tuple = (years, months, days, hours, minutes, seconds, 0)
-
     try:
-        win32api.SetLocalTime(time_tuple)
-    except win32api.error as exc:
-        (number, context, message) = exc
+        class SYSTEMTIME(ctypes.Structure):
+            _fields_ = [
+                ('wYear', ctypes.c_int16),
+                ('wMonth', ctypes.c_int16),
+                ('wDayOfWeek', ctypes.c_int16),
+                ('wDay', ctypes.c_int16),
+                ('wHour', ctypes.c_int16),
+                ('wMinute', ctypes.c_int16),
+                ('wSecond', ctypes.c_int16),
+                ('wMilliseconds', ctypes.c_int16)]
+        system_time = SYSTEMTIME()
+        system_time.wYear = int(years)
+        system_time.wMonth = int(months)
+        system_time.wDay = int(days)
+        system_time.wHour = int(hours)
+        system_time.wMinute = int(minutes)
+        system_time.wSecond = int(seconds)
+        system_time_ptr = ctypes.pointer(system_time)
+        succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
+        return succeeded is not 0
+    except OSError:
         log.error('Failed to set local time')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
         return False
 
     return True
