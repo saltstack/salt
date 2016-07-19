@@ -792,6 +792,26 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
+def _try_parse_datetime(time_str, fmts):
+    '''
+    Attempts to parse the input time_str as a date.
+
+    :param str time_str: A string representing the time
+    :param list fmts: A list of date format strings
+
+    :return: Returns a datetime object if parsed properly. Otherwise None
+    :rtype datetime
+    '''
+    result = None
+    for fmt in fmts:
+        try:
+            result = datetime.strptime(time_str, fmt)
+            break
+        except ValueError:
+            pass
+    return result
+
+
 def get_system_time():
     '''
     Get the system time.
@@ -827,12 +847,15 @@ def set_system_time(newtime):
     :rtype: bool
     '''
     # Get date/time object from newtime
-    dt_obj = salt.utils.date_cast(newtime)
+    fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']
+    dt_obj = _try_parse_datetime(newtime, fmts)
+    if dt_obj is None:
+        return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(hours=int(dt_obj.strftime('%H')),
-                                minutes=int(dt_obj.strftime('%M')),
-                                seconds=int(dt_obj.strftime('%S')))
+    return set_system_date_time(hours=dt_obj.hour,
+                                minutes=dt_obj.minute,
+                                seconds=dt_obj.second)
 
 
 def set_system_date_time(years=None,
@@ -940,13 +963,17 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
+    fmts = ['%Y-%m-%d', '%m-%d-%Y', '%m-%d-%y',
+            '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d']
     # Get date/time object from newdate
-    dt_obj = salt.utils.date_cast(newdate)
+    dt_obj = _try_parse_datetime(newdate, fmts)
+    if dt_obj is None:
+        return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(years=int(dt_obj.strftime('%Y')),
-                                months=int(dt_obj.strftime('%m')),
-                                days=int(dt_obj.strftime('%d')))
+    return set_system_date_time(years=dt_obj.year,
+                                months=dt_obj.month,
+                                days=dt_obj.day)
 
 
 def start_time_service():
