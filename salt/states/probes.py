@@ -94,7 +94,7 @@ def _expand_probes(probes, defaults):
         if probe_name not in expected_probes.keys():
             expected_probes[probe_name] = dict()
         probe_defaults = probe_test.pop('defaults', {})
-        for test_name, test_details in probe_test.iteritems():
+        for test_name, test_details in six.iteritems(probe_test):
             test_defaults = test_details.pop('defaults', {})
             expected_test_details = deepcopy(defaults)  # copy first the general defaults
             expected_test_details.update(probe_defaults)  # update with more specific defaults if any
@@ -118,7 +118,7 @@ def _clean_probes(probes):
         if not probe_tests:
             probes.pop(probe_name)
             continue
-        for test_name, test_params in probe_tests.iteritems():
+        for test_name, test_params in six.iteritems(probe_tests):
             if not test_params:
                 probes[probe_name].pop(test_name)
             if not probes.get(probe_name):
@@ -163,7 +163,7 @@ def _compare_probes(configured_probes, expected_probes):
         remove_probes[probe_name] = configured_probes.pop(probe_name)
 
     # common probes
-    for probe_name, probe_tests in expected_probes.iteritems():
+    for probe_name, probe_tests in six.iteritems(expected_probes):
         configured_probe_tests = configured_probes.get(probe_name, {})
         configured_tests_keys_set = set(configured_probe_tests.keys())
         expected_tests_keys_set = set(probe_tests.keys())
@@ -185,7 +185,7 @@ def _compare_probes(configured_probes, expected_probes):
                 test_name: configured_probe_tests.pop(test_name)
             })
         # common tests for common probes
-        for test_name, test_params in probe_tests.iteritems():
+        for test_name, test_params in six.iteritems(probe_tests):
             configured_test_params = configured_probe_tests.get(test_name, {})
             # if test params are different, probe goes to update probes dict!
             if test_params != configured_test_params:

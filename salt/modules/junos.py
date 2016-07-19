@@ -2,11 +2,14 @@
 '''
 Module for interfacing to Junos devices.
 '''
-from __future__ import absolute_import
 
 # Import python libraries
+from __future__ import absolute_import
 import logging
 import json
+
+# Import Salt libs
+import salt.ext.six as six
 
 try:
     from lxml import etree
@@ -124,7 +127,7 @@ def call_rpc(cmd=None, *args, **kwargs):
     else:
         op.update(kwargs)
 
-    for k, v in op.iteritems():
+    for k, v in six.iteritems(op):
         op[k] = str(v)
     op['format'] = 'json'
 

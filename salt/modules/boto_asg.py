@@ -398,7 +398,7 @@ def _create_scheduled_actions(conn, as_name, scheduled_actions):
     Helper function to create scheduled actions
     '''
     if scheduled_actions:
-        for name, action in scheduled_actions.iteritems():
+        for name, action in six.iteritems(scheduled_actions):
             if 'start_time' in action and isinstance(action['start_time'], six.string_types):
                 action['start_time'] = datetime.datetime.strptime(
                     action['start_time'], DATE_FORMAT

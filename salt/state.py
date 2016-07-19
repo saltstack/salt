@@ -185,7 +185,7 @@ def find_name(name, state, high):
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == 'sls':
-        for nid, item in high.iteritems():
+        for nid, item in six.iteritems(high):
             if item['__sls__'] == name:
                 ext_id.append((nid, next(iter(item))))
     # otherwise we are requiring a single state, lets find it
