@@ -2108,10 +2108,17 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                publisher_acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            clear_load['user'].split('_', 1)[-1])
+                if not publisher_acl:
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                        )
+                    return ''
                 if self.opts['sudo_acl'] and publisher_acl:
                     good = self.ckminions.auth_check(
-                                publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
+                                publisher_acl,
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
@@ -2146,14 +2153,17 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
-                    if clear_load['user'] not in acl:
+                    # Build ACL matching the user name
+                    acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            clear_load['user'])
+                    if not acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                        acl[clear_load['user']],
+                        acl,
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],

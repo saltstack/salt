@@ -187,11 +187,51 @@ def clean_old_jobs(opts):
         mminion.returners[fstr]()
 
 
+def mk_key(opts, user):
+    if salt.utils.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        keyfile = os.path.join(
+            opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+        )
+    else:
+        keyfile = os.path.join(
+            opts['cachedir'], '.{0}_key'.format(user)
+        )
+
+    if os.path.exists(keyfile):
+        log.debug('Removing stale keyfile: {0}'.format(keyfile))
+        if salt.utils.is_windows() and not os.access(keyfile, os.W_OK):
+            # Cannot delete read-only files on Windows.
+            os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
+        os.unlink(keyfile)
+
+    key = salt.crypt.Crypticle.generate_key_string()
+    cumask = os.umask(191)
+    with salt.utils.fopen(keyfile, 'w+') as fp_:
+        fp_.write(key)
+    os.umask(cumask)
+    # 600 octal: Read and write access to the owner only.
+    # Write access is necessary since on subsequent runs, if the file
+    # exists, it needs to be written to again. Windows enforces this.
+    os.chmod(keyfile, 0o600)
+    if HAS_PWD:
+        try:
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+        except OSError:
+            # The master is not being run as root and can therefore not
+            # chown the key file
+            pass
+    return key
+
+
 def access_keys(opts):
     '''
     A key needs to be placed in the filesystem with permissions 0400 so
     clients are required to run as root.
     '''
+    # TODO: Need a way to get all available users for systems not supported by pwd module.
+    #       For now users pattern matching will not work for publisher_acl.
     users = []
     keys = {}
     if opts['client_acl'] or opts['client_acl_blacklist']:
@@ -224,41 +264,14 @@ def access_keys(opts):
                     log.error('ACL user {0} is not available'.format(user))
                     continue
 
-        if salt.utils.is_windows():
-            # The username may contain '\' if it is in Windows
-            # 'DOMAIN\username' format. Fix this for the keyfile path.
-            keyfile = os.path.join(
-                opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
-            )
-        else:
-            keyfile = os.path.join(
-                opts['cachedir'], '.{0}_key'.format(user)
-            )
+        keys[user] = mk_key(opts, user)
 
-        if os.path.exists(keyfile):
-            log.debug('Removing stale keyfile: {0}'.format(keyfile))
-            if salt.utils.is_windows() and not os.access(keyfile, os.W_OK):
-                # Cannot delete read-only files on Windows.
-                os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
-            os.unlink(keyfile)
+    # Check other users matching ACL patterns
+    if HAS_PWD:
+        for user in users:
+            if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
+                keys[user] = mk_key(opts, user)
 
-        key = salt.crypt.Crypticle.generate_key_string()
-        cumask = os.umask(191)
-        with salt.utils.fopen(keyfile, 'w+') as fp_:
-            fp_.write(key)
-        os.umask(cumask)
-        # 600 octal: Read and write access to the owner only.
-        # Write access is necessary since on subsequent runs, if the file
-        # exists, it needs to be written to again. Windows enforces this.
-        os.chmod(keyfile, 0o600)
-        if HAS_PWD:
-            try:
-                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-            except OSError:
-                # The master is not being run as root and can therefore not
-                # chown the key file
-                pass
-        keys[user] = key
     return keys
 
 
@@ -1352,7 +1365,6 @@ class LocalFuncs(object):
         extra = load.get('kwargs', {})
 
         # check blacklist/whitelist
-        good = True
         # Check if the user is blacklisted
         if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
             salt.utils.warn_until(
@@ -1361,24 +1373,11 @@ class LocalFuncs(object):
                     '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
                     'This functionality will be removed in Salt Nitrogen.'
                     )
-        blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
-        for user_re in blacklist.get('users', []):
-            if re.match(user_re, load['user']):
-                good = False
-                break
 
-        # check if the cmd is blacklisted
-        for module_re in blacklist.get('modules', []):
-            # if this is a regular command, its a single function
-            if isinstance(load['fun'], str):
-                funs_to_check = [load['fun']]
-            # if this a compound function
-            else:
-                funs_to_check = load['fun']
-            for fun in funs_to_check:
-                if re.match(module_re, fun):
-                    good = False
-                    break
+        publisher_acl = salt.acl.PublisherACL(
+                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
+        good = not publisher_acl.user_is_blacklisted(load['user']) and \
+                not publisher_acl.cmd_is_blacklisted(load['fun'])
 
         if good is False:
             log.error(
@@ -1514,14 +1513,16 @@ class LocalFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            load['user'])
                     if load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            acl[load['user']],
+                            acl,
                             load['fun'],
                             load['arg'],
                             load['tgt'],
