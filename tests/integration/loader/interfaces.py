@@ -16,6 +16,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
+import salt.ext.six as six
 from salt.config import minion_config
 
 import salt.loader
@@ -30,7 +31,7 @@ class RawModTest(TestCase):
     def test_basic(self):
         self.opts = minion_config(None)
         testmod = salt.loader.raw_mod(self.opts, 'test', None)
-        for k, v in testmod.iteritems():
+        for k, v in six.iteritems(testmod):
             self.assertEqual(k.split('.')[0], 'test')
 
     def test_bad_name(self):
