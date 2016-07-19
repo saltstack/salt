@@ -4,8 +4,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-from salt.ext.six.moves import range
-
 import os
 import unittest
 import logging
@@ -22,6 +20,8 @@ from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxC
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
+import salt.ext.six as six
+from salt.ext.six.moves import range
 import integration
 from salt.config import cloud_providers_config, vm_profiles_config
 from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, \
@@ -138,7 +138,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         expected_attributes = MINIMAL_MACHINE_ATTRIBUTES
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in machines.iteritems():
+        for name, machine in six.iteritems(machines):
             self.assertItemsEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
@@ -152,7 +152,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in machines.iteritems():
+        for name, machine in six.iteritems(machines):
             self.assertGreaterEqual(len(machine.keys()), expected_minimal_attribute_count)
 
         self.assertIn(BASE_BOX_NAME, names)
@@ -167,7 +167,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in machines.iteritems():
+        for name, machine in six.iteritems(machines):
             self.assertItemsEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
@@ -399,7 +399,7 @@ class XpcomConversionTests(unittest.TestCase):
         o = XPCOM()
 
         if attributes and isinstance(attributes, dict):
-            for key, value in attributes.iteritems():
+            for key, value in six.iteritems(attributes):
                 setattr(o, key, value)
         return o
 

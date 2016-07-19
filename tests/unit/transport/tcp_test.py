@@ -13,6 +13,7 @@ import tornado.ioloop
 from tornado.testing import AsyncTestCase
 
 import salt.config
+import salt.ext.six as six
 import salt.utils
 import salt.transport.server
 import salt.transport.client
@@ -173,7 +174,7 @@ class BaseTCPPubCase(AsyncTestCase):
     def tearDown(self):
         super(BaseTCPPubCase, self).tearDown()
         failures = []
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:
