@@ -84,7 +84,7 @@ def _gather_buffer_space():
         grains = salt.grains.core._memdata(os_data)
         total_mem = grains['mem_total']
     # Return the higher number between 5% of the system memory and 100MB
-    return min([total_mem * 0.05, 10 << 20])
+    return max([total_mem * 0.05, 10 << 20])
 
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
