@@ -507,13 +507,18 @@ class IPCMessagePublisher(object):
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
-        log.trace('IPCPublisher write buffer set to: {0}'.format(self.opts['ipc_write_buffer']))
         try:
-            stream = IOStream(
-                connection,
-                io_loop=self.io_loop,
-                max_write_buffer_size=self.opts['ipc_write_buffer']
-            )
+            if self.opts['ipc_write_buffer']:
+                stream = IOStream(
+                    connection,
+                    io_loop=self.io_loop,
+                    max_write_buffer_size=self.opts['ipc_write_buffer']
+                )
+            else:
+                stream = IOStream(
+                    connection,
+                    io_loop=self.io_loop
+                )
             self.streams.add(stream)
         except Exception as exc:
             log.error('IPC streaming error: {0}'.format(exc))
