@@ -1489,7 +1489,7 @@ def os_data():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
-        grains['osmajorrelease'] = grains['osrelease_info'][0]
+        grains['osmajorrelease'] = str(grains['osrelease_info'][0])  ## This will be an integer in the next release
         os_name = 'os' if grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname'
         grains['osfinger'] = '{0}-{1}'.format(grains[os_name], grains['osrelease_info'][0])
 
