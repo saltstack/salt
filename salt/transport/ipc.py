@@ -508,7 +508,8 @@ class IPCMessagePublisher(object):
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
         try:
-            if self.opts['ipc_write_buffer']:
+            if self.opts['ipc_write_buffer'] > 0:
+                log.trace('Setting IPC connection write buffer: {0}'.format((self.opts['ipc_write_buffer'])))
                 stream = IOStream(
                     connection,
                     io_loop=self.io_loop,
