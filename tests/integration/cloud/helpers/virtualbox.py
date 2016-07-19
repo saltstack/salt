@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
 from __future__ import absolute_import
-from unittest2 import skipIf
-from integration.cloud.helpers import random_name
-from salt.utils import virtualbox
 import json
 import logging
 import os
 import unittest
+
+# Import Salt Testing libs
+from salttesting import skipIf
+
+# Import Salt libs
+import salt.ext.six as six
 import integration
+from salt.utils import virtualbox
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = random_name()
+INSTANCE_NAME = integration.cloud.helpers.random_name()
 PROVIDER_NAME = "virtualbox"
 CONFIG_NAME = PROVIDER_NAME + "-config"
 PROFILE_NAME = PROVIDER_NAME + "-test"
@@ -98,7 +104,7 @@ class VirtualboxCloudTestCase(integration.ShellCase):
         if kw_function_args:
             args = [
                 "{0}='{1}'".format(key, value)
-                for key, value in kw_function_args.iteritems()
+                for key, value in six.iteritems(kw_function_args)
                 ]
 
         output = self.run_cloud("-f {0} {1} {2}".format(function, CONFIG_NAME, " ".join(args)), **kwargs)
