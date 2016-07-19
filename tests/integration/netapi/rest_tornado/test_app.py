@@ -324,6 +324,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
+    @skipIf(True, 'issue #34753')
     def test_get_no_mid(self):
         response = self.fetch('/minions',
                               method='GET',
