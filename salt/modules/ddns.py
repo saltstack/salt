@@ -75,8 +75,8 @@ def _get_keyring(keyfile):
     return keyring
 
 
-def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', port=53,
-             replace=True, timeout=5, **kwargs):
+def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
+             timeout=5, **kwargs, port=53):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
@@ -86,8 +86,8 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', port=53,
 
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
     '''
-    res = update(zone, name, ttl, 'A', ip, nameserver, port, timeout, replace,
-                 **kwargs)
+    res = update(zone, name, ttl, 'A', ip, nameserver, timeout, replace,
+                 **kwargs, port)
     if res is False:
         return False
 
@@ -101,15 +101,15 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', port=53,
         popped.append(p)
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
-        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, port, timeout,
-                     replace, **kwargs)
+        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, timeout,
+                     replace, **kwargs, port)
         if ptr:
             return True
     return res
 
 
-def delete_host(zone, name, nameserver='127.0.0.1', port=53, timeout=5,
-                **kwargs):
+def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs,
+               port=53):
     '''
     Delete the forward and reverse records for a host.
 
@@ -129,8 +129,8 @@ def delete_host(zone, name, nameserver='127.0.0.1', port=53, timeout=5,
     except IndexError:
         ips = []
 
-    res = delete(zone, name, nameserver=nameserver, port=port, timeout=timeout,
-                 **kwargs)
+    res = delete(zone, name, nameserver=nameserver, timeout=timeout, **kwargs,
+                 port=port)
 
     fqdn = fqdn + '.'
     for ip in ips:
@@ -144,14 +144,14 @@ def delete_host(zone, name, nameserver='127.0.0.1', port=53, timeout=5,
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
             ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
-                         port=port, timeout=timeout, **kwargs)
+                         timeout=timeout, **kwargs, port=port)
         if ptr:
             res = True
     return res
 
 
-def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', port=53,
-           timeout=5, replace=False, **kwargs):
+def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
+           replace=False, **kwargs, port=53):
     '''
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
@@ -198,7 +198,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', port=53,
 
 
 def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
-           port=53, timeout=5, **kwargs):
+           timeout=5, **kwargs, port=53):
     '''
     Delete a DNS record.
 
