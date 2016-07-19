@@ -1432,6 +1432,7 @@ def os_data():
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
+        grains.update(_bsd_cpudata(grains))
         try:
             grains['osrelease'] = __salt__['cmd.run']('freebsd-version -u').split('-')[0]
         except salt.exceptions.CommandExecutionError:
