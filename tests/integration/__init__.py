@@ -440,23 +440,24 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             pass
 
         # Let's begin the shutdown routines
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.send_signal(signal.SIGINT)
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-            timeout = 15
-            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
-                    timeout,
-                     self.display_name,
-                     self.__class__.__name__)
-            while timeout > 0:
-                if terminal.poll() is not None:
-                    break
-                timeout -= 0.0125
-                time.sleep(0.0125)
+        if not sys.platform.startswith('win'):
+            if terminal.poll() is None:
+                try:
+                    log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
+                    terminal.send_signal(signal.SIGINT)
+                except OSError as exc:
+                    if exc.errno not in (errno.ESRCH, errno.EACCES):
+                        raise
+                timeout = 15
+                log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
+                        timeout,
+                         self.display_name,
+                         self.__class__.__name__)
+                while timeout > 0:
+                    if terminal.poll() is not None:
+                        break
+                    timeout -= 0.0125
+                    time.sleep(0.0125)
         if terminal.poll() is None:
             try:
                 log.info('Sending SIGTERM to %s %s DAEMON', self.display_name, self.__class__.__name__)
