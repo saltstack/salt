@@ -243,6 +243,14 @@
 # ZMQ high-water-mark for EventPublisher pub socket
 #event_publisher_pub_hwm: 10000
 
+# The master may allocate memory per-event and not
+# reclaim it.
+# To set a high-water mark for memory allocation, use
+# ipc_write_buffer to set a high-water mark for message
+# buffering.
+# Value: In bytes. Set to 'dynamic' to have Salt select
+# a value for you. Default is disabled.
+# ipc_write_buffer: 'dynamic'
 
 
 #####        Security settings       #####
