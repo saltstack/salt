@@ -169,7 +169,7 @@ def _check_loglevel(level='info', quiet=False):
             .format(
                 level,
                 ', '.join(
-                    sorted(LOG_LEVELS, key=LOG_LEVELS.get, reverse=True)
+                    sorted(LOG_LEVELS, reverse=True)
                 )
             )
         )
