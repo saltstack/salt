@@ -1053,7 +1053,7 @@ def installed(
     if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
-    refreshed = False   
+    refreshed = False
 
     if version is not None and version == 'latest':
         version = __salt__['pkg.latest_version'](name,
