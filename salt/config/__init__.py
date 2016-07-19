@@ -2979,11 +2979,11 @@ def apply_minion_config(overrides=None,
     # if there is no beacons option yet, add an empty beacons dict
     if 'beacons' not in opts:
         opts['beacons'] = {}
-    
+
     if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
-        opts['ipc_write_buffer'] = 0 
+        opts['ipc_write_buffer'] = 0
 
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
@@ -3062,7 +3062,7 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
-        opts['ipc_write_buffer'] = 0 
+        opts['ipc_write_buffer'] = 0
     using_ip_for_id = False
     append_master = False
     if not opts.get('id'):
