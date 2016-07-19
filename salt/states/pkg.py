@@ -1061,8 +1061,8 @@ def installed(
         # Ensure that refresh doesn't occur again for the remainder of the salt run
         # (unless overriden)
         if os.path.isfile(rtag) and refresh:
-           os.remove(rtag)
-        refresh=False
+            os.remove(rtag)
+        refresh = False
 
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
@@ -1092,12 +1092,12 @@ def installed(
                                    **kwargs)
 
     if salt.utils.is_windows():
-       # Ensure that a refresh does not re-occur for the rest of the salt run
-       # (unless overriden)
-       if os.path.isfile(rtag) and refresh:
-          os.remove(rtag)
-       kwargs.pop('refresh')
-       refresh = False
+        # Ensure that a refresh does not re-occur for the rest of the salt run
+        # (unless overriden)
+        if os.path.isfile(rtag) and refresh:
+           os.remove(rtag)
+        kwargs.pop('refresh')
+        refresh = False
 
     try:
         (desired, targets, to_unpurge,
