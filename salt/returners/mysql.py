@@ -246,6 +246,11 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
+    # if a minion is returning a standalone job, get a jobid
+    if ret['jid'] == 'req':
+        ret['jid'] = prep_jid(nocache=ret.get('nocache', False))
+        save_load(ret['jid'], ret)
+
     try:
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO `salt_returns`
