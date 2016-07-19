@@ -859,10 +859,11 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         raise SaltInvocationError('Only one of network_interface_id or '
                                   'network_interface_name may be provided.')
     if network_interface_name:
-        network_interface_id = get_network_interface_id(network_interface_name,
+        result = get_network_interface_id(network_interface_name,
                                                         region=region, key=key,
                                                         keyid=keyid,
                                                         profile=profile)
+        network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
                 "Given network_interface_name '{0}' cannot be mapped to an "
