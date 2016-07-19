@@ -1095,7 +1095,7 @@ def installed(
         # Ensure that a refresh does not re-occur for the rest of the salt run
         # (unless overriden)
         if os.path.isfile(rtag) and refresh:
-           os.remove(rtag)
+            os.remove(rtag)
         kwargs.pop('refresh')
         refresh = False
 
