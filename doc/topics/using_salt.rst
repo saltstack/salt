@@ -15,6 +15,7 @@ This section describes the fundamental components and concepts that you need to 
     engines/index
     yaml/index
     jinja/index
+    tutorials/index
     troubleshooting/index
     ../faq
     best_practices
