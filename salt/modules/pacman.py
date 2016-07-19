@@ -299,13 +299,13 @@ def group_list():
             ret['partially_installed'].append(group)
         available.pop(group)
 
-    # Now installed and partially installed are set, whatever is left is the available list.
-
-    ret['available'] = available.keys()
-
     ret['installed'].sort()
     ret['partially_installed'].sort()
-    ret['available'].sort()
+
+    # Now installed and partially installed are set, whatever is left is the available list.
+    # In Python 3, .keys() returns an iterable view instead of a list. sort() cannot be
+    # called on views. Use sorted() instead. Plus it's just as efficient as sort().
+    ret['available'] = sorted(available.keys())
 
     return ret
 
