@@ -30,11 +30,6 @@ try:
 except ImportError:
     pass
 
-try:
-    import salt.ext.six.moves.socketserver as socketserver
-except ImportError:
-    import socketserver
-
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
@@ -81,7 +76,11 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
-import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
+
+try:
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=name-in-module
+except ImportError:
+    import socketserver
 
 if salt.utils.is_windows():
     import win32api
