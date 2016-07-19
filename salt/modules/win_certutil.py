@@ -5,7 +5,7 @@ manager.
 
 .. code-block:: bash
 
-    salt '*' certutil.install salt://cert.cer "TrustedPublisher"
+    salt '*' certutil.add_store salt://cert.cer "TrustedPublisher"
 '''
 
 # Import Python Libs
