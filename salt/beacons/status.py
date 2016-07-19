@@ -32,7 +32,8 @@ def beacon(config):
     data = {'loadavg': __salt__.status.loadavg(),
             'cpustats': __salt__.status.cpustats(),
             'meminfo': __salt__.status.meminfo(),
-            'vmstats': __salt__.status.vmstats(),
+            'swapinfo': __salt__.ps.swap_memory(),
+            'vmstats': __salt__.ps.virtual_memory(),
             'time': __salt__.status.time(),
             }
     return [{'tag': ctime, 'data': data}]
