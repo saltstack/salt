@@ -796,10 +796,20 @@ def get_system_time():
     '''
     Get the system time.
 
-    :return: Returns the system time in HH:MM AM/PM format.
+    :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
     '''
-    return datetime.strftime(datetime.now(), "%I:%M %p")
+    now = win32api.GetLocalTime()
+    meridian = 'AM'
+    hours = int(now[4])
+    if hours == 12:
+        meridian = 'PM'
+    elif hours == 0:
+        hours = 12
+    elif hours > 12:
+        hours = hours - 12
+        meridian = 'PM'
+    return '{0:02d}:{1:02d}:{2:02d} {3}'.format(hours, now[5], now[6], meridian)
 
 
 def set_system_time(newtime):
@@ -907,7 +917,8 @@ def get_system_date():
 
         salt '*' system.get_system_date
     '''
-    return datetime.strftime(datetime.now(), "%a %m/%d/%Y")
+    now = win32api.GetLocalTime()
+    return '{0:02d}/{1:02d}/{2:04d}'.format(now[1], now[3], now[0])
 
 
 def set_system_date(newdate):
