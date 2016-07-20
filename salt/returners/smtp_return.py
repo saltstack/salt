@@ -6,7 +6,8 @@ The following fields can be set in the minion conf file. Fields are optional
 unless noted otherwise.
 
 * ``from`` (required) The name/address of the email sender.
-* ``to`` (required) The name/address of the email recipient.
+* ``to`` (required) The names/addresses of the email recipients;
+    comma-delimited. For example: ``you@example.com,someoneelse@example.com``.
 * ``host`` (required) The SMTP server hostname or address.
 * ``port`` The SMTP server port; defaults to ``25``.
 * ``username`` The username used to authenticate to the server. If specified a
@@ -93,11 +94,10 @@ for Salt Master. For example:
     smtp.subject: 'Salt Master {{act}}ed key from Minion ID: {{id}}'
     smtp.template: /srv/salt/templates/email.j2
 
-Also you need to create additional file with email body template:
+Also you need to create additional file ``/srv/salt/templates/email.j2`` with email body template:
 
 .. code-block:: yaml
 
-    # /srv/salt/templates/email.j2
     act: {{act}}
     id: {{id}}
     result: {{result}}
@@ -167,7 +167,7 @@ def returner(ret):
 
     _options = _get_options(ret)
     from_addr = _options.get('from')
-    to_addrs = _options.get('to')
+    to_addrs = _options.get('to').split(',')
     host = _options.get('host')
     port = _options.get('port')
     user = _options.get('username')
@@ -185,13 +185,13 @@ def returner(ret):
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
+
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
     subject = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=subject, **ret)
     if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
-
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     template = _options.get('template')
@@ -226,14 +226,14 @@ def returner(ret):
                'Subject: {3}\r\n'
                '\r\n'
                '{4}').format(from_addr,
-                             to_addrs,
+                             ', '.join(to_addrs),
                              formatdate(localtime=True),
                              subject,
                              content)
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    server.set_debuglevel = 'debug'
+    server.set_debuglevel(1) # enable logging SMTP session
     if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
