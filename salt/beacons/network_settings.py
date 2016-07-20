@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import third party libs
 try:
     from pyroute2.ipdb import IPDB
+    IP = IPDB()
     HAS_PYROUTE2 = True
 except ImportError:
     HAS_PYROUTE2 = False
@@ -28,8 +29,6 @@ ATTRS = ['family', 'txqlen', 'ipdb_scope', 'index', 'operstate', 'group',
          'ifi_type', 'ports']
 
 LAST_STATS = {}
-
-IP = IPDB()
 
 
 class Hashabledict(dict):
