@@ -50,17 +50,17 @@ class ConfigTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('config.manage_mode', ['"775"']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['"1775"']), '01775')
+            self.run_function('config.manage_mode', ['"1775"']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['"0775"']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['"01775"']), '01775')
+            self.run_function('config.manage_mode', ['"01775"']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['"0"']), '0000')
         self.assertEqual(
             self.run_function('config.manage_mode', ['775']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['1775']), '01775')
+            self.run_function('config.manage_mode', ['1775']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['0']), '0000')
 
