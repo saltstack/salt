@@ -112,6 +112,20 @@ versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 Pillar data. Make sure that your Pillars which need to use the string versions
 of these values are enclosed in quotes.
 
+The '%' Sign
+============
+
+The `%` symbol has a special meaning in YAML, it needs to be passed as a
+string literal:
+
+.. code-block:: yaml
+
+    cheese:
+      ssh_auth.present:
+        - user: tbortels
+        - source: salt://ssh_keys/chease.pub
+        - config: '%h/.ssh/authorized_keys'
+
 Integers are Parsed as Integers
 ===============================
 
