@@ -2108,15 +2108,11 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                publisher_acl = salt.utils.get_values_of_matching_keys(
-                            self.opts['publisher_acl'] or self.opts['client_acl'],
-                            clear_load['user'].split('_', 1)[-1])
-                if not publisher_acl:
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                        )
-                    return ''
+                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
+                    publisher_acl = salt.utils.get_values_of_matching_keys(
+                            publisher_acl,
+                            clear_load['user'].split('_', 1)[-1])
                     good = self.ckminions.auth_check(
                                 publisher_acl,
                                 clear_load['fun'],
