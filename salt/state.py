@@ -512,6 +512,8 @@ class Compiler(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
@@ -1140,6 +1142,8 @@ class State(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
