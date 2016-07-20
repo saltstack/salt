@@ -86,11 +86,8 @@ def find_file(path, saltenv='base', **kwargs):
            'rel': ''}
     try:
         root = os.path.join(salt.syspaths.CACHE_DIR, 'azure')
-    except IndexError:
-        # An invalid index was passed
-        return fnd
-    except ValueError:
-        # An invalid index option was passed
+    except (IndexError, ValueError):
+        # An invalid index or index option was passed
         return fnd
     full = os.path.join(root, path)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(
