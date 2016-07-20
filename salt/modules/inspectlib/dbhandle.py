@@ -89,7 +89,7 @@ class DBHandle(DBHandleBase):
         Keep singleton.
         '''
         if not cls.__instance:
-            cls.__instance = super(DBHandle, cls).__new__(cls, *args, **kwargs)
+            cls.__instance = super(DBHandle, cls).__new__(cls)
         return cls.__instance
 
     def __init__(self, path):
