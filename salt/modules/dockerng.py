@@ -772,6 +772,25 @@ def _get_client(timeout=None):
             # it's not defined by user.
             client_kwargs['version'] = 'auto'
 
+        docker_machine = __salt__['config.get']('docker.machine', NOTSET)
+
+        if docker_machine is not NOTSET:
+            docker_machine_json = __salt__['cmd.run']('docker-machine inspect ' + docker_machine)
+            try:
+                docker_machine_json = json.loads(docker_machine_json)
+                docker_machine_tls = docker_machine_json['HostOptions']['AuthOptions']
+                docker_machine_ip = docker_machine_json['Driver']['IPAddress']
+                client_kwargs['base_url'] = 'https://' + docker_machine_ip + ':2376'
+                client_kwargs['tls'] = docker.tls.TLSConfig(
+                    client_cert=(docker_machine_tls['ClientCertPath'],
+                                 docker_machine_tls['ClientKeyPath']),
+                    ca_cert=docker_machine_tls['CaCertPath'],
+                    assert_hostname=False,
+                    verify=True)
+            except Exception as exc:
+                raise CommandExecutionError(
+                    'Docker machine {0} failed: {1}'.format(docker_machine, exc))
+
         __context__['docker.client'] = docker.Client(**client_kwargs)
 
     # Set a new timeout if one was passed
