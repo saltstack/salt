@@ -17,6 +17,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 import salt.ext.six as six
 from salt.modules import mysql as mysqlmod
 
@@ -26,6 +27,9 @@ NO_MYSQL = False
 try:
     import MySQLdb  # pylint: disable=import-error,unused-import
 except ImportError:
+    NO_MYSQL = True
+
+if not salt.utils.which('mysqladmin'):
     NO_MYSQL = True
 
 
