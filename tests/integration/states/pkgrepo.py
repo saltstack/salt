@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 tests for pkgrepo states
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -17,6 +19,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 class PkgrepoTest(integration.ModuleCase,
                   integration.SaltReturnAssertsMixIn):
@@ -30,6 +35,14 @@ class PkgrepoTest(integration.ModuleCase,
         '''
         This is a destructive test as it adds a repository.
         '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
+        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+            self.skipTest(
+                'The PPA used for this test does not exist for Ubuntu Wily'
+                ' (15.10) and later.'
+            )
+
         if grains['os_family'] == 'Debian':
             try:
                 from aptsources import sourceslist
@@ -42,7 +55,7 @@ class PkgrepoTest(integration.ModuleCase,
         # tests/integration/files/file/base/pkgrepo/managed.sls needs to be
         # corrected.
         self.assertReturnNonEmptySaltType(ret)
-        for state_id, state_result in ret.iteritems():
+        for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
     @destructiveTest
@@ -52,12 +65,20 @@ class PkgrepoTest(integration.ModuleCase,
         This is a destructive test as it removes the repository added in the
         above test.
         '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
+        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+            self.skipTest(
+                'The PPA used for this test does not exist for Ubuntu Wily'
+                ' (15.10) and later.'
+            )
+
         ret = self.run_function('state.sls', mods='pkgrepo.absent', timeout=120)
         # If the below assert fails then no states were run, and the SLS in
         # tests/integration/files/file/base/pkgrepo/absent.sls needs to be
         # corrected.
         self.assertReturnNonEmptySaltType(ret)
-        for state_id, state_result in ret.iteritems():
+        for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
 

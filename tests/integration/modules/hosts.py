@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the hosts module
 '''
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -50,7 +50,7 @@ class HostsModuleTest(integration.ModuleCase):
         '''
         self.__clean_hosts()
         hosts = self.run_function('hosts.list_hosts')
-        self.assertEqual(len(hosts), 6)
+        self.assertEqual(len(hosts), 10)
         self.assertEqual(hosts['::1'], ['ip6-localhost', 'ip6-loopback'])
         self.assertEqual(hosts['127.0.0.1'], ['localhost', 'myname'])
 
@@ -121,7 +121,7 @@ class HostsModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
         )
-        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
         self.assertFalse(
             self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']),
             'should remove second entry'
@@ -138,11 +138,11 @@ class HostsModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
         )
-        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
         self.assertTrue(
             self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
         )
-        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
 
     def test_rm_host(self):
         self.__clean_hosts()
@@ -210,8 +210,8 @@ class HostsModuleTest(integration.ModuleCase):
         lines = salt.utils.fopen(HFN, 'r').read().splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',
-            '192.168.1.1\t\thost1.fqdn.com\t\thost1\t\thost1-reorder',
-            '192.168.1.2\t\thost2.fqdn.com\t\thost2\t\toldhost2\t\thost2-reorder',
+            '192.168.1.1\t\thost1.fqdn.com host1 host1-reorder',
+            '192.168.1.2\t\thost2.fqdn.com host2 oldhost2 host2-reorder',
         ])
 
 

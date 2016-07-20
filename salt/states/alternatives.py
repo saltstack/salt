@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of the alternatives system
-========================================
 
 Control the alternatives system
 
@@ -23,8 +22,8 @@ Control the alternatives system
 
   hadoop-0.20-conf:
     alternatives.remove:
-        - name: hadoop-0.20-conf
-        - path: {{ my_hadoop_conf }}
+      - name: hadoop-0.20-conf
+      - path: {{ my_hadoop_conf }}
 
 '''
 
@@ -104,7 +103,7 @@ def remove(name, path):
            'changes': {},
            'comment': ''}
 
-    isinstalled = __salt__['alternatives.check_installed'](name, path)
+    isinstalled = __salt__['alternatives.check_exists'](name, path)
     if isinstalled:
         if __opts__['test']:
             ret['comment'] = ('Alternative for {0} will be removed'
@@ -159,7 +158,6 @@ def auto(name):
            'changes': {}}
 
     display = __salt__['alternatives.display'](name)
-    isinstalled = False
     line = display.splitlines()[0]
     if line.endswith(' auto mode'):
         ret['comment'] = '{0} already in auto mode'.format(name)

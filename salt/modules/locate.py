@@ -2,6 +2,7 @@
 '''
 Module for using the locate utilities
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -107,7 +108,7 @@ def locate(pattern, database='', limit=0, **kwargs):
         'wholename': 'w',
         }
     for option in kwargs:
-        if bool(kwargs[option]) is True:
+        if bool(kwargs[option]) is True and option in toggles:
             options += toggles[option]
     if options:
         options = '-{0}'.format(options)

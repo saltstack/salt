@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
+
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:
@@ -13,7 +20,8 @@ from copy import deepcopy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -434,3 +442,27 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     return salt.utils.get_group_list(name)
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'usermod -l {0} {1}'.format(new_name, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False

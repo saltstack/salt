@@ -3,26 +3,22 @@
 Manage basic template commands
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import time
 import os
 import codecs
 import logging
-from cStringIO import StringIO as cStringIO
-from StringIO import StringIO as pyStringIO
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.utils.odict import OrderedDict
+from salt._compat import string_io
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
-
-def string_io(data=None):  # cStringIO can't handle unicode
-    try:
-        return cStringIO(bytes(data))
-    except UnicodeEncodeError:
-        return pyStringIO(data)
 
 #FIXME: we should make the default encoding of a .sls file a configurable
 #       option in the config, and default it to 'utf-8'.
@@ -36,12 +32,17 @@ def compile_template(template,
                      default,
                      saltenv='base',
                      sls='',
+                     input_data='',
                      **kwargs):
     '''
     Take the path to a template and return the high data structure
     derived from the template.
     '''
 
+    # if any error occurs, we return an empty dictionary
+    ret = {}
+
+    log.debug('compile template: {0}'.format(template))
     # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
     kwargs.setdefault('env', saltenv)
     salt.utils.warn_until(
@@ -51,49 +52,70 @@ def compile_template(template,
         _dont_call_warnings=True
     )
 
-    # Template was specified incorrectly
-    if not isinstance(template, string_types):
-        return {}
-    # Template does not exists
-    if not os.path.isfile(template):
-        return {}
-    # Template is an empty file
-    if salt.utils.is_empty(template):
-        return {}
+    if template != ':string:':
+        # Template was specified incorrectly
+        if not isinstance(template, string_types):
+            log.error('Template was specified incorrectly: {0}'.format(template))
+            return ret
+        # Template does not exist
+        if not os.path.isfile(template):
+            log.error('Template does not exist: {0}'.format(template))
+            return ret
+        # Template is an empty file
+        if salt.utils.is_empty(template):
+            log.warn('Template is an empty file: {0}'.format(template))
+            return ret
+
+        with codecs.open(template, encoding=SLS_ENCODING) as ifile:
+            # data input to the first render function in the pipe
+            input_data = ifile.read()
+            if not input_data.strip():
+                # Template is nothing but whitespace
+                log.error('Template is nothing but whitespace: {0}'.format(template))
+                return ret
 
     # Get the list of render funcs in the render pipe line.
-    render_pipe = template_shebang(template, renderers, default)
-
-    with codecs.open(template, encoding=SLS_ENCODING) as ifile:
-        # data input to the first render function in the pipe
-        input_data = ifile.read()
-        if not input_data.strip():
-            # Template is nothing but whitespace
-            return {}
+    render_pipe = template_shebang(template, renderers, default, input_data)
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        try:
-            input_data.seek(0)
-        except Exception:
-            pass
+        # For GPG renderer, input_data can be an OrderedDict. Repress the
+        # error.
+        if not isinstance(input_data, OrderedDict):
+            try:
+                input_data.seek(0)
+            except Exception as exp:
+                log.error('error: {0}'.format(exp))
+
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:
             render_kwargs['argline'] = argline
+        start = time.time()
         ret = render(input_data, saltenv, sls, **render_kwargs)
+        log.profile(
+            'Time (in seconds) to render \'{0}\' using \'{1}\' renderer: {2}'.format(
+                template,
+                render.__module__.split('.')[-1],
+                time.time() - start
+            )
+        )
         if ret is None:
             # The file is empty or is being written elsewhere
             time.sleep(0.01)
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
-        if log.isEnabledFor(logging.GARBAGE):
+        if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
             try:
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
                     ret.read()))
                 ret.seek(0)
             except Exception:
+                # ret is not a StringIO, which means it was rendered using
+                # yaml, mako, or another engine which renders to a data
+                # structure. We don't want to log this, so ignore this
+                # exception.
                 pass
     return ret
 
@@ -109,7 +131,7 @@ def compile_template_str(template, renderers, default):
     return compile_template(fn_, renderers, default)
 
 
-def template_shebang(template, renderers, default):
+def template_shebang(template, renderers, default, input_data):
     '''
     Check the template shebang line and return the list of renderers specified
     in the pipe.
@@ -129,15 +151,19 @@ def template_shebang(template, renderers, default):
     '''
     render_pipe = []
 
+    line = ''
     # Open up the first line of the sls template
-    with salt.utils.fopen(template, 'r') as ifile:
-        line = ifile.readline()
+    if template == ':string:':
+        line = input_data.split()[0]
+    else:
+        with salt.utils.fopen(template, 'r') as ifile:
+            line = ifile.readline()
 
-        # Check if it starts with a shebang and not a path
-        if line.startswith('#!') and not line.startswith('#!/'):
+    # Check if it starts with a shebang and not a path
+    if line.startswith('#!') and not line.startswith('#!/'):
 
-            # pull out the shebang data
-            render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
+        # pull out the shebang data
+        render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
 
     if not render_pipe:
         render_pipe = check_render_pipe_str(default, renderers)
@@ -145,22 +171,22 @@ def template_shebang(template, renderers, default):
     return render_pipe
 
 
-# A dict of combined renderer(ie, rend1_rend2_...) to
-# render-pipe(ie, rend1|rend2|...)
+# A dict of combined renderer (i.e., rend1_rend2_...) to
+# render-pipe (i.e., rend1|rend2|...)
 #
 OLD_STYLE_RENDERERS = {}
 
 for comb in '''
-    yaml_jinja
-    yaml_mako
-    yaml_wempy
-    json_jinja
-    json_mako
-    json_wempy
-    yamlex_jinja
-    yamlexyamlex_mako
-    yamlexyamlex_wempy
-    '''.strip().split():
+        yaml_jinja
+        yaml_mako
+        yaml_wempy
+        json_jinja
+        json_mako
+        json_wempy
+        yamlex_jinja
+        yamlexyamlex_mako
+        yamlexyamlex_wempy
+        '''.strip().split():
 
     fmt, tmpl = comb.split('_')
     OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)

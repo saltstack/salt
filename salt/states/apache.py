@@ -39,6 +39,7 @@ the above word between angle brackets (<>).
 '''
 
 from __future__ import with_statement, print_function
+from __future__ import absolute_import
 
 # Import python libs
 import os.path

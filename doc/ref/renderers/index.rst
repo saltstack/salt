@@ -5,7 +5,7 @@ Renderers
 =========
 
 The Salt state system operates by gathering information from common data
-types such as lists, dictionaries and strings that would be familiar
+types such as lists, dictionaries, and strings that would be familiar
 to any developer.
 
 SLS files are translated from whatever data templating format they are written
@@ -109,7 +109,7 @@ as output.
 Writing Renderers
 -----------------
 
-A custom renderer must be a Python module placed in the rendered directory and the
+A custom renderer must be a Python module placed in the renderers directory and the
 module implement the ``render`` function.
 
 The ``render`` function will be passed the path of the SLS file as an argument.
@@ -121,11 +121,10 @@ Custom renderers must be placed in a ``_renderers`` directory within the
 :conf_master:`file_roots` specified by the master config file.
 
 Custom renderers are distributed when any of the following are run:
-    :mod:`state.highstate <salt.modules.state.highstate>`
 
-    :mod:`saltutil.sync_renderers <salt.modules.saltutil.sync_renderers>`
-
-    :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+- :py:func:`state.apply <salt.modules.state.apply_>`
+- :py:func:`saltutil.sync_renderers <salt.modules.saltutil.sync_renderers>`
+- :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
 
 Any custom renderers which have been synced to a minion, that are named the
 same as one of Salt's default set of renderers, will take the place of the

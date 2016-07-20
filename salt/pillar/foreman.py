@@ -30,15 +30,24 @@ The following options are optional:
   foreman.cafile: /etc/ssl/certs/mycert.ca.pem # default is None
   foreman.lookup_parameters: True # default is True
 
+An alternative would be to use the Foreman modules integrating Salt features
+in the Smart Proxy and the webinterface.
+
+Further information can be found on `GitHub <https://github.com/theforeman/foreman_salt>`_.
 
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
-import requests
 
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 __opts__ = {'foreman.url': 'http://foreman/api',
             'foreman.user': 'admin',
@@ -54,6 +63,18 @@ __opts__ = {'foreman.url': 'http://foreman/api',
 
 # Set up logging
 log = logging.getLogger(__name__)
+
+# Declare virtualname
+__virtualname__ = 'foreman'
+
+
+def __virtual__():
+    '''
+    Only return if all the modules are available
+    '''
+    if not HAS_REQUESTS:
+        return False
+    return __virtualname__
 
 
 def ext_pillar(minion_id,
@@ -93,25 +114,14 @@ def ext_pillar(minion_id,
                 verify=verify,
                 cert=(certfile, keyfile)
                 )
-        result = resp.json
+        result = resp.json()
 
         log.debug('Raw response of the Foreman request is %r', format(result))
 
         if lookup_parameters:
             parameters = dict()
-            for param in result['parameters']:
-                resp = requests.get(
-                        url + '/hosts/' + minion_id + '/parameters/'
-                            + str(param[u'id']),
-                        auth=(user, password),
-                        headers=headers,
-                        verify=verify,
-                        cert=(certfile, keyfile)
-                        )
-                body = resp.json
-                log.debug('Raw response of the Foreman parameter lookup'
-                        'request is %r', format(body))
-                parameters.update({body[u'name']: body[u'value']})
+            for param in result['all_parameters']:
+                parameters.update({param[u'name']: param[u'value']})
 
             result[u'parameters'] = parameters
 

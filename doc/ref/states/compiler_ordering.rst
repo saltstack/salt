@@ -79,48 +79,48 @@ Will have High Data which looks like this represented in json:
             "pkg": [
                 {
                     "name": "httpd"
-                }, 
-                "installed", 
+                },
+                "installed",
                 {
                     "order": 10000
                 }
-            ], 
+            ],
             "service": [
                 {
                     "name": "httpd"
-                }, 
+                },
                 {
                     "watch": [
                         {
                             "file": "apache_conf"
-                        }, 
+                        },
                         {
                             "pkg": "apache"
                         }
                     ]
-                }, 
-                "running", 
+                },
+                "running",
                 {
                     "order": 10001
                 }
-            ], 
-            "__sls__": "blah", 
+            ],
+            "__sls__": "blah",
             "__env__": "base"
-        }, 
+        },
         "apache_conf": {
             "file": [
                 {
                     "name": "/etc/httpd/conf.d/httpd.conf"
-                }, 
+                },
                 {
                     "source": "salt://apache/httpd.conf"
-                }, 
-                "managed", 
+                },
+                "managed",
                 {
                     "order": 10002
                 }
-            ], 
-            "__sls__": "blah", 
+            ],
+            "__sls__": "blah",
             "__env__": "base"
         }
     }
@@ -131,39 +131,39 @@ The subsequent Low Data will look like this:
 
     [
         {
-            "name": "httpd", 
-            "state": "pkg", 
-            "__id__": "apache", 
-            "fun": "installed", 
-            "__env__": "base", 
-            "__sls__": "blah", 
+            "name": "httpd",
+            "state": "pkg",
+            "__id__": "apache",
+            "fun": "installed",
+            "__env__": "base",
+            "__sls__": "blah",
             "order": 10000
-        }, 
+        },
         {
-            "name": "httpd", 
+            "name": "httpd",
             "watch": [
                 {
                     "file": "apache_conf"
-                }, 
+                },
                 {
                     "pkg": "apache"
                 }
-            ], 
-            "state": "service", 
-            "__id__": "apache", 
-            "fun": "running", 
-            "__env__": "base", 
-            "__sls__": "blah", 
+            ],
+            "state": "service",
+            "__id__": "apache",
+            "fun": "running",
+            "__env__": "base",
+            "__sls__": "blah",
             "order": 10001
-        }, 
+        },
         {
-            "name": "/etc/httpd/conf.d/httpd.conf", 
-            "source": "salt://apache/httpd.conf", 
-            "state": "file", 
-            "__id__": "apache_conf", 
-            "fun": "managed", 
-            "__env__": "base", 
-            "__sls__": "blah", 
+            "name": "/etc/httpd/conf.d/httpd.conf",
+            "source": "salt://apache/httpd.conf",
+            "state": "file",
+            "__id__": "apache_conf",
+            "fun": "managed",
+            "__env__": "base",
+            "__sls__": "blah",
             "order": 10002
         }
     ]
@@ -226,7 +226,7 @@ In the following case:
     include:
       - qux
 
-In the above case if `state.sls foo` were called then the formulas will be
+In the above case if ``state.apply foo`` were called then the formulas will be
 loaded in the following order:
 
 1. quo

@@ -34,8 +34,9 @@ Create a new `virtualenv`_:
 
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
-On Arch Linux, where Python 3 is the default installation of Python, use the
-``virtualenv2`` command instead of ``virtualenv``.
+Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+On Arch Linux, where Python 3 is the default installation of Python, use
+the ``virtualenv2`` command instead of ``virtualenv``.
 
 .. note:: Using system Python modules in the virtualenv
 
@@ -121,15 +122,14 @@ Copy the master and minion config files into your virtualenv:
 .. code-block:: bash
 
     mkdir -p /path/to/your/virtualenv/etc/salt
-    cp ./salt/conf/master /path/to/your/virtualenv/etc/salt/master
-    cp ./salt/conf/minion /path/to/your/virtualenv/etc/salt/minion
+    cp ./salt/conf/master ./salt/conf/minion /path/to/your/virtualenv/etc/salt/
 
 Edit the master config file:
 
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  If you are running version 0.11.1 or older, uncomment and change the
+3.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
     ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
@@ -139,7 +139,7 @@ Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  If you are running version 0.11.1 or older, uncomment and change the
+2.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to
     ``/path/to/your/virtualenv/salt-minion.pid``.
 3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
@@ -175,23 +175,28 @@ do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
 If you would like to log to the console instead of to the log file, remove the
 ``-d``.
 
-Once the minion starts, you may see an error like the following:
+.. _too_long_socket_path:
+.. note:: Too long socket path?
 
-.. code-block:: bash
+    Once the minion starts, you may see an error like the following:
 
-    zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
+    .. code-block:: bash
 
-This means the the path to the socket the minion is using is too long. This is
-a system limitation, so the only workaround is to reduce the length of this
-path. This can be done in a couple different ways:
+        zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
+        var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"
+        is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-1.  Create your virtualenv in a path that is short enough.
-2.  Edit the :conf_minion:`sock_dir` minion config variable and reduce its
-    length. Remember that this path is relative to the value you set in
-    :conf_minion:`root_dir`.
+    This means that the path to the socket the minion is using is too long. This is
+    a system limitation, so the only workaround is to reduce the length of this
+    path. This can be done in a couple different ways:
 
-``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
-and 103 characters on BSD-based systems.
+    1.  Create your virtualenv in a path that is short enough.
+    2.  Edit the :conf_minion:`sock_dir` minion config variable and reduce its
+        length. Remember that this path is relative to the value you set in
+        :conf_minion:`root_dir`.
+
+    ``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
+    and 103 characters on BSD-based systems.
 
 .. note:: File descriptor limits
 
@@ -208,6 +213,48 @@ and 103 characters on BSD-based systems.
 
     To set file descriptors on OSX, refer to the :doc:`OS X Installation
     </topics/installation/osx>` instructions.
+
+
+Changing Default Paths
+~~~~~~~~~~~~~~~~~~~~~~
+
+Instead of updating your configuration files to point to the new root directory
+and having to pass the new configuration directory path to all of Salt's CLI
+tools, you can explicitly tweak the default system paths that Salt expects:
+
+.. code-block:: bash
+
+    GENERATE_SALT_SYSPATHS=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
+
+
+You can now call all of Salt's CLI tools without explicitly passing the configuration directory.
+
+Additional Options
+..................
+
+In case you want to distribute your virtualenv, you probably don't want to
+include Salt's clone ``.git/`` directory, and, without it, Salt won't report
+the accurate version. You can tell ``setup.py`` to generate the hardcoded
+version information which is distributable:
+
+.. code-block:: bash
+
+    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
+
+
+Instead of passing those two environmental variables, you can just pass a
+single one which will trigger the other two:
+
+.. code-block:: bash
+
+    MIMIC_SALT_INSTALL=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
+
+
+This last one will grant you an editable salt installation with hardcoded
+system paths and version information.
 
 
 Installing Salt from the Python Package Index
@@ -231,7 +278,7 @@ to a virtualenv using pip:
 
 .. code-block:: bash
 
-    pip install Sphinx
+    pip install Sphinx==1.3b2
 
 Change to salt documentation directory, then:
 
@@ -281,3 +328,10 @@ Run the test suite with following command:
     ./setup.py test
 
 See :doc:`here <tests/index>` for more information regarding the test suite.
+
+Issue and Pull Request Labeling System
+--------------------------------------
+
+SaltStack uses several labeling schemes to help facilitate code contributions
+and bug resolution. See the :ref:`Labels and Milestones
+<labels-and-milestones>` documentation for more information.

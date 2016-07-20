@@ -2,18 +2,24 @@
 '''
 Support for iptables
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
 import sys
+import uuid
 import shlex
+import string
 
 # Import salt libs
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
-import salt.modules.cmdmod as salt_cmd
+from salt.ext import six
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -34,6 +40,21 @@ def _iptables_cmd(family='ipv4'):
         return salt.utils.which('ip6tables')
     else:
         return salt.utils.which('iptables')
+
+
+def _has_option(option, family='ipv4'):
+    '''
+    Return truth of whether iptables has `option`.  For example:
+
+    .. code-block:: python
+
+        _has_option('--wait')
+        _has_option('--check', family='ipv6')
+    '''
+    cmd = '{0} --help'.format(_iptables_cmd(family))
+    if option in __salt__['cmd.run'](cmd, output_loglevel='quiet'):
+        return True
+    return False
 
 
 def _conf(family='ipv4'):
@@ -60,8 +81,13 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
+    elif __grains__['os_family'] == 'Suse':
+        # SuSE does not seem to use separate files for IPv4 and IPv6
+        return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     else:
-        return False
+        raise SaltException('Saving iptables to file is not' +
+                            ' supported on {0}.'.format(__grains__['os']) +
+                            ' Please file an issue with SaltStack')
 
 
 def version(family='ipv4'):
@@ -82,12 +108,11 @@ def version(family='ipv4'):
     return out[1]
 
 
-def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
+def build_rule(table='filter', chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
+    are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
     `command` may be specified as either a short option ('I') or a long option
@@ -98,6 +123,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
+
+    To pass in jump options that doesn't take arguments, pass in an empty
+    string.
 
     CLI Examples:
 
@@ -132,173 +160,257 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     '''
     if 'target' in kwargs:
-        kwargs['jump'] = kwargs['target']
-        del kwargs['target']
+        kwargs['jump'] = kwargs.pop('target')
+
+    # Ignore name and state for this function
+    kwargs.pop('name', None)
+    kwargs.pop('state', None)
 
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
         if ignore in kwargs:
             del kwargs[ignore]
 
-    rule = ''
+    rule = []
     proto = False
-    bang_not_pat = re.compile(r'[!,not]\s?')
+    bang_not_pat = re.compile(r'(!|not)\s?')
+
+    def maybe_add_negation(arg):
+        '''
+        Will check if the defined argument is intended to be negated,
+        (i.e. prefixed with '!' or 'not'), and add a '! ' to the rule.
+
+        The prefix will be removed from the value in the kwargs dict.
+        '''
+        value = str(kwargs[arg])
+        if value.startswith('!') or value.startswith('not'):
+            kwargs[arg] = re.sub(bang_not_pat, '', value)
+            return '! '
+        return ''
 
     if 'if' in kwargs:
-        if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
-            kwargs['if'] = re.sub(bang_not_pat, '', kwargs['if'])
-            rule += '! '
-
-        rule += '-i {0} '.format(kwargs['if'])
+        rule.append('{0}-i {1}'.format(maybe_add_negation('if'), kwargs['if']))
         del kwargs['if']
 
     if 'of' in kwargs:
-        if kwargs['of'].startswith('!') or kwargs['of'].startswith('not'):
-            kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
-            rule += '! '
-
-        rule += '-o {0} '.format(kwargs['of'])
+        rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    if 'protocol' in kwargs:
-        proto = kwargs['protocol']
-        del kwargs['protocol']
-    elif 'proto' in kwargs:
-        proto = kwargs['proto']
-        del kwargs['proto']
-
-    if proto:
-        if proto.startswith('!') or proto.startswith('not'):
-            proto = re.sub(bang_not_pat, '', proto)
-            rule += '! '
-
-        rule += '-p {0} '.format(proto)
-        proto = True
+    for proto_arg in ('protocol', 'proto'):
+        if proto_arg in kwargs:
+            if not proto:
+                rule.append('{0}-p {1}'.format(maybe_add_negation(proto_arg), kwargs[proto_arg]))
+                proto = True
+            del kwargs[proto_arg]
 
     if 'match' in kwargs:
-        if not isinstance(kwargs['match'], list):
-            kwargs['match'] = kwargs['match'].split(',')
-        for match in kwargs['match']:
-            rule += '-m {0} '.format(match)
+        match_value = kwargs['match']
+        if not isinstance(match_value, list):
+            match_value = match_value.split(',')
+        for match in match_value:
+            rule.append('-m {0}'.format(match))
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule += '--name {0} '.format(kwargs['name'])
+                rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
 
-    if 'name' in kwargs:
-        del kwargs['name']
-
-    if 'state' in kwargs:
-        del kwargs['state']
+    if 'match-set' in kwargs:
+        if isinstance(kwargs['match-set'], six.string_types):
+            kwargs['match-set'] = [kwargs['match-set']]
+        for match_set in kwargs['match-set']:
+            negative_match_set = ''
+            if match_set.startswith('!') or match_set.startswith('not'):
+                negative_match_set = '! '
+                match_set = re.sub(bang_not_pat, '', match_set)
+            rule.append('-m set {0}--match-set {1}'.format(negative_match_set, match_set))
+        del kwargs['match-set']
 
     if 'connstate' in kwargs:
         if '-m state' not in rule:
-            rule += '-m state '
+            rule.append('-m state')
 
-        if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
-            kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
-            rule += '! '
+        rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
 
-        rule += '--state {0} '.format(kwargs['connstate'])
         del kwargs['connstate']
 
     if 'dport' in kwargs:
-        if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
-            kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
-            rule += '! '
-
-        rule += '--dport {0} '.format(kwargs['dport'])
+        rule.append('{0}--dport {1}'.format(maybe_add_negation('dport'), kwargs['dport']))
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        if str(kwargs['sport']).startswith('!') or str(kwargs['sport']).startswith('not'):
-            kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
-            rule += '! '
-
-        rule += '--sport {0} '.format(kwargs['sport'])
+        rule.append('{0}--sport {1}'.format(maybe_add_negation('sport'), kwargs['sport']))
         del kwargs['sport']
 
-    if 'dports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
+    for multiport_arg in ('dports', 'sports'):
+        if multiport_arg in kwargs:
+            if '-m multiport' not in rule:
+                rule.append('-m multiport')
+                if not proto:
+                    return 'Error: proto must be specified'
 
-        if isinstance(kwargs['dports'], list):
-            if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
-                rule += '! '
-            dports = ','.join([str(i) for i in kwargs['dports']])
-        else:
-            if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
-                dports = re.sub(bang_not_pat, '', kwargs['dports'])
-                rule += '! '
+            mp_value = kwargs[multiport_arg]
+            if isinstance(mp_value, list):
+                if any(i for i in mp_value if str(i).startswith('!') or str(i).startswith('not')):
+                    mp_value = [re.sub(bang_not_pat, '', str(item)) for item in mp_value]
+                    rule.append('!')
+                dports = ','.join(str(i) for i in mp_value)
             else:
-                dports = kwargs['dports']
+                if str(mp_value).startswith('!') or str(mp_value).startswith('not'):
+                    dports = re.sub(bang_not_pat, '', mp_value)
+                    rule.append('!')
+                else:
+                    dports = mp_value
 
-        rule += '--dports {0} '.format(dports)
-        del kwargs['dports']
-
-    if 'sports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
-
-        if isinstance(kwargs['sports'], list):
-            if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
-                rule += '! '
-            sports = ','.join([str(i) for i in kwargs['sports']])
-        else:
-            if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
-                sports = re.sub(bang_not_pat, '', kwargs['sports'])
-                rule += '! '
-            else:
-                sports = kwargs['sports']
-
-        rule += '--sports {0} '.format(sports)
-        del kwargs['sports']
+            rule.append('--{0} {1}'.format(multiport_arg, dports))
+            del kwargs[multiport_arg]
 
     if 'comment' in kwargs:
-        rule += '--comment "{0}" '.format(kwargs['comment'])
+        if '-m comment' not in rule:
+            rule.append('-m comment')
+
+        rule.append('--comment "{0}"'.format(kwargs['comment']))
         del kwargs['comment']
 
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
-        if kwargs['set'].startswith('!') or kwargs['set'].startswith('not'):
-            kwargs['set'] = re.sub(bang_not_pat, '', kwargs['set'])
-            rule += '! '
-
-        rule += '--match-set {0} '.format(kwargs['set'])
+        rule.append('{0}--match-set {1}'.format(maybe_add_negation('set'), kwargs['set']))
         del kwargs['set']
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
+    # All jump arguments as extracted from man iptables-extensions, man iptables,
+    # man xtables-addons and http://www.iptables.info/en/iptables-targets-and-jumps.html
+    after_jump_arguments = (
+        'j',  # j and jump needs to be first
+        'jump',
 
-    if 'jump' in kwargs:
-        after_jump.append('--jump {0} '.format(kwargs['jump']))
-        del kwargs['jump']
+        # IPTABLES
+        'add-set',
+        'and-mark',
+        'and-tos',
+        'checksum-fill',
+        'clamp-mss-to-pmtu',
+        'clustermac',
+        'ctevents',
+        'ctmask',
+        'del-set',
+        'ecn-tcp-remove',
+        'exist',
+        'expevents',
+        'gateway',
+        'hash-init',
+        'hashmode',
+        'helper',
+        'label',
+        'local-node',
+        'log-ip-options',
+        'log-level',
+        'log-prefix',
+        'log-tcp-options',
+        'log-tcp-sequence',
+        'log-uid',
+        'mask',
+        'new',
+        'nfmask',
+        'nflog-group',
+        'nflog-prefix',
+        'nflog-range',
+        'nflog-threshold',
+        'nodst',
+        'notrack',
+        'on-ip',
+        'on-port',
+        'or-mark',
+        'or-tos',
+        'persistent',
+        'queue-balance',
+        'queue-bypass',
+        'queue-num',
+        'random',
+        'rateest-ewmalog',
+        'rateest-interval',
+        'rateest-name',
+        'reject-with',
+        'restore',
+        'restore-mark',
+        #'save',  # no arg, problematic name: How do we avoid collision with this?
+        'save-mark',
+        'selctx',
+        'set-class',
+        'set-dscp',
+        'set-dscp-class',
+        'set-mark',
+        'set-mss',
+        'set-tos',
+        'set-xmark',
+        'strip-options',
+        'timeout',
+        'to',
+        'to-destination',
+        'to-ports',
+        'to-source',
+        'total-nodes',
+        'tproxy-mark',
+        'ttl-dec',
+        'ttl-inc',
+        'ttl-set',
+        'type',
+        'ulog-cprange',
+        'ulog-nlgroup',
+        'ulog-prefix',
+        'ulog-qthreshold',
+        'xor-mark',
+        'xor-tos',
+        'zone',
 
-    if 'j' in kwargs:
-        after_jump.append('-j {0} '.format(kwargs['j']))
-        del kwargs['j']
+        # IPTABLES-EXTENSIONS
+        'dst-pfx',
+        'hl-dec',
+        'hl-inc',
+        'hl-set',
+        'hmark-dport-mask',
+        'hmark-dst-prefix',
+        'hmark-mod',
+        'hmark-offset',
+        'hmark-proto-mask',
+        'hmark-rnd',
+        'hmark-spi-mask',
+        'hmark-sport-mask',
+        'hmark-src-prefix',
+        'hmark-tuple',
+        'led-always-blink',
+        'led-delay',
+        'led-trigger-id',
+        'queue-cpu-fanout',
+        'src-pfx',
 
-    if 'to-port' in kwargs:
-        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
-        del kwargs['to-port']
+        # WEB
+        'to-port',
 
-    if 'to-ports' in kwargs:
-        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
-        del kwargs['to-ports']
-
-    if 'to-destination' in kwargs:
-        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
-        del kwargs['to-destination']
-
-    if 'reject-with' in kwargs:
-        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
-        del kwargs['reject-with']
+        # XTABLES
+        'addr',
+        'and-mask',
+        'delude',
+        'honeypot',
+        'or-mask',
+        'prefix',
+        'reset',
+        'reuse',
+        'set-mac',
+        'shift',
+        'static',
+        'tarpit',
+        'tname',
+        'ttl',
+    )
+    for after_jump_argument in after_jump_arguments:
+        if after_jump_argument in kwargs:
+            value = kwargs[after_jump_argument]
+            if any(ws_char in str(value) for ws_char in string.whitespace):
+                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
+            else:
+                after_jump.append('--{0} {1}'.format(after_jump_argument, value))
+            del kwargs[after_jump_argument]
 
     if 'log' in kwargs:
         after_jump.append('--log {0} '.format(kwargs['log']))
@@ -329,17 +441,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['log-uid']
 
     for item in kwargs:
-        if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
-            kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
-            rule += '! '
-
+        rule.append(maybe_add_negation(item))
         if len(item) == 1:
-            rule += '-{0} {1} '.format(item, kwargs[item])
+            rule.append('-{0} {1}'.format(item, kwargs[item]))
         else:
-            rule += '--{0} {1} '.format(item, kwargs[item])
+            rule.append('--{0} {1}'.format(item, kwargs[item]))
 
-    for item in after_jump:
-        rule += item
+    rule += after_jump
 
     if full in ['True', 'true']:
         if not table:
@@ -354,10 +462,12 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         else:
             flag = '--'
 
-        return '{0} -t {1} {2}{3} {4} {5} {6}'.format(_iptables_cmd(family),
-               table, flag, command, chain, position, rule)
+        wait = '--wait' if _has_option('--wait', family) else ''
 
-    return rule
+        return '{0} {1} -t {2} {3}{4} {5} {6} {7}'.format(_iptables_cmd(family),
+               wait, table, flag, command, chain, position, ' '.join(rule))
+
+    return ' '.join(rule)
 
 
 def get_saved_rules(conf_file=None, family='ipv4'):
@@ -373,7 +483,7 @@ def get_saved_rules(conf_file=None, family='ipv4'):
         IPv6:
         salt '*' iptables.get_saved_rules family=ipv6
     '''
-    return _parse_conf(conf_file, family)
+    return _parse_conf(conf_file=conf_file, family=family)
 
 
 def get_rules(family='ipv4'):
@@ -462,7 +572,9 @@ def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
     if not policy:
         return 'Error: Policy needs to be specified'
 
-    cmd = '{0} -t {1} -P {2} {3}'.format(_iptables_cmd(family), table, chain, policy)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -P {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, policy)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -482,6 +594,8 @@ def save(filename=None, family='ipv4'):
     '''
     if _conf() and not filename:
         filename = _conf(family)
+
+    log.debug('Saving rules to {0}'.format(filename))
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
@@ -517,25 +631,30 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
+    ipt_cmd = _iptables_cmd(family)
 
-    HAS_CHECK = False
-    if '--check' in salt_cmd.run('iptables --help', output_loglevel='quiet'):
-        HAS_CHECK = True
-
-    if HAS_CHECK is False:
-        cmd = '{0}-save' . format(_iptables_cmd(family))
-        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
-            table,
-            chain,
-            rule,
-        ))
-        if out != -1:
-            out = ''
-        else:
-            return False
+    if _has_option('--check', family):
+        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
+        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
     else:
-        cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
-        out = __salt__['cmd.run'](cmd)
+        _chain_name = hex(uuid.getnode())
+
+        # Create temporary table
+        __salt__['cmd.run']('{0} -t {1} -N {2}'.format(ipt_cmd, table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -A {2} {3}'.format(ipt_cmd, table, _chain_name, rule))
+
+        out = __salt__['cmd.run']('{0}-save'.format(ipt_cmd))
+
+        # Clean up temporary table
+        __salt__['cmd.run']('{0} -t {1} -F {2}'.format(ipt_cmd, table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -X {2}'.format(ipt_cmd, table, _chain_name))
+
+        for i in out.splitlines():
+            if i.startswith('-A {0}'.format(_chain_name)):
+                if i.replace(_chain_name, chain) in out.splitlines():
+                    return True
+
+        return False
 
     if not out:
         return True
@@ -562,7 +681,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     cmd = '{0}-save -t {1}'.format(_iptables_cmd(family), table)
-    out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
+    out = __salt__['cmd.run'](cmd).find(':{0} '.format(chain))
 
     if out != -1:
         out = True
@@ -591,7 +710,9 @@ def new_chain(table='filter', chain=None, family='ipv4'):
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = '{0} -t {1} -N {2}'.format(_iptables_cmd(family), table, chain)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -N {3}'.format(
+            _iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -618,7 +739,9 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = '{0} -t {1} -X {2}'.format(_iptables_cmd(family), table, chain)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -X {3}'.format(
+            _iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -652,7 +775,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = '{0} -t {1} -A {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -A {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     if len(out) == 0:
         return True
@@ -697,8 +822,12 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         rules = get_rules(family='ipv4')
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
+        if position is 0:
+            position = 1
 
-    cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
+            _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -734,7 +863,9 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
     if position:
         rule = position
 
-    cmd = '{0} -t {1} -D {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -D {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -754,10 +885,8 @@ def flush(table='filter', chain='', family='ipv4'):
         salt '*' iptables.flush filter INPUT family=ipv6
     '''
 
-    if chain:
-        cmd = '{0} -t {1} -F {2}'.format(_iptables_cmd(family), table, chain)
-    else:
-        cmd = '{0} -t {1} -F'.format(_iptables_cmd(family), table)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -F {3}'.format(_iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -848,7 +977,7 @@ def _parser():
         parser = optparse.OptionParser()
         add_arg = parser.add_option
     else:
-        import argparse
+        import argparse  # pylint: disable=minimum-python-version
         parser = argparse.ArgumentParser()
         add_arg = parser.add_argument
 

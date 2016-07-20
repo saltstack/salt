@@ -2,10 +2,16 @@
 '''
 Support for nginx
 '''
-import urllib2
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+
+import re
 
 
 # Cache the output of running which('nginx') so this module
@@ -39,6 +45,29 @@ def version():
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[-1]
+
+
+def build_info():
+    '''
+    Return server and build arguments
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nginx.build_info
+    '''
+    ret = {'info': []}
+    out = __salt__['cmd.run']('{0} -V'.format(__detect_os()))
+
+    for i in out.splitlines():
+        if i.startswith('configure argument'):
+            ret['build arguments'] = re.findall(r"(?:[^\s]*'.*')|(?:[^\s]+)", i)[2:]
+            continue
+
+        ret['info'].append(i)
+
+    return ret
 
 
 def configtest():
@@ -121,7 +150,7 @@ def status(url="http://127.0.0.1/status"):
 
         salt '*' nginx.status
     """
-    resp = urllib2.urlopen(url)
+    resp = _urlopen(url)
     status_data = resp.read()
     resp.close()
 

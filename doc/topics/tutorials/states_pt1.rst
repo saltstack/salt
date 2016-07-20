@@ -1,3 +1,5 @@
+.. _states-tutorial:
+
 =====================================
 States tutorial, part 1 - Basic Usage
 =====================================
@@ -18,7 +20,7 @@ States are stored in text files on the master and transferred to the minions on
 demand via the master's File Server. The collection of state files make up the
 ``State Tree``.
 
-To start using a central state system in Salt, the Salt File Server must first 
+To start using a central state system in Salt, the Salt File Server must first
 be set up. Edit the master config file (:conf_master:`file_roots`) and
 uncomment the following lines:
 
@@ -68,7 +70,7 @@ collection of minion matches is defined; for now simply specify all hosts
     .. code-block:: yaml
 
         base:
-          'os:Fedora':
+          'G@os:Fedora':
             - match: grain
             - webserver
 
@@ -85,7 +87,7 @@ named ``webserver.sls``, containing the following:
         - installed         # function declaration
 
 The first line, called the :ref:`id-declaration`, is an arbitrary identifier.
-In this case it defines the name of the package to be installed. 
+In this case it defines the name of the package to be installed.
 
 .. note::
 
@@ -125,13 +127,31 @@ Next, let's run the state we created. Open a terminal on the master and run:
 
 .. code-block:: bash
 
-    % salt '*' state.highstate
+    salt '*' state.apply
 
-Our master is instructing all targeted minions to run :func:`state.highstate
-<salt.modules.state.highstate>`. When a minion executes a highstate call it
-will download the :ref:`top file <states-top>` and attempt to match the
-expressions. When it does match an expression the modules listed for it will be
-downloaded, compiled, and executed.
+Our master is instructing all targeted minions to run :func:`state.apply
+<salt.modules.state.apply>`. When this function is executed without any SLS
+targets, a minion will download the :ref:`top file <states-top>` and attempt to
+match the expressions within it. When the minion does match an expression the
+modules listed for it will be downloaded, compiled, and executed.
+
+.. note::
+    This action is referred to as a "highstate", and can be run using the
+    :py:func:`state.highstate <salt.modules.state.highstate>` function.
+    However, to make the usage easier to understand ("highstate" is not
+    necessarily an intuitive name), a :py:func:`state.apply
+    <salt.modules.state.apply_>` function was added in version 2015.5.0, which
+    when invoked without any SLS names will trigger a highstate.
+    :py:func:`state.highstate <salt.modules.state.highstate>` still exists and
+    can be used, but the documentation (as can be seen above) has been updated
+    to reference :py:func:`state.apply <salt.modules.state.apply_>`, so keep
+    the following in mind as you read the documentation:
+
+    - :py:func:`state.apply <salt.modules.state.apply_>` invoked without any
+      SLS names will run :py:func:`state.highstate
+      <salt.modules.state.highstate>`
+    - :py:func:`state.apply <salt.modules.state.apply_>` invoked with SLS names
+      will run :py:func:`state.sls <salt.modules.state.sls>`
 
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
@@ -141,22 +161,29 @@ and all changes made.
     If you have created :ref:`custom grain modules <writing-grains>`, they will
     not be available in the top file until after the first :ref:`highstate
     <running-highstate>`. To make custom grains available on a minion's first
-    highstate, it is recommended to use :ref:`this example
-    <minion-start-reactor>` to ensure that the custom grains are synced when
-    the minion starts.
+    :ref:`highstate <running-highstate>`, it is recommended to use :ref:`this
+    example <minion-start-reactor>` to ensure that the custom grains are synced
+    when the minion starts.
 
 .. _sls-file-namespace:
 .. admonition:: SLS File Namespace
 
     Note that in the :ref:`example <targeting-minions>` above, the SLS file
     ``webserver.sls`` was referred to simply as ``webserver``. The namespace
-    for SLS files follows a few simple rules:
+    for SLS files when referenced in :conf_master:`top.sls <state_top>` or an :ref:`include-declaration`
+    follows a few simple rules:
 
     1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
        ``webserver``).
     2. Subdirectories can be used for better organization.
-        a. Each subdirectory is represented by a dot.
-        b. ``webserver/dev.sls`` is referred to as ``webserver.dev``.
+        a. Each subdirectory is represented with a dot (following the Python
+           import model) in Salt states and on the command line .  ``webserver/dev.sls``
+           on the filesystem is referred to as ``webserver.dev`` in Salt
+        b. Because slashes are represented as dots, SLS files can not contain
+           dots in the name (other than the dot for the SLS suffix).  The SLS
+           file ``webserver_1.0.sls`` can not be matched, and ``webserver_1.0``
+           would match the directory/file ``webserver_1/0.sls``
+
     3. A file called ``init.sls`` in a subdirectory is referred to by the path
        of the directory. So, ``webserver/init.sls`` is referred to as
        ``webserver``.
@@ -178,12 +205,12 @@ and all changes made.
             salt-minion -l debug
 
     Run the minion in the foreground
-        By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) one can view any output from the minion as it works:
+        By not starting the minion in daemon mode (:option:`-d <salt-minion -d>`)
+        one can view any output from the minion as it works:
 
         .. code-block:: bash
 
-            salt-minion &
+            salt-minion
 
     Increase the default timeout value when running :command:`salt`. For
     example, to change the default timeout to 60 seconds:
@@ -196,8 +223,8 @@ and all changes made.
 
     .. code-block:: bash
 
-        salt-minion -l debug &          # On the minion
-        salt '*' state.highstate -t 60  # On the master
+        salt-minion -l debug        # On the minion
+        salt '*' state.apply -t 60  # On the master
 
 Next steps
 ==========

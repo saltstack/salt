@@ -3,9 +3,11 @@
 Tests to try out salt key.RaetKey Potentially ephemeral
 
 '''
+from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
+from salt.ext.six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -17,8 +19,8 @@ import time
 import tempfile
 import shutil
 
-from ioflo.base.odicting import odict
-from ioflo.base.aiding import Timer, StoreTimer
+from ioflo.aid.odicting import odict
+from ioflo.aid.timing import Timer, StoreTimer
 from ioflo.base import storing
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -68,13 +70,15 @@ class BasicTestCase(unittest.TestCase):
         self.sockDirpath = os.path.join(self.saltDirpath, 'sock')
 
         self.opts = dict(
-                     pki_dir=pkiDirpath,
-                     sock_dir=self.sockDirpath,
-                     cachedir=self.cacheDirpath,
-                     open_mode=False,
-                     auto_accept=True,
-                     transport='raet',
-                     )
+                        __role='master',
+                        id='master',
+                        pki_dir=pkiDirpath,
+                        sock_dir=self.sockDirpath,
+                        cachedir=self.cacheDirpath,
+                        open_mode=False,
+                        auto_accept=True,
+                        transport='raet',
+                        )
 
         self.mainKeeper = RaetKey(opts=self.opts)
         self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="base", dir='/tmp')
@@ -398,7 +402,7 @@ def runSome():
              'testManualAccept',
              'testDelete']
 
-    tests.extend(map(BasicTestCase, names))
+    tests.extend(list(list(map(BasicTestCase, names))))
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)

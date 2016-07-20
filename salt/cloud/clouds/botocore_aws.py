@@ -25,12 +25,13 @@ If this driver is still needed, set up the cloud configuration at
       securitygroup: ssh_open
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
-      provider: aws
+      driver: aws
 
 '''
 # pylint: disable=E0102
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import stat
 import logging
@@ -39,6 +40,7 @@ import logging
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+import salt.ext.six as six
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
 try:
@@ -66,9 +68,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         # Import botocore
         import botocore.session
@@ -84,7 +83,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    if get_dependencies() is False:
+        return False
+
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'aws':
             continue
 
@@ -144,7 +146,10 @@ def __virtual__():
         list_nodes_select, globals(), (conn,)
     )
 
-    return 'aws'
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -155,6 +160,16 @@ def get_configured_provider():
         __opts__,
         'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 

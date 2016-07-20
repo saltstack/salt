@@ -30,6 +30,7 @@ These guides go into detail how to install Salt on a given platform.
     fedora
     freebsd
     gentoo
+    openbsd
     osx
     rhel
     solaris
@@ -52,7 +53,7 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
   cloud service providers using a unified API
 * `Requests`_ - HTTP library
 
-Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies 
+Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
 
 * ZeroMQ:
@@ -60,7 +61,6 @@ vary:
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
-  * `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 
 * RAET:
 
@@ -68,23 +68,28 @@ vary:
   * `ioflo`_ - The flo programming interface raet and salt-raet is built on
   * `RAET`_ - The worlds most awesome UDP protocol
 
-Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install 
+Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install
 time, for example:
 
 .. code-block:: bash
 
-    python setup.py install --salt-transport=raet
+    python setup.py --salt-transport=raet install
 
-This way, only the required dependencies are pulled by the setup script if need 
+This way, only the required dependencies are pulled by the setup script if need
 be.
 
-If installing using pip, the ``--salt-transport`` install option can be 
+If installing using pip, the ``--salt-transport`` install option can be
 provided like:
 
 .. code-block:: bash
 
   pip install --install-option="--salt-transport=raet" salt
 
+.. note::
+    Salt does not bundle dependencies that are typically distributed as part of
+    the base OS. If you have unmet dependencies and are using a custom or
+    minimal installation, you might need to install some additional packages
+    from your OS vendor.
 
 Optional Dependencies
 ---------------------
@@ -96,9 +101,8 @@ Optional Dependencies
 .. _`Python 2.6`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/0.1.12
+.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
-.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
@@ -122,3 +126,15 @@ not guaranteed.
 Whenever possible, backward compatibility between new masters and old minions
 will be preserved.  Generally, the only exception to this policy is in case of
 a security vulnerability.
+
+
+Building Packages using Salt Pack
+---------------------------------
+
+Salt-pack is an open-source package builder for most commonly used Linux
+platforms, for example: Redhat/CentOS and Debian/Ubuntu families, utilizing
+SaltStack states and execution modules to build Salt and a specified set of
+dependencies, from which a platform specific repository can be built.
+
+https://github.com/saltstack/salt-pack
+

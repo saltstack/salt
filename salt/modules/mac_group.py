@@ -4,11 +4,13 @@ Manage groups on Mac OS 10.7+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import grp
 except ImportError:
     pass
 
+# Import Salt Libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache

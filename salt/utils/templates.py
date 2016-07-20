@@ -20,15 +20,16 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.yamlencoding
+import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
-from salt.utils.jinja import ensure_sequence_filter, show_full_context
-from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
-from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+import salt.utils.jinja
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,68 @@ TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 # FIXME: also in salt/template.py
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
+
+ALIAS_WARN = (
+        'Starting in 2015.5, cmd.run uses python_shell=False by default, '
+        'which doesn\'t support shellisms (pipes, env variables, etc). '
+        'cmd.run is currently aliased to cmd.shell to prevent breakage. '
+        'Please switch to cmd.shell or set python_shell=True to avoid '
+        'breakage in the future, when this aliasing is removed.'
+)
+ALIASES = {
+        'cmd.run': 'cmd.shell',
+        'cmd': {'run': 'shell'},
+}
+
+
+class AliasedLoader(object):
+    '''
+    Light wrapper around the LazyLoader to redirect 'cmd.run' calls to
+    'cmd.shell', for easy use of shellisms during templating calls
+
+    Dotted aliases ('cmd.run') must resolve to another dotted alias
+    (e.g. 'cmd.shell')
+
+    Non-dotted aliases ('cmd') must resolve to a dictionary of function
+    aliases for that module (e.g. {'run': 'shell'})
+    '''
+
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+
+    def __getitem__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return self.wrapped[ALIASES[name]]
+        else:
+            return self.wrapped[name]
+
+    def __getattr__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
+        else:
+            return getattr(self.wrapped, name)
+
+
+class AliasedModule(object):
+    '''
+    Light wrapper around module objects returned by the LazyLoader's getattr
+    for the purposes of `salt.cmd.run()` syntax in templates
+
+    Allows for aliasing specific functions, such as `run` to `shell` for easy
+    use of shellisms during templating calls
+    '''
+    def __init__(self, wrapped, aliases):
+        self.aliases = aliases
+        self.wrapped = wrapped
+
+    def __getattr__(self, name):
+        if name in self.aliases:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return getattr(self.wrapped, self.aliases[name])
+        else:
+            return getattr(self.wrapped, name)
 
 
 def wrap_tmpl_func(render_str):
@@ -52,6 +115,11 @@ def wrap_tmpl_func(render_str):
         if context is None:
             context = {}
 
+        # Alias cmd.run to cmd.shell to make python_shell=True the default for
+        # templated calls
+        if 'salt' in kws:
+            kws['salt'] = AliasedLoader(kws['salt'])
+
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
@@ -64,6 +132,17 @@ def wrap_tmpl_func(render_str):
                 context['tplpath'] = tmplpath
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
+                template = tmplpath.replace('\\', '/')
+                i = template.rfind(slspath.replace('.', '/'))
+                if i != -1:
+                    template = template[i:]
+                tpldir = os.path.dirname(template).replace('\\', '/')
+                tpldata = {
+                    'tplfile': template,
+                    'tpldir': tpldir,
+                    'tpldot': tpldir.replace('/', '.'),
+                }
+                context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
             context['sls_path'] = slspath.replace('/', '_')
@@ -102,6 +181,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred: {0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -214,7 +294,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-    if tmplstr and not isinstance(tmplstr, unicode):
+    if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -223,7 +303,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             #
             # XXX: FileSystemLoader is not being properly instantiated here is
             # it? At least it ain't according to:
@@ -232,7 +312,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
+        loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 
@@ -242,7 +322,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
-    env_args['extensions'].append(JinjaSerializerExtension)
+    env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
@@ -262,17 +342,23 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                                        **env_args)
 
     jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
-    jinja_env.globals['show_full_context'] = show_full_context
+    jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
+
+    jinja_env.tests['list'] = salt.utils.is_list
 
     decoded_context = {}
-    for key, value in context.iteritems():
+    for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
             decoded_context[key] = value
             continue
-        decoded_context[key] = salt.utils.sdecode(value)
+
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -314,6 +400,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,
@@ -336,7 +429,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     lookup = None
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
@@ -357,6 +450,45 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
+def render_genshi_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Genshi template. A method should be passed in as part of the
+    context. If no method is passed in, xml is assumed. Valid methods are:
+
+    .. code-block:
+
+        - xml
+        - xhtml
+        - html
+        - text
+        - newtext
+        - oldtext
+
+    Note that the ``text`` method will call ``NewTextTemplate``. If ``oldtext``
+    is desired, it must be called explicitly
+    '''
+    method = context.get('method', 'xml')
+    if method == 'text' or method == 'newtext':
+        from genshi.template import NewTextTemplate
+        tmpl = NewTextTemplate(tmplstr)
+    elif method == 'oldtext':
+        from genshi.template import OldTextTemplate
+        tmpl = OldTextTemplate(tmplstr)
+    else:
+        from genshi.template import MarkupTemplate
+        tmpl = MarkupTemplate(tmplstr)
+
+    return tmpl.generate(**context).render(method)
+
+
+def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Cheetah template.
+    '''
+    from Cheetah.Template import Template
+    return str(Template(tmplstr, searchList=[context]))
+
+
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
@@ -373,6 +505,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             os.path.basename(sfn).split('.')[0],
             sfn
             )
+    # File templates need these set as __var__
+    if '__env__' not in kwargs and 'saltenv' in kwargs:
+        setattr(mod, '__env__', kwargs['saltenv'])
+        builtins = ['salt', 'grains', 'pillar', 'opts']
+        for builtin in builtins:
+            arg = '__{0}__'.format(builtin)
+            setattr(mod, arg, kwargs[builtin])
+
     for kwarg in kwargs:
         setattr(mod, kwarg, kwargs[kwarg])
 
@@ -395,10 +535,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
+GENSHI = wrap_tmpl_func(render_genshi_tmpl)
+CHEETAH = wrap_tmpl_func(render_cheetah_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
     'mako': MAKO,
     'py': py,
     'wempy': WEMPY,
+    'genshi': GENSHI,
+    'cheetah': CHEETAH,
 }

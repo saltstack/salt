@@ -46,6 +46,39 @@ To install from ``updates-testing``, use the ``enablerepo`` argument for yum:
     yum --enablerepo=updates-testing install salt-master
     yum --enablerepo=updates-testing install salt-minion
 
+Installation Using pip
+======================
+
+Since Salt is on `PyPI`_, it can be installed using pip, though most users
+prefer to install using a package manager.
+
+Installing from pip has a few additional requirements:
+
+* Install the group 'Development Tools', ``dnf groupinstall 'Development Tools'``
+* Install the 'zeromq-devel' package if it fails on linking against that
+  afterwards as well.
+
+A pip install does not make the init scripts or the /etc/salt directory, and you
+will need to provide your own systemd service unit.
+
+Installation from pip:
+
+.. _`PyPI`: https://pypi.python.org/pypi/salt
+
+.. code-block:: bash
+
+    pip install salt
+
+.. warning::
+
+    If installing from pip (or from source using ``setup.py install``), be
+    advised that the ``yum-utils`` package is needed for Salt to manage
+    packages. Also, if the Python dependencies are not already installed, then
+    you will need additional libraries/tools installed to build some of them.
+    More information on this can be found :ref:`here
+    <installing-for-development>`.
+
+
 Post-installation tasks
 =======================
 

@@ -1,20 +1,28 @@
 # -*- coding: utf-8 -*-
 '''
-Manage ruby installations with rbenv.
+Manage ruby installations with rbenv. Rbenv is supported on Linux and Mac OS X.
+Rbenv doesn't work on Windows (and isn't really necessary on Windows as there is
+no system Ruby on Windows). On Windows, the RubyInstaller and/or Pik are both
+good alternatives to work with multiple versions of Ruby on the same box.
+
+http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-ruby/
 
 .. versionadded:: 0.16.0
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
-import salt.utils
 import shlex
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+
+# Import Salt libs
+import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -27,6 +35,15 @@ __opts__ = {
     'rbenv.root': None,
     'rbenv.build_env': None,
 }
+
+
+def __virtual__():
+    """
+    Only work on POSIX-like systems
+    """
+    if salt.utils.is_windows():
+        return False
+    return True
 
 
 def _shlex_split(s):
@@ -48,7 +65,7 @@ def _parse_env(env):
     if not isinstance(env, dict):
         env = {}
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
@@ -322,7 +339,7 @@ def rehash(runas=None):
     return True
 
 
-def do(cmdline=None, runas=None):
+def do(cmdline=None, runas=None, env=None):
     '''
     Execute a ruby command with rbenv's shims from the user or the system.
 
@@ -334,12 +351,17 @@ def do(cmdline=None, runas=None):
         salt '*' rbenv.do 'gem list bundler' deploy
     '''
     path = _rbenv_path(runas)
-    environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
+    if not env:
+        env = {}
+
+    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
     cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
+
     result = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
-        env=environ
+        env=env,
+        python_shell=False
     )
 
     if result['retcode'] == 0:
@@ -360,9 +382,13 @@ def do_with_ruby(ruby, cmdline, runas=None):
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler'
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' deploy
     '''
+    cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
+
+    env = {}
     if ruby:
-        cmd = 'RBENV_VERSION={0} {1}'.format(ruby, cmdline)
+        env['RBENV_VERSION'] = ruby
+        cmd = cmdline
     else:
         cmd = cmdline
 
-    return do(cmd, runas=runas)
+    return do(cmd, runas=runas, env=env)

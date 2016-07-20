@@ -27,7 +27,7 @@ on writing YAML range files is here:
 
 https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
-Additionally, the Python seco range libraries must be instaled on the salt
+Additionally, the Python seco range libraries must be installed on the salt
 master. One can verify that they have been installed correctly via the
 following command:
 
@@ -62,7 +62,7 @@ server:
 
     $ cat /etc/range/test.yaml
     CLUSTER: host1..100.test.com
-    APPS: 
+    APPS:
       - frontend
       - backend
       - mysql
@@ -75,7 +75,7 @@ One might target host1 through host100 in the test.com domain with Salt as follo
     salt --range %test:CLUSTER test.ping
 
 
-The following salt command would target three hosts: ``frontend``, ``backend`` and ``mysql``:
+The following salt command would target three hosts: ``frontend``, ``backend``, and ``mysql``:
 
 .. code-block:: bash
 

@@ -15,6 +15,7 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
@@ -26,17 +27,21 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
 
         another-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
 
 '''
+
+from __future__ import absolute_import
 import logging
 import socket
 
@@ -75,7 +80,9 @@ def send_msg(recipient,
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         smtp.send_msg 'admin@example.com' 'This is a salt module test' \
             profile='my-smtp-account'
@@ -86,6 +93,7 @@ def send_msg(recipient,
     if profile:
         creds = __salt__['config.option'](profile)
         server = creds.get('smtp.server')
+        use_ssl = creds.get('smtp.tls')
         sender = creds.get('smtp.sender')
         username = creds.get('smtp.username')
         password = creds.get('smtp.password')
@@ -94,6 +102,7 @@ def send_msg(recipient,
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
+    recipients = [r.strip() for r in recipient.split(',')]
 
     try:
         if use_ssl in ['True', 'true']:
@@ -101,7 +110,7 @@ def send_msg(recipient,
         else:
             smtpconn = smtplib.SMTP(server)
 
-    except socket.gaierror, _error:
+    except socket.gaierror as _error:
         log.debug("Exception: {0}" . format(_error))
         return False
 
@@ -126,12 +135,12 @@ def send_msg(recipient,
     if username and password:
         try:
             smtpconn.login(username, password)
-        except smtplib.SMTPAuthenticationError, _error:
+        except smtplib.SMTPAuthenticationError as _error:
             log.debug("SMTP Authentication Failure")
             return False
 
     try:
-        smtpconn.sendmail(sender, [recipient], msg.as_string())
+        smtpconn.sendmail(sender, recipients, msg.as_string())
     except smtplib.SMTPRecipientsRefused:
         log.debug("All recipients were refused.")
         return False

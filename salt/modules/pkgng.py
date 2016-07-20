@@ -2,6 +2,12 @@
 '''
 Support for ``pkgng``, the new package manager for FreeBSD
 
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 .. warning::
 
     This module has been completely rewritten. Up to and including version
@@ -30,6 +36,7 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -39,6 +46,7 @@ import os
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -48,10 +56,25 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Load as 'pkg' on FreeBSD 10 and greater
+    Load as 'pkg' on FreeBSD 10 and greater.
+    Load as 'pkg' on DragonFly BSD.
+    Load as 'pkg' on FreeBSD 9 when config option
+    ``providers:pkg`` is set to 'pkgng'.
     '''
+    if __grains__['kernel'] == 'DragonFly':
+        return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
+    if __grains__['os'] == 'FreeBSD' and \
+            float(__grains__['osmajorrelease']) == 9:
+        providers = {}
+        if 'providers' in __opts__:
+            providers = __opts__['providers']
+        log.debug('__opts__.providers: {0}'.format(providers))
+        if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
+            log.debug('Configuration option \'providers:pkg\' is set to '
+                '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
+            return __virtualname__
     return False
 
 
@@ -66,6 +89,13 @@ def _pkg(jail=None, chroot=None):
     elif chroot:
         ret += ' -c {0!r}'.format(chroot)
     return ret
+
+
+def _get_pkgng_version(jail=None, chroot=None):
+    '''
+    return the version of 'pkg'
+    '''
+    return __salt__['cmd.run']([_pkg(jail, chroot), '--version']).strip()
 
 
 def _get_version(name, results):
@@ -168,11 +198,11 @@ def version(*names, **kwargs):
     origins = __context__.get('pkg.origin', {})
     return dict([
         (x, {'origin': origins.get(x, ''), 'version': y})
-        for x, y in ret.iteritems()
+        for x, y in six.iteritems(ret)
     ])
 
 # Support pkg.info get version info, since this is the CLI usage
-info = version
+info = salt.utils.alias_function(version, 'info')
 
 
 def refresh_db(jail=None, chroot=None, force=False):
@@ -216,7 +246,7 @@ def refresh_db(jail=None, chroot=None, force=False):
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
-update = refresh_db
+update = salt.utils.alias_function(refresh_db, 'update')
 
 
 def latest_version(*names, **kwargs):
@@ -239,6 +269,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 0:
         return ''
     ret = {}
+
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
@@ -246,12 +277,29 @@ def latest_version(*names, **kwargs):
     chroot = kwargs.get('chroot')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot)
 
+    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot), '>=', '1.6.0'):
+        quiet = True
+    else:
+        quiet = False
+
     for name in names:
-        cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
+        # FreeBSD supports packages in format java/openjdk7
+        if '/' in name:
+            cmd = [_pkg(jail, chroot), 'search']
+        else:
+            cmd = [_pkg(jail, chroot), 'search', '-S', 'name', '-Q', 'version', '-e']
+        if quiet:
+            cmd.append('-q')
+        cmd.append(name)
+
         pkgver = _get_version(
             name,
-            __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+            sorted(
+                __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace').splitlines(),
+                reverse=True
+            ).pop(0)
         )
+
         if pkgver is not None:
             installed = pkgs.get(name, [])
             if not installed:
@@ -272,7 +320,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def list_pkgs(versions_as_list=False,
@@ -323,7 +371,7 @@ def list_pkgs(versions_as_list=False,
             origins = __context__.get(contextkey_origins, {})
             return dict([
                 (x, {'origin': origins.get(x, ''), 'version': y})
-                for x, y in ret.iteritems()
+                for x, y in six.iteritems(ret)
             ])
         return ret
 
@@ -353,7 +401,7 @@ def list_pkgs(versions_as_list=False,
     if salt.utils.is_true(with_origin):
         return dict([
             (x, {'origin': origins.get(x, ''), 'version': y})
-            for x, y in ret.iteritems()
+            for x, y in six.iteritems(ret)
         ])
     return ret
 
@@ -711,7 +759,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    opts = ''
+    opts = 'y'
     repo_opts = ''
     if salt.utils.is_true(orphan):
         opts += 'A'
@@ -723,8 +771,6 @@ def install(name=None,
         opts += 'U'
     if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not salt.utils.is_true(dryrun):
-        opts += 'y'
     if salt.utils.is_true(quiet):
         opts += 'q'
     if salt.utils.is_true(reinstall_requires):
@@ -744,7 +790,9 @@ def install(name=None,
 
     if pkg_type == 'file':
         pkg_cmd = 'add'
-        targets = pkg_params.keys()
+        # pkg add has smaller set of options (i.e. no -y or -n), filter below
+        opts = ''.join([opt for opt in opts if opt in 'AfIMq'])
+        targets = pkg_params
     elif pkg_type == 'repository':
         pkg_cmd = 'install'
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -752,7 +800,7 @@ def install(name=None,
             # comma-separated list
             pkg_params = {name: kwargs.get('version')}
         targets = []
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -761,6 +809,11 @@ def install(name=None,
     cmd = '{0} {1} {2} {3} {4}'.format(
         _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
     )
+
+    if pkg_cmd == 'add' and salt.utils.is_true(dryrun):
+        # pkg add doesn't have a dryrun mode, so echo out what will be run
+        return cmd
+
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
@@ -875,8 +928,17 @@ def remove(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    old = list_pkgs(jail=jail, chroot=chroot)
-    targets = [x for x in pkg_params if x in old]
+    targets = []
+    old = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
+    for pkg in pkg_params.items():
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        if pkg[0].find("/") > 0:
+            origin = pkg[0]
+            pkg = [k for k, v in old.iteritems() if v['origin'] == origin][0]
+
+        if pkg[0] in old:
+            targets.append(pkg[0])
+
     if not targets:
         return {}
 
@@ -906,24 +968,25 @@ def remove(name=None,
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
-    new = list_pkgs(jail=jail, chroot=chroot)
+    new = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
     return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages, since this is the CLI usage
-delete = remove
+delete = salt.utils.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = remove
+purge = salt.utils.alias_function(remove, 'purge')
 
 
-def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
+def upgrade(*names, **kwargs):
     '''
-    Upgrade all packages (run a ``pkg upgrade``)
+    Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
+    omitted, the operation is executed on all packages.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.upgrade
+        salt '*' pkg.upgrade <package name>
 
     jail
         Audit packages within the specified jail
@@ -932,7 +995,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade jail=<jail name or id>
+            salt '*' pkg.upgrade <package name> jail=<jail name or id>
 
     chroot
         Audit packages within the specified chroot (ignored if ``jail`` is
@@ -942,7 +1005,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade chroot=/path/to/chroot
+            salt '*' pkg.upgrade <package name> chroot=/path/to/chroot
 
 
     Any of the below options can also be used with ``jail`` or ``chroot``.
@@ -954,7 +1017,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade force=True
+            salt '*' pkg.upgrade <package name> force=True
 
     local
         Do not update the repository catalogs with ``pkg-update(8)``. A value
@@ -965,7 +1028,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade local=True
+            salt '*' pkg.upgrade <package name> local=True
 
     dryrun
         Dry-run mode: show what packages have updates available, but do not
@@ -976,8 +1039,18 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade dryrun=True
+            salt '*' pkg.upgrade <package name> dryrun=True
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    force = kwargs.pop('force', False)
+    local = kwargs.pop('local', False)
+    dryrun = kwargs.pop('dryrun', False)
     opts = ''
     if force:
         opts += 'f'
@@ -990,11 +1063,23 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     if opts:
         opts = '-' + opts
 
-    return __salt__['cmd.run'](
-        '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
+    old = list_pkgs()
+    call = __salt__['cmd.run_all'](
+        '{0} upgrade {1} {2}'.format(_pkg(jail, chroot), opts, ' '.join(names)),
         python_shell=False,
         output_loglevel='trace'
     )
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def clean(jail=None, chroot=None):

@@ -8,10 +8,11 @@ Example:
 .. code-block:: yaml
 
     rabbit@rabbit.example.com:
-        rabbitmq_cluster.join:
-          - user: rabbit
-          - host: rabbit.example.com
+      rabbitmq_cluster.join:
+        - user: rabbit
+        - host: rabbit.example.com
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -29,41 +30,51 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def join(name, host, user='rabbit', runas=None):
+def joined(name, host, user='rabbit', ram_node=None, runas='root'):
     '''
-    Ensure the RabbitMQ plugin is enabled.
+    Ensure the current node joined to a cluster with node user@host
 
     name
         Irrelevant, not used (recommended: user@host)
     user
-        The user to join the cluster as (default: rabbit)
+        The user of node to join to (default: rabbit)
     host
-        The cluster host to join to
+        The host of node to join to
+    ram_node
+        Join node as a RAM node
     runas
-        The user to run the rabbitmq-plugin command as
+        The user to run the rabbitmq command as
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    result = {}
 
-    joined = __salt__['rabbitmq.cluster_status']()
-    if '{0}@{1}'.format(user, host) in joined:
+    status = __salt__['rabbitmq.cluster_status']()
+    if '{0}@{1}'.format(user, host) in status:
         ret['comment'] = 'Already in cluster'
         return ret
 
+    if not __opts__['test']:
+        result = __salt__['rabbitmq.join_cluster'](host,
+                                                   user,
+                                                   ram_node,
+                                                   runas=runas)
+        if 'Error' in result:
+            ret['result'] = False
+            ret['comment'] = result['Error']
+            return ret
+        elif 'Join' in result:
+            ret['comment'] = result['Join']
+
+    # If we've reached this far before returning, we have changes.
+    ret['changes'] = {'old': '', 'new': '{0}@{1}'.format(user, host)}
+
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Host is set to join cluster {0}@{1}'.format(
+        ret['comment'] = 'Node is set to join cluster {0}@{1}'.format(
             user, host)
-        return ret
-
-    result = __salt__['rabbitmq.join_cluster'](host, user, runas=runas)
-
-    if 'Error' in result:
-        ret['result'] = False
-        ret['comment'] = result['Error']
-    elif 'Join' in result:
-        ret['comment'] = result['Join']
-        ret['changes'] = {'old': '', 'new': '{0}@{1}'.format(user, host)}
 
     return ret
+
+
+# Alias join to preserve backward compat
+join = salt.utils.alias_function(joined, 'join')

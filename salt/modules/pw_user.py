@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
+
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import copy
+import logging
 try:
     import pwd
+    HAS_PWD = True
 except ImportError:
-    pass
-import logging
-import copy
+    HAS_PWD = False
+
+# Import 3rd party libs
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +36,9 @@ def __virtual__():
     '''
     Set the user module if the kernel is FreeBSD
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    if HAS_PWD and __grains__['kernel'] == 'FreeBSD':
+        return __virtualname__
+    return False
 
 
 def _get_gecos(name):
@@ -84,7 +97,7 @@ def add(name,
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
 
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
     if uid:
@@ -253,7 +266,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
@@ -426,3 +439,27 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'pw usermod -l {0} -n {1}'.format(new_name, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False

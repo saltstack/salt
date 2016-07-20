@@ -59,7 +59,7 @@ In states
 
 The second way to enable aggregation is with the state-level ``aggregate``
 keyword. In this configuration, Salt will invoke the ``mod_aggregate`` function
-the first time it encounters this keyword. Any additional occurances of the
+the first time it encounters this keyword. Any additional occurrences of the
 keyword will be ignored as the aggregation has already taken place.
 
 The following example will trigger ``mod_aggregate`` when the ``lamp_stack``
@@ -89,7 +89,7 @@ The mod_aggregate function just needs to accept three parameters and return the
 low data to use. Since mod_aggregate is working on the state runtime level it
 does need to manipulate `low data`.
 
-The three parameters are `low`, `chunks` and `running`. The `low` option is the
+The three parameters are `low`, `chunks`, and `running`. The `low` option is the
 low data for the state execution which is about to be called. The `chunks` is
 the list of all of the low data dictionaries which are being executed by the
 runtime and the `running` dictionary is the return data from all of the state

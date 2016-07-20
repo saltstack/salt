@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.utils.validate import net
 
@@ -21,34 +24,54 @@ class ValidateNetTestCase(TestCase):
         '''
         Test IPv4 address validation
         '''
-        self.assertTrue(net.ipv4_addr('127.0.0.1'))
-        self.assertTrue(net.ipv4_addr('127.0.0.1'))
-        self.assertTrue(net.ipv4_addr('127.0.0.19'))
-        self.assertTrue(net.ipv4_addr('1.1.1.1/28'))
-        self.assertTrue(net.ipv4_addr('127.0.0.11/32'))
+        true_addrs = [
+            '127.0.0.1',
+            '127.0.0.1',
+            '127.0.0.19',
+            '1.1.1.1/28',
+            '127.0.0.11/32',
+        ]
 
-        self.assertFalse(net.ipv4_addr('127.0.0.911'))
-        self.assertFalse(net.ipv4_addr('127.0.0911'))
-        self.assertFalse(net.ipv4_addr('127.0.011'))
-        self.assertFalse(net.ipv4_addr('127.0.011/32'))
-        self.assertFalse(net.ipv4_addr('::1'))
-        self.assertFalse(net.ipv4_addr('::1/128'))
-        self.assertFalse(net.ipv4_addr('::1/28'))
+        false_addrs = [
+            '127.0.0.911',
+            '127.0.0911',
+            '127.0.011',
+            '127.0.011/32',
+            '::1',
+            '::1/128',
+            '::1/28',
+        ]
+
+        for addr in true_addrs:
+            self.assertTrue(net.ipv4_addr(addr))
+
+        for addr in false_addrs:
+            self.assertFalse(net.ipv4_addr(addr))
 
     def test_ipv6_addr(self):
         '''
         Test IPv6 address validation
         '''
-        self.assertTrue(net.ipv6_addr('::1'))
-        self.assertTrue(net.ipv6_addr('::1/32'))
-        self.assertTrue(net.ipv6_addr('::1/32'))
-        self.assertTrue(net.ipv6_addr('::1/128'))
-        self.assertTrue(net.ipv6_addr('2a03:4000:c:10aa:1017:f00d:aaaa:a'))
+        true_addrs = [
+            '::1',
+            '::1/32',
+            '::1/32',
+            '::1/128',
+            '2a03:4000:c:10aa:1017:f00d:aaaa:a',
+        ]
 
-        self.assertFalse(net.ipv6_addr('1.1.1.1'))
-        self.assertFalse(net.ipv6_addr('::1/0'))
-        self.assertFalse(net.ipv6_addr('::1/32d'))
-        self.assertFalse(net.ipv6_addr('::1/129'))
+        false_addrs = [
+            '1.1.1.1',
+            '::1/0',
+            '::1/32d',
+            '::1/129',
+        ]
+
+        for addr in true_addrs:
+            self.assertTrue(net.ipv6_addr(addr))
+
+        for addr in false_addrs:
+            self.assertFalse(net.ipv6_addr(addr))
 
 
 if __name__ == '__main__':

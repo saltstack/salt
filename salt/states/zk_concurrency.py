@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Control concurrency of steps within state execution using zookeeper
-=========================================================================
+===================================================================
 
 This module allows you to "wrap" a state's execution with concurrency control.
 This is useful to protect against all hosts executing highstate simultaneously
@@ -17,8 +17,8 @@ steps are executing with a single path.
 
     acquire_lock:
       zk_concurrency.lock:
+        - name: /trafficeserver
         - zk_hosts: 'zookeeper:2181'
-        - path: /trafficserver
         - max_concurrency: 4
         - prereq:
             - service: trafficserver
@@ -34,7 +34,7 @@ steps are executing with a single path.
 
     release_lock:
       zk_concurrency.unlock:
-        - path: /trafficserver
+        - name: /trafficserver
         - require:
             - service: trafficserver
 
@@ -42,145 +42,54 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
-import logging
-
-try:
-    from kazoo.client import KazooClient
-
-    from kazoo.retry import (
-        ForceRetryError
-    )
-    import kazoo.recipe.lock
-    from kazoo.exceptions import CancelledError
-    from kazoo.exceptions import NoNodeError
-
-    # TODO: use the kazoo one, waiting for pull req:
-    # https://github.com/python-zk/kazoo/pull/206
-    class _Semaphore(kazoo.recipe.lock.Semaphore):
-        def __init__(self,
-                    client,
-                    path,
-                    identifier=None,
-                    max_leases=1,
-                    ephemeral_lease=True,
-                    ):
-            kazoo.recipe.lock.Semaphore.__init__(self,
-                                                client,
-                                                path,
-                                                identifier=identifier,
-                                                max_leases=max_leases)
-            self.ephemeral_lease = ephemeral_lease
-
-            # if its not ephemeral, make sure we didn't already grab it
-            if not self.ephemeral_lease:
-                for child in self.client.get_children(self.path):
-                    try:
-                        data, stat = self.client.get(self.path + "/" + child)
-                        if identifier == data.decode('utf-8'):
-                            self.create_path = self.path + "/" + child
-                            self.is_acquired = True
-                            break
-                    except NoNodeError:  # pragma: nocover
-                        pass
-
-        def _get_lease(self, data=None):
-            # Make sure the session is still valid
-            if self._session_expired:
-                raise ForceRetryError("Retry on session loss at top")
-
-            # Make sure that the request hasn't been canceled
-            if self.cancelled:
-                raise CancelledError("Semaphore cancelled")
-
-            # Get a list of the current potential lock holders. If they change,
-            # notify our wake_event object. This is used to unblock a blocking
-            # self._inner_acquire call.
-            children = self.client.get_children(self.path,
-                                                self._watch_lease_change)
-
-            # If there are leases available, acquire one
-            if len(children) < self.max_leases:
-                self.client.create(self.create_path, self.data, ephemeral=self.ephemeral_lease)
-
-            # Check if our acquisition was successful or not. Update our state.
-            if self.client.exists(self.create_path):
-                self.is_acquired = True
-            else:
-                self.is_acquired = False
-
-            # Return current state
-            return self.is_acquired
-
-    HAS_DEPS = True
-except ImportError:
-    HAS_DEPS = False
-
-ZK_CONNECTION = None
-SEMAPHORE_MAP = {}
+# TODO: use depends decorator to make these per function deps, instead of all or nothing
+REQUIRED_FUNCS = (
+    'zk_concurrency.lock',
+    'zk_concurrency.unlock',
+    'zk_concurrency.party_members',
+)
 
 __virtualname__ = 'zk_concurrency'
 
 
 def __virtual__():
-    if not HAS_DEPS:
+    if not all(func in __salt__ for func in REQUIRED_FUNCS):
         return False
 
     return __virtualname__
 
 
-def _get_zk_conn(hosts):
-    global ZK_CONNECTION
-    if ZK_CONNECTION is None:
-        ZK_CONNECTION = KazooClient(hosts=hosts)
-        ZK_CONNECTION.start()
-
-    return ZK_CONNECTION
-
-
-def _close_zk_conn():
-    global ZK_CONNECTION
-    if ZK_CONNECTION is None:
-        return
-
-    ZK_CONNECTION.stop()
-    ZK_CONNECTION = None
-
-
-def lock(zk_hosts,
-         path,
-         max_concurrency,
+def lock(name,
+         zk_hosts,
+         identifier=None,
+         max_concurrency=1,
          timeout=None,
-         ephemeral_lease=False):
+         ephemeral_lease=False,
+         ):
     '''
     Block state execution until you are able to get the lock (or hit the timeout)
 
     '''
-    ret = {'name': path,
+    ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'attempt to acquire lock'
+        ret['comment'] = 'Attempt to acquire lock'
         return ret
 
-    zk = _get_zk_conn(zk_hosts)
-    if path not in SEMAPHORE_MAP:
-        SEMAPHORE_MAP[path] = _Semaphore(zk,
-                                        path,
-                                        __grains__['id'],
-                                        max_leases=max_concurrency,
-                                        ephemeral_lease=ephemeral_lease)
-    # block waiting for lock acquisition
-    if timeout:
-        logging.info('Acquiring lock with timeout={0}'.format(timeout))
-        SEMAPHORE_MAP[path].acquire(timeout=timeout)
-    else:
-        logging.info('Acquiring lock with no timeout')
-        SEMAPHORE_MAP[path].acquire()
+    if identifier is None:
+        identifier = __grains__['id']
 
-    if SEMAPHORE_MAP[path].is_acquired:
+    locked = __salt__['zk_concurrency.lock'](name,
+                                             zk_hosts,
+                                             identifier=identifier,
+                                             max_concurrency=max_concurrency,
+                                             timeout=timeout,
+                                             ephemeral_lease=ephemeral_lease)
+    if locked:
         ret['result'] = True
         ret['comment'] = 'lock acquired'
     else:
@@ -189,26 +98,64 @@ def lock(zk_hosts,
     return ret
 
 
-def unlock(path):
+def unlock(name,
+           zk_hosts=None,  # in case you need to unlock without having run lock (failed execution for example)
+           identifier=None,
+           max_concurrency=1,
+           ephemeral_lease=False
+           ):
     '''
-    Remove lease from semaphore
+    Remove lease from semaphore.
     '''
-    ret = {'name': path,
+    ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'released lock if its here'
+        ret['comment'] = 'Released lock if it is here'
         return ret
 
-    if path in SEMAPHORE_MAP:
-        SEMAPHORE_MAP[path].release()
-        del SEMAPHORE_MAP[path]
+    if identifier is None:
+        identifier = __grains__['id']
+
+    unlocked = __salt__['zk_concurrency.unlock'](name,
+                                                 zk_hosts=zk_hosts,
+                                                 identifier=identifier,
+                                                 max_concurrency=max_concurrency,
+                                                 ephemeral_lease=ephemeral_lease)
+
+    if unlocked:
+        ret['result'] = True
     else:
-        ret['comment'] = 'Unable to find lease for path {0}'.format(path)
-        return ret
+        ret['comment'] = 'Unable to find lease for path {0}'.format(name)
 
-    ret['result'] = True
+    return ret
+
+
+def min_party(name,
+              zk_hosts,
+              min_nodes,
+              ):
+    '''
+    Ensure that there are `min_nodes` in the party at `name`.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts)
+    if not isinstance(nodes, list):
+        raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
+
+    num_nodes = len(nodes)
+
+    if num_nodes >= min_nodes:
+        ret['result'] = None if __opts__['test'] else True
+        ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
+
     return ret

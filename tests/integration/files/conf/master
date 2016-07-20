@@ -10,6 +10,7 @@ sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
 fileserver_list_cache_time: 0
+pillar_opts: True
 peer:
   '.*':
     - 'test.*'
@@ -57,3 +58,15 @@ external_auth:
 
 master_tops:
   master_tops_test: True
+
+nodegroups:
+  min: minion
+  sub_min: sub_minion
+  mins: N@min or N@sub_min
+  multiline_nodegroup:
+    - 'minion'
+    - 'or'
+    - 'sub_minion'
+  redundant_minions: N@min or N@mins
+  nodegroup_loop_a: N@nodegroup_loop_b
+  nodegroup_loop_b: N@nodegroup_loop_a

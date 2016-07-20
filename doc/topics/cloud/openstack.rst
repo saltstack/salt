@@ -41,11 +41,19 @@ Configuration
       # tenant is the project name
       tenant: myproject
 
-      provider: openstack
+      driver: openstack
 
       # skip SSL certificate validation (default false)
       insecure: false
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Using nova client to get information from OpenStack
 ===================================================
@@ -98,7 +106,7 @@ Here is an example of a profile:
 The following list explains some of the important properties.
 
 
-size 
+size
     can be one of the options listed in the output of ``nova flavor-list``.
 
 image
@@ -108,20 +116,21 @@ ssh_key_file
     The SSH private key that the salt-cloud uses to SSH into the VM after its
     first booted in order to execute a command or script. This private key's
     *public key* must be the openstack public key inserted into the
-    authorized_key's file of the VM's root user account. 
+    authorized_key's file of the VM's root user account.
 
 ssh_key_name
     The name of the openstack SSH public key that is inserted into the
     authorized_keys file of the VM's root user account. Prior to using this
     public key, you must use openstack commands or the horizon web UI to load
     that key into the tenant's account. Note that this openstack tenant must be
-    the one you defined in the cloud provider. 
+    the one you defined in the cloud provider.
 
 ssh_interface
     This option allows you to create a VM without a public IP. If this option
     is omitted and the VM does not have a public IP, then the salt-cloud waits
-    for a certain period of time and then destroys the VM.    
-  
+    for a certain period of time and then destroys the VM. With the nova drive,
+    private cloud networks can be defined here.
+
 For more information concerning cloud profiles, see :doc:`here
 </topics/cloud/profiles>`.
 

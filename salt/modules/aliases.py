@@ -2,6 +2,7 @@
 '''
 Manage the information in the aliases file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -143,12 +144,11 @@ def has_target(alias, target):
     if target == '':
         raise SaltInvocationError('target can not be an empty string')
     aliases = list_aliases()
-    if alias in aliases and isinstance(target, list):
-        for item in target:
-            if item not in aliases[alias]:
-                return False
+    if alias not in aliases:
+        return False
+    if isinstance(target, list):
         target = ', '.join(target)
-    return alias in aliases and target in aliases[alias]
+    return target == aliases[alias]
 
 
 def set_target(alias, target):

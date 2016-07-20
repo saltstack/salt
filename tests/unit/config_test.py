@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -17,7 +18,7 @@ from contextlib import contextmanager
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
-from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salttesting.helpers import ensure_in_syspath
 from salt.exceptions import CommandExecutionError
 
 ensure_in_syspath('../')
@@ -159,7 +160,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -201,7 +202,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MINION_CONFIG'] = env_fpath
@@ -255,7 +256,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -284,7 +285,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under minion.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the minion.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -319,7 +320,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under master.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the master.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -362,34 +363,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
-
-    def test_issue_6714_parsing_errors_logged(self):
-        try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-            test_config = os.path.join(tempdir, 'config')
-
-            # Let's populate a master configuration file with some basic
-            # settings
-            salt.utils.fopen(test_config, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {0}/foo.log\n'.format(tempdir) +
-                '\n\n\n'
-                'blah:false\n'
-            )
-
-            with TestsLoggingHandler() as handler:
-                # Let's load the configuration
-                config = sconfig.master_config(test_config)
-                for message in handler.messages:
-                    if message.startswith('ERROR:Error parsing configuration'):
-                        break
-                else:
-                    raise AssertionError(
-                        'No parsing error message was logged'
-                    )
-        finally:
-            if os.path.isdir(tempdir):
-                shutil.rmtree(tempdir)
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
     def test_get_id_etc_hostname(self):
@@ -464,6 +437,28 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    @patch('os.path.isdir', MagicMock(return_value=True))
+    def test_cloud_config_deploy_scripts_search_path(self):
+        '''
+        Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
+        the correct deploy search paths are present.
+
+        There should be two search paths reported in the tuple: ``/etc/salt/cloud.deploy.d``
+        and ``<path-to-salt-install>/salt/cloud/deploy``. The first element is usually
+        ``/etc/salt/cloud.deploy.d``, but sometimes is can be something like
+        ``/etc/local/salt/cloud.deploy.d``, so we'll only test against the last part of
+        the path.
+        '''
+        search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
+        etc_deploy_path = '/salt/cloud.deploy.d'
+        deploy_path = '/salt/cloud/deploy'
+
+        # Check cloud.deploy.d path is the first element in the search_paths tuple
+        self.assertTrue(search_paths[0].endswith(etc_deploy_path))
+
+        # Check the second element in the search_paths tuple
+        self.assertTrue(search_paths[1].endswith(deploy_path))
+
     # apply_cloud_config tests
 
     def test_apply_cloud_config_no_provider_detail_list(self):
@@ -485,27 +480,27 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
-                                       'provider': 'foo:bar'}}}}))
+                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_list(self):
         '''
         Tests success when valid data is passed into the function as a list
         '''
-        overrides = {'providers': {'foo': [{'provider': 'bar'}]}}
+        overrides = {'providers': {'foo': [{'driver': 'bar'}]}}
         ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
         self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
-                                       'provider': 'foo:bar'}}}}))
+                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_dict(self):
         '''
         Tests success when valid data is passed into function as a dictionary
         '''
-        overrides = {'providers': {'foo': {'provider': 'bar'}}}
+        overrides = {'providers': {'foo': {'driver': 'bar'}}}
         ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
         self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     # apply_vm_profiles_config tests
@@ -524,7 +519,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         providers = {'test-provider':
                          {'digital_ocean':
-                              {'provider': 'digital_ocean', 'profiles': {}}}}
+                              {'driver': 'digital_ocean', 'profiles': {}}}}
         overrides = {'test-profile':
                          {'provider': 'test-provider',
                           'image': 'Ubuntu 12.10 x64',
@@ -543,7 +538,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         Tests profile extends functionality with valid provider and profile configs
         '''
-        providers = {'test-config': {'ec2': {'profiles': {}, 'provider': 'ec2'}}}
+        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
         overrides = {'Amazon': {'image': 'test-image-1',
                                 'extends': 'dev-instances'},
                      'Fedora': {'image': 'test-image-2',
@@ -575,10 +570,10 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         overrides = {'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'},
+                           'driver': 'ec2'},
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -599,11 +594,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'
+                           'driver': 'ec2'
                           },
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'linode'
+                           'driver': 'linode'
                           }],
                      'conf_file': PATH}
         ret = {'my-production-envs':
@@ -611,7 +606,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'profiles': {},
                          'location': 'us-east-1',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'user': 'ec2-user@mycorp.com'}},
                'my-dev-envs':
@@ -619,12 +614,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'password': 'supersecret',
                          'profiles': {},
-                         'provider': 'linode'},
+                         'driver': 'linode'},
                     'ec2':
                         {'profiles': {},
                          'location': 'ap-southeast-1',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'user': 'user@mycorp.com'}}}
         self.assertEqual(ret,
@@ -649,22 +644,22 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'},
+                           'driver': 'ec2'},
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         ret = {'my-production-envs':
                    {'linode':
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'profiles': {},
                          'location': 'Salt Lake City',
-                         'provider': 'linode',
+                         'driver': 'linode',
                          'password': 'new-password'},
                     'ec2':
                         {'user': 'ec2-user@mycorp.com',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'profiles': {},
                          'location': 'us-east-1'}},
@@ -673,12 +668,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'password': 'supersecret',
                          'profiles': {},
-                         'provider': 'linode'},
+                         'driver': 'linode'},
                     'ec2':
                         {'profiles': {},
                          'user': 'user@mycorp.com',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'location': 'ap-southeast-1'}}}
         self.assertEqual(ret, sconfig.apply_cloud_providers_config(
@@ -698,7 +693,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -718,7 +713,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -738,7 +733,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -758,7 +753,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -871,7 +866,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath

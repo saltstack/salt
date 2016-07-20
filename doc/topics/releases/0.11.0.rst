@@ -34,7 +34,7 @@ Reactor System
 The new reactor system allows for a reactive logic engine to be created which
 can respond to events within a salted environment. The reactor system uses sls
 files to match events fired on the master with actions, enabling Salt
-to react to problems in an infrastructure. 
+to react to problems in an infrastructure.
 
 Your load-balanced group of webservers is under extra load? Spin up a new VM
 and add it to the group. Your fileserver is filling up? Send a notification to

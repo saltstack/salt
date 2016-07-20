@@ -1,3 +1,5 @@
+.. _coding-style:
+
 =================
 Salt Coding Style
 =================
@@ -15,18 +17,43 @@ no grounds to treat others without respect, especially people working to
 improve Salt)!!
 
 
+.. _pylint-instructions:
+
 Linting
 =======
 
-Most Salt style conventions are codified in Salt's ``.pylintrc`` file. This file
-is found in the root of the Salt project and can be passed as an argument to the
-pylint_ program as follows:
+Most Salt style conventions are codified in Salt's ``.pylintrc`` file. Salt's
+pylint file has two dependencies: pylint_ and saltpylint_. You can install
+these dependencies with ``pip``:
+
+.. code-block:: bash
+
+    pip install pylint
+    pip install saltpylint
+
+The ``.pylintrc`` file is found in the root of the Salt project and can be passed
+as an argument to the pylint_ program as follows:
 
 .. code-block:: bash
 
     pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint
 
 .. _pylint: http://www.pylint.org
+.. _saltpylint: https://github.com/saltstack/salt-pylint
+
+Variables
+=========
+
+Variables should be a minimum of three characters and should provide an
+easy-to-understand name of the object being represented.
+
+When keys and values are iterated over, descriptive names should be used
+to represent the temporary variables.
+
+Multi-word variables should be separated by an underscore.
+
+Variables which are two-letter words should have an underscore appended
+to them to pad them to three characters.
 
 Strings
 =======
@@ -195,13 +222,27 @@ This is a good way to import exceptions:
 Absolute Imports
 ----------------
 
-Although `absolute imports`_ seems like an awesome idea, please do not use it.  
-Extra care would be necessary all over salt's code in order for absolute 
-imports to work as supposed. Believe it, it has been tried before and, as a 
-tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``, all 
-other salt modules which needed to import :mod:`sys<python2:sys>` would have to 
-also import :mod:`absolute_import<python2:__future__>`, which should be 
+Although `absolute imports`_ seems like an awesome idea, please do not use it.
+Extra care would be necessary all over salt's code in order for absolute
+imports to work as supposed. Believe it, it has been tried before and, as a
+tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``, all
+other salt modules which needed to import :mod:`sys<python2:sys>` would have to
+also import :mod:`absolute_import<python2:__future__>`, which should be
 avoided.
+
+.. note::
+
+    An exception to this rule is the ``absolute_import`` from ``__future__`` at
+    the top of each file within the Salt project. This import is necessary for
+    Py3 compatibility. This particular import looks like this:
+
+    .. code-block:: python
+
+        from __future__ import absolute_import
+
+    This import is required for all new Salt files and is a good idea to add to
+    any custom states or modules. However, the practice of avoiding absolute
+    imports still applies to all other cases as to avoid a name conflict.
 
 .. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
 
@@ -256,12 +297,12 @@ instance:
 Line Length
 -----------
 
-For function definitions and function calls, Salt adheres to the PEP-8 
+For function definitions and function calls, Salt adheres to the PEP-8
 specification of at most 80 characters per line.
 
-Non function definitions or function calls, please adopt a soft limit of 120 
-characters per line. If breaking the line reduces the code readability, don't 
-break it. Still, try to avoid passing that 120 characters limit and remember, 
+Non function definitions or function calls, please adopt a soft limit of 120
+characters per line. If breaking the line reduces the code readability, don't
+break it. Still, try to avoid passing that 120 characters limit and remember,
 **vertical is better...  unless it isn't**
 
 

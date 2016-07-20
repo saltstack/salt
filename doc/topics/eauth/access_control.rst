@@ -33,7 +33,7 @@ The access controls are manifested using matchers in these configurations:
 
 In the above example, fred is able to send commands only to minions which match
 the specified glob target. This can be expanded to include other functions for
-other minions based on standard targets.
+other minions based on standard targets (all matchers are supported except the compound one).
 
 .. code-block:: yaml
 
@@ -55,3 +55,6 @@ other minions based on standard targets.
 The above allows for all minions to be hit by test.ping by dave, and adds a
 few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
+
+.. note::
+    Functions are matched using regular expressions.

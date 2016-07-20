@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Manage the shadow file
+Manage the shadow file on Linux systems
+
+.. important::
+    If you feel that Salt should be using this module to manage passwords on a
+    minion, and it is using a different module (or gives an error similar to
+    *'shadow.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -137,7 +144,15 @@ def set_mindays(name, mindays):
 
 def gen_password(password, crypt_salt=None, algorithm='sha512'):
     '''
+    .. versionadded:: 2014.7.0
+
     Generate hashed password
+
+    .. note::
+
+        When called this function is called directly via remote-execution,
+        the password argument may be displayed in the system's process list.
+        This may be a security risk on certain systems.
 
     password
         Plaintext password to be hashed.
@@ -159,7 +174,7 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
     .. code-block:: bash
 
         salt '*' shadow.gen_password 'I_am_password'
-        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt='I_am_salt' algorithm=sha256
     '''
     if not HAS_CRYPT:
         raise CommandExecutionError(
@@ -171,6 +186,8 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
 def del_password(name):
     '''
+    .. versionadded:: 2014.7.0
+
     Delete the password from name user
 
     CLI Example:

@@ -61,7 +61,7 @@ This makes 21 new developers since 0.9.4 was released!
 
 To keep up with the growing community follow Salt on Ohloh
 (http://www.ohloh.net/p/salt), to join the Salt development community, fork
-Salt on Github, and get coding (https://github.com/saltstack/salt)!
+Salt on GitHub, and get coding (https://github.com/saltstack/salt)!
 
 Major Features
 ==============
@@ -284,7 +284,7 @@ More to Come
 ------------
 
 We are actively seeking inclusion in more distributions. Primarily getting
-Salt into Gentoo, SUSE, OpenBSD and preparing Solaris support are all turning
+Salt into Gentoo, SUSE, OpenBSD, and preparing Solaris support are all turning
 into higher priorities.
 
 Refinement
@@ -327,7 +327,7 @@ This module was contributed thanks to the efforts of Christer Edwards
 :mod:`gentoo_service <salt.modules.gentoo_service>`
 ```````````````````````````````````````````````````
 Support has been added for managing services in Gentoo. Now Gentoo services
-can be started, stopped, restarted, enabled, disabled and viewed.
+can be started, stopped, restarted, enabled, disabled, and viewed.
 
 :mod:`pip <salt.modules.pip>`
 `````````````````````````````

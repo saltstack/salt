@@ -3,15 +3,15 @@
 salting.py module of salt specific interfaces to raet
 
 '''
+from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=W0611
 
 # Import Python libs
 import os
-from collections import namedtuple, OrderedDict
 
 # Import ioflo libs
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -21,11 +21,7 @@ from raet.keeping import Keep
 
 from salt.key import RaetKey
 
-# Python equivalent of an enum
-APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
-APPL_KIND_NAMES = odict((v, k) for k, v in APPL_KINDS.iteritems())  # inverse map
-ApplKind = namedtuple('ApplKind', APPL_KINDS)
-applKinds = ApplKind(**APPL_KINDS)
+from salt.utils import kinds
 
 
 class SaltKeep(Keep):
@@ -51,7 +47,7 @@ class SaltKeep(Keep):
                     'role', 'acceptance', 'verhex', 'pubhex']
     RemoteDumpFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'natted', 'fqdn', 'dyned',
                          'sid', 'main', 'kind', 'joined', 'role']
-    Auto = raeting.autoModes.never #auto accept
+    Auto = raeting.AutoMode.never.value #auto accept
 
     def __init__(self, opts, prefix='estate', basedirpath='',  auto=None, **kwa):
         '''
@@ -60,9 +56,9 @@ class SaltKeep(Keep):
         basedirpath = basedirpath or os.path.join(opts['cache_dir'], 'raet')
         super(SaltKeep, self).__init__(prefix=prefix, basedirpath=basedirpath, **kwa)
         self.auto = (auto if auto is not None else
-                            (raeting.autoModes.always if opts['open_mode'] else
-                                (raeting.autoModes.once if opts['auto_accept'] else
-                                 raeting.autoModes.never)))
+                            (raeting.AutoMode.always.value if opts['open_mode'] else
+                                (raeting.AutoMode.once.value if opts['auto_accept'] else
+                                 raeting.AutoMode.never.value)))
         self.saltRaetKey = RaetKey(opts)
 
     def clearAllDir(self):
@@ -78,18 +74,15 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
-    def loadLocalData(self):
+    def loadLocalRoleData(self):
         '''
-        Load and Return the data from the local estate
+        Load and return the role data
         '''
-        data = super(SaltKeep, self).loadLocalData()
-        if not data:
-            return None
-        srkdata = self.saltRaetKey.read_local()
-        if not srkdata:
-            srkdata = dict(sign=None, priv=None)
-        data.update([('sighex', srkdata['sign']),
-                     ('prihex', srkdata['priv'])])
+        keydata = self.saltRaetKey.read_local()
+        if not keydata:
+            keydata = odict([('sign', None), ('priv', None)])
+        data = odict([('sighex', keydata['sign']),
+                     ('prihex', keydata['priv'])])
         return data
 
     def clearLocalRoleData(self):
@@ -104,6 +97,18 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
+    def loadLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        data = super(SaltKeep, self).loadLocalData()
+        if not data:
+            return None
+        roleData = self.loadLocalRoleData() # if not present defaults None values
+        data.update([('sighex', roleData.get('sighex')),
+                     ('prihex', roleData.get('prihex'))])
+        return data
+
     def loadRemoteData(self, name):
         '''
         Load and Return the data from the remote file
@@ -113,7 +118,7 @@ class SaltKeep(Keep):
             return None
 
         mid = data['role']
-        for status in raeting.ACCEPTANCES:
+        for status in [acceptance.name for acceptance in Acceptance]:
             keydata = self.saltRaetKey.read_remote(mid, status)
             if keydata:
                 break
@@ -123,7 +128,7 @@ class SaltKeep(Keep):
                          ('verhex', None),
                          ('pubhex', None)])
         else:
-            data.update(acceptance=raeting.ACCEPTANCES[status],
+            data.update(acceptance=raeting.Acceptance[status].value,
                         verhex=keydata['verify'],
                         pubhex=keydata['pub'])
 
@@ -146,7 +151,7 @@ class SaltKeep(Keep):
                     for name, data in keeps.items():
                         if data['role'] == mid:
                             keeps[name].update(
-                                    [('acceptance', raeting.ACCEPTANCES[status]),
+                                    [('acceptance', raeting.Acceptance[status].value),
                                      ('verhex', keydata['verify']),
                                      ('pubhex', keydata['pub'])])
         return keeps
@@ -245,9 +250,9 @@ class SaltKeep(Keep):
         Where status is acceptance status of role and keys
         and has value from raeting.acceptances
         '''
-        status = raeting.ACCEPTANCES[self.saltRaetKey.status(role,
+        status = raeting.Acceptance[self.saltRaetKey.status(role,
                                                              pubhex,
-                                                             verhex)]
+                                                             verhex)].value
 
         return status
 
@@ -257,7 +262,7 @@ class SaltKeep(Keep):
         '''
         mid = remote.role
         self.saltRaetKey.reject(match=mid, include_accepted=True)
-        remote.acceptance = raeting.acceptances.rejected
+        remote.acceptance = raeting.Acceptance.rejected.value
 
     def pendRemote(self, remote):
         '''
@@ -271,4 +276,4 @@ class SaltKeep(Keep):
         '''
         mid = remote.role
         self.saltRaetKey.accept(match=mid, include_rejected=True)
-        remote.acceptance = raeting.acceptances.accepted
+        remote.acceptance = raeting.Acceptance.accepted.value

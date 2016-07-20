@@ -3,7 +3,7 @@
 Display values only, separated by newlines
 ==========================================
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.5.0
 
 This outputter is designed for Salt CLI return data. It will do the following
 to the return dict:
@@ -69,6 +69,12 @@ Output
     10
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 def _get_values(data):
     # This should be able to be improved
@@ -79,7 +85,7 @@ def _get_values(data):
     # This would enable us to toggle
     # this functionality.
     values = []
-    for _, minion_values in data.items():
+    for _, minion_values in six.iteritems(data):
         if isinstance(minion_values, list):
             values.extend(minion_values)
         else:

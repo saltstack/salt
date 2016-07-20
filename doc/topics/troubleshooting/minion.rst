@@ -66,24 +66,26 @@ check that no additional access control system such as `SELinux`_ or
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
 .. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
 
+.. _troubleshooting-minion-salt-call:
+
 Using salt-call
 ===============
 
-The ``salt-call`` command was originally developed for aiding in the development
-of new Salt modules. Since then, many applications have been developed for
-running any Salt module locally on a minion. These range from the original
-intent of salt-call, development assistance, to gathering more verbose output
-from calls like :mod:`state.highstate <salt.modules.state.highstate>`.
+The ``salt-call`` command was originally developed for aiding in the
+development of new Salt modules. Since then, many applications have been
+developed for running any Salt module locally on a minion. These range from the
+original intent of salt-call (development assistance), to gathering more
+verbose output from calls like :mod:`state.apply <salt.modules.state.apply_>`.
 
 When initially creating your state tree, it is generally recommended to invoke
-:mod:`state.highstate <salt.modules.state.highstate>` from the minion with
-``salt-call``. This displays far more information about the highstate execution
-than calling it remotely. For even more verbosity, increase the loglevel with
-the same argument as ``salt-minion``:
+highstates by running :mod:`state.apply <salt.modules.state.apply_>` directly
+from the minion with ``salt-call``, rather than remotely from the master. This
+displays far more information about the execution than calling it remotely. For
+even more verbosity, increase the loglevel using the ``-l`` argument:
 
 .. code-block:: bash
 
-    # salt-call -l debug state.highstate
+    # salt-call -l debug state.apply
 
 The main difference between using ``salt`` and using ``salt-call`` is that
 ``salt-call`` is run from the minion, and it only runs the selected function on
@@ -127,3 +129,23 @@ The reason for this difficulty is that python attempts to pickle all objects in
 memory when communicating, and it cannot pickle function objects. Since the
 Salt loader system creates and manages function objects this causes the pickle
 operation to fail.
+
+Salt Minion Doesn't Return Anything While Running Jobs Locally
+==============================================================
+
+When a command being run via Salt takes a very long time to return
+(package installations, certain scripts, etc.) the minion may drop you back
+to the shell. In most situations the job is still running but Salt has
+exceeded the set timeout before returning. Querying the job queue will
+provide the data of the job but is inconvenient. This can be resolved by
+either manually using the ``-t`` option to set a longer timeout when running
+commands (by default it is 5 seconds) or by modifying the minion
+configuration file: ``/etc/salt/minion`` and setting the ``timeout`` value to
+change the default timeout for all commands, and then restarting the
+salt-minion service.
+
+.. note::
+
+    Modifying the minion timeout value is not required when running commands
+    from a Salt Master. It is only required when running commands locally on
+    the minion.

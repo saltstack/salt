@@ -15,7 +15,7 @@ Management of Redis server
         - value: string data
 
 The redis server information specified in the minion config file can be
-overidden in states using the following arguments: ``host``, ``post``, ``db``,
+overridden in states using the following arguments: ``host``, ``post``, ``db``,
 ``password``.
 
 .. code-block:: yaml

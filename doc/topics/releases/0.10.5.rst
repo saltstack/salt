@@ -39,7 +39,7 @@ OpenStack Additions
 --------------------
 
 OpenStack integration with Salt has been moving forward at a blistering pace.
-The new `nova`, `glance` and `keystone` modules represent the beginning of
+The new `nova`, `glance`, and `keystone` modules represent the beginning of
 ongoing OpenStack integration.
 
 The Salt team has had many conversations with core OpenStack developers and

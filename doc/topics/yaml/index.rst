@@ -105,6 +105,6 @@ Learning More
 -------------
 
 One easy way to learn more about how YAML gets rendered into Python data structures is
-to use an online YAML parser to see the Python output. 
+to use an online YAML parser to see the Python output.
 
 One excellent choice for experimenting with YAML parsing is: http://yaml-online-parser.appspot.com/

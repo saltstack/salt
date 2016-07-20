@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the salt mine system
 '''
+# Import Python libs
+from __future__ import absolute_import
+import time
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
@@ -81,6 +84,8 @@ class MineTest(integration.ModuleCase):
                     minion_tgt=minion_id
                 )
             )
+        time.sleep(1)
+        for minion_id in ('minion', 'sub_minion'):
             ret = self.run_function(
                 'mine.get',
                 [minion_id, 'grains.items'],

@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import pipes
@@ -20,6 +21,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -70,14 +74,14 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 integration.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
-            ret = self.run_cp('{0} {1} {2}'.format(
+            ret = self.run_cp('--out pprint {0} {1} {2}'.format(
                 pipes.quote(minion),
                 pipes.quote(testfile),
                 pipes.quote(minion_testfile)
             ))
 
             data = yaml.load('\n'.join(ret))
-            for part in data.values():
+            for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
             ret = self.run_salt(
@@ -132,7 +136,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} \'*\' foo {0}/foo'.format(
+            '--out pprint --config-dir {0} \'*\' foo {0}/foo'.format(
                 config_dir
             ),
             catch_stderr=True,

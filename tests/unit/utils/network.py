@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting import TestCase
@@ -101,12 +104,14 @@ class NetworkTestCase(TestCase):
                                              'broadcast': '10.10.10.255',
                                              'netmask': '255.255.252.0'}],
                                    'inet6': [{'address': 'fe80::e23f:49ff:fe85:6aaf',
-                                              'prefixlen': '64'}],
+                                              'prefixlen': '64',
+                                              'scope': 'link'}],
                                    'up': True},
                           'lo': {'inet': [{'address': '127.0.0.1',
                                            'netmask': '255.0.0.0'}],
                                  'inet6': [{'address': '::1',
-                                            'prefixlen': '128'}],
+                                            'prefixlen': '128',
+                                            'scope': 'host'}],
                                  'up': True}}
         )
 
@@ -127,9 +132,11 @@ class NetworkTestCase(TestCase):
                           'lo0': {'inet': [{'address': '127.0.0.1',
                                             'netmask': '255.0.0.0'}],
                                   'inet6': [{'address': 'fe80::1',
-                                             'prefixlen': '64'},
+                                             'prefixlen': '64',
+                                             'scope': '0x8'},
                                             {'address': '::1',
-                                             'prefixlen': '128'}],
+                                             'prefixlen': '128',
+                                             'scope': None}],
                                   'up': True},
                           'plip0': {'up': False},
                           'tun0': {'inet': [{'address': '10.12.0.1',

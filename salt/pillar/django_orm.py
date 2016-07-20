@@ -89,12 +89,15 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 import logging
 import os
 import sys
 
 import salt.exceptions
+import salt.ext.six as six
+import salt.utils
 
 HAS_VIRTUALENV = False
 
@@ -175,14 +178,14 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         base_env = {}
         proc = subprocess.Popen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             base_env[key] = value
 
         command = ['bash', '-c', 'source {0} && env'.format(env_file)]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')
@@ -195,10 +198,10 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
         django_pillar = {}
 
-        for proj_app, models in django_app.iteritems():
+        for proj_app, models in six.iteritems(django_app):
             _, _, app = proj_app.rpartition('.')
             django_pillar[app] = {}
-            for model_name, model_meta in models.iteritems():
+            for model_name, model_meta in six.iteritems(models):
                 model_orm = get_model(app, model_name)
                 if model_orm is None:
                     raise salt.exceptions.SaltException(

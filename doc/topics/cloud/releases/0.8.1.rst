@@ -40,7 +40,7 @@ Increased Map Functionality
 ===========================
 
 Previously, map files were only used for creating VMs. Now they can also be
-used to query and delete VMs. The -Q, -F and -d options can all be used in
+used to query and delete VMs. The -Q, -F, and -d options can all be used in
 conjunction with -m, to display map-specific data. If a VM that is specified
 in the map does not exist, it will still show up under -Q and -F as "Absent".
 If a VM specified in the map does not exist when a -d is specified, it will
@@ -94,5 +94,3 @@ providers a different user (ec2-user, ubuntu, bitnami, etc). Deployment on
 such images must be handled using sudo. Previously, sudo was used to issue
 all deployment commands, but this failed on images where sudo was not installed
 by default (such as FreeBSD). Now sudo will only be used with non-root logins.
-
-

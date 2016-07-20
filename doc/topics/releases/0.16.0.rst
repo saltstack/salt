@@ -85,8 +85,8 @@ default. This means that it's no longer necessary to specify the ``-c`` option
 to specify the location of the config file when starting the Salt Minion on
 Windows in a terminal.
 
-Muliple Targets for pkg.removed, pkg.purged States
---------------------------------------------------
+Multiple Targets for pkg.removed, pkg.purged States
+---------------------------------------------------
 
 Both :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
 <salt.states.pkg.purged>` now support the ``pkgs`` argument, which allow for
@@ -132,4 +132,4 @@ Support for Setting Password Hashes on BSD Minions
 --------------------------------------------------
 
 FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
-:mod:`user.present <salt.states.user.present>` states. 
+:mod:`user.present <salt.states.user.present>` states.

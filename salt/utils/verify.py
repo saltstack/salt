@@ -2,6 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
+from __future__ import absolute_import
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -22,8 +23,8 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-from salt.exceptions import SaltClientError
-import salt.exitcodes
+from salt.exceptions import SaltClientError, SaltSystemExit
+import salt.defaults.exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -153,12 +154,12 @@ def verify_files(files, user):
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
-
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(salt.exitcodes.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -170,6 +171,17 @@ def verify_files(files, user):
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
+
+        except IOError as err:
+            if os.path.isfile(dirname):
+                msg = 'Failed to create path {0}, is {1} a file?'.format(fn_, dirname)
+                raise SaltSystemExit(msg=msg)
+            if err.errno != errno.EACCES:
+                raise
+            msg = 'No permissions to access "{0}", are you running as the correct user?\n'
+            sys.stderr.write(msg.format(fn_))
+            sys.exit(err.errno)
+
         except OSError as err:
             msg = 'Failed to create path "{0}" - {1}\n'
             sys.stderr.write(msg.format(fn_, err))
@@ -184,7 +196,7 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir=''):
+def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -202,7 +214,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(salt.exitcodes.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
@@ -280,8 +292,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         log.critical(msg)
                     else:
                         sys.stderr.write("CRITICAL: {0}\n".format(msg))
-    # Run the extra verification checks
-    zmq_version()
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()
 
 
 def check_user(user):
@@ -297,7 +311,7 @@ def check_user(user):
         pwuser = pwd.getpwnam(user)
         try:
             if hasattr(os, 'initgroups'):
-                os.initgroups(user, pwuser.pw_gid)
+                os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
             else:
                 os.setgroups(salt.utils.get_gid_list(user, include_default=False))
             os.setgid(pwuser.pw_gid)
@@ -403,7 +417,7 @@ def check_max_open_files(opts):
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
-    accepted_count = sum(1 for _ in os.listdir(accepted_keys_dir))
+    accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
         'This salt-master instance has accepted {0} minion keys.'.format(

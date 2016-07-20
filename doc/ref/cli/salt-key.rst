@@ -15,6 +15,27 @@ Description
 Salt-key executes simple management of Salt server public keys used for
 authentication.
 
+On initial connection, a Salt minion sends its public key to the Salt
+master. This key must be accepted using the ``salt-key`` command on the
+Salt master.
+
+Salt minion keys can be in one of the following states:
+
+- **unaccepted**: key is waiting to be accepted.
+- **accepted**: key was accepted and the minion can communicate with the Salt
+  master.
+- **rejected**: key was rejected using the ``salt-key`` command. In
+  this state the minion does not receive any communication from the Salt
+  master.
+- **denied**: key was rejected automatically by the Salt master.
+  This occurs when a minion has a duplicate ID, or when a minion was rebuilt or
+  had new keys generated and the previous key was not deleted from the Salt
+  master. In this state the minion does not receive any communication from the
+  Salt master.
+
+To change the state of a minion key, use ``-d`` to delete the key and then
+accept or reject the key.
+
 Options
 =======
 
@@ -116,7 +137,7 @@ Actions
 
 
 Key Generation Options
------------------------
+----------------------
 
 .. option:: --gen-keys=GEN_KEYS
 
@@ -136,10 +157,10 @@ Key Generation Options
 
 .. option:: --gen-signature
 
-    Create a signature file of the masters public-key named
-    master_pubkey_signature. The signature can be send to a minion in the
-    masters auth-reply and enables the minion to verify the masters public-key
-    cryptographically. This requires a new signing-key- pair which can be
+    Create a signature file of the master's public-key named
+    master_pubkey_signature. The signature can be sent to a minion in the
+    master's auth-reply and enables the minion to verify the master's public-key
+    cryptographically. This requires a new signing-key-pair which can be
     auto-created with the --auto-create parameter.
 
 .. option:: --priv=PRIV

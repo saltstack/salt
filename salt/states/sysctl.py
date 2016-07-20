@@ -11,6 +11,7 @@ Control the kernel sysctl system.
     sysctl.present:
       - value: 20
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

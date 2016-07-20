@@ -8,6 +8,7 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import datetime
 
@@ -15,18 +16,21 @@ import datetime
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
-    PSUTIL2 = psutil.version_info >= (2, 0)
+    PSUTIL2 = getattr(psutil, 'version_info', ()) >= (2, 0)
 except ImportError:
     HAS_PSUTIL = False
+# pylint: enable=import-error
 
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return False
+        return False, 'The ps module cannot be loaded: python module psutil not installed.'
 
     # Functions and attributes used in this execution module seem to have been
     # added as of psutil 0.3.0, from an inspection of the source code. Only
@@ -37,7 +41,7 @@ def __virtual__():
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
         return True
-    return False
+    return False, 'The ps module cannot be loaded: psutil must be version 0.3.0 or greater.'
 
 
 def _get_proc_cmdline(proc):
@@ -96,7 +100,7 @@ def _get_proc_username(proc):
     '''
     try:
         return proc.username() if PSUTIL2 else proc.username
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
 
@@ -128,15 +132,15 @@ def top(num_processes=5, interval=3):
     for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in start_usage.items():
+    for process, start in six.iteritems(start_usage):
         try:
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system
@@ -158,9 +162,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in process.get_cpu_times()._asdict().items():
+        for key, value in six.iteritems(process.cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in process.get_memory_info()._asdict().items():
+        for key, value in six.iteritems(process.memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -178,6 +182,32 @@ def get_pid_list():
         salt '*' ps.get_pid_list
     '''
     return psutil.pids()
+
+
+def proc_info(pid, attrs=None):
+    '''
+    Return a dictionary of information for a process id (PID).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.proc_info 2322
+        salt '*' ps.proc_info 2322 attrs='["pid", "name"]'
+
+    pid
+        PID of process to query.
+
+    attrs
+        Optional list of desired process attributes.  The list of possible
+        attributes can be found here:
+        http://pythonhosted.org/psutil/#psutil.Process
+    '''
+    try:
+        proc = psutil.Process(pid)
+        return proc.as_dict(attrs)
+    except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError) as exc:
+        raise CommandExecutionError(exc)
 
 
 def kill_pid(pid, signal=15):
@@ -511,7 +541,7 @@ def boot_time(time_format=None):
     except AttributeError:
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
-        b_time = int(psutil.get_boot_time())
+        b_time = int(psutil.boot_time())
     if time_format:
         # Load epoch timestamp as a datetime.datetime object
         b_time = datetime.datetime.fromtimestamp(b_time)
@@ -583,7 +613,7 @@ def get_users():
         # get_users is only present in psutil > v0.5.0
         # try utmp
         try:
-            import utmp
+            import utmp  # pylint: disable=import-error
 
             result = []
             while True:

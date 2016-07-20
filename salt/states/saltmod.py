@@ -9,9 +9,10 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
 .. seealso:: More Orchestrate documentation
 
-    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -22,7 +23,8 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import salt._compat
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +56,8 @@ def state(
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
-        timeout=None):
+        timeout=None,
+        queue=False):
     '''
     Invoke a state run on a given target
 
@@ -93,7 +96,7 @@ def state(
         The default salt environment to pull sls files from
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
 
     roster
         In the event of using salt-ssh, a roster system can be set
@@ -114,6 +117,9 @@ def state(
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+
+    queue
+        Pass ``queue=true`` through to the state function
 
     Examples:
 
@@ -144,17 +150,17 @@ def state(
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
-    ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+    state_ret = {'name': name,
+                 'changes': {},
+                 'comment': '',
+                 'result': True}
 
     try:
         allow_fail = int(allow_fail)
     except ValueError:
-        ret['result'] = False
-        ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
-        return ret
+        state_ret['result'] = False
+        state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
+        return state_ret
 
     if env is not None:
         msg = (
@@ -164,11 +170,11 @@ def state(
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
+        state_ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
     if expr_form and tgt_type:
-        ret.setdefault('warnings', []).append(
+        state_ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         )
@@ -192,33 +198,26 @@ def state(
             sls = ','.join(sls)
         cmd_kw['arg'].append(sls)
     else:
-        ret['comment'] = 'No highstate or sls specified, no execution made'
-        ret['result'] = False
-        return ret
+        state_ret['comment'] = 'No highstate or sls specified, no execution made'
+        state_ret['result'] = False
+        return state_ret
 
-    if test:
-        cmd_kw['kwarg']['test'] = test
+    if test or __opts__.get('test'):
+        cmd_kw['kwarg']['test'] = True
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
     cmd_kw['kwarg']['saltenv'] = __env__
+    cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
         cmd_kw['kwarg']['concurrent'] = concurrent
     else:
-        ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
-        ret['result'] = False
-        return ret
+        state_ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
+        state_ret['result'] = False
+        return state_ret
 
-    if __opts__['test'] is True:
-        ret['comment'] = (
-                '{0} will be run on target {1} as test={2}'
-                ).format(fun == 'state.highstate' and 'Highstate'
-                    or 'States '+','.join(cmd_kw['arg']),
-                tgt, str(test))
-        ret['result'] = None
-        return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
     changes = {}
@@ -228,54 +227,66 @@ def state(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
-        ret.setdefault('warnings', []).append(
+        state_ret.setdefault('warnings', []).append(
             '\'fail_minions\' needs to be a list or a comma separated '
             'string. Ignored.'
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
 
         m_ret = False
 
+        if 'return' in mdata and 'ret' not in mdata:
+            mdata['ret'] = mdata.pop('return')
+
+        m_state = True
         if mdata.get('failed', False):
             m_state = False
         else:
-            m_ret = mdata['ret']
-            m_state = salt.utils.check_state_result(m_ret)
+            try:
+                m_ret = mdata['ret']
+            except KeyError:
+                m_state = False
+            if m_state:
+                m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret and m_ret or 'Minion did not respond'
+            failures[minion] = m_ret or 'Minion did not respond'
             continue
-        for state_item in m_ret.itervalues():
-            if state_item['changes']:
-                changes[minion] = m_ret
-                break
-        else:
+        try:
+            for state_item in six.itervalues(m_ret):
+                if 'changes' in state_item and state_item['changes']:
+                    changes[minion] = m_ret
+                    break
+            else:
+                no_change.add(minion)
+        except AttributeError:
+            log.error("m_ret did not have changes %s %s", type(m_ret), m_ret)
             no_change.add(minion)
 
     if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
+        state_ret['changes'] = {'out': 'highstate', 'ret': changes}
     if len(fail) > allow_fail:
-        ret['result'] = False
-        ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
+        state_ret['result'] = False
+        state_ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
     else:
-        ret['comment'] = 'States ran successfully.'
+        state_ret['comment'] = 'States ran successfully.'
         if changes:
-            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
+            state_ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
         if no_change:
-            ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
+            state_ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
-        ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
-            ret['comment'] += '\n'.join(
+        state_ret['comment'] += '\nFailures:\n'
+        for minion, failure in six.iteritems(failures):
+            state_ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
                         {minion: failure},
@@ -283,8 +294,12 @@ def state(
                         __opts__,
                         ).splitlines()
                     )
-            ret['comment'] += '\n'
-    return ret
+            state_ret['comment'] += '\n'
+    if test or __opts__.get('test'):
+        if state_ret['changes'] and state_ret['result'] is True:
+            # Test mode with changes is the only case where result should ever be none
+            state_ret['result'] = None
+    return state_ret
 
 
 def function(
@@ -332,20 +347,24 @@ def function(
         based on the returned data dict for individual minions
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
     '''
-    if kwarg is None:
-        kwarg = {}
-
-    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
-
-    ret = {'name': name,
+    state_ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+    if kwarg is None:
+        kwarg = {}
+    if isinstance(arg, str):
+        state_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+                           'Modifying in place, but please update SLS file '
+                           'to remove this warning.']
+        arg = arg.split()
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
-        ret['warnings'] = [
+        state_ret['warnings'] = [
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         ]
@@ -358,14 +377,20 @@ def function(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
-        ret['comment'] = (
+        state_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
                 ).format(fun, tgt, str(False))
-        ret['result'] = None
-        return ret
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+        state_ret['result'] = None
+        return state_ret
+    try:
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    except Exception as exc:
+        state_ret['result'] = False
+        state_ret['comment'] = str(exc)
+        return state_ret
 
     changes = {}
     fail = set()
@@ -373,21 +398,24 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
-        ret.setdefault('warnings', []).append(
+        state_ret.setdefault('warnings', []).append(
             '\'fail_minions\' needs to be a list or a comma separated '
             'string. Ignored.'
         )
         fail_minions = ()
-
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
-
+        if mdata.get('retcode'):
+            state_ret['result'] = False
+            fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
         else:
+            if 'return' in mdata and 'ret' not in mdata:
+                mdata['ret'] = mdata.pop('return')
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
 
@@ -397,29 +425,32 @@ def function(
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
-
-    if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
-    if fail:
-        ret['result'] = False
-        ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+    if not cmd_ret:
+        state_ret['result'] = False
+        state_ret['command'] = 'No minions responded'
     else:
-        ret['comment'] = 'Function ran successfully.'
-    if changes:
-        ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
-    if failures:
-        ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
-            ret['comment'] += '\n'.join(
-                    (' ' * 4 + l)
-                    for l in salt.output.out_format(
-                        {minion: failure},
-                        'highstate',
-                        __opts__,
-                        ).splitlines()
-                    )
-            ret['comment'] += '\n'
-    return ret
+        if changes:
+            state_ret['changes'] = {'out': 'highstate', 'ret': changes}
+        if fail:
+            state_ret['result'] = False
+            state_ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+        else:
+            state_ret['comment'] = 'Function ran successfully.'
+        if changes:
+            state_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+        if failures:
+            state_ret['comment'] += '\nFailures:\n'
+            for minion, failure in six.iteritems(failures):
+                state_ret['comment'] += '\n'.join(
+                        (' ' * 4 + l)
+                        for l in salt.output.out_format(
+                            {minion: failure},
+                            'highstate',
+                            __opts__,
+                            ).splitlines()
+                        )
+                state_ret['comment'] += '\n'
+    return state_ret
 
 
 def wait_for_event(
@@ -475,7 +506,8 @@ def wait_for_event(
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     del_counter = 0
     starttime = time.time()
@@ -537,6 +569,12 @@ def runner(name, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the runner function
+
+    .. code-block:: yaml
+
+         run-manage-up:
+          salt.runner:
+            - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     out = __salt__['saltutil.runner'](name, **kwargs)

@@ -5,7 +5,7 @@ Salt Formulas
 =============
 
 Formulas are pre-written Salt States. They are as open-ended as Salt States
-themselves and can be used for tasks such as installing a package, configuring
+themselves and can be used for tasks such as installing a package, configuring,
 and starting a service, setting up users or permissions, and many other common
 tasks.
 
@@ -85,8 +85,9 @@ or zip file of the repository. The directory structure is designed to work with
     .. code-block:: yaml
 
         file_roots:
-          - /srv/salt
-          - /srv/formulas/apache-formula
+          base:
+            - /srv/salt
+            - /srv/formulas/apache-formula
 
 3.  Restart the Salt Master.
 
@@ -251,7 +252,7 @@ Use ``module.function`` notation
 
 So-called "short-declaration" notation is preferred for referencing state
 modules and state functions. It provides a consistent pattern of
-``module.function`` shared between Salt States, the Reactor, Overstate, Salt
+``module.function`` shared between Salt States, the Reactor, Salt
 Mine, the Scheduler, as well as with the CLI.
 
 .. code-block:: yaml
@@ -366,7 +367,8 @@ variables or interact.
   for :ref:`any of the alternate renderers <all-salt.renderers>` in Salt.)
 * Highstate can be thought of as a human-friendly data structure; easy to write
   and easy to read.
-* Salt's state compiler validates the highstate and compiles it to low state.
+* Salt's state compiler validates the :ref:`highstate <running-highstate>` and
+  compiles it to low state.
 * Low state can be thought of as a machine-friendly data structure. It is a
   list of dictionaries that each map directly to a function call.
 * Salt's state system finally starts and executes on each "chunk" in the low
@@ -415,11 +417,15 @@ from the Salt Master. For example:
 
     {# or #}
 
-    {% load_json 'path/to/file.json' as some_data %}
+    {% import_yaml 'path/to/file.yaml' as some_data %}
 
     {# or #}
 
-    {% load_text 'path/to/ssh_key.pub' as ssh_pub_key %}
+    {% import_json 'path/to/file.json' as some_data %}
+
+    {# or #}
+
+    {% import_text 'path/to/ssh_key.pub' as ssh_pub_key %}
 
     {# or #}
 
@@ -576,7 +582,7 @@ read it will be hard to maintain -- switch to a format that is easier to read.
 Using alternate renderers is very simple to do using Salt's "she-bang" syntax
 at the top of the file. The Python renderer must simply return the correct
 :ref:`highstate data structure <states-highstate-example>`. The following
-example is a state tree of two sls files, one simple and one complicated. 
+example is a state tree of two sls files, one simple and one complicated.
 
 ``/srv/salt/top.sls``:
 
@@ -679,10 +685,11 @@ example, the following macro could be used to write a php.ini config file:
 
 .. code-block:: yaml
 
-    PHP:
-      engine: 'On'
-      short_open_tag: 'Off'
-      error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
+    php_ini:
+      PHP:
+        engine: 'On'
+        short_open_tag: 'Off'
+        error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
 
 ``/srv/salt/php.ini.tmpl``:
 
@@ -690,8 +697,8 @@ example, the following macro could be used to write a php.ini config file:
 
     {% macro php_ini_serializer(data) %}
     {% for section_name, name_val_pairs in data.items() %}
-    [{{ section }}]
-    {% for name, val in name_val_pairs.items() %}
+    [{{ section_name }}]
+    {% for name, val in name_val_pairs.items() -%}
     {{ name }} = "{{ val }}"
     {% endfor %}
     {% endfor %}
@@ -751,7 +758,7 @@ syntax for referencing a value is a normal dictionary lookup in Jinja, such as
         },
         'Gentoo': {
             'server': 'dev-db/mysql',
-            'mysql-client': 'dev-db/mysql',
+            'client': 'dev-db/mysql',
             'service': 'mysql',
             'config': '/etc/mysql/my.cnf',
             'python': 'dev-python/mysql-python',
@@ -770,6 +777,43 @@ state file using the following syntax:
         - name: {{ mysql.server }}
       service.running:
         - name: {{ mysql.service }}
+
+Collecting common values
+````````````````````````
+
+Common values can be collected into a *base* dictionary.  This
+minimizes repetition of identical values in each of the
+``lookup_dict`` sub-dictionaries.  Now only the values that are
+different from the base must be specified of the alternates:
+
+:file:`map.jinja`:
+
+.. code-block:: jinja
+
+    {% set mysql = salt['grains.filter_by']({
+        'default': {
+            'server': 'mysql-server',
+            'client': 'mysql-client',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+            'python': 'python-mysqldb',
+        },
+        'Debian': {
+        },
+        'RedHat': {
+            'client': 'mysql',
+            'service': 'mysqld',
+            'config': '/etc/my.cnf',
+            'python': 'MySQL-python',
+        },
+        'Gentoo': {
+            'server': 'dev-db/mysql',
+            'client': 'dev-db/mysql',
+            'python': 'dev-python/mysql-python',
+        },
+    },
+    merge=salt['pillar.get']('mysql:lookup', default='default') %}
+
 
 Overriding values in the lookup table
 `````````````````````````````````````
@@ -792,6 +836,38 @@ Pillar would replace the ``config`` value from the call above.
       lookup:
         config: /usr/local/etc/mysql/my.cnf
 
+.. note:: Protecting Expansion of Content with Special Characters
+
+  When templating keep in mind that YAML does have special characters for
+  quoting, flows, and other special structure and content.  When a Jinja
+  substitution may have special characters that will be incorrectly parsed by
+  YAML care must be taken.  It is a good policy to use the ``yaml_encode`` or
+  the ``yaml_dquote`` Jinja filters:
+
+  .. code-block:: jinja
+
+      {%- set foo = 7.7 %}
+      {%- set bar = none %}
+      {%- set baz = true %}
+      {%- set zap = 'The word of the day is "salty".' %}
+      {%- set zip = '"The quick brown fox . . ."' %}
+
+      foo: {{ foo|yaml_encode }}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      zap: {{ zap|yaml_encode }}
+      zip: {{ zip|yaml_dquote }}
+
+  The above will be rendered as below:
+
+  .. code-block:: yaml
+
+      foo: 7.7
+      bar: null
+      baz: true
+      zap: "The word of the day is \"salty\"."
+      zip: "\"The quick brown fox . . .\""
+
 The :py:func:`filter_by <salt.modules.grains.filter_by>` function performs a
 simple dictionary lookup but also allows for fetching data from Pillar and
 overriding data stored in the lookup table. That same workflow can be easily
@@ -809,7 +885,7 @@ When to use lookup tables
 The ``map.jinja`` file is only a convention within Salt Formulas. This greater
 pattern is useful for a wide variety of data in a wide variety of workflows.
 This pattern is not limited to pulling data from a single file or data source.
-This pattern is useful in States, Pillar, the Reactor, and Overstate as well.
+This pattern is useful in States, Pillar and the Reactor, for example.
 
 Working with a data structure instead of, say, a config file allows the data to
 be cobbled together from multiple sources (local files, remote Pillar, database
@@ -874,9 +950,9 @@ XML.)
 
 .. code-block:: yaml
 
-    {% load_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
+    {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
-        'appX:server_xml_overrides', 
+        'appX:server_xml_overrides',
         default=server_xml_defaults,
         merge=True)
     %}
@@ -910,7 +986,7 @@ example:
 .. code-block:: yaml
 
     {# Load the map file. #}
-    {% load_yaml 'app/defaults.yaml' as app_defaults %}
+    {% import_yaml 'app/defaults.yaml' as app_defaults %}
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}
@@ -1028,7 +1104,7 @@ of where the data comes from. Production data will vary from development data
 will vary from data from one company to another, however the state itself stays
 the same.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set user_list = [
         {'name': 'larry', 'shell': 'bash'},
@@ -1114,7 +1190,9 @@ Jinja macros to encapsulate logic or conditionals are discouraged in favor of
 Repository structure
 ====================
 
-A basic Formula repository should have the following layout::
+A basic Formula repository should have the following layout:
+
+.. code-block:: text
 
     foo-formula
     |-- foo/
@@ -1153,7 +1231,7 @@ A sample skeleton for the ``README.rst`` file:
     .. note::
 
         See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
+        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -1198,6 +1276,8 @@ Versioning
 
 Formula are versioned according to Semantic Versioning, http://semver.org/.
 
+.. note::
+
     Given a version number MAJOR.MINOR.PATCH, increment the:
 
     #. MAJOR version when you make incompatible API changes,
@@ -1223,9 +1303,9 @@ structure can be performed by with the :py:func:`state.show_sls
     salt '*' state.show_sls apache
 
 Salt Formulas can then be tested by running each ``.sls`` file via
-:py:func:`state.sls <salt.modules.state.sls>` and checking the output for the
-success or failure of each state in the Formula. This should be done for each
-supported platform.
+:py:func:`state.apply <salt.modules.state.apply_>` and checking the output for
+the success or failure of each state in the Formula. This should be done for
+each supported platform.
 
 .. ............................................................................
 

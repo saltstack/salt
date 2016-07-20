@@ -4,6 +4,7 @@ Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

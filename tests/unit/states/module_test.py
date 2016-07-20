@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 from inspect import ArgSpec
 
 # Import Salt Libs
@@ -59,7 +60,7 @@ class ModuleStateTest(TestCase):
             comment = 'Module function {0} is set to execute'.format(CMD)
             self.assertEqual(ret['comment'], comment)
 
-    @patch('salt.utils.get_function_argspec', MagicMock(return_value=aspec))
+    @patch('salt.utils.args.get_function_argspec', MagicMock(return_value=aspec))
     def test_module_run_missing_arg(self):
         '''
         Tests the return of module.run state when arguments are missing

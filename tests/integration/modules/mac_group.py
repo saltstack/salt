@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
@@ -20,6 +21,9 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 import integration
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def __random_string(size=6):
@@ -46,7 +50,6 @@ class MacGroupModuleTest(integration.ModuleCase):
         '''
         Sets up test requirements
         '''
-        super(MacGroupModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in 'Darwin':
             self.skipTest(

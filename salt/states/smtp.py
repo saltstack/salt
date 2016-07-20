@@ -5,7 +5,7 @@ Sending Messages via SMTP
 
 .. versionadded:: 2014.7.0
 
-This state is useful for firing messages during state runs, using the XMPP
+This state is useful for firing messages during state runs, using the SMTP
 protocol
 
 .. code-block:: yaml

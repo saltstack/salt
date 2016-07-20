@@ -2,7 +2,16 @@
 '''
 Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -89,8 +98,8 @@ def available(name):
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
-    The Solaris and SmartOS "if" statement uses svcs to return the service name from the
-    package name.
+    We look up the name with the svcs command to get back the FMRI
+    This allows users to use simpler service names
 
     CLI Example:
 
@@ -98,12 +107,9 @@ def available(name):
 
         salt '*' service.available net-snmp
     '''
-    if 'SmartOS' in __grains__['os'] or 'Solaris' in __grains__['os']:
-        cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
-        name = __salt__['cmd.run'](cmd, python_shell=False)
-        return name in get_all()
-    else:
-        return name in get_all()
+    cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
+    name = __salt__['cmd.run'](cmd, python_shell=False)
+    return name in get_all()
 
 
 def missing(name):
@@ -118,12 +124,9 @@ def missing(name):
 
         salt '*' service.missing net-snmp
     '''
-    if 'SmartOS' in __grains__['os'] or 'Solaris' in __grains__['os']:
-        cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
-        name = __salt__['cmd.run'](cmd, python_shell=False)
-        return name not in get_all()
-    else:
-        return name not in get_all()
+    cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
+    name = __salt__['cmd.run'](cmd, python_shell=False)
+    return name not in get_all()
 
 
 def get_all():
@@ -268,7 +271,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

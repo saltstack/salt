@@ -27,17 +27,15 @@ that can solve many specific problems in an infrastructure.
 
 The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
-communication system, Salt provides an extremely fast, flexible and easy-to-use
+communication system, Salt provides an extremely fast, flexible, and easy-to-use
 configuration management system called ``Salt States``.
 
 Installing Salt
 ---------------
 
-SaltStack has been made to be very easy to install and get started. Setting up
-Salt should be as easy as installing Salt via distribution packages on Linux or
-via the Windows installer. The :doc:`installation documents
-</topics/installation/index>` cover platform-specific installation in depth.
-
+SaltStack has been made to be very easy to install and get started. The
+:doc:`installation documents </topics/installation/index>` contain instructions
+for all supported platforms.
 
 Starting Salt
 -------------
@@ -184,7 +182,7 @@ master. To list the keys that are on the master:
 
     salt-key -L
 
-The keys that have been rejected, accepted and pending acceptance are listed.
+The keys that have been rejected, accepted, and pending acceptance are listed.
 The easiest way to accept the minion key is to accept all pending keys:
 
 .. code-block:: bash
@@ -198,9 +196,9 @@ The easiest way to accept the minion key is to accept all pending keys:
     and then set this value as the :conf_minion:`master_finger` in the minion configuration
     file. Restart the Salt minion.
 
-    On the minion, run ``salt-key -f minion-id`` to print the fingerprint of the
-    minion's public key. This fingerprint can then be compared against the fingerprint
-    generated on the minion.
+    On the master, run ``salt-key -f minion-id`` to print the fingerprint of the
+    minion's public key that was received by the master. On the minion, run
+    ``salt-call key.finger --local`` to print the fingerprint of the minion key.
 
     On the master:
 
@@ -217,14 +215,14 @@ The easiest way to accept the minion key is to accept all pending keys:
         # salt-call key.finger --local
         local:
             39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
-            
+
     If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that the minion is connected to the master and authenticated, the master 
+Now that the minion is connected to the master and authenticated, the master
 can start to command the minion.
 
 Salt commands allow for a vast set of functions to be executed and for
@@ -276,7 +274,7 @@ targeted minions:
 
 .. code-block:: bash
 
-    salt '*' disk.percent
+    salt '*' disk.usage
 
 
 Getting to Know the Functions
@@ -402,7 +400,7 @@ Targeting
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
-there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a
+there are minions named ``larry1``, ``larry2``, ``curly1``, and ``curly2``, a
 glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1``
 will match ``larry1`` and ``curly1``.
 
@@ -447,7 +445,7 @@ the command line:
     salt '*' pkg.install vim
 
 This example passes the argument ``vim`` to the pkg.install function. Since
-many functions can accept more complex input then just a string, the arguments
+many functions can accept more complex input than just a string, the arguments
 are parsed through YAML, allowing for more complex data to be sent on the
 command line:
 
@@ -512,7 +510,7 @@ Now install vim on the minions by calling the SLS directly:
 
 .. code-block:: bash
 
-    salt '*' state.sls vim
+    salt '*' state.apply vim
 
 This command will invoke the state system and run the ``vim`` SLS.
 
@@ -588,14 +586,13 @@ This formula can be referenced via the following command:
 
 .. code-block:: bash
 
-    salt '*' state.sls nginx
+    salt '*' state.apply nginx
 
 .. note::
-    Reminder!
-
-    Just as one could call the ``test.ping`` or ``disk.usage`` execution modules,
-    ``state.sls`` is simply another execution module. It simply takes the name of an
-    SLS file as an argument.
+    :py:func:`state.apply <salt.modules.state.apply_>` is just another remote
+    execution function, just like :py:func:`test.ping <salt.modules.test.ping>`
+    or :py:func:`disk.usage <salt.modules.disk.usage>`. It simply takes the
+    name of an SLS file as an argument.
 
 Now that subdirectories can be used, the ``vim.sls`` formula can be cleaned up.
 To make things more flexible, move the ``vim.sls`` and vimrc into a new subdirectory
@@ -640,9 +637,8 @@ Getting Deeper Into States
 Two more in-depth States tutorials exist, which delve much more deeply into States
 functionality.
 
-1. Thomas' original states tutorial, :doc:`How Do I Use Salt
-   States?</topics/tutorials/starting_states>`, covers much more to get off the
-   ground with States.
+1. :doc:`How Do I Use Salt States? </topics/tutorials/starting_states>`, covers much
+   more to get off the ground with States.
 
 2. The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a
    fantastic introduction.

@@ -44,7 +44,7 @@ master config file.
 
 There is no single method to get the keypair to your minion.  The difficulty is
 finding a distribution method which is secure. For Amazon EC2 only, an AWS best
-practice is to use IAM Roles to pass credentials. (See blog post, 
+practice is to use IAM Roles to pass credentials. (See blog post,
 http://blogs.aws.amazon.com/security/post/Tx610S2MLVZWEA/Using-IAM-roles-to-distribute-non-AWS-credentials-to-your-EC2-instances )
 
 .. admonition:: Security Warning
@@ -63,6 +63,5 @@ You will want to place the minion keys before starting the salt-minion daemon:
     /etc/salt/pki/minion/minion.pem
     /etc/salt/pki/minion/minion.pub
 
-Once in place, you should be able to start salt-minion and run
-``salt-call state.highstate`` or any other salt commands that require master
-authentication.
+Once in place, you should be able to start salt-minion and run ``salt-call
+state.apply`` or any other salt commands that require master authentication.

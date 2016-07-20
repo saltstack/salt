@@ -7,6 +7,7 @@ import functools
 import sys
 import os
 import types
+import time
 
 from sphinx.directives import TocTree
 
@@ -42,6 +43,9 @@ class Mock(object):
 # pylint: enable=R0903
 
 MOCK_MODULES = [
+    # Python stdlib
+    'user',
+
     # salt core
     'Crypto',
     'Crypto.Signature',
@@ -49,6 +53,8 @@ MOCK_MODULES = [
     'Crypto.Hash',
     'Crypto.PublicKey',
     'Crypto.Random',
+    'Crypto.Signature',
+    'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
     'msgpack',
     'yaml',
@@ -57,6 +63,7 @@ MOCK_MODULES = [
     'yaml.scanner',
     'zmq',
     'zmq.eventloop',
+    'zmq.eventloop.ioloop',
 
     # third-party libs for cloud modules
     'libcloud',
@@ -81,8 +88,11 @@ MOCK_MODULES = [
     'tornado',
     'tornado.concurrent',
     'tornado.gen',
+    'tornado.httpclient',
     'tornado.httpserver',
+    'tornado.httputil',
     'tornado.ioloop',
+    'tornado.simple_httpclient',
     'tornado.web',
     'tornado.websocket',
 
@@ -92,12 +102,14 @@ MOCK_MODULES = [
     'ws4py.websocket',
 
     # modules, renderers, states, returners, et al
+    'ClusterShell',
+    'ClusterShell.NodeSet',
     'django',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
+    'nagios_json',
     'psutil',
-    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
@@ -109,14 +121,40 @@ MOCK_MODULES = [
     'rpmUtils.arch',
     'yum',
     'OpenSSL',
-    'zfs'
+    'zfs',
+    'salt.ext.six.moves.winreg',
+    'win32security',
+    'ntsecuritycon',
 ]
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
 
-# Define a fake version attribute for libcloud so docs build as supposed
+def mock_decorator_with_params(*oargs, **okwargs):
+    '''
+    Optionally mock a decorator that takes parameters
+
+    E.g.:
+
+    @blah(stuff=True)
+    def things():
+        pass
+    '''
+    def inner(fn, *iargs, **ikwargs):
+        if hasattr(fn, '__call__'):
+            return fn
+        else:
+            return Mock()
+    return inner
+
+# Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['pymongo'].version = '0.0.0'
+sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
+sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
+
+# Define a fake version attribute for the following libs.
+sys.modules['cherrypy'].config = mock_decorator_with_params
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -152,19 +190,21 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2015 SaltStack, Inc.'
+copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.8.x'  # latest release
-previous_release = '2014.7.6'  # latest release from previous branch
-previous_release_dir = '2014.7'  # path on web server for previous branch
-build_type = 'inactive'  # latest, previous, develop, inactive
+latest_release = '2016.3.1'  # latest release
+previous_release = '2015.8.10'  # latest release from previous branch
+previous_release_dir = '2015.8'  # path on web server for previous branch
+next_release = ''  # next release
+next_release_dir = ''  # path on web server for next release branch
 
-# set release to 'version' for develop so sha is used
-# - otherwise -
-# set release to 'latest_release' or 'previous_release'
+today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
 
-release = previous_release # version, latest_release, previous_release
+# < --- START do not merge these settings to other branches START ---> #
+build_type = 'previous'  # latest, previous, develop, next
+release = previous_release  # version, latest_release, previous_release
+# < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
 
@@ -174,6 +214,8 @@ elif release.startswith('2014.7'):
     search_cx = '004624818632696854117:thhslradbru' # 2014.7
 elif release.startswith('2015.5'):
     search_cx = '004624818632696854117:ovogwef29do' # 2015.5
+elif release.startswith('2015.8'):
+    search_cx = '004624818632696854117:aw_tegffouy' # 2015.8
 else:
     search_cx = '004624818632696854117:haj7bjntf4s'  # develop
 
@@ -221,11 +263,11 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-      <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-2-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -234,6 +276,7 @@ extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
@@ -301,6 +344,7 @@ html_context = {
     'previous_release_dir': previous_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
+    'today': today,
 }
 
 html_use_index = True
@@ -379,12 +423,14 @@ man_pages = [
     ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
     ('ref/cli/salt-cp', 'salt-cp', 'salt-cp Documentation', authors, 1),
     ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
+    ('ref/cli/salt-proxy', 'salt-proxy', 'salt-proxy Documentation', authors, 1),
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
     ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
     ('ref/cli/salt-unity', 'salt-unity', 'salt-unity Command', authors, 1),
+    ('ref/cli/spm', 'spm', 'Salt Package Manager Command', authors, 1),
 ]
 
 
@@ -395,7 +441,7 @@ epub_publisher = epub_author
 epub_copyright = copyright
 
 epub_scheme = 'URL'
-epub_identifier = 'http://saltstack.org/'
+epub_identifier = 'http://saltstack.com/'
 
 #epub_tocdepth = 3
 

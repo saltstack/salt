@@ -39,7 +39,7 @@ def absent(name, user=None, signal=None):
         running = __salt__['ps.pgrep'](name, user=user)
         ret['result'] = None
         if running:
-            ret['comment'] = ('{0} processes will ',
+            ret['comment'] = ('{0} processes will '
                               'be killed').format(len(running))
         else:
             ret['comment'] = 'No matching processes running'

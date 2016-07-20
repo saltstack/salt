@@ -19,6 +19,7 @@ Run chef-client or chef-solo
       chef.solo:
         - environment: dev
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

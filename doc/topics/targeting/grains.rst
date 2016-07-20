@@ -6,22 +6,25 @@ Grains
 
 Salt comes with an interface to derive information about the underlying system.
 This is called the grains interface, because it presents salt with grains of
-information.
+information. Grains are collected for the operating system, domain name,
+IP address, kernel, OS type, memory, and many other system properties.
 
 The grains interface is made available to Salt modules and components so that
 the right salt minion commands are automatically available on the right
 systems.
 
-It is important to remember that grains are bits of information loaded when
-the salt minion starts, so this information is static. This means that the
-information in grains is unchanging, therefore the nature of the data is
-static. So grains information are things like the running kernel, or the
-operating system.
+Grain data is relatively static, though if system information changes
+(for example, if network settings are changed), or if a new value is assigned
+to a custom grain, grain data is refreshed.
 
 .. note::
 
-    Grains resolve to lowercase letters. For example, ``FOO`` and ``foo``
+    Grains resolve to lowercase letters. For example, ``FOO``, and ``foo``
     target the same grain.
+
+.. important::
+  See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
+  important security information.
 
 Match all CentOS minions:
 
@@ -70,7 +73,7 @@ Grains in the Minion Config
 ===========================
 
 Grains can also be statically assigned within the minion configuration file.
-Just add the option ``grains`` and pass options to it:
+Just add the option :conf_minion:`grains` and pass options to it:
 
 .. code-block:: yaml
 
@@ -113,13 +116,13 @@ the following configuration:
 
 .. code-block:: yaml
 
-    'node_type:web':
+    'node_type:webserver':
       - match: grain
       - webserver
 
     'node_type:postgres':
       - match: grain
-      - database
+      - postgres
 
     'node_type:redis':
       - match: grain
@@ -128,20 +131,20 @@ the following configuration:
     'node_type:lb':
       - match: grain
       - lb
-        
+
 For this example to work, you would need to have defined the grain
 ``node_type`` for the minions you wish to match. This simple example is nice,
 but too much of the code is similar. To go one step further, Jinja templating
-can be used to simplify the the :term:`top file`.
+can be used to simplify the :term:`top file`.
 
 .. code-block:: yaml
 
-    {% set node_type = salt['grains.get']('node_type', '') %}
+    {% set the_node_type = salt['grains.get']('node_type', '') %}
 
-    {% if node_type %}
-      'node_type:{{ self }}':
+    {% if the_node_type %}
+      'node_type:{{ the_node_type }}':
         - match: grain
-        - {{ self }}
+        - {{ the_node_type }}
     {% endif %}
 
 Using Jinja templating, only one match entry needs to be defined.
@@ -157,7 +160,7 @@ Using Jinja templating, only one match entry needs to be defined.
 Writing Grains
 ==============
 
-Grains are easy to write. The grains interface is derived by executing
+The grains interface is derived by executing
 all of the "public" functions found in the modules located in the grains
 package or the custom grains directory. The functions in the modules of
 the grains must return a Python :ref:`dict <python2:typesmapping>`, where the
@@ -165,11 +168,11 @@ keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and
 the values are the values.
 
 Custom grains should be placed in a ``_grains`` directory located under the
-:conf_master:`file_roots` specified by the master config file. They will be
-distributed to the minions when :mod:`state.highstate
-<salt.modules.state.highstate>` is run, or by executing the
-:mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
-:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+:conf_master:`file_roots` specified by the master config file.  The default
+path would be ``/srv/salt/_grains``.  Custom grains will be distributed to the
+minions when :py:func:`state.apply <salt.modules.state.apply_>` is run, or by
+executing the :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>`
+or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
 Grains are easy to write, and only need to return a dictionary.  A common
 approach would be code something similar to the following:
@@ -181,8 +184,8 @@ approach would be code something similar to the following:
         # initialize a grains dictionary
         grains = {}
         # Some code for logic that sets grains like
-        grains['yourcustomgrain']=True
-        grains['anothergrain']='somevalue'
+        grains['yourcustomgrain'] = True
+        grains['anothergrain'] = 'somevalue'
         return grains
 
 Before adding a grain to Salt, consider what the grain is and remember that
@@ -193,9 +196,71 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
 
     Custom grains will not be available in the top file until after the first
     :ref:`highstate <running-highstate>`. To make custom grains available on a
-    minion's first highstate, it is recommended to use :ref:`this example
-    <minion-start-reactor>` to ensure that the custom grains are synced when
-    the minion starts.
+    minion's first :ref:`highstate <running-highstate>`, it is recommended to
+    use :ref:`this example <minion-start-reactor>` to ensure that the custom
+    grains are synced when the minion starts.
+
+Loading Custom Grains
+---------------------
+
+If you have multiple functions specifying grains that are called from a ``main``
+function, be sure to prepend grain function names with an underscore. This prevents
+Salt from including the loaded grains from the grain functions in the final
+grain data structure. For example, consider this custom grain file:
+
+.. code-block:: python
+
+    #!/usr/bin/env python
+    def _my_custom_grain():
+        my_grain = {'foo': 'bar', 'hello': 'world'}
+        return my_grain
+
+
+    def main():
+        # initialize a grains dictionary
+        grains = {}
+        grains['my_grains'] = _my_custom_grain()
+        return grains
+
+The output of this example renders like so:
+
+.. code-block:: bash
+
+    # salt-call --local grains.items
+    local:
+        ----------
+        <Snipped for brevity>
+        my_grains:
+            ----------
+            foo:
+                bar
+            hello:
+                world
+
+However, if you don't prepend the ``my_custom_grain`` function with an underscore,
+the function will be rendered twice by Salt in the items output: once for the
+``my_custom_grain`` call itself, and again when it is called in the ``main``
+function:
+
+.. code-block:: bash
+
+    # salt-call --local grains.items
+    local:
+    ----------
+        <Snipped for brevity>
+        foo:
+            bar
+        <Snipped for brevity>
+        hello:
+            world
+        <Snipped for brevity>
+        my_grains:
+            ----------
+            foo:
+                bar
+            hello:
+                world
+
 
 Precedence
 ==========
@@ -205,15 +270,15 @@ defining custom grains, there is an order of precedence which should be kept in
 mind when defining them. The order of evaluation is as follows:
 
 1. Core grains.
-2. Custom grain modules in ``_grains`` directory, synced to minions.
-3. Custom grains in ``/etc/salt/grains``.
-4. Custom grains in ``/etc/salt/minion``.
+2. Custom grains in ``/etc/salt/grains``.
+3. Custom grains in ``/etc/salt/minion``.
+4. Custom grain modules in ``_grains`` directory, synced to minions.
 
 Each successive evaluation overrides the previous ones, so any grains defined
 by custom grains modules synced to minions that have the same name as a core
 grain will override that core grain. Similarly, grains from
-``/etc/salt/grains`` override both core grains and custom grain modules, and
-grains in ``/etc/salt/minion`` will override *any* grains of the same name.
+``/etc/salt/minion`` override both core grains and custom grain modules, and
+grains in ``_grains`` will override *any* grains of the same name.
 
 
 Examples of Grains
@@ -229,7 +294,7 @@ Syncing Grains
 ==============
 
 Syncing grains can be done a number of ways, they are automatically synced when
-:mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
-above) the grains can be manually synced and reloaded by calling the
+:mod:`state.apply <salt.modules.state.apply_>` is called, or (as noted above)
+the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.

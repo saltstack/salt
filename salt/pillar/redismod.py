@@ -30,6 +30,7 @@ Configuring the Redis ext_pillar
           - redis: {function: key_value}
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json

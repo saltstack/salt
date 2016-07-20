@@ -9,6 +9,7 @@ On Ubuntu, install Salt Cloud by using following command:
 .. code-block:: bash
 
     sudo add-apt-repository ppa:saltstack/salt
+    sudo apt-get update
     sudo apt-get install salt-cloud
 
 If using Salt Cloud on OS X, ``curl-ca-bundle`` must be installed. Presently,

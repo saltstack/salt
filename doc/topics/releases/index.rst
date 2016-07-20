@@ -8,10 +8,7 @@ information about the version numbering scheme.
 Latest Branch Release
 =====================
 
-.. releasestree::
-    :maxdepth: 1
-
-    2014.7.6
+|current_release_doc|
 
 Previous Releases
 =================
@@ -20,6 +17,8 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2015.8.*
+    2015.5.*
     2014.7.*
     2014.1.*
     0.*

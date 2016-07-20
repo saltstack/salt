@@ -15,15 +15,18 @@ be in the :conf_master:`fileserver_backend` list to enable this backend.
 Fileserver environments are defined using the :conf_master:`file_roots`
 configuration option.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+import errno
 import logging
 
 # Import salt libs
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +78,7 @@ def envs():
     '''
     Return the file server environments
     '''
-    return __opts__['file_roots'].keys()
+    return list(__opts__['file_roots'].keys())
 
 
 def serve_file(load, fnd):
@@ -129,7 +132,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.split(':', 1)
@@ -150,7 +153,7 @@ def update():
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
     with salt.utils.fopen(mtime_map_path, 'w') as fp_:
-        for file_path, mtime in new_mtime_map.iteritems():
+        for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
 
@@ -194,12 +197,12 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
                               load['saltenv'],
-                              '{0}.hash.{1}'.format(fnd['rel'],
+                              u'{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -228,7 +231,15 @@ def file_hash(load, fnd):
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        try:
+            os.makedirs(cache_dir)
+        except OSError as err:
+            if err.errno == errno.EEXIST:
+                # rarely, the directory can be already concurrently created between
+                # the os.path.exists and the os.makedirs lines above
+                pass
+            else:
+                raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:

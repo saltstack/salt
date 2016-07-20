@@ -4,12 +4,32 @@
 External Authentication System
 ==============================
 
-Salt's External Authentication System (eAuth) allows for Salt to  pass through
+Salt's External Authentication System (eAuth) allows for Salt to pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
-.. toctree::
+.. note::
 
-    access_control
+    eAuth using the PAM external auth system requires salt-master to be run as
+    root as this system needs root access to check authentication.
+
+Access Control System
+---------------------
+
+.. note:: When to Use ``client_acl`` and ``external_auth``
+
+    ``client_acl`` is useful for allowing local system users to run Salt
+    commands without giving them root access. If you can log into the Salt
+    master directly, then ``client_acl`` will allow you to use Salt without
+    root privileges. If the local system is configured to authenticate against
+    a remote system, like LDAP or Active Directory, then ``client_acl`` will
+    interact with the remote system transparently.
+
+    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
+    that use Salt's Python API. It can be used at the CLI (with the ``-a``
+    flag) but it is more cumbersome as there are more steps involved.  The only
+    time it is useful at the CLI is when the local system is *not* configured
+    to authenticate against an external service *but* you still want Salt to
+    authenticate against an external service.
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
@@ -30,6 +50,9 @@ in the master configuration file and uses the :ref:`access control system
 The above configuration allows the user ``thatch`` to execute functions
 in the test and network modules on the minions that match the web* target.
 User ``steve`` is given unrestricted access to minion commands.
+
+Salt respects the current PAM configuration in place, and uses the 'login'
+service to authenticate.
 
 .. note:: The PAM module does not allow authenticating as ``root``.
 
@@ -74,6 +97,13 @@ append a ``%`` to the ID:
           - '*':
             - 'pkg.*'
 
+.. warning::
+    All users that have external authentication privileges are allowed to run
+    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
+    that this could inadvertently expose some data such as minion IDs.
+
+.. _salt-token-generation:
+
 Tokens
 ------
 
@@ -88,7 +118,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home
+This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
@@ -99,6 +129,10 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP and Active Directory
 =========================
+
+.. note::
+
+    LDAP usage requires that you have installed python-ldap.
 
 Salt supports both user and group authentication for LDAP (and Active Directory
 accessed via its LDAP interface)
@@ -211,8 +245,8 @@ the master config:
 
 To determine group membership in AD, the username and password that is entered
 when LDAP is requested as the eAuth mechanism on the command line is used to
-bind to AD's LDAP interface.  If this fails, then it doesn't matter what groups
-the user belongs to, he or she is denied access.  Next, the distinguishedName
+bind to AD's LDAP interface. If this fails, then it doesn't matter what groups
+the user belongs to, he or she is denied access. Next, the distinguishedName
 of the user is looked up with the following LDAP search:
 
 .. code-block:: text
@@ -236,15 +270,15 @@ membership.  Then the following LDAP query is executed:
     external_auth:
       ldap:
         test_ldap_user:
-          - '*':
-            - test.ping
+            - '*':
+                - test.ping
 
 To configure an LDAP group, append a ``%`` to the ID:
 
 .. code-block:: yaml
 
     external_auth:
-    ldap:
+      ldap:
         test_ldap_group%:
           - '*':
             - test.echo

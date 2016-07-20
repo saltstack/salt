@@ -1,3 +1,5 @@
+.. _faq:
+
 Frequently Asked Questions
 ==========================
 
@@ -6,13 +8,35 @@ Frequently Asked Questions
 Is Salt open-core?
 ------------------
 
-No. Salt is 100% committed to being open-source, including all of our APIs and
-the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
-developed under the `Apache 2.0 license`_, allowing it to be used in both open
-and proprietary projects.
+No. Salt is 100% committed to being open-source, including all of our APIs. It
+is developed under the `Apache 2.0 license`_, allowing it to be used in both
+open and proprietary projects.
 
-.. _`'Halite' web interface`: https://github.com/saltstack/halite
+To expand on this a little:
+
+There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because 
+
+1. It is a standalone product that that anyone is free to use.
+2. It is developed in the open with contributions accepted from the community for the good of the project. 
+3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
+4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
+5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
+
+SaltStack the company does make proprietary products which use Salt and its libraries, like company is free to do, but we do so via the APIs, NOT by forking Salt and creating a different, closed-source version of it for paying customers.
+
+
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+
+I think I found a bug! What should I do?
+-----------------------------------------
+
+The salt-users mailing list as well as the salt IRC channel can both be helpful
+resources to confirm if others are seeing the issue and to assist with
+immediate debugging.
+
+To report a bug to the Salt project, please follow the instructions in
+:doc:`reporting a bug </topics/development/reporting_bugs>`.
+
 
 What ports should I open on my firewall?
 ----------------------------------------
@@ -27,8 +51,8 @@ I'm seeing weird behavior (including but not limited to packages not installing 
 This is often caused by SELinux.  Try disabling SELinux or putting it in
 permissive mode and see if the weird behavior goes away.
 
-My script runs every time I run a *state.highstate*. Why?
----------------------------------------------------------
+My script runs every time I run a *state.apply*. Why?
+-----------------------------------------------------
 
 You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
 :mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
@@ -120,21 +144,14 @@ should be opened on our tracker_, with the following information:
 
 .. _tracker: https://github.com/saltstack/salt/issues
 
-I'm using gitfs and my custom modules/states/etc are not syncing. Why?
-----------------------------------------------------------------------
-
-In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
-</topics/tutorials/gitfs>` which can affect the syncing of custom types.
-Upgrading to 0.16.4 or newer will fix this.
-
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to Minions when :mod:`state.highstate
-<salt.modules.state.highstate>`, :mod:`saltutil.sync_modules
+Custom modules are only synced to Minions when :mod:`state.apply
+<salt.modules.state.apply_>`, :mod:`saltutil.sync_modules
 <salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to Minions when :mod:`state.highstate <salt.modules.state.highstate>`,
+synced to Minions when :mod:`state.apply <salt.modules.state.apply_>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 
@@ -188,24 +205,73 @@ backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
 
+Is it possible to deploy a file to a specific minion, without other minions having access to it?
+------------------------------------------------------------------------------------------------
+
+The Salt fileserver does not yet support access control, but it is still
+possible to do this. As of Salt 2015.5.0, the
+:mod:`file_tree <salt.pillar.file_tree>` external pillar is available, and
+allows the contents of a file to be loaded as Pillar data. This external pillar
+is capable of assigning Pillar values both to individual minions, and to
+:ref:`nodegroups <targeting-nodegroups>`. See the :mod:`documentation
+<salt.pillar.file_tree>` for details on how to set this up.
+
+Once the external pillar has been set up, the data can be pushed to a minion
+via a :py:func:`file.managed <salt.states.file.managed>` state, using the
+``contents_pillar`` argument:
+
+.. code-block:: yaml
+
+    /etc/my_super_secret_file:
+      file.managed:
+        - user: secret
+        - group: secret
+        - mode: 600
+        - contents_pillar: secret_files:my_super_secret_file
+
+In this example, the source file would be located in a directory called
+``secret_files`` underneath the file_tree path for the minion. The syntax for
+specifying the pillar variable is the same one used for :py:func:`pillar.get
+<salt.modules.pillar.get>`, with a colon representing a nested dictionary.
+
+.. warning::
+    Deploying binary contents using the :py:func:`file.managed
+    <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
+    newer.
+
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------
 
-Restarting Salt using Salt without having the restart interrupt the whole
-process is a tricky problem to solve. We're still working on it but in the
-meantime a good way is to use the system scheduler with a short interval. The
-following example is a state that will always execute at the very end of a
-state run.
+Updating the salt-minion package requires a restart of the salt-minion service.
+But restarting the service while in the middle of a state run interrupts the
+process of the minion running states and sending results back to the master.
+It's a tricky problem to solve, and we're working on it, but in the meantime
+one way of handling this (on Linux and UNIX-based operating systems) is to use
+**at** (a job scheduler which predates cron) to schedule a restart of the
+service. **at** is not installed by default on most distros, and requires a
+service to be running (usually called **atd**) in order to schedule jobs.
+Here's an example of how to upgrade the salt-minion package at the end of a
+Salt run, and schedule a service restart for one minute after the package
+update completes.
 
 Linux/Unix
 **********
 
 .. code-block:: yaml
 
-    salt-minion-reload:
-      cmd.run:
-        - name: echo service salt-minion restart | at now + 1 minute
+    salt-minion:
+      pkg.installed:
+        - name: salt-minion
+        - version: 2014.1.7-3.el6
         - order: last
+      service.running:
+        - name: salt-minion
+        - require:
+          - pkg: salt-minion
+      cmd.wait:
+        - name: echo service salt-minion restart | at now + 1 minute
+        - watch:
+          - pkg: salt-minion
 
 To ensure that **at** is installed and **atd** is running, the following states
 can be used (be sure to double-check the package name and service name for the
@@ -220,7 +286,7 @@ distro the minion is running, in case they differ from the example below.
         - name: atd
         - enable: True
 
-An alternatvie to using the :program:`atd` daemon is to fork and disown the
+An alternative to using the :program:`atd` daemon is to fork and disown the
 process.
 
 .. code-block:: yaml
@@ -228,24 +294,31 @@ process.
     restart_minion:
       cmd.run:
         - name: |
-            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+            exec 0>&- # close stdin
+            exec 1>&- # close stdout
+            exec 2>&- # close stderr
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion' &
         - python_shell: True
         - order: last
 
 Windows
 *******
 
+For Windows machines, restarting the minion at can be accomplished by
+adding the following state:
+
 .. code-block:: yaml
 
     schedule-start:
       cmd.run:
-        - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
-        - shell: powershell
+        - name: 'start powershell "Restart-Service -Name salt-minion"'
         - order: last
-      service.dead:
-        - name: salt-minion
-        - require:
-            - cmd: schedule-start
+
+or running immediately from the command line:
+
+.. code-block:: bash
+
+    salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
 
 Salting the Salt Master
 -----------------------
@@ -270,3 +343,37 @@ More information about salting the Salt master can be found in the salt-formula
 for salt itself:
 
 https://github.com/saltstack-formulas/salt-formula
+
+.. _faq-grain-security:
+
+Is Targeting using Grain Data Secure?
+-------------------------------------
+
+Because grains can be set by users that have access to the minion configuration
+files on the local system, grains are considered less secure than other
+identifiers in Salt. Use caution when targeting sensitive operations or setting
+pillar values based on grain data.
+
+When possible, you should target sensitive operations and data using the Minion
+ID. If the Minion ID of a system changes, the Salt Minion's public key must be
+re-accepted by an administrator on the Salt Master, making it less vulnerable
+to impersonation attacks.
+
+Why Did the Value for a Grain Change on Its Own?
+------------------------------------------------
+
+This is usually the result of an upstream change in an OS distribution that
+replaces or removes something that Salt was using to detect the grain.
+Fortunately, when this occurs, you can use Salt to fix it with a command
+similar to the following:
+
+.. code-block:: bash
+
+    salt -G 'grain:ChangedValue' grains.setvals "{'grain': 'OldValue'}"
+
+(Replacing *grain*, *ChangedValue*, and *OldValue* with
+the grain and values that you want to change / set.)
+
+You should also `file an issue <https://github.com/saltstack/salt/issues>`_
+describing the change so it can be fixed in Salt.
+

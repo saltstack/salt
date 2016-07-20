@@ -21,12 +21,12 @@
 
 {% set script_files = [
     '_static/js/core.min.js',
-    '_static/js/webhelp.min_v1.4.2.js',
+    '_static/js/webhelp.min_v1.4.3.js',
 ] %}
 
 {% set css_files = [
     '_static/css/core.min.css',
-    '_static/css/webhelp.min_v1.4.2.css',
+    '_static/css/webhelp.min_v1.4.4.css',
 ] %}
 
 {%- macro relbar() %}
@@ -154,15 +154,19 @@
                             </nav>
                             <!--end navbar-->
 
-                            {% if build_type == "develop" and on_saltstack %}
+                            {% if "topics/releases" in pagename and "0" in pagename and not release in pagename and not "In Progress" in title %}
+                            <div id="dev-notification">
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> These release notes are for an old release of Salt. This release might contain known security and other issues that are fixed in the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Release notes for the latest release" href="{{ release }}.html">latest release</a>.</div>
+                            </div>
+
+                            {% elif build_type == "develop" and on_saltstack %}
                             <div id="dev-notification">
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-cog"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
                             </div>
-                            {% endif %}
 
-                            {% if build_type == "inactive" and on_saltstack %}
+                            {% elif build_type == "inactive" and on_saltstack %}
                             <div id="dev-notification">
-                                <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-cog"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
+                                <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
                             </div>
                             {% endif %}
 
@@ -187,10 +191,11 @@
                     <div class="footer">
                         <hr />
 
-                        {% if on_saltstack %}
                         <div class="row">
 
+                            {% if on_saltstack %}
                             <div class="col-sm-6">
+                            <p><i>Generated on {{today}}.</i></p>
 
                                 {% if build_type == "latest" %}
                                 <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
@@ -212,12 +217,12 @@
 
                             <div class="col-sm-6">
 
-                                 <a href="http://saltstack.com/events/" target="_blank"><img class="nolightbox nav-banner center" src="{{ pathto('_static/images/saltStack_events_300x300.jpg', 1) }}"/></a>
+                                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/footer-support.png', 1) }}"/></a>
 
 
                             </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div> <!--end footer-->
                     {%- endblock %}
 
@@ -227,9 +232,12 @@
             <div id="sidebar-wrapper">
             <div id="sidebar-static">
 
-                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox center" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
+
+                <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
+
                 <div class="releaselinks versions {{ build_type }}">
 
                 <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
@@ -238,7 +246,6 @@
 
                 <a  class="btn btn-secondary{% if build_type == "develop" %} active{% endif %}" id="develop"{% if build_type == "develop" %} title="View all release notes"{% endif %} title="Switch to docs built recently from the develop branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/develop/">Develop{% if build_type == "develop" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
-                <p><a id="notifications" title="View the latest announcements from SaltStack" data-container="body" data-toggle="tooltip" data-placement="bottom" href="#">Announcements</a></p>
                 </div>
 
                 {% else %}

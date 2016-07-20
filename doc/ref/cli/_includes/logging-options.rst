@@ -6,8 +6,8 @@ Logging options which override any settings defined on the configuration files.
 .. start-console-output
 .. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
 
-    Console logging log level. One of ``all``, ``garbage``, ``trace``, 
-    ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: 
+    Console logging log level. One of ``all``, ``garbage``, ``trace``,
+    ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default:
     |loglevel|.
 .. stop-console-output
 
@@ -17,6 +17,6 @@ Logging options which override any settings defined on the configuration files.
 
 .. option:: --log-file-level=LOG_LEVEL_LOGFILE
 
-    Logfile logging log level. One of ``all``, ``garbage``, ``trace``, 
-    ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default: 
+    Logfile logging log level. One of ``all``, ``garbage``, ``trace``,
+    ``debug``, ``info``, ``warning``, ``error``, ``quiet``. Default:
     |loglevel|.

@@ -4,19 +4,21 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
+from salttesting import skipIf
 
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
+from salt.ext.six.moves import range
 
 
 def __random_name(size=6):
@@ -65,8 +67,10 @@ class GoGridTest(integration.ShellCase):
                 PROVIDER_NAME + '.conf'
             )
         )
+
         api = config[profile_str][PROVIDER_NAME]['apikey']
         shared_secret = config[profile_str][PROVIDER_NAME]['sharedsecret']
+
         if api == '' or shared_secret == '':
             self.skipTest(
                 'An api key and shared secret must be provided to run these tests. '

@@ -8,6 +8,7 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :platform: linux
 
 '''
+from __future__ import absolute_import
 # Import Salt libs
 import salt.utils
 import salt.exceptions

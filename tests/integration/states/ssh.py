@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the ssh_known_hosts state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -24,7 +24,7 @@ import salt.utils
 
 KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
-GITHUB_IP = '192.30.252.129'
+GITHUB_IP = '192.30.253.113'
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
@@ -71,8 +71,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
 
         # save twice, no changes
-        ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        self.assertSaltStateChangesEqual(ret, {})
+        self.run_state('ssh_known_hosts.present', **kwargs)
 
         # test again, nothing is about to be changed
         ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)

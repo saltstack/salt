@@ -29,7 +29,7 @@ distribution.
 Single Package
 ==============
 
-Shipping Salt as a single package, where the minion, master and all tools are
+Shipping Salt as a single package, where the minion, master, and all tools are
 together is perfectly acceptable and practiced by distributions such as
 FreeBSD.
 

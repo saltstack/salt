@@ -4,21 +4,25 @@ Execute calls on selinux
 
 .. note::
     This module requires the ``semanage`` and ``setsebool`` commands to be
-    available on the minion. On RHEL-based distros, this means that the
-    ``policycoreutils`` and ``policycoreutils-python`` packages must be
-    installed. If not on a RHEL-based distribution, consult the selinux
+    available on the minion. On RHEL-based distributions, ensure that the
+    ``policycoreutils-python`` package is installed. On Fedora 23 and up,
+    ensure that the ``policycoreutils-python-utils`` package is installed.  If
+    not on a Fedora or RHEL-based distribution, consult the selinux
     documentation for your distro to ensure that the proper packages are
     installed.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -92,7 +96,7 @@ def setenforce(mode):
 
         salt '*' selinux.setenforce enforcing
     '''
-    if isinstance(mode, string_types):
+    if isinstance(mode, six.string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
         elif mode.lower() == 'permissive':
@@ -162,7 +166,7 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool -P '
     else:
         cmd = 'setsebool '
-    for boolean, value in pairs.items():
+    for boolean, value in six.iteritems(pairs):
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 

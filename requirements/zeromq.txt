@@ -1,0 +1,4 @@
+-r base.txt
+
+pycrypto >= 2.6.1
+pyzmq >= 2.2.0

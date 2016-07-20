@@ -2,6 +2,8 @@
 '''
 Create ssh executor system
 '''
+
+from __future__ import absolute_import
 # Import python libs
 import os
 import copy
@@ -18,8 +20,11 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.log
-from salt._compat import string_types
+from salt.ext.six import string_types
 
+__func_alias__ = {
+    'apply_': 'apply'
+}
 log = logging.getLogger(__name__)
 
 
@@ -89,11 +94,13 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
             file_refs,
-            __pillar__)
+            __pillar__,
+            id_=st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -156,11 +163,13 @@ def low(data, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
             file_refs,
-            __pillar__)
+            __pillar__,
+            id_=st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -220,11 +229,13 @@ def high(data, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
             file_refs,
-            __pillar__)
+            __pillar__,
+            id_=st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -255,6 +266,28 @@ def high(data, **kwargs):
 
     # If for some reason the json load fails, return the stdout
     return stdout
+
+
+def apply_(mods=None,
+          **kwargs):
+    '''
+    .. versionadded:: 2015.5.3
+
+    Apply states! This function will call highstate or state.sls based on the
+    arguments passed in, state.apply is intended to be the main gateway for
+    all state executions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.apply
+        salt '*' state.apply test
+        salt '*' state.apply test,pkgs
+    '''
+    if mods:
+        return sls(mods, **kwargs)
+    return highstate(**kwargs)
 
 
 def highstate(test=None, **kwargs):
@@ -290,11 +323,13 @@ def highstate(test=None, **kwargs):
     for chunk in chunks:
         if not isinstance(chunk, dict):
             return chunks
+    # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
             file_refs,
-            __pillar__)
+            __pillar__,
+            id_=st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -361,11 +396,13 @@ def top(topfn, test=None, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
             file_refs,
-            __pillar__)
+            __pillar__,
+            id_=st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -509,3 +546,120 @@ def show_top():
         return errors
     matches = st_.top_matches(top_data)
     return matches
+
+
+def single(fun, name, test=None, **kwargs):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Execute a single state function with the named kwargs, returns False if
+    insufficient data is sent to the command
+
+    By default, the values of the kwargs will be parsed as YAML. So, you can
+    specify lists values, or lists of single entry key-value maps, as you
+    would in a YAML salt file. Alternatively, JSON format of keyword values
+    is also supported.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.single pkg.installed name=vim
+
+    '''
+    st_kwargs = __salt__.kwargs
+    __opts__['grains'] = __grains__
+
+    # state.fun -> [state, fun]
+    comps = fun.split('.')
+    if len(comps) < 2:
+        __context__['retcode'] = 1
+        return 'Invalid function passed'
+
+    # Create the low chunk, using kwargs as a base
+    kwargs.update({'state': comps[0],
+                   'fun': comps[1],
+                   '__id__': name,
+                   'name': name})
+
+    opts = copy.deepcopy(__opts__)
+
+    # Set test mode
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+
+    # Get the override pillar data
+    __pillar__.update(kwargs.get('pillar', {}))
+
+    # Create the State environment
+    st_ = salt.client.ssh.state.SSHState(__opts__, __pillar__)
+
+    # Verify the low chunk
+    err = st_.verify_data(kwargs)
+    if err:
+        __context__['retcode'] = 1
+        return err
+
+    # Must be a list of low-chunks
+    chunks = [kwargs]
+
+    # Retrieve file refs for the state run, so we can copy relevant files down
+    # to the minion before executing the state
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
+
+    # Create the tar containing the state pkg and relevant files.
+    trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __context__['fileclient'],
+            chunks,
+            file_refs,
+            __pillar__,
+            id_=st_kwargs['id_'])
+
+    # Create a hash so we can verify the tar on the target system
+    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
+
+    # We use state.pkg to execute the "state package"
+    cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
+            __opts__['thin_dir'],
+            test,
+            trans_tar_sum,
+            __opts__['hash_type'])
+
+    # Create a salt-ssh Single object to actually do the ssh work
+    single = salt.client.ssh.Single(
+            __opts__,
+            cmd,
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
+
+    # Copy the tar down
+    single.shell.send(
+            trans_tar,
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+
+    # Run the state.pkg command on the target
+    stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return stdout

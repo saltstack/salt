@@ -30,7 +30,7 @@ Salt always executes states in a finite manner, meaning that they will always
 execute in the same order regardless of the system that is executing them.
 But in Salt 0.17.0, the ``state_auto_order`` option was added. This option
 makes states get evaluated in the order in which they are defined in sls
-files.
+files, including the top.sls file.
 
 The evaluation order makes it easy to know what order the states will be
 executed in, but it is important to note that the requisite system will
@@ -38,7 +38,9 @@ override the ordering defined in the files, and the ``order`` option described
 below will also override the order in which states are defined in sls files.
 
 If the classic ordering is preferred (lexicographic), then set
-``state_auto_order`` to ``False`` in the master configuration file.
+``state_auto_order`` to ``False`` in the master configuration file. Otherwise,
+``state_auto_order`` defaults to ``True``.
+
 
 .. _ordering_requisites:
 
@@ -47,14 +49,14 @@ Requisite Statements
 
 .. note::
 
-    This document represents behavior exhibited by Salt requisites as of
-    version 0.9.7 of Salt.
+    The behavior of requisites changed in version 0.9.7 of Salt.  This
+    documentation applies to requisites in version 0.9.7 and later.
 
 Often when setting up states any single action will require or depend on
 another action. Salt allows for the building of relationships between states
 with requisite statements. A requisite statement ensures that the named state
 is evaluated before the state requiring it. There are three types of requisite
-statements in Salt, **require**, **watch** and **prereq**.
+statements in Salt, **require**, **watch**, and **prereq**.
 
 These requisite statements are applied to a specific state declaration:
 
@@ -77,7 +79,7 @@ executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
 Require statements can refer to any state defined in Salt. The basic examples
-are `pkg`, `service` and `file`, but any used state can be referenced.
+are `pkg`, `service`, and `file`, but any used state can be referenced.
 
 In addition to state declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
@@ -97,7 +99,7 @@ the discrete states are split or groups into separate sls files:
           - sls: network
 
 In this example, the httpd service running state will not be applied
-(i.e., the httpd service will not be started) unless both the https package is
+(i.e., the httpd service will not be started) unless both the httpd package is
 installed AND the network state is satisfied.
 
 .. note:: Requisite matching
@@ -136,7 +138,7 @@ more requisites. Both requisite types can also be separately declared:
       group.present: []
 
 In this example, the httpd service is only going to be started if the package,
-user, group and file are executed successfully.
+user, group, and file are executed successfully.
 
 
 Requisite Documentation
@@ -178,4 +180,3 @@ a state to the end of the line. To do this, set the order to ``last``:
     vim:
       pkg.installed:
         - order: last
-

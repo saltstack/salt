@@ -24,6 +24,7 @@ Developers
 Aaron Bull Schaefer <aaron@elasticdog.com>
 Aaron Toponce <aaron.toponce@gmail.com>
 Aditya Kulkarni <adi@saltstack.com>
+Alexander Pyatkin <asp@thexyz.net>
 Andre Sachs <andre@sachs.nom.za>
 Andrew Kuhnhausen <trane@errstr.com>
 Antti Kaihola <akaihol+github@ambitone.com>
@@ -39,11 +40,13 @@ Christer Edwards <christer.edwards@gmail.com>
 Clint Savage <herlo1@gmail.com>
 Colton Myers <cmyers@saltstack.com>
 Corey Quinn <corey@sequestered.net>
+Corin Kochenower <ckochenower@saltstack.com>
 Dan Garthwaite <dan@garthwaite.org>
 Daniel Wallace <danielwallace at gtmanfred dot com>
 David Boucha <boucha@gmail.com>
 David Pravec <alekibango@pravec.tk>
 deutsche
+Dmitry Kuzmenko <dkuzmenko@saltstack.com>
 Doug Renn <renn@nestegg.com>
 Eivind Uggedal <eivind@uggedal.com>
 epoelke@gmail.com <epoelke@heartflow.com>
@@ -51,6 +54,7 @@ Eric Poelke <epoelke@gmail.com>
 Erik Nolte <enolte@beyondoblivion.com>
 Evan Borgstrom <evan@fatbox.ca>
 Forrest Alvarez <forrest.alvarez@gmail.com>
+Fred Reimer <freimer@freimer.org>
 Henrik Holmboe <henrik@holmboe.se>
 Gareth J. Greenaway <gareth@wiked.org>
 Jacob Albretsen <jakea@xmission.com>
@@ -75,12 +79,15 @@ Matthew Printz <hipokrit@gmail.com>
 Matthias Teege <matthias-git@mteege.de>
 Maxim Burgerhout <maxim@wzzrd.com>
 Mickey Malone <mickey.malone@gmail.com>
+Michael Steed <msteed@saltstack.com>
 Mike Place <mp@saltstack.com>
 Mitch Anderson <mitch@metauser.net>
+Mostafa Hussein <mostafa.hussein91@gmail.com>
 Nathaniel Whiteinge <seth@eseth.com>
 Nicolas Delaby <nicolas.delaby@ezeep.com>
 Nicole Thomas <nicole@saltstack.com>
 Nigel Owen <nigelowen2.gmail.com>
+Nitin Madhok <nmadhok@clemson.edu>
 Oleg Anashkin <oleg.anashkin@gmail.com>
 Pedro Algarvio <pedro@algarvio.me>
 Peter Baumgartner
@@ -90,6 +97,7 @@ Robert Fielding
 Sean Channel <pentabular@gmail.com>
 Seth House <seth@eseth.com>
 Seth Vidal <skvidal@fedoraproject.org>
+Stas Alekseev <stas.alekseev@gmail.com>
 Thomas Schreiber <tom@rizumu.us>
 Thomas S Hatch <thatch45@gmail.com>
 Tor Hveem <xt@bash.no>
@@ -105,6 +113,6 @@ contributors please check ohloh, this file can sometimes be out of date:
 
 https://www.ohloh.net/p/salt/contributors
 
-To see current statistics check out the Github Pulse page:
+To see current statistics check out the GitHub Pulse page:
 
 https://github.com/saltstack/salt/pulse

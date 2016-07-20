@@ -21,9 +21,14 @@ A state module to manage LVMs
         - stripes: 5
         - stripesize: 8K
 '''
+from __future__ import absolute_import
+
+# Import python libs
+import os
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -117,9 +122,41 @@ def vg_present(name, devices=None, **kwargs):
            'comment': '',
            'name': name,
            'result': True}
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
 
     if __salt__['lvm.vgdisplay'](name):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
+        for device in devices:
+            realdev = os.path.realpath(device)
+            pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
+            if pvs and pvs.get(realdev, None):
+                if pvs[realdev]['Volume Group Name'] == name:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of Volume Group'.format(device))
+                elif pvs[realdev]['Volume Group Name'] == '#orphans_lvm2':
+                    __salt__['lvm.vgextend'](name, device)
+                    pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
+                    if pvs[realdev]['Volume Group Name'] == name:
+                        ret['changes'].update(
+                            {device: 'added to {0}'.format(name)})
+                    else:
+                        ret['comment'] = '{0}\n{1}'.format(
+                            ret['comment'],
+                            '{0} could not be added'.format(device))
+                        ret['result'] = False
+                else:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of {1}'.format(
+                            device, pvs[realdev]['Volume Group Name']))
+                    ret['result'] = False
+            else:
+                ret['comment'] = '{0}\n{1}'.format(
+                    ret['comment'],
+                    'pv {0} is not present'.format(device))
+                ret['result'] = False
     elif __opts__['test']:
         ret['comment'] = 'Volume Group {0} is set to be created'.format(name)
         ret['result'] = None

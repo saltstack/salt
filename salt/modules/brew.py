@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 Homebrew for Mac OS X
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -32,19 +39,19 @@ def _list_taps():
     List currently installed brew taps
     '''
     cmd = 'brew tap'
-    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    return _call_brew(cmd)['stdout'].splitlines()
 
 
 def _tap(tap, runas=None):
     '''
-    Add unofficial Github repos to the list of formulas that brew tracks,
+    Add unofficial GitHub repos to the list of formulas that brew tracks,
     updates, and installs from.
     '''
     if tap in _list_taps():
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, python_shell=False, runas=runas):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -58,6 +65,18 @@ def _homebrew_bin():
     ret = __salt__['cmd.run']('brew --prefix', output_loglevel='trace')
     ret += '/bin/brew'
     return ret
+
+
+def _call_brew(cmd):
+    '''
+    Calls the brew command with the user account of brew
+    '''
+    user = __salt__['file.get_user'](_homebrew_bin())
+    runas = user if user != __opts__['user'] else None
+    return __salt__['cmd.run_all'](cmd,
+                                   runas=runas,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -88,7 +107,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'brew list --versions'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = _call_brew(cmd)['stdout']
     for line in out.splitlines():
         try:
             name_and_versions = line.split(' ')
@@ -151,7 +170,7 @@ def latest_version(*names, **kwargs):
         return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -193,7 +212,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+    _call_brew(cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -210,9 +229,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = 'brew update'
-    user = __salt__['file.get_user'](_homebrew_bin())
-
-    if __salt__['cmd.retcode'](cmd, runas=user):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to update')
         return False
 
@@ -234,7 +251,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             salt '*' pkg.install <package name>
 
     taps
-        Unofficial Github repos to use when updating and installing formulas.
+        Unofficial GitHub repos to use when updating and installing formulas.
 
         CLI Example:
 
@@ -293,7 +310,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     formulas = ' '.join(pkg_params)
     old = list_pkgs()
-    user = __salt__['file.get_user'](_homebrew_bin())
 
     # Ensure we've tapped the repo if necessary
     if taps:
@@ -303,28 +319,21 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             taps = [taps]
 
         for tap in taps:
-            if user != __opts__['user']:
-                _tap(tap, runas=user)
-            else:
-                _tap(tap)
+            _tap(tap)
 
     if options:
         cmd = 'brew install {0} {1}'.format(formulas, ' '.join(options))
     else:
         cmd = 'brew install {0}'.format(formulas)
 
-    __salt__['cmd.run'](
-        cmd,
-        runas=user if user != __opts__['user'] else None,
-        python_shell=False,
-        output_loglevel='trace'
-    )
+    _call_brew(cmd)
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
 
 
-def list_upgrades():
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -334,9 +343,21 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    cmd = 'brew outdated'
+    if refresh:
+        refresh_db()
 
-    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    cmd = 'brew outdated'
+    call = _call_brew(cmd)
+    if call['retcode'] != 0:
+        msg = 'Failed to get upgrades'
+        for key in ('stderr', 'stdout'):
+            if call[key]:
+                msg += ': ' + call[key]
+                break
+        raise CommandExecutionError(msg)
+    else:
+        out = call['stdout']
+    return out.splitlines()
 
 
 def upgrade_available(pkg):
@@ -370,19 +391,27 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     old = list_pkgs()
 
     if salt.utils.is_true(refresh):
         refresh_db()
 
     cmd = 'brew upgrade'
-    user = __salt__['file.get_user'](_homebrew_bin())
-    __salt__['cmd.run'](
-        cmd,
-        runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='trace'
-    )
+    call = _call_brew(cmd)
 
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret

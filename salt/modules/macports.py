@@ -31,12 +31,19 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import (
+    CommandExecutionError
+)
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -56,8 +63,21 @@ def __virtual__():
 
 def _list(query=''):
     ret = {}
-    cmd = ['port', 'list', query]
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    cmd = 'port list {0}'.format(query)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
@@ -156,11 +176,11 @@ def latest_version(*names, **kwargs):
 
     ret = {}
 
-    for k, v in available.items():
-        if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
-            ret[k] = v
+    for key, val in six.iteritems(available):
+        if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
+            ret[key] = val
         else:
-            ret[k] = ''
+            ret[key] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -169,7 +189,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -299,7 +319,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         return {}
 
     formulas_array = []
-    for pname, pparams in pkg_params.items():
+    for pname, pparams in six.iteritems(pkg_params):
         formulas_array.append(pname + (pparams or ''))
 
     old = list_pkgs()
@@ -312,7 +332,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -350,14 +370,15 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    cmd = ['port', 'selfupdate']
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
-                                  python_shell=False)
-    if ret['retcode'] != 0:
-        ret['success'] = False
-        return ret
-    else:
-        return {'success': True, 'retcode': 0}
+    call = __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
 
 
 def upgrade(refresh=True):  # pylint: disable=W0613
@@ -380,7 +401,6 @@ def upgrade(refresh=True):  # pylint: disable=W0613
 
         salt '*' pkg.upgrade
     '''
-
     if refresh:
         refresh_db()
 

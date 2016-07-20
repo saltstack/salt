@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The default service module, if not otherwise specified salt will fall back
-to this basic module
+If Salt's OS detection does not identify a different virtual service module, the minion will fall back to using this basic module, which simply wraps sysvinit scripts.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -36,10 +36,13 @@ def __virtual__():
         'Arch ARM',
         'ALT',
         'SUSE  Enterprise Server',
+        'SUSE',
         'OEL',
         'Linaro',
         'elementary OS',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'Mint',
+        'Raspbian'
     ))
     if __grains__.get('os', '') in disable:
         return False
@@ -49,7 +52,12 @@ def __virtual__():
     # Suse >=12.0 uses systemd
     if __grains__.get('os_family', '') == 'Suse':
         try:
-            if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
+            # osrelease might be in decimal format (e.g. "12.1"), or for
+            # SLES might include service pack (e.g. "11 SP3"), so split on
+            # non-digit characters, and the zeroth element is the major
+            # number (it'd be so much simpler if it was always "X.Y"...)
+            import re
+            if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
                 return False
         except ValueError:
             return False

@@ -28,7 +28,7 @@ The following HTTP call will trigger the following Salt event.
 .. code-block:: bash
 
     % curl -sS http://localhost:8000/hook/some/tag \
-        -d some='Data!' 
+        -d some='Data!'
 
 Event tag: ``salt/netapi/hook/some/tag``. Event data:
 

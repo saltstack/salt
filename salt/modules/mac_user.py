@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users on Mac OS 10.7+
+
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:
@@ -13,10 +20,13 @@ import random
 import string
 import time
 
+# Import 3rdp-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -62,7 +72,7 @@ def _dscl(cmd, ctype='create'):
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
-    for idx in xrange(501, 2 ** 32):
+    for idx in range(501, 2 ** 24):
         if idx not in uids:
             return idx
 
@@ -120,7 +130,7 @@ def add(name,
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
-        random.SystemRandom().choice(string.letters + string.digits) for x in xrange(20)
+        random.SystemRandom().choice(string.letters + string.digits) for x in range(20)
     )
     _dscl('/Users/{0} {1!r}'.format(_cmd_quote(name),
                                     _cmd_quote(randpass)), ctype='passwd')
@@ -434,3 +444,29 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    _dscl(
+        '/Users/{0} RecordName {0!r} {2!r}'.format(name, new_name),
+        ctype='change'
+    )
+    # dscl buffers changes, sleep 1 second before checking if new value
+    # matches desired value
+    time.sleep(1)
+    return info(new_name).get('RecordName') == new_name

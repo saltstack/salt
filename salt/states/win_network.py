@@ -59,6 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -66,6 +67,8 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.validate.net
+from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -174,16 +177,21 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     )
     if cur_dns_proto == 'static':
         cur_dns_servers = cur['Statically Configured DNS Servers']
+        if set(dns_servers or ['None']) != set(cur_dns_servers):
+            changes['dns_servers'] = dns_servers
     elif 'DNS servers configured through DHCP' in cur:
         cur_dns_servers = cur['DNS servers configured through DHCP']
+        if dns_proto == 'static':
+            # If we're currently set to 'dhcp' but moving to 'static', specify the changes.
+            if set(dns_servers or ['None']) != set(cur_dns_servers):
+                changes['dns_servers'] = dns_servers
+
     cur_ip_proto = 'static' if cur['DHCP enabled'] == 'No' else 'dhcp'
     cur_ip_addrs = _addrdict_to_ip_addrs(cur.get('ip_addrs', []))
     cur_gateway = cur.get('Default Gateway')
 
     if dns_proto != cur_dns_proto:
         changes['dns_proto'] = dns_proto
-    if set(dns_servers or ['None']) != set(cur_dns_servers):
-        changes['dns_servers'] = dns_servers
     if ip_proto != cur_ip_proto:
         changes['ip_proto'] = ip_proto
     if set(ip_addrs or []) != set(cur_ip_addrs):
@@ -272,7 +280,10 @@ def managed(name,
             ret['comment'] += ' (already disabled)'
         return ret
     else:
-        currently_enabled = __salt__['ip.is_disabled'](name)
+        try:
+            currently_enabled = __salt__['ip.is_disabled'](name)
+        except CommandExecutionError:
+            currently_enabled = False
         if not currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
@@ -357,7 +368,7 @@ def managed(name,
                 changes['ip_addrs'] = ip_addrs
             if changes.get('ip_proto') == 'static' and not changes.get('ip_addrs'):
                 changes['ip_addrs'] = ip_addrs
-            for idx in xrange(len(changes['ip_addrs'])):
+            for idx in range(len(changes['ip_addrs'])):
                 if idx == 0:
                     __salt__['ip.set_static_ip'](
                         name,

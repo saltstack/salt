@@ -46,16 +46,24 @@ either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 '''
 
+
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
+# Import python libs
+from __future__ import absolute_import
+
+# Import salt libs
 from salt.exceptions import SaltInvocationError
 from salt.utils.reclass import (
     prepend_reclass_source_path,
     filter_out_source_path_option,
     set_inventory_base_uri_default
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'reclass'
@@ -75,7 +83,7 @@ def __virtual__(retry=False):
                 continue
 
             # each pillar entry is a single-key hash of name -> options
-            opts = pillar.itervalues().next()
+            opts = next(six.itervalues(pillar))
             prepend_reclass_source_path(opts)
             break
 

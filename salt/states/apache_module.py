@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Apache Modules
-=====================
 
 .. versionadded:: 2014.7.0
 
@@ -10,14 +9,15 @@ Enable and disable apache modules.
 .. code-block:: yaml
 
     Enable cgi module:
-        apache_module.enable:
-            - name: cgi
+      apache_module.enable:
+        - name: cgi
 
     Disable cgi module:
-        apache_module.disable:
-            - name: cgi
+      apache_module.disable:
+        - name: cgi
 '''
-from salt._compat import string_types
+from __future__ import absolute_import
+from salt.ext.six import string_types
 
 
 def __virtual__():

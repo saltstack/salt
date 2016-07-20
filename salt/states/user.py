@@ -25,11 +25,19 @@ as either absent or present
 '''
 
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -61,15 +69,23 @@ def _changes(name,
              roomnumber='',
              workphone='',
              homephone='',
+             loginclass=None,
              date=0,
              mindays=0,
              maxdays=999999,
              inactdays=0,
              warndays=7,
-             expire=-1):
+             expire=-1,
+             win_homedrive=None,
+             win_profile=None,
+             win_logonscript=None,
+             win_description=None):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 2015.8.0 to include support for windows homedrive, profile,
+    logonscript, and description fields.
 
     Updated in 2014.7.0 to include support for shadow attributes, all
     attributes supported as integers only.
@@ -83,6 +99,8 @@ def _changes(name,
         return False
 
     change = {}
+    if groups is None:
+        groups = lusr['groups']
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid:
         if lusr['uid'] != uid:
@@ -111,7 +129,6 @@ def _changes(name,
         newhome = home if home else lusr['home']
         if newhome is not None and not os.path.isdir(newhome):
             change['homeDoesNotExist'] = newhome
-
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -137,6 +154,19 @@ def _changes(name,
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
+    if win_homedrive:
+        if lusr['homedrive'] != win_homedrive:
+            change['homedrive'] = win_homedrive
+    if win_profile:
+        if lusr['profile'] != win_profile:
+            change['profile'] = win_profile
+    if win_logonscript:
+        if lusr['logonscript'] != win_logonscript:
+            change['logonscript'] = win_logonscript
+    if win_description:
+        if lusr['description'] != win_description:
+            change['description'] = win_description
+
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
     if 'user.chroomnumber' in __salt__:
@@ -148,6 +178,11 @@ def _changes(name,
     if 'user.chhomephone' in __salt__:
         if homephone is not None and lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    # OpenBSD login class
+    if __grains__['kernel'] == 'OpenBSD':
+        if loginclass:
+            if __salt__['user.get_loginclass'](name) != loginclass:
+                change['loginclass'] = loginclass
 
     return change
 
@@ -171,12 +206,17 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            loginclass=None,
             date=None,
             mindays=None,
             maxdays=None,
             inactdays=None,
             warndays=None,
-            expire=None):
+            expire=None,
+            win_homedrive=None,
+            win_profile=None,
+            win_logonscript=None,
+            win_description=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -188,17 +228,18 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user.
+        the same name as the user, Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
         specified here does not exist on the minion, the state will fail.
         If set to the empty list, the user will be removed from all groups
-        except the default group.
+        except the default group. If unset, salt will assume current groups
+        are still wanted (see issue #28706).
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -210,7 +251,7 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, True by default
+        the state, Default is ``True``.
 
     home
         The custom login directory of user. Uses default value of underlying
@@ -219,13 +260,15 @@ def present(name,
         set to True.
 
     createhome
-        If True, the home directory will be created if it doesn't exist.
+        If False, the home directory will not be created if it doesn't exist.
         Please note that directories leading up to the home directory
-        will NOT be created.
+        will NOT be created, Default is ``True``.
 
     password
         A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
+        argument is set to ``True`` then ``password`` is ignored.
+        For Windows this is the plain text password.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -234,22 +277,26 @@ def present(name,
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
         "password" field. This option will be ignored if "password" is not
-        specified.
+        specified, Default is ``True``.
 
     empty_password
-        Set to True to enable no password-less login for user
+        Set to True to enable password-less login for user, Default is ``False``.
 
     shell
         The login shell, defaults to the system default shell
 
     unique
-        Require a unique UID, True by default
+        Require a unique UID, Default is ``True``.
 
     system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID, Default is
+        ``False``.
 
+    loginclass
+        The login class, defaults to empty
+        (BSD only)
 
-    User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
+    User comment field (GECOS) support (currently Linux, BSD, and MacOS
     only):
 
     The below values should be specified as strings to avoid ambiguities when
@@ -267,7 +314,6 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
-
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -296,11 +342,42 @@ def present(name,
     expire
         Date that account expires, represented in days since epoch (January 1,
         1970).
+
+    The below parameters apply to windows only:
+
+    win_homedrive (Windows Only)
+        The drive letter to use for the home directory. If not specified the
+        home directory will be a unc path. Otherwise the home directory will be
+        mapped to the specified drive. Must be a letter followed by a colon.
+        Because of the colon, the value must be surrounded by single quotes. ie:
+        - win_homedrive: 'U:
+
+        .. versionchanged:: 2015.8.0
+
+    win_profile (Windows Only)
+        The custom profile directory of the user. Uses default value of
+        underlying system if not set.
+
+        .. versionchanged:: 2015.8.0
+
+    win_logonscript (Windows Only)
+        The full path to the logon script to run when the user logs in.
+
+        .. versionchanged:: 2015.8.0
+
+    win_description (Windows Only)
+        A brief description of the purpose of the users account.
+
+        .. versionchanged:: 2015.8.0
     '''
-    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
-    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
-    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
-    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
+    if fullname is not None:
+        fullname = salt.utils.locales.sdecode(fullname)
+    if roomnumber is not None:
+        roomnumber = salt.utils.locales.sdecode(roomnumber)
+    if workphone is not None:
+        workphone = salt.utils.locales.sdecode(workphone)
+    if homephone is not None:
+        homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
@@ -354,19 +431,24 @@ def present(name,
                        roomnumber,
                        workphone,
                        homephone,
+                       loginclass,
                        date,
                        mindays,
                        maxdays,
                        inactdays,
                        warndays,
-                       expire)
+                       expire,
+                       win_homedrive,
+                       win_profile,
+                       win_logonscript,
+                       win_description)
 
     if changes:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in six.iteritems(changes):
                 if key == 'password':
                     val = 'XXX-REDACTED-XXX'
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
@@ -374,8 +456,10 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -389,7 +473,7 @@ def present(name,
             if key == 'homeDoesNotExist':
                 __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
-                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0755)
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)
@@ -406,6 +490,18 @@ def present(name,
             if key == 'expire':
                 __salt__['shadow.set_expire'](name, expire)
                 continue
+            if key == 'win_homedrive':
+                __salt__['user.update'](name=name, homedrive=val)
+                continue
+            if key == 'win_profile':
+                __salt__['user.update'](name=name, profile=val)
+                continue
+            if key == 'win_logonscript':
+                __salt__['user.update'](name=name, logonscript=val)
+                continue
+            if key == 'win_description':
+                __salt__['user.update'](name=name, description=val)
+                continue
             if key == 'groups':
                 __salt__['user.ch{0}'.format(key)](
                     name, val, not remove_groups
@@ -418,6 +514,8 @@ def present(name,
         if 'shadow.info' in __salt__:
             if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
@@ -425,7 +523,13 @@ def present(name,
         if 'shadow.info' in __salt__:
             for key in spost:
                 if lshad[key] != spost[key]:
-                    ret['changes'][key] = spost[key]
+                    if key == 'passwd':
+                        ret['changes'][key] = 'XXX-REDACTED-XXX'
+                    else:
+                        ret['changes'][key] = spost[key]
+        if __grains__['kernel'] == 'OpenBSD':
+            if lcpre != lcpost:
+                ret['changes']['loginclass'] = lcpost
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
@@ -444,12 +548,17 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           loginclass,
                            date,
                            mindays,
                            maxdays,
                            inactdays,
                            warndays,
-                           expire)
+                           expire,
+                           win_homedrive,
+                           win_profile,
+                           win_logonscript,
+                           win_description)
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(
@@ -468,21 +577,41 @@ def present(name,
             groups.extend(present_optgroups)
         elif present_optgroups:
             groups = present_optgroups[:]
-        if __salt__['user.add'](name,
-                                uid=uid,
-                                gid=gid,
-                                groups=groups,
-                                home=home,
-                                shell=shell,
-                                unique=unique,
-                                system=system,
-                                fullname=fullname,
-                                roomnumber=roomnumber,
-                                workphone=workphone,
-                                homephone=homephone,
-                                createhome=createhome):
+
+        # Setup params specific to Linux and Windows to be passed to the
+        # add.user function
+        if not salt.utils.is_windows():
+            params = {'name': name,
+                      'uid': uid,
+                      'gid': gid,
+                      'groups': groups,
+                      'home': home,
+                      'shell': shell,
+                      'unique': unique,
+                      'system': system,
+                      'fullname': fullname,
+                      'roomnumber': roomnumber,
+                      'workphone': workphone,
+                      'homephone': homephone,
+                      'createhome': createhome,
+                      'loginclass': loginclass}
+        else:
+            params = ({'name': name,
+                       'password': password,
+                       'fullname': fullname,
+                       'description': win_description,
+                       'groups': groups,
+                       'home': home,
+                       'homedrive': win_homedrive,
+                       'profile': win_profile,
+                       'logonscript': win_logonscript})
+
+        if __salt__['user.add'](**params):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
+            if not createhome:
+                # pwd incorrectly reports presence of home
+                ret['changes']['home'] = ''
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
@@ -570,12 +699,13 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's files as well as the user
+        Set purge to True to delete all of the user's files as well as the user,
+        Default is ``False``.
 
     force
-        If the user is logged in the absent state will fail, set the force
+        If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
-        supported in FreeBSD and Solaris.
+        supported in FreeBSD and Solaris, Default is ``False``.
     '''
     ret = {'name': name,
            'changes': {},

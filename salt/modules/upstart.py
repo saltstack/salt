@@ -3,6 +3,12 @@
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
 
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 Currently (as of Ubuntu 12.04) there is no tool available to disable
 Upstart services (like update-rc.d). This[1] is the recommended way to
 disable an Upstart service. So we assume that all Upstart services
@@ -38,13 +44,19 @@ about this, at least.
     used, as it supports the hybrid upstart/sysvinit system used in
     RHEL/CentOS 6.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
 import os
+import re
+import itertools
+import fnmatch
 
 # Import salt libs
 import salt.utils
+import salt.modules.cmdmod
+import salt.utils.systemd
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -59,7 +71,9 @@ def __virtual__():
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS'):
+    if salt.utils.systemd.booted(__context__):
+        return False
+    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
         debian_initctl = '/sbin/initctl'
@@ -77,7 +91,7 @@ def _find_utmp():
     '''
     result = {}
     # These are the likely locations for the file on Ubuntu
-    for utmp in ('/var/run/utmp', '/run/utmp'):
+    for utmp in '/var/run/utmp', '/run/utmp':
         try:
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
@@ -165,7 +179,12 @@ def _upstart_is_disabled(name):
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
+    files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
+    for file_name in itertools.ifilter(os.path.isfile, files):
+        with salt.utils.fopen(file_name) as fp_:
+            if re.search(r'^\s*manual', fp_.read(), re.MULTILINE):
+                return True
+    return False
 
 
 def _upstart_is_enabled(name):
@@ -214,11 +233,24 @@ def _iter_service_names():
         name = os.path.basename(line)
         found.add(name)
         yield name
-    for line in glob.glob('/etc/init/*.conf'):
-        name = os.path.basename(line)[:-5]
-        if name in found:
-            continue
-        yield name
+
+    # This walk method supports nested services as per the init man page
+    # definition 'For example a configuration file /etc/init/rc-sysinit.conf
+    # is named rc-sysinit, while a configuration file /etc/init/net/apache.conf
+    # is named net/apache'
+    init_root = '/etc/init/'
+    for root, dirnames, filenames in os.walk(init_root):
+        relpath = os.path.relpath(root, init_root)
+        for filename in fnmatch.filter(filenames, '*.conf'):
+            if relpath == '.':
+                # service is defined in the root, no need to append prefix.
+                name = filename[:-5]
+            else:
+                # service is nested, append its relative path prefix.
+                name = os.path.join(relpath, filename[:-5])
+            if name in found:
+                continue
+            yield name
 
 
 def get_enabled():
@@ -431,9 +463,11 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
+    if _upstart_is_disabled(name):
+        return _upstart_is_disabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    with file(override, 'w') as ofile:
-        ofile.write('manual')
+    with salt.utils.fopen(override, 'a') as ofile:
+        ofile.write('manual\n')
     return _upstart_is_disabled(name)
 
 
@@ -441,8 +475,17 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
+    if _upstart_is_enabled(name):
+        return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    if os.access(override, os.R_OK):
+    files = ['/etc/init/{0}.conf'.format(name), override]
+    for file_name in itertools.ifilter(os.path.isfile, files):
+        with salt.utils.fopen(file_name, 'r+') as fp_:
+            new_text = re.sub(r'^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
+            fp_.seek(0)
+            fp_.write(new_text)
+            fp_.truncate()
+    if os.access(override, os.R_OK) and os.path.getsize(override) == 0:
         os.unlink(override)
     return _upstart_is_enabled(name)
 
@@ -460,7 +503,7 @@ def enable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = [executable, '-f', name, 'defaults']
+    cmd = '{0} -f {1} defaults'.format(executable, name)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
@@ -481,7 +524,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

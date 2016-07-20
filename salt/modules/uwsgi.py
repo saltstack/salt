@@ -6,6 +6,7 @@ uWSGI stats server http://uwsgi-docs.readthedocs.org/en/latest/StatsServer.html
 :maturity:   new
 :platform:   all
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json

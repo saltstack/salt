@@ -2,7 +2,7 @@
 '''
 Oracle DataBase connection module
 
-:mainteiner: Vladimir Bormotov <bormotov@gmail.com>
+:maintainer: Vladimir Bormotov <bormotov@gmail.com>
 
 :maturity: new
 
@@ -14,23 +14,25 @@ Oracle DataBase connection module
 
     **OS Environment**
 
-    .. code-block:: text
+    .. code-block:: yaml
 
         ORACLE_HOME: path to oracle product
         PATH: path to Oracle Client libs need to be in PATH
 
     **pillar**
 
-    .. code-block:: text
+    .. code-block:: yaml
 
         oracle.dbs: list of known based
         oracle.dbs.<db>.uri: connection credentials in format:
             user/password@host[:port]/sid[ as {sysdba|sysoper}]
 '''
+from __future__ import absolute_import
 
 import os
 import logging
 from salt.utils.decorators import depends
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ def _cx_oracle_req():
     '''
     Fallback function stub
     '''
-    return 'Need "cx_Oracle" and Oracle Client installed for this functin exist'
+    return 'Need "cx_Oracle" and Oracle Client installed for this function exist'
 
 
 def _unicode_output(cursor, name, default_type, size, precision, scale):
@@ -70,7 +72,7 @@ def _unicode_output(cursor, name, default_type, size, precision, scale):
     '''
     if default_type in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
                         cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
-        return cursor.var(unicode, size, cursor.arraysize)
+        return cursor.var(six.text_type, size, cursor.arraysize)
 
 
 def _connect(uri):
@@ -111,7 +113,7 @@ def run_query(db, query):
     '''
     Run SQL query and return result
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -124,7 +126,9 @@ def run_query(db, query):
 
 def show_dbs(*dbs):
     '''
-    Show databases configuration from pillar. Filter by args
+    Show databases configuration from pillar. Filter by `*args`
+
+    CLI Example:
 
     .. code-block:: bash
 

@@ -5,10 +5,13 @@ Support for Tomcat
 This module uses the manager webapp to manage Apache tomcat webapps.
 If the manager webapp is not configured some of the functions won't work.
 
-.. note::
-
-    The config format was changed in 2014.7.0, but backwards compatibility for
-    the old-style config will be in the 2014.7.1 release.
+:configuration:
+    - Java bin path should be in default path
+    - If ipv6 is enabled make sure you permit manager access to ipv6 interface
+      "0:0:0:0:0:0:0:1"
+    - If you are using tomcat.tar.gz it has to be installed or symlinked under
+      ``/opt``, preferably using name tomcat
+    - "tomcat.signal start/stop" works but it does not use the startup scripts
 
 The following grains/pillar should be set:
 
@@ -57,17 +60,32 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import os
+import re
 import glob
 import hashlib
-import urllib
-import urllib2
 import tempfile
-import os
+import logging
+
+# Import 3rd-party libs
+# pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        urlopen as _urlopen,
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -148,13 +166,32 @@ def _auth(uri):
     if user is False or password is False:
         return False
 
-    basic = urllib2.HTTPBasicAuthHandler()
+    basic = _HTTPBasicAuthHandler()
     basic.add_password(realm='Tomcat Manager Application', uri=uri,
             user=user, passwd=password)
-    digest = urllib2.HTTPDigestAuthHandler()
+    digest = _HTTPDigestAuthHandler()
     digest.add_password(realm='Tomcat Manager Application', uri=uri,
             user=user, passwd=password)
-    return urllib2.build_opener(basic, digest)
+    return _build_opener(basic, digest)
+
+
+def _extract_war_version(war):
+    '''
+    Extract the version from the war file name.  There does not seem to be a
+    standard for encoding the version into the `war file name
+    <https://tomcat.apache.org/tomcat-6.0-doc/deployer-howto.html>`_.
+
+    Examples:
+
+    .. code-block::
+
+        /path/salt-2015.8.6.war -> 2015.8.6
+        /path/V6R2013xD5.war -> V6R2013xD5
+    '''
+    basename = os.path.basename(war)
+    war_package = os.path.splitext(basename)[0]  # remove '.war'
+    version = re.findall("-([\\d.-]+)$", war_package)  # try semver
+    return version[0] if version and len(version) == 1 else war_package  # default to whole name
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -199,19 +236,19 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     url += 'text/{0}'.format(cmd)
     url6 += '{0}'.format(cmd)
     if opts:
-        url += '?{0}'.format(urllib.urlencode(opts))
-        url6 += '?{0}'.format(urllib.urlencode(opts))
+        url += '?{0}'.format(_urlencode(opts))
+        url6 += '?{0}'.format(_urlencode(opts))
 
     # Make the HTTP request
-    urllib2.install_opener(auth)
+    _install_opener(auth)
 
     try:
         # Trying tomcat >= 7 url
-        ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
+        ret['msg'] = _urlopen(url, timeout=timeout).read().splitlines()
     except Exception:
         try:
             # Trying tomcat6 url
-            ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
+            ret['msg'] = _urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:
             ret['msg'] = 'Failed to create HTTP request'
 
@@ -488,7 +525,8 @@ def deploy_war(war,
                saltenv='base',
                timeout=180,
                env=None,
-               temp_war_location=None):
+               temp_war_location=None,
+               version=''):
     '''
     Deploy a WAR file
 
@@ -509,6 +547,17 @@ def deploy_war(war,
     temp_war_location : None
         use another location to temporarily copy to war file
         by default the system's temp directory is used
+    version : ''
+        Specify the war version.  If this argument is provided, it overrides
+        the version encoded in the war file name, if one is present.
+
+        Examples:
+
+        .. code-block:: bash
+
+            salt '*' tomcat.deploy_war salt://salt-2015.8.6.war version=2015.08.r6
+
+        .. versionadded:: 2015.8.6
 
     CLI Examples:
 
@@ -557,12 +606,14 @@ def deploy_war(war,
             __salt__['file.set_mode'](cached, '0644')
         except KeyError:
             pass
+    else:
+        tfile = war
 
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': os.path.basename(war).replace('.war', ''),
+        'version': version or _extract_war_version(war),
     }
     if force == 'yes':
         opts['update'] = 'true'
@@ -580,7 +631,7 @@ def deploy_war(war,
 
 def passwd(passwd,
            user='',
-           alg='md5',
+           alg='sha1',
            realm=None):
     '''
     This function replaces the $CATALINA_HOME/bin/digest.sh script
@@ -595,23 +646,15 @@ def passwd(passwd,
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     '''
-    if alg == 'md5':
-        m = hashlib.md5()
-    elif alg == 'sha1':
-        m = hashlib.sha1()
-    else:
-        return False
+    # Shouldn't it be SHA265 instead of SHA1?
+    digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
+    if digest:
+        if realm:
+            digest.update('{0}:{1}:{2}'.format(user, realm, passwd,))
+        else:
+            digest.update(passwd)
 
-    if realm:
-        m.update('{0}:{1}:{2}'.format(
-            user,
-            realm,
-            passwd,
-            ))
-    else:
-        m.update(passwd)
-
-    return m.hexdigest()
+    return digest and digest.hexdigest() or False
 
 
 # Non-Manager functions
@@ -653,7 +696,7 @@ def fullversion():
             continue
         if ': ' in line:
             comps = line.split(': ')
-            ret[comps[0]] = comps[1]
+            ret[comps[0]] = comps[1].lstrip()
     return ret
 
 
@@ -704,6 +747,6 @@ if __name__ == '__main__':
     new_format_creds = _get_credentials()
 
     if old_format_creds == new_format_creds:
-        print 'Config backwards compatible'
+        log.info('Config backwards compatible')
     else:
-        print 'Config not backwards compatible'
+        log.ifno('Config not backwards compatible')

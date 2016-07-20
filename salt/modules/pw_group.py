@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 Manage groups on FreeBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage groups on a
+    minion, and it is using a different module (or gives an error similar to
+    *'group.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -129,3 +136,23 @@ def chgid(name, gid):
     if post_gid != pre_gid:
         return post_gid == gid
     return False
+
+
+def members(name, members_list):
+    '''
+    Replaces members of the group with a provided list.
+
+    .. versionadded:: 2015.5.4
+
+    CLI Example:
+
+        salt '*' group.members foo 'user1,user2,user3,...'
+
+    Replaces a membership list for a local group 'foo'.
+        foo:x:1234:user1,user2,user3,...
+    '''
+
+    retcode = __salt__['cmd.retcode']('pw groupmod {0} -M {1}'.format(
+        name, members_list), python_shell=False)
+
+    return not retcode

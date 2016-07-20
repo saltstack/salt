@@ -26,7 +26,7 @@ Halite
 ------
 
 The new Halite web GUI is now available on PyPI. A great deal of work has
-been put into Halite to make it fully event driven and amazingly fast. The 
+been put into Halite to make it fully event driven and amazingly fast. The
 Halite UI can be started from within the Salt Master (after being installed
 from PyPI), or standalone, and does not require an external database to run.
 It is very lightweight!

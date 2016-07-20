@@ -91,15 +91,10 @@ pki_dir: /conf/pki/minion
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
-# If this is set, the time between reconnection attempts will increase by 
+# If this is set, the time between reconnection attempts will increase by
 # acceptance_wait_time seconds per iteration, up to this maximum. If this
 # is not set, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: None
-
-# When healing, a dns_check is run. This is to make sure that the originally
-# resolved dns has not changed. If this is something that does not happen in
-# your environment, set this value to False.
-#dns_check: True
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
@@ -197,11 +192,11 @@ pki_dir: /conf/pki/minion
 # Run states when the minion daemon starts. To enable, set startup_states to:
 # 'highstate' -- Execute state.highstate
 # 'sls' -- Read in the sls_list option and execute the named sls files
-# 'top' -- Read top_file option and execute based on that file on the Master 
+# 'top' -- Read top_file option and execute based on that file on the Master
 #startup_states: ''
 #
 # list of states to run when the minion starts up if startup_states is 'sls'
-#sls_list: 
+#sls_list:
 #  - edit.vim
 #  - hyper
 #
@@ -286,8 +281,7 @@ pki_dir: /conf/pki/minion
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
-#multiprocessing: True
-multiprocessing: False
+# multiprocessing: True
 
 ######         Logging settings       #####
 ###########################################
@@ -320,7 +314,7 @@ multiprocessing: False
 # Default: 'warning'
 #log_level_logfile:
 #
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen on http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
@@ -383,12 +377,12 @@ multiprocessing: False
 # without informing either party that their connection has been taken away.
 # Enabling TCP Keepalives prevents this from happening.
 #
-# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
 # or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300
-# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds 
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
 # on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
 #tcp_keepalive_idle: 300
 #
@@ -396,8 +390,8 @@ multiprocessing: False
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
 #tcp_keepalive_cnt: -1
 #
-# How often, in seconds, to send keepalives after the first one. Default -1 to 
-# use OS defaults, typically 75 seconds on Linux, see 
+# How often, in seconds, to send keepalives after the first one. Default -1 to
+# use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
 

@@ -16,6 +16,7 @@ file. The default for this is:
       - private
       - local
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path

@@ -16,21 +16,30 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser
       password: mypassword
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
-      provider: parallels
+      driver: parallels
 
 '''
 
 # Import python libs
-import copy
+from __future__ import absolute_import
 import time
 import pprint
-import urllib
-import urllib2
 import logging
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
 from salt._compat import ElementTree as ET
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        Request as _Request,
+        urlopen as _urlopen,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -45,6 +54,8 @@ from salt.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'parallels'
+
 
 # Only load in this module if the PARALLELS configurations are in place
 def __virtual__():
@@ -54,7 +65,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -63,8 +74,8 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'parallels',
-        ('user',)
+        __active_provider_name__ or __virtualname__,
+        ('user', 'password', 'url',)
     )
 
 
@@ -258,6 +269,21 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'parallels',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -265,7 +291,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -322,113 +348,8 @@ def create(vm_):
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
 
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
-
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': public_ip,
-            'username': ssh_username,
-            'password': config.get_cloud_config_value(
-                'password', vm_, __opts__, search_global=False
-            ),
-            'script': deploy_script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
+    vm_['ssh_host'] = public_ip
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -444,7 +365,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -459,7 +380,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     path = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
-    auth_handler = urllib2.HTTPBasicAuthHandler()
+    auth_handler = _HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='Parallels Instance Manager',
         uri=path,
@@ -471,8 +392,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             search_global=False
         )
     )
-    opener = urllib2.build_opener(auth_handler)
-    urllib2.install_opener(opener)
+    opener = _build_opener(auth_handler)
+    _install_opener(opener)
 
     if action:
         path += action
@@ -480,20 +401,20 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     if command:
         path += '/{0}'.format(command)
 
-    if type(args) is not dict:
+    if not type(args, dict):
         args = {}
 
     kwargs = {'data': data}
-    if type(data) is str and '<?xml' in data:
+    if isinstance(data, str) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }
 
     if args:
-        params = urllib.urlencode(args)
-        req = urllib2.Request(url='{0}?{1}'.format(path, params), **kwargs)
+        params = _urlencode(args)
+        req = _Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
-        req = urllib2.Request(url=path, **kwargs)
+        req = _Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
@@ -502,7 +423,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         log.debug(data)
 
     try:
-        result = urllib2.urlopen(req)
+        result = _urlopen(req)
         log.debug(
             'PARALLELS Response Status Code: {0}'.format(
                 result.getcode()
@@ -516,7 +437,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             return items
 
         return {}
-    except urllib2.URLError as exc:
+    except URLError as exc:
         log.error(
             'PARALLELS Response Status Code: {0} {1}'.format(
                 exc.code,

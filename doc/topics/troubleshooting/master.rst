@@ -19,7 +19,7 @@ run them in the foreground.
 
 .. _`monit`: http://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
-.. _`supervisord`: http://supervisord.org/         
+.. _`supervisord`: http://supervisord.org/
 
 What Ports does the Master Need Open?
 =====================================
@@ -181,18 +181,17 @@ Commands Time Out or Do Not Return Output
 =========================================
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
-sometimes encounter times where your highstate, or other long running commands
-do not return output. 
-
-.. note::
-    A number of timing issues were resolved in the 2014.1 release of Salt.
-    Upgrading to at least this version is strongly recommended if timeouts
-    persist.
+sometimes encounter times where a :py:func:`state.apply
+<salt.modules.state.apply_>`, or other long running commands do not return
+output.
 
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
 
+Having keys accepted for Salt minions that no longer exist or are not reachable
+also increases the possibility of timeouts, since the Salt master waits for
+those systems to return command results.
 
 Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
@@ -204,6 +203,19 @@ expecting files such as ``/etc/salt/pki`` to be pulled from the location
 specified with ``-c``. Modify the ``root_dir`` setting to address this
 behavior.
 
+Salt Master Doesn't Return Anything While Running jobs
+======================================================
+
+When a command being run via Salt takes a very long time to return
+(package installations, certain scripts, etc.) the master may drop you back
+to the shell. In most situations the job is still running but Salt has
+exceeded the set timeout before returning. Querying the job queue will
+provide the data of the job but is inconvenient. This can be resolved by
+either manually using the ``-t`` option to set a longer timeout when running
+commands (by default it is 5 seconds) or by modifying the master
+configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
+change the default timeout for all commands, and then restarting the
+salt-master service.
 
 Salt Master Auth Flooding
 =========================
@@ -214,11 +226,11 @@ mitigate the chances of an authentication flood from causing an interuption in
 service.
 
 .. note::
-    recon_default: 
-    
+    recon_default:
+
     The average number of seconds to wait between reconnection attempts.
 
-    recon_max: 
+    recon_max:
        The maximum number of seconds to wait between reconnection attempts.
 
     recon_randomize:
@@ -227,7 +239,7 @@ service.
     acceptance_wait_time:
         The number of seconds to wait for a reply to each authentication request.
 
-    random_reauth_delay: 
+    random_reauth_delay:
         The range of seconds across which the minions should attempt to randomize
         authentication attempts.
 
@@ -235,6 +247,32 @@ service.
         The total time to wait for the authentication process to complete, regardless
         of the number of attempts.
 
+
+=====================
+Running state locally
+=====================
+
+To debug the states, you can use call locally.
+
+.. code-block:: bash
+
+    salt-call -l trace --local state.highstate
+
+
+The top.sls file is used to map what SLS modules get loaded onto what minions via the state system.
+
+It is located in the file defined in the ``file_roots`` variable of the salt master
+configuration file which is defined by found in ``CONFIG_DIR/master``, normally ``/etc/salt/master``
+
+The default configuration for the ``file_roots`` is:
+
+.. code-block:: yaml
+
+   file_roots:
+     base:
+       - /srv/salt
+
+So the top file is defaulted to the location ``/srv/salt/top.sls``
 
 
 Salt Master Umask

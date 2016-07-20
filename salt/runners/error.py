@@ -3,6 +3,7 @@
 Error generator to enable integration testing of salt runner error handling
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 

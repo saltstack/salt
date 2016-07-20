@@ -20,11 +20,10 @@ client is detailed below.
     See the :py:func:`state.event <salt.runners.state.event>` runner to utilize
     Salt's event bus from shell scripts.
 
-    See the `salt-api`_ project to access Salt externally via a REST interface.
-    It uses Salt's Python interface documented below and is also useful as a
-    reference implementation.
+    Salt's `netapi module`_ provides access to Salt externally via a REST interface.
+    Review the `netapi module`_ documentation for more information.
 
-.. _`salt-api`: https://github.com/saltstack/salt-api
+.. _`netapi module`: http://docs.saltstack.com/en/latest/topics/netapi/index.html
 
 Salt's ``opts`` dictionary
 ==========================
@@ -47,7 +46,7 @@ Salt's Loader Interface
 Modules in the Salt ecosystem are loaded into memory using a custom loader
 system. This allows modules to have conditional requirements (OS, OS version,
 installed libraries, etc) and allows Salt to inject special variables
-(``__salt__``, ``__opts``, etc).
+(``__salt__``, ``__opts__``, etc).
 
 Most modules can be manually loaded. This is often useful in third-party Python
 apps or when writing tests. However some modules require and expect a full,
@@ -68,8 +67,12 @@ Each module type has a corresponding loader function.
 
 .. autofunction:: salt.loader.grains
 
+.. autofunction:: salt.loader.grain_funcs
+
 Salt's Client Interfaces
 ========================
+
+.. _local-client:
 
 LocalClient
 -----------
@@ -82,7 +85,7 @@ Salt Caller
 -----------
 
 .. autoclass:: salt.client.Caller
-    :members: function
+    :members: cmd
 
 RunnerClient
 ------------
@@ -101,3 +104,9 @@ CloudClient
 
 .. autoclass:: salt.cloud.CloudClient
     :members:
+
+SSHClient
+---------
+
+.. autoclass:: salt.client.ssh.client.SSHClient
+    :members: cmd, cmd_iter

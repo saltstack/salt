@@ -115,17 +115,17 @@ from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
-    _cron_matched,
-    SALT_CRON_NO_IDENTIFIER
+    _cron_matched
 )
 
 
@@ -216,7 +216,7 @@ def present(name,
             month='*',
             dayweek='*',
             comment=None,
-            identifier=None):
+            identifier=False):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -256,8 +256,8 @@ def present(name,
         edits. This defaults to the state id
     '''
     name = ' '.join(name.strip().split())
-    if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+    if identifier is False:
+        identifier = name
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -312,7 +312,7 @@ def present(name,
 
 def absent(name,
            user='root',
-           identifier=None,
+           identifier=False,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -334,8 +334,8 @@ def absent(name,
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
-    if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+    if identifier is False:
+        identifier = name
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -438,7 +438,7 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -524,14 +524,15 @@ def file(name,
         return ret
 
     if ret['changes']:
+        cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
         ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
     elif ret['result']:
+        cron_ret = None
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
 
-    cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-    if cron_ret['retcode']:
+    if cron_ret and cron_ret['retcode']:
         ret['comment'] = 'Unable to update user {0} crontab {1}.' \
                          ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
         ret['result'] = False

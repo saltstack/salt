@@ -1,13 +1,26 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
 import random
 import string
 from copy import deepcopy
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
-# import Python Third Party Libs
+# Import Salt Testing Libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Salt libs
+import salt.config
+import salt.loader
+
+# Import Third Party Libs
 # pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import boto
     HAS_BOTO = True
@@ -30,18 +43,12 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
 from salt.modules import boto_secgroup
 
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 required_boto_version = '2.4.0'
 vpc_id = 'vpc-mjm05d27'
@@ -50,6 +57,13 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
+
+opts = salt.config.DEFAULT_MASTER_OPTS
+utils = salt.loader.utils(opts, whitelist=['boto'])
+funcs = salt.loader.minion_mods(opts, utils=utils)
+boto_secgroup.__salt__ = funcs
+boto_secgroup.__utils__ = utils
+boto_secgroup.__virtual__()
 
 
 def _random_group_id():
@@ -184,10 +198,12 @@ class BotoSecgroupTestCase(TestCase):
         tests return of 'config' when given group name. get_config returns an OrderedDict.
         '''
         group_name = _random_group_name()
-        ip_protocol = 'tcp'
+        ip_protocol = u'tcp'
         from_port = 22
         to_port = 22
-        cidr_ip = '0.0.0.0/0'
+        cidr_ip = u'0.0.0.0/0'
+        rules_egress = [{'to_port': -1, 'from_port': -1, 'ip_protocol': u'-1', 'cidr_ip': u'0.0.0.0/0'}]
+
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(name=group_name, description=group_name)
         group.authorize(ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr_ip=cidr_ip)
@@ -195,7 +211,8 @@ class BotoSecgroupTestCase(TestCase):
         expected_get_config_result = OrderedDict([('name', group.name), ('group_id', group.id), ('owner_id', u'111122223333'),
                                                  ('description', group.description),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
-                                                  'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}])])
+                                                  'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
+                                                 ('rules_egress', rules_egress)])
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
@@ -307,5 +324,5 @@ class BotoSecgroupTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoSecgroupTestCase, needs_daemon=False)

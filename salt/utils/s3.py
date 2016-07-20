@@ -4,20 +4,22 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
-import binascii
-import datetime
-import hashlib
-import hmac
 import logging
-import urllib
-import requests
+
+# Import 3rd-party libs
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 
 # Import Salt libs
 import salt.utils
+import salt.utils.aws
 import salt.utils.xmlutil as xml
-import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
@@ -25,8 +27,9 @@ log = logging.getLogger(__name__)
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
-          path=None, return_bin=False, action=None, local_file=None,
-          verify_ssl=True):
+          path='', return_bin=False, action=None, local_file=None,
+          verify_ssl=True, location=None, full_headers=False, role_arn=None,
+          chunk_size=16384):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -34,7 +37,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A service_url may also be specified in the configuration::
+    If keyid or key is not specified, an attempt to fetch them from EC2 IAM
+    metadata service will be made.
+
+    A service_url may also be specified in the configuration:
 
         s3.service_url: s3.amazonaws.com
 
@@ -54,15 +60,22 @@ def query(key, keyid, method='GET', params=None, headers=None,
     This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
+
+    A region may be specified:
+
+        s3.location: eu-central-1
+
+    If region is not specified, an attempt to fetch the region from EC2 IAM
+    metadata service will be made. Failing that, default is us-east-1
     '''
+    if not HAS_REQUESTS:
+        log.error('There was an error: requests is required for s3 access')
+
     if not headers:
         headers = {}
 
     if not params:
         params = {}
-
-    if path is None:
-        path = ''
 
     if not service_url:
         service_url = 's3.amazonaws.com'
@@ -73,93 +86,69 @@ def query(key, keyid, method='GET', params=None, headers=None,
         endpoint = service_url
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
-    token = None
-    if not key or not keyid:
-        iam_creds = iam.get_iam_metadata()
-        key = iam_creds['secret_key']
-        keyid = iam_creds['access_key']
-        token = iam_creds['security_token']
+    if not key:
+        key = salt.utils.aws.IROLE_CODE
 
-    if not requesturl:
-        x_amz_date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-        content_type = 'text/plain'
-        if method == 'GET':
-            if bucket:
-                can_resource = '/{0}/{1}'.format(bucket, path)
-            else:
-                can_resource = '/'
-        elif method == 'PUT' or method == 'HEAD' or method == 'DELETE':
-            if path:
-                can_resource = '/{0}/{1}'.format(bucket, path)
-            else:
-                can_resource = '/{0}/'.format(bucket)
+    if not keyid:
+        keyid = salt.utils.aws.IROLE_CODE
 
-        if action:
-            can_resource += '?{0}'.format(action)
-
-        log.debug('CanonicalizedResource: {0}'.format(can_resource))
-
-        headers['Host'] = endpoint
-        headers['Content-type'] = content_type
-        headers['Date'] = x_amz_date
-        if token:
-            headers['x-amz-security-token'] = token
-
-        string_to_sign = '{0}\n'.format(method)
-
-        new_headers = []
-        for header in sorted(headers):
-            if header.lower().startswith('x-amz'):
-                log.debug(header.lower())
-                new_headers.append('{0}:{1}'.format(header.lower(),
-                                                    headers[header]))
-        can_headers = '\n'.join(new_headers)
-        log.debug('CanonicalizedAmzHeaders: {0}'.format(can_headers))
-
-        string_to_sign += '\n{0}'.format(content_type)
-        string_to_sign += '\n{0}'.format(x_amz_date)
-        if can_headers:
-            string_to_sign += '\n{0}'.format(can_headers)
-        string_to_sign += '\n{0}'.format(can_resource)
-        log.debug('String To Sign:: \n{0}'.format(string_to_sign))
-
-        hashed = hmac.new(key, string_to_sign, hashlib.sha1)
-        sig = binascii.b2a_base64(hashed.digest())
-        headers['Authorization'] = 'AWS {0}:{1}'.format(keyid, sig.strip())
-
-        querystring = urllib.urlencode(params)
-        if action:
-            if querystring:
-                querystring = '{0}&{1}'.format(action, querystring)
-            else:
-                querystring = action
-        requesturl = 'https://{0}/'.format(endpoint)
-        if path:
-            requesturl += path
-        if querystring:
-            requesturl += '?{0}'.format(querystring)
-
-    data = None
+    data = ''
+    payload_hash = None
     if method == 'PUT':
         if local_file:
-            with salt.utils.fopen(local_file, 'r') as ifile:
-                data = ifile.read()
+            payload_hash = salt.utils.get_hash(local_file, form='sha256')
+
+    if not requesturl:
+        requesturl = 'https://{0}/{1}'.format(endpoint, path)
+        headers, requesturl = salt.utils.aws.sig4(
+            method,
+            endpoint,
+            params,
+            data=data,
+            uri='/{0}'.format(path),
+            prov_dict={'id': keyid, 'key': key},
+            role_arn=role_arn,
+            location=location,
+            product='s3',
+            requesturl=requesturl,
+            payload_hash=payload_hash,
+        )
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
     log.debug('    Authorization: {0}'.format(headers['Authorization']))
 
-    try:
-        result = requests.request(method, requesturl, headers=headers,
+    if not data:
+        data = None
+
+    response = None
+    if method == 'PUT':
+        if local_file:
+            with salt.utils.fopen(local_file, 'r') as data:
+                result = requests.request(method,
+                                          requesturl,
+                                          headers=headers,
+                                          data=data,
+                                          verify=verify_ssl,
+                                          stream=True)
+        response = result.content
+    elif method == 'GET' and local_file and not return_bin:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl,
+                                  stream=True)
+    else:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
                                   data=data,
                                   verify=verify_ssl)
         response = result.content
-    except requests.exceptions.HTTPError as exc:
-        log.error('There was an error::')
-        if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-            log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-        log.error('    Content: \n{0}'.format(exc.read()))
-        return False
+    if result.status_code >= 400:
+        # On error the S3 API response should contain error message
+        log.debug('    Response content: {0}'.format(response))
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
@@ -200,8 +189,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'w') as out:
-            out.write(response)
+        with salt.utils.fopen(local_file, 'wb') as out:
+            for chunk in result.iter_content(chunk_size=chunk_size):
+                out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
 
     # This can be used to return a binary object wholesale
@@ -221,7 +211,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if result.status_code != requests.codes.ok:
             return
         ret = {'headers': []}
-        for header in result.headers:
-            ret['headers'].append(header.strip())
+        if full_headers:
+            ret['headers'] = dict(result.headers)
+        else:
+            for header in result.headers:
+                ret['headers'].append(header.strip())
 
     return ret

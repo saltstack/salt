@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -12,7 +15,7 @@ ensure_in_syspath('../')
 # Import Salt libs
 import integration
 from salt import client
-from salt.exceptions import EauthAuthenticationError, SaltInvocationError
+from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -48,19 +51,19 @@ class LocalClientTestCase(TestCase,
     def test_cmd_subset(self, cmd_mock):
         with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
             self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), kwarg=None, expr_form='list',
+            cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
             self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), kwarg=None, expr_form='list',
+            cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
     def test_pub(self):
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
-            ret = self.client.pub('*', 'test.ping')
-            expected_ret = {'jid': '0', 'minions': []}
-            self.assertDictEqual(ret, expected_ret)
+            self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))
 
         # Check nodegroups behavior
         with patch('os.path.exists', return_value=True):
@@ -70,7 +73,7 @@ class LocalClientTestCase(TestCase,
                 # Do we raise an exception if the nodegroup can't be matched?
                 self.assertRaises(SaltInvocationError,
                                   self.client.pub,
-                                  'non_existant_group', 'test.ping', expr_form='nodegroup')
+                                  'non_existent_group', 'test.ping', expr_form='nodegroup')
 
 
 if __name__ == '__main__':

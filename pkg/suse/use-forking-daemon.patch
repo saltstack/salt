@@ -1,0 +1,14 @@
+Index: salt-2014.1.8/pkg/salt-master.service
+===================================================================
+--- salt-2014.1.13.orig/pkg/salt-master.service
++++ salt-2014.1.13/pkg/salt-master.service
+@@ -4,8 +4,7 @@ Description=The Salt Master Server
+ After=syslog.target network.target
+ 
+ [Service]
+ LimitNOFILE=16384
+-Type=notify
+-NotifyAccess=all
++Type=simple
+ ExecStart=/usr/bin/salt-master
+ KillMode=process

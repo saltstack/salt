@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+from mock import call
+import re
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-import re
-
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -26,6 +26,13 @@ test_list_db_csv = (
     'postgres,postgres,LATIN1,en_US,en_US,,pg_default\n'
     'test_db,postgres,LATIN1,en_US,en_US,,pg_default'
 )
+
+test_list_schema_csv = (
+    'name,owner,acl\n'
+    'public,postgres,"{postgres=UC/postgres,=UC/postgres}"\n'
+    'pg_toast,postgres,""'
+)
+
 
 if NO_MOCK is False:
     SALT_STUB = {
@@ -51,7 +58,7 @@ class PostgresTestCase(TestCase):
         self.assertEqual('postgres', cmd.call_args[1]['runas'])
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_alter(self):
         postgres.db_alter('dbname',
                           user='testuser',
@@ -62,15 +69,42 @@ class PostgresTestCase(TestCase):
                           tablespace='testspace',
                           owner='otheruser',
                           runas='foo')
-        postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
-            '--host testhost --port testport --dbname maint_db '
-            '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
-            host='testhost', user='testuser',
-            password='foo', runas='foo', port='testport')
+        postgres._run_psql.assert_has_calls([
+            call('/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
+                 '--host testhost --port testport --dbname maint_db '
+                 '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
+                 host='testhost', user='testuser',
+                 password='foo', runas='foo', port='testport'),
+            call('/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
+                 '--host testhost --port testport --dbname maint_db '
+                 '-c \'ALTER DATABASE "dbname" SET TABLESPACE "testspace"\'',
+                 host='testhost', user='testuser',
+                 password='foo', runas='foo', port='testport')
+        ])
+
+    @patch('salt.modules.postgres.owner_to',
+           Mock(return_value={'retcode': None}))
+    def test_db_alter_owner_recurse(self):
+        postgres.db_alter('dbname',
+                          user='testuser',
+                          host='testhost',
+                          port='testport',
+                          maintenance_db='maint_db',
+                          password='foo',
+                          tablespace='testspace',
+                          owner='otheruser',
+                          owner_recurse=True,
+                          runas='foo')
+        postgres.owner_to.assert_called_once_with('dbname',
+                                                  'otheruser',
+                                                  user='testuser',
+                                                  host='testhost',
+                                                  port='testport',
+                                                  password='foo',
+                                                  runas='foo')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_create(self):
         postgres.db_create(
             'dbname',
@@ -83,16 +117,18 @@ class PostgresTestCase(TestCase):
             owner='otheruser',
             runas='foo'
         )
+
+        qstr = (
+            '/usr/bin/pgsql --no-align --no-readline --no-password '
+            '--username testuser --host testhost --port testport --dbname maint_db '
+            '-c \'CREATE DATABASE "dbname" WITH TABLESPACE = testspace OWNER = "otheruser"\'')
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
-            '--host testhost --port testport --dbname maint_db -c '
-            '\'CREATE DATABASE "dbname" '
-            'WITH TABLESPACE = testspace OWNER = "otheruser"\'',
+            qstr,
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None,
+           Mock(return_value={'retcode': 0,
                               'stdout': test_list_db_csv}))
     def test_db_exists(self):
         ret = postgres.db_exists(
@@ -107,7 +143,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None,
+           Mock(return_value={'retcode': 0,
                               'stdout': test_list_db_csv}))
     def test_db_list(self):
         ret = postgres.db_list(
@@ -139,7 +175,7 @@ class PostgresTestCase(TestCase):
                          'Owner': 'postgres', 'Access privileges': ''}})
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_remove(self):
         postgres.db_remove(
             'test_db',
@@ -158,7 +194,7 @@ class PostgresTestCase(TestCase):
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=False))
     def test_group_create(self):
         postgres.group_create(
@@ -184,7 +220,7 @@ class PostgresTestCase(TestCase):
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
     def test_group_remove(self):
         postgres.group_remove(
@@ -204,13 +240,13 @@ class PostgresTestCase(TestCase):
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_group_update(self):
         postgres.group_update(
             'testgroup',
-            user='testuser',
+            user='"testuser"',
             host='testhost',
             port='testport',
             maintenance_db='maint_db',
@@ -225,11 +261,11 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(re.match(
             '.*'
-            '(\'|\")ALTER.* testgroup .* UNENCRYPTED PASSWORD',
+            '(\'|\")ALTER.* (\\\\)?"testgroup(\\\\)?" .* UNENCRYPTED PASSWORD',
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists',
            Mock(return_value=False))
     def test_user_create(self):
@@ -253,19 +289,20 @@ class PostgresTestCase(TestCase):
         )
         call = postgres._run_psql.call_args[0][0]
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser'
+            '/usr/bin/pgsql --no-align --no-readline --no-password '
+            '--username testuser'
             ' --host testhost --port testport'
-            ' --dbname maint_test -c (\'|\")CREATE ROLE',
+            ' --dbname maint_test -c (\'|\")CREATE ROLE (\\\\)?"testuser(\\\\)?"',
             call))
 
         for i in (
             'INHERIT NOCREATEDB NOCREATEROLE '
-            'NOSUPERUSER NOREPLICATION LOGIN PASSWORD'
+            'NOSUPERUSER NOREPLICATION LOGIN UNENCRYPTED PASSWORD'
         ).split():
             self.assertTrue(i in call, '{0} not in {1}'.format(i, call))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version',
            Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query',
@@ -296,7 +333,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version',
            Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query',
@@ -333,10 +370,11 @@ class PostgresTestCase(TestCase):
                           'expiry time': None,
                           'can login': True,
                           'can update system catalogs': True,
+                          'groups': [],
                           'inherits privileges': True}})
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
     def test_user_remove(self):
@@ -350,14 +388,15 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --no-password --username test_user "
+            "/usr/bin/pgsql --no-align --no-readline --no-password "
+            "--username test_user "
             "--host test_host --port test_port "
             "--dbname maint_db -c 'DROP ROLE test_user'",
             host='test_host', port='test_port', user='test_user',
             password='test_password', runas='foo')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update(self):
@@ -379,19 +418,21 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
+        call_output = postgres._run_psql.call_args[0][0]
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password '
+                '--username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE (\\\\)?"test_username(\\\\)?" WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
-                ' GRANT test_groups TO test_username[\'"]{0,1}',
-                postgres._run_psql.call_args[0][0])
+                ' GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username(\\\\)?"[\'"]{0,1}',
+                call_output)
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update2(self):
@@ -412,18 +453,19 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
+        call_output = postgres._run_psql.call_args[0][0]
         self.assertTrue(
             re.match(
                 '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c \'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN;'
-                ' GRANT test_groups TO test_username\'',
-                postgres._run_psql.call_args[0][0])
+                ' GRANT "test_groups" TO "test_username"\'',
+                call_output)
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update3(self):
@@ -445,18 +487,20 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
+        call_output = postgres._run_psql.call_args[0][0]
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password '
+                '--username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c \'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN NOPASSWORD;'
-                ' GRANT test_groups TO test_username\'',
-                postgres._run_psql.call_args[0][0])
+                ' GRANT "test_groups" TO "test_username"\'',
+                call_output)
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update_encrypted_passwd(self):
@@ -478,20 +522,22 @@ class PostgresTestCase(TestCase):
             groups='test_groups',
             runas='foo'
         )
+        call_output = postgres._run_psql.call_args[0][0]
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password '
+                '--username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE (\\\\)?"test_username(\\\\)?" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
                 '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
-                '; GRANT test_groups TO test_username[\'"]{0,1}',
-                postgres._run_psql.call_args[0][0])
+                '; GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username(\\\\)?"[\'"]{0,1}',
+                call_output)
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
+           Mock(return_value={'retcode': 0, 'stdout': '9.1.9'}))
     def test_version(self):
         postgres.version(
             user='test_user',
@@ -501,12 +547,14 @@ class PostgresTestCase(TestCase):
             password='test_pass',
             runas='foo'
         )
+        call_output = postgres._run_psql.call_args[0][0]
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
+            '/usr/bin/pgsql --no-align --no-readline --no-password '
+            '--username test_user '
             '--host test_host --port test_port '
             '--dbname test_maint '
             '-c (\'|\")SELECT setting FROM pg_catalog.pg_settings',
-            postgres._run_psql.call_args[0][0]))
+            call_output))
 
     @patch('salt.modules.postgres.psql_query',
            Mock(return_value=[{'extname': "foo", 'extversion': "1"}]))
@@ -666,6 +714,136 @@ class PostgresTestCase(TestCase):
                 'foo', 'bar', True),
             'md596948aad3fcae80c08a35c9b5958cd89')
 
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_list_schema_csv}))
+    def test_schema_list(self):
+        ret = postgres.schema_list(
+            'maint_db',
+            db_user='testuser',
+            db_host='testhost',
+            db_port='testport',
+            db_password='foo'
+        )
+        self.assertDictEqual(ret, {
+            'public': {'acl': '{postgres=UC/postgres,=UC/postgres}',
+                       'owner': 'postgres'},
+            'pg_toast': {'acl': '', 'owner': 'postgres'}
+            })
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_exists(self):
+        ret = postgres.schema_exists(
+            'template1',
+            'public'
+        )
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_get(self):
+        ret = postgres.schema_get(
+            'template1',
+            'public'
+        )
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_get_again(self):
+        ret = postgres.schema_get(
+            'template1',
+            'pg_toast'
+        )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=False))
+    def test_schema_create(self):
+        postgres.schema_create(
+            'test_db',
+            'test_schema',
+            user='user',
+            db_host='test_host',
+            db_port='test_port',
+            db_user='test_user',
+            db_password='test_password'
+        )
+        postgres._run_psql.assert_called_once_with(
+            "/usr/bin/pgsql --no-align --no-readline --no-password "
+            "--username test_user "
+            "--host test_host --port test_port "
+            "--dbname test_db -c 'CREATE SCHEMA test_schema'",
+            host='test_host', port='test_port',
+            password='test_password', user='test_user', runas='user')
+
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=True))
+    def test_schema_create2(self):
+        ret = postgres.schema_create('test_db',
+                                     'test_schema',
+                                     user='user',
+                                     db_host='test_host',
+                                     db_port='test_port',
+                                     db_user='test_user',
+                                     db_password='test_password'
+                                     )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=True))
+    def test_schema_remove(self):
+        postgres.schema_remove(
+            'test_db',
+            'test_schema',
+            user='user',
+            db_host='test_host',
+            db_port='test_port',
+            db_user='test_user',
+            db_password='test_password'
+        )
+        postgres._run_psql.assert_called_once_with(
+            "/usr/bin/pgsql --no-align --no-readline --no-password "
+            "--username test_user "
+            "--host test_host --port test_port "
+            "--dbname test_db -c 'DROP SCHEMA test_schema'",
+            host='test_host', port='test_port',
+            password='test_password', user='test_user', runas='user')
+
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=False))
+    def test_schema_remove2(self):
+        ret = postgres.schema_remove('test_db',
+                                     'test_schema',
+                                     user='user',
+                                     db_host='test_host',
+                                     db_port='test_port',
+                                     db_user='test_user',
+                                     db_password='test_password'
+                                     )
+        self.assertFalse(ret)
 
 if __name__ == '__main__':
     from integration import run_tests

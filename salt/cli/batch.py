@@ -4,7 +4,7 @@ Execute batch runs
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import math
 import time
 import copy
@@ -12,19 +12,27 @@ import copy
 # Import salt libs
 import salt.client
 import salt.output
+import salt.exceptions
 from salt.utils import print_cli
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 class Batch(object):
     '''
     Manage the execution of batch runs
     '''
-    def __init__(self, opts, eauth=None, quiet=False):
+    def __init__(self, opts, eauth=None, quiet=False, parser=None):
         self.opts = opts
         self.eauth = eauth if eauth else {}
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts['conf_file'])
         self.minions, self.ping_gen = self.__gather_minions()
+        self.options = parser
 
     def __gather_minions(self):
         '''
@@ -45,11 +53,14 @@ class Batch(object):
         ping_gen = self.local.cmd_iter(*args, **self.eauth)
 
         fret = set()
-        for ret in ping_gen:
-            m = next(ret.iterkeys())
-            if m is not None:
-                fret.add(m)
-        return (list(fret), ping_gen)
+        try:
+            for ret in ping_gen:
+                m = next(six.iterkeys(ret))
+                if m is not None:
+                    fret.add(m)
+            return (list(fret), ping_gen)
+        except StopIteration:
+            raise salt.exceptions.SaltClientError('No minions matched the target.')
 
     def get_bnum(self):
         '''
@@ -86,6 +97,13 @@ class Batch(object):
         ret = {}
         iters = []
 
+        if self.options:
+            show_jid = self.options.show_jid
+            show_verbose = self.options.verbose
+        else:
+            show_jid = False
+            show_verbose = False
+
         # the minion tracker keeps track of responses and iterators
         # - it removes finished iterators from iters[]
         # - if a previously detected minion does not respond, its
@@ -104,7 +122,11 @@ class Batch(object):
             else:
                 for i in range(bnum - len(active)):
                     if to_run:
-                        next_.append(to_run.pop())
+                        minion_id = to_run.pop()
+                        if isinstance(minion_id, dict):
+                            next_.append(minion_id.keys()[0])
+                        else:
+                            next_.append(minion_id)
 
             active += next_
             args[0] = next_
@@ -117,6 +139,8 @@ class Batch(object):
                                 *args,
                                 raw=self.opts.get('raw', False),
                                 ret=self.opts.get('return', ''),
+                                show_jid=show_jid,
+                                verbose=show_verbose,
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -133,9 +157,10 @@ class Batch(object):
             for ping_ret in self.ping_gen:
                 if ping_ret is None:
                     break
-                if ping_ret not in self.minions:
-                    self.minions.append(ping_ret)
-                    to_run.append(ping_ret)
+                m = next(ping_ret.iterkeys())
+                if m not in self.minions:
+                    self.minions.append(m)
+                    to_run.append(m)
 
             for queue in iters:
                 try:
@@ -151,8 +176,12 @@ class Batch(object):
                             continue
                         if self.opts.get('raw'):
                             parts.update({part['id']: part})
+                            minion_tracker[queue]['minions'].remove(part['id'])
                         else:
                             parts.update(part)
+                            for id in part.keys():
+                                if id in minion_tracker[queue]['minions']:
+                                    minion_tracker[queue]['minions'].remove(id)
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
@@ -169,11 +198,16 @@ class Batch(object):
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
-            for minion, data in parts.items():
+            for minion, data in six.iteritems(parts):
                 if minion in active:
                     active.remove(minion)
                 if self.opts.get('raw'):
                     yield data
+                elif self.opts.get('failhard'):
+                    # When failhard is passed, we need to return all data to include
+                    # the retcode to use in salt/cli/salt.py later. See issue #24996.
+                    ret[minion] = data
+                    yield {minion: data}
                 else:
                     ret[minion] = data['ret']
                     yield {minion: data['ret']}

@@ -4,6 +4,7 @@ Minion side functions for salt-cp
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import fnmatch
@@ -12,11 +13,18 @@ import fnmatch
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.utils.url
 import salt.crypt
 import salt.transport
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
+
+__proxyenabled__ = ['*']
 
 
 def _auth():
@@ -28,6 +36,24 @@ def _auth():
     return __context__['auth']
 
 
+def _gather_pillar(pillarenv, pillar_override):
+    '''
+    Whenever a state run starts, gather the pillar data fresh
+    '''
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'],
+        pillar=pillar_override,
+        pillarenv=pillarenv
+    )
+    ret = pillar.compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        ret.update(pillar_override)
+    return ret
+
+
 def recv(files, dest):
     '''
     Used with salt-cp, pass the files dict, and the destination.
@@ -36,7 +62,7 @@ def recv(files, dest):
     It does not work via the CLI.
     '''
     ret = {}
-    for path, data in files.items():
+    for path, data in six.iteritems(files):
         if os.path.basename(path) == os.path.basename(dest) \
                 and not os.path.isdir(dest):
             final = dest
@@ -59,13 +85,25 @@ def recv(files, dest):
 def _mk_client():
     '''
     Create a file client and add it to the context.
+
+    Each file client needs to correspond to a unique copy
+    of the opts dictionary, therefore it's hashed by the
+    id of the __opts__ dict
     '''
-    if 'cp.fileclient' not in __context__:
-        __context__['cp.fileclient'] = \
+    if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+        __context__['cp.fileclient_{0}'.format(id(__opts__))] = \
                 salt.fileclient.get_file_client(__opts__)
 
 
-def _render_filenames(path, dest, saltenv, template):
+def _client():
+    '''
+    Return a client, hashed by the list of masters
+    '''
+    _mk_client()
+    return __context__['cp.fileclient_{0}'.format(id(__opts__))]
+
+
+def _render_filenames(path, dest, saltenv, template, **kw):
     '''
     Process markup in the :param:`path` and :param:`dest` variables (NOT the
     files under the paths they ultimately point to) according to the markup
@@ -83,7 +121,11 @@ def _render_filenames(path, dest, saltenv, template):
 
     kwargs = {}
     kwargs['salt'] = __salt__
-    kwargs['pillar'] = __pillar__
+    if 'pillarenv' in kw or 'pillar' in kw:
+        pillarenv = kw.get('pillarenv', __opts__.get('pillarenv'))
+        kwargs['pillar'] = _gather_pillar(pillarenv, kw.get('pillar'))
+    else:
+        kwargs['pillar'] = __pillar__
     kwargs['grains'] = __grains__
     kwargs['opts'] = __opts__
     kwargs['saltenv'] = saltenv
@@ -124,7 +166,8 @@ def get_file(path,
              makedirs=False,
              template=None,
              gzip=None,
-             env=None):
+             env=None,
+             **kwargs):
     '''
     Used to get a single file from the salt master
 
@@ -152,6 +195,20 @@ def get_file(path,
     Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1
     is the lightest compression and 9 the heaviest.  1 uses the least CPU on
     the master (and minion), 9 uses the most.
+
+    There are two ways of defining the fileserver environment (a.k.a.
+    ``saltenv``) from which to retrieve the file. One is to use the ``saltenv``
+    parameter, and the other is to use a querystring syntax in the ``salt://``
+    URL. The below two examples are equivalent:
+
+    .. code-block:: bash
+
+        salt '*' cp.get_file salt://foo/bar.conf /etc/foo/bar.conf saltenv=config
+        salt '*' cp.get_file salt://foo/bar.conf?saltenv=config /etc/foo/bar.conf
+
+    .. note::
+        It may be necessary to quote the URL when using the querystring method,
+        depending on the shell being used to run the command.
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -162,13 +219,16 @@ def get_file(path,
         # Backwards compatibility
         saltenv = env
 
-    (path, dest) = _render_filenames(path, dest, saltenv, template)
+    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
+
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
 
     if not hash_file(path, saltenv):
         return ''
     else:
-        _mk_client()
-        return __context__['cp.fileclient'].get_file(
+        return _client().get_file(
                 path,
                 dest,
                 makedirs,
@@ -203,7 +263,6 @@ def get_template(path,
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
     if 'salt' not in kwargs:
         kwargs['salt'] = __salt__
     if 'pillar' not in kwargs:
@@ -212,7 +271,7 @@ def get_template(path,
         kwargs['grains'] = __grains__
     if 'opts' not in kwargs:
         kwargs['opts'] = __opts__
-    return __context__['cp.fileclient'].get_template(
+    return _client().get_template(
             path,
             dest,
             template,
@@ -221,7 +280,7 @@ def get_template(path,
             **kwargs)
 
 
-def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None):
+def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kwargs):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -242,15 +301,18 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None):
         # Backwards compatibility
         saltenv = env
 
-    (path, dest) = _render_filenames(path, dest, saltenv, template)
+    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
-    _mk_client()
-    return __context__['cp.fileclient'].get_dir(path, dest, saltenv, gzip)
+    return _client().get_dir(path, dest, saltenv, gzip)
 
 
 def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
+
+    The default behaviuor is to write the fetched file to the given
+    destination path. To simply return the text contents instead, set destination to
+    None.
 
     CLI Example:
 
@@ -268,8 +330,10 @@ def get_url(path, dest, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+    if dest:
+        return _client().get_url(path, dest, False, saltenv)
+    else:
+        return _client().get_url(path, None, False, saltenv, no_cache=True)
 
 
 def get_file_str(path, saltenv='base', env=None):
@@ -307,6 +371,20 @@ def cache_file(path, saltenv='base', env=None):
     .. code-block:: bash
 
         salt '*' cp.cache_file salt://path/to/file
+
+    There are two ways of defining the fileserver environment (a.k.a.
+    ``saltenv``) from which to cache the file. One is to use the ``saltenv``
+    parameter, and the other is to use a querystring syntax in the ``salt://``
+    URL. The below two examples are equivalent:
+
+    .. code-block:: bash
+
+        salt '*' cp.cache_file salt://foo/bar.conf saltenv=config
+        salt '*' cp.cache_file salt://foo/bar.conf?saltenv=config
+
+    .. note::
+        It may be necessary to quote the URL when using the querystring method,
+        depending on the shell being used to run the command.
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -317,30 +395,40 @@ def cache_file(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    if path.startswith('salt://|'):
-        # Strip pipe. Windows doesn't allow pipes in filenames
-        path = 'salt://{0}'.format(path[8:])
-    env_splitter = '?saltenv='
-    if '?env=' in path:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using '
-            '\'saltenv\' not \'env\'. This functionality will be '
-            'removed in Salt Boron.'
-        )
-        env_splitter = '?env='
+    contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+    path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
     try:
-        path, saltenv = path.split(env_splitter)
-    except ValueError:
+        if path_is_remote and contextkey in __context__:
+            # Prevent multiple caches in the same salt run. Affects remote URLs
+            # since the master won't know their hash, so the fileclient
+            # wouldn't be able to prevent multiple caches if we try to cache
+            # the remote URL more than once.
+            if os.path.isfile(__context__[contextkey]):
+                return __context__[contextkey]
+            else:
+                # File is in __context__ but no longer exists in the minion
+                # cache, get rid of the context key and re-cache below.
+                # Accounts for corner case where file is removed from minion
+                # cache between cp.cache_file calls in the same salt-run.
+                __context__.pop(contextkey)
+    except AttributeError:
         pass
-    result = __context__['cp.fileclient'].cache_file(path, saltenv)
+
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    result = _client().cache_file(path, saltenv)
     if not result:
         log.error(
             'Unable to cache file {0!r} from saltenv {1!r}.'.format(
                 path, saltenv
             )
         )
+    if path_is_remote:
+        # Cache was successful, store the result in __context__ to prevent
+        # multiple caches (see above).
+        __context__[contextkey] = result
     return result
 
 
@@ -355,6 +443,30 @@ def cache_files(paths, saltenv='base', env=None):
     .. code-block:: bash
 
         salt '*' cp.cache_files salt://pathto/file1,salt://pathto/file1
+
+    There are two ways of defining the fileserver environment (a.k.a.
+    ``saltenv``) from which to cache the files. One is to use the ``saltenv``
+    parameter, and the other is to use a querystring syntax in the ``salt://``
+    URL. The below two examples are equivalent:
+
+    .. code-block:: bash
+
+        salt '*' cp.cache_files salt://foo/bar.conf,salt://foo/baz.conf saltenv=config
+        salt '*' cp.cache_files salt://foo/bar.conf?saltenv=config,salt://foo/baz.conf?saltenv=config
+
+    The querystring method is less useful when all files are being cached from
+    the same environment, but is a good way of caching files from multiple
+    different environments in the same command. For example, the below command
+    will cache the first file from the ``config1`` environment, and the second
+    one from the ``config2`` environment.
+
+    .. code-block:: bash
+
+        salt '*' cp.cache_files salt://foo/bar.conf?saltenv=config1,salt://foo/bar.conf?saltenv=config2
+
+    .. note::
+        It may be necessary to quote the URL when using the querystring method,
+        depending on the shell being used to run the command.
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -365,8 +477,7 @@ def cache_files(paths, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_files(paths, saltenv)
+    return _client().cache_files(paths, saltenv)
 
 
 def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
@@ -411,8 +522,7 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_dir(
+    return _client().cache_dir(
         path, saltenv, include_empty, include_pat, exclude_pat
     )
 
@@ -436,8 +546,7 @@ def cache_master(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_master(saltenv)
+    return _client().cache_master(saltenv)
 
 
 def cache_local_file(path):
@@ -464,8 +573,7 @@ def cache_local_file(path):
             return path_cached
 
     # The file hasn't been cached or has changed; cache it
-    _mk_client()
-    return __context__['cp.fileclient'].cache_local_file(path)
+    return _client().cache_local_file(path)
 
 
 def list_states(saltenv='base', env=None):
@@ -487,8 +595,7 @@ def list_states(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].list_states(saltenv)
+    return _client().list_states(saltenv)
 
 
 def list_master(saltenv='base', prefix='', env=None):
@@ -510,8 +617,7 @@ def list_master(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].file_list(saltenv, prefix)
+    return _client().file_list(saltenv, prefix)
 
 
 def list_master_dirs(saltenv='base', prefix='', env=None):
@@ -533,8 +639,7 @@ def list_master_dirs(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].dir_list(saltenv, prefix)
+    return _client().dir_list(saltenv, prefix)
 
 
 def list_master_symlinks(saltenv='base', prefix='', env=None):
@@ -556,8 +661,7 @@ def list_master_symlinks(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].symlink_list(saltenv, prefix)
+    return _client().symlink_list(saltenv, prefix)
 
 
 def list_minion(saltenv='base', env=None):
@@ -579,8 +683,7 @@ def list_minion(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].file_local_list(saltenv)
+    return _client().file_local_list(saltenv)
 
 
 def is_cached(path, saltenv='base', env=None):
@@ -603,8 +706,7 @@ def is_cached(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].is_cached(path, saltenv)
+    return _client().is_cached(path, saltenv)
 
 
 def hash_file(path, saltenv='base', env=None):
@@ -628,11 +730,14 @@ def hash_file(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].hash_file(path, saltenv)
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    return _client().hash_file(path, saltenv)
 
 
-def push(path):
+def push(path, keep_symlinks=False, upload_path=None):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
@@ -643,42 +748,61 @@ def push(path):
     ``file_recv`` to ``True`` in the master configuration file, and restart the
     master.
 
+    keep_symlinks
+        Keep the path value without resolving its canonical form
+
+    upload_path
+        Provide a different path inside the master's minion files cachedir
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cp.push /etc/fstab
+        salt '*' cp.push /etc/system-release keep_symlinks=True
+        salt '*' cp.push /etc/fstab upload_path='/new/path/fstab'
     '''
     log.debug('Trying to copy {0!r} to master'.format(path))
     if '../' in path or not os.path.isabs(path):
         log.debug('Path must be absolute, returning False')
         return False
-    path = os.path.realpath(path)
+    if not keep_symlinks:
+        path = os.path.realpath(path)
     if not os.path.isfile(path):
         log.debug('Path failed os.path.isfile check, returning False')
         return False
     auth = _auth()
 
+    if upload_path:
+        if '../' in upload_path:
+            log.debug('Path must be absolute, returning False')
+            log.debug('Bad path: {0}'.format(upload_path))
+            return False
+        load_path = upload_path.lstrip(os.sep)
+    else:
+        load_path = path.lstrip(os.sep)
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
-            'path': path.lstrip(os.sep),
+            'path': load_path,
             'tok': auth.gen_token('salt')}
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
+        init_send = False
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
-            if not load['data']:
+            if not load['data'] and init_send:
                 return True
-            ret = sreq.send(load)
+            ret = channel.send(load)
             if not ret:
                 log.error('cp.push Failed transfer failed. Ensure master has '
                 '\'file_recv\' set to \'True\' and that the file is not '
                 'larger than the \'file_recv_size_max\' setting on the master.')
                 return ret
+            init_send = True
 
 
-def push_dir(path, glob=None):
+def push_dir(path, glob=None, upload_path=None):
     '''
     Push a directory from the minion up to the master, the files will be saved
     to the salt master in the master's minion files cachedir (defaults to
@@ -691,26 +815,36 @@ def push_dir(path, glob=None):
     is disabled by default for security purposes. To enable, set ``file_recv``
     to ``True`` in the master configuration file, and restart the master.
 
+    upload_path
+        Provide a different path and directory name inside the master's minion
+        files cachedir
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cp.push /usr/lib/mysql
+        salt '*' cp.push /usr/lib/mysql upload_path='/newmysql/path'
         salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
     '''
     if '../' in path or not os.path.isabs(path):
         return False
+    tmpupload_path = upload_path
     path = os.path.realpath(path)
     if os.path.isfile(path):
-        return push(path)
+        return push(path, upload_path=upload_path)
     else:
         filelist = []
         for root, dirs, files in os.walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
-            filelist = filter(lambda fi: fnmatch.fnmatch(fi, glob), filelist)
+            filelist = [fi for fi in filelist if fnmatch.fnmatch(fi, glob)]
         for tmpfile in filelist:
-            ret = push(tmpfile)
+            if upload_path and tmpfile.startswith(path):
+                tmpupload_path = os.path.join(os.path.sep,
+                                   upload_path.strip(os.path.sep),
+                                   tmpfile.replace(path, '').strip(os.path.sep))
+            ret = push(tmpfile, upload_path=tmpupload_path)
             if not ret:
                 return ret
     return True

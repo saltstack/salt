@@ -5,13 +5,16 @@ Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
 
-# Import salt libs
-import salt.utils
-
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import random
 import string
+
+# Import Salt Libs
+import salt.utils
+from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -24,14 +27,15 @@ def __virtual__():
 
 
 def _format_response(response, msg):
+    error = 'RabbitMQ command failed: {0}'.format(response)
     if isinstance(response, dict):
         if response['retcode'] != 0:
-            msg = 'Error'
+            raise CommandExecutionError(error)
         else:
             msg = response['stdout']
     else:
         if 'Error' in response:
-            msg = 'Error'
+            raise CommandExecutionError(error)
     return {
         msg: response
     }
@@ -55,8 +59,30 @@ def _get_rabbitmq_plugin():
     return rabbitmq
 
 
+def _strip_listing_to_done(output_list):
+    '''Conditionally remove non-relevant first and last line,
+    "Listing ..." - "...done".
+    outputlist: rabbitmq command output split by newline
+    return value: list, conditionally modified, may be empty.
+    '''
+
+    # conditionally remove non-relevant first line
+    f_line = ''.join(output_list[:1])
+    if f_line.startswith('Listing') and f_line.endswith('...'):
+        output_list.pop(0)
+
+    # some versions of rabbitmq have no trailing '...done' line,
+    # which some versions do not output.
+    l_line = ''.join(output_list[-1:])
+    if '...done' in l_line:
+        output_list.pop()
+
+    return output_list
+
+
 def _output_to_dict(cmdoutput, values_mapper=None):
-    '''Convert rabbitmqctl output to a dict of data
+    '''
+    Convert rabbitmqctl output to a dict of data
     cmdoutput: string output of rabbitmqctl commands
     values_mapper: function object to process the values part of each line
     '''
@@ -65,11 +91,22 @@ def _output_to_dict(cmdoutput, values_mapper=None):
         values_mapper = lambda string: string.split('\t')
 
     # remove first and last line: Listing ... - ...done
-    data_rows = cmdoutput.splitlines()[1:-1]
-    for row in data_rows:
-        key, values = row.split('\t', 1)
-        ret[key] = values_mapper(values)
+    data_rows = _strip_listing_to_done(cmdoutput.splitlines())
 
+    for row in data_rows:
+        try:
+            key, values = row.split('\t', 1)
+        except ValueError:
+            # If we have reached this far, we've hit an edge case where the row
+            # only has one item: the key. The key doesn't have any values, so we
+            # set it to an empty string to preserve rabbitmq reporting behavior.
+            # e.g. A user's permission string for '/' is set to ['', '', ''],
+            # Rabbitmq reports this only as '/' from the rabbitmqctl command.
+            log.debug('Could not find any values for key \'{0}\'. '
+                      'Setting to \'{0}\' to an empty string.'.format(row))
+            ret[row] = ''
+            continue
+        ret[key] = values_mapper(values)
     return ret
 
 
@@ -89,7 +126,7 @@ def list_users(runas=None):
                               runas=runas)
 
     # func to get tags from string such as "[admin, monitoring]"
-    func = lambda string: set(string[1:-1].split(','))
+    func = lambda string: set([x.strip() for x in string[1:-1].split(',')])
     return _output_to_dict(res, func)
 
 
@@ -105,11 +142,9 @@ def list_vhosts(runas=None):
     '''
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqctl list_vhosts',
-                              runas=runas)
-
-    # remove first and last line: Listing ... - ...done
-    return res.splitlines()[1:-1]
+    res = __salt__['cmd.run']('rabbitmqctl list_vhosts -q',
+                              runas=runas).splitlines()
+    return res
 
 
 def user_exists(name, runas=None):
@@ -409,7 +444,7 @@ def cluster_status(runas=None):
     return res
 
 
-def join_cluster(host, user='rabbit', runas=None):
+def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     '''
     Join a rabbit cluster
 
@@ -417,15 +452,17 @@ def join_cluster(host, user='rabbit', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
     '''
+    if ram_node:
+        cmd = 'rabbitmqctl join_cluster --ram {0}@{1}'.format(user, host)
+    else:
+        cmd = 'rabbitmqctl join_cluster {0}@{1}'.format(user, host)
+
     if runas is None:
         runas = salt.utils.get_user()
     stop_app(runas)
-    res = __salt__['cmd.run'](
-        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
-        python_shell=False,
-        runas=runas)
+    res = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -553,7 +590,7 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
     return res
 
 
-def list_policies(runas=None):
+def list_policies(vhost="/", runas=None):
     '''
     Return a dictionary of policies nested by vhost and name
     based on the data returned from rabbitmqctl list_policies.
@@ -569,22 +606,27 @@ def list_policies(runas=None):
     ret = {}
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqctl list_policies',
+    res = __salt__['cmd.run']('rabbitmqctl list_policies -p {0}'.format(
+                              vhost),
                               runas=runas)
     for line in res.splitlines():
         if '...' not in line and line != '\n':
             parts = line.split('\t')
-            if len(parts) != 6:
+            if len(parts) not in (5, 6):
                 continue
             vhost, name = parts[0], parts[1]
             if vhost not in ret:
                 ret[vhost] = {}
-            ret[vhost][name] = {
-                'apply_to': parts[2],
-                'pattern': parts[3],
-                'definition': parts[4],
-                'priority': parts[5]
-            }
+            ret[vhost][name] = {}
+            # How many fields are there? - 'apply_to' was inserted in position 2 at somepoint
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
     log.debug('Listing policies: {0}'.format(ret))
     return ret
 
@@ -599,7 +641,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
+        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode":"all"}'
     '''
     if runas is None:
         runas = salt.utils.get_user()
@@ -672,8 +714,12 @@ def plugin_is_enabled(name, runas=None):
     cmd = '{0} list -m -e'.format(rabbitmq)
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run'](cmd, python_shell=False, runas=runas)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):

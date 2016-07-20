@@ -30,11 +30,11 @@
 {%endif%}{% if interface.provider %}    provider {{interface.provider}}
 {%endif%}{% if interface.unit %}    unit {{interface.unit}}
 {%endif%}{% if interface.options %}    options {{interface.options}}
-{%endif%}{% if interface.master %}    bond_master {{interface.master}}
+{%endif%}{% if interface.master %}    bond-master {{interface.master}}
 {%endif%}{% if interface.dns_nameservers %}    dns-nameservers {%for item in interface.dns_nameservers %}{{item}} {%endfor%}
 {%endif%}{% if interface.dns_search %}    dns-search {% for item in interface.dns_search %}{{item}} {%endfor%}
 {%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    bond_{{item}} {{interface.bonding[item]}}
+{%endfor%}{%endif%}{% if interface.bonding %}{%for item in interface.bonding_keys %}    bond-{{item}} {{interface.bonding[item]}}
 {%endfor%}{%endif%}{% if interface.bridging %}{%for item in interface.bridging_keys %}    bridge_{{item}} {{interface.bridging[item]}}
 {%endfor%}{%endif%}{% if interface.wireless_essid %}    wireless-essid {{interface.wireless_essid}}
 {%endif%}{% if interface.wireless_mode %}    wireless-mode {{interface.wireless_mode}}

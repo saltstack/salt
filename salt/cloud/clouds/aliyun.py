@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 AliYun ECS Cloud Module
-==========================
+=======================
 
 .. versionadded:: 2014.7.0
 
@@ -20,23 +20,25 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # aliyun Access Key Secret
       key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
 :depends: requests
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import json
 import pprint
-import requests
 import logging
 import hmac
-import urllib
 import uuid
 import sys
 import base64
 from hashlib import sha1
+
+# Import Salt libs
+from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -47,6 +49,13 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -62,6 +71,8 @@ DEFAULT_LOCATION = 'cn-hangzhou'
 
 DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
 
+__virtualname__ = 'aliyun'
+
 
 # Only load in this module if the aliyun configurations are in place
 def __virtual__():
@@ -71,7 +82,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -80,8 +94,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'aliyun',
+        __active_provider_name__ or __virtualname__,
         ('id', 'key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -118,7 +142,7 @@ def avail_images(kwargs=None, call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     provider = get_configured_provider()
@@ -440,7 +464,9 @@ def start(name, call=None):
     '''
     Start a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a start myinstance
     '''
@@ -464,7 +490,9 @@ def stop(name, force=False, call=None):
     '''
     Stop a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a stop myinstance
         salt-cloud -a stop myinstance force=True
@@ -492,7 +520,9 @@ def reboot(name, call=None):
     '''
     Reboot a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot myinstance
     '''
@@ -516,7 +546,7 @@ def create_node(kwargs):
     '''
     Convenience function to make the rest api call for node creation.
     '''
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     # Required parameters
@@ -549,6 +579,21 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'aliyun',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -556,7 +601,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -641,7 +686,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -663,16 +708,16 @@ def _compute_signature(parameters, access_key_secret):
             s = line.decode().encode('utf8')
         else:
             s = line.decode(sys.stdin.encoding).encode('utf8')
-        res = urllib.quote(s, '')
+        res = _quote(s, '')
         res = res.replace('+', '%20')
         res = res.replace('*', '%2A')
         res = res.replace('%7E', '~')
         return res
 
-    sortedParameters = sorted(parameters.items(), key=lambda items: items[0])
+    sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
-    for (k, v) in sortedParameters:
+    for k, v in sortedParameters:
         canonicalizedQueryString += '&' + percent_encode(k) \
             + '=' + percent_encode(v)
 
@@ -731,7 +776,6 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    #print content
 
     result = json.loads(content, object_hook=salt.utils.decode_dict)
     if 'Code' in result:
@@ -761,7 +805,9 @@ def show_disk(name, call=None):
     '''
     Show the disk details of the instance
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a show_disk aliyun myinstance
     '''
@@ -790,7 +836,9 @@ def list_monitor_data(kwargs=None, call=None):
     Get monitor data of the instance. If instance name is
     missing, will show all the instance monitor data on the region.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f list_monitor_data aliyun
         salt-cloud -f list_monitor_data aliyun name=AY14051311071990225bd
@@ -800,7 +848,7 @@ def list_monitor_data(kwargs=None, call=None):
             'The list_monitor_data must be called with -f or --function.'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     ret = {}
@@ -865,7 +913,7 @@ def show_image(kwargs, call=None):
             '-f or --function'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     location = get_location()

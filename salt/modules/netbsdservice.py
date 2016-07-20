@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for NetBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -108,7 +115,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} onestatus'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
 
 
 def _get_svc(rcd, service_status):
@@ -256,7 +263,7 @@ def disable(name, **kwargs):
     return _rcconf_status(name, 'NO')
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

@@ -14,6 +14,7 @@ client applications.
     http://docs.saltstack.com/ref/clients/index.html
 
 '''
+from __future__ import absolute_import
 # Import Python libs
 import os
 
@@ -45,7 +46,7 @@ class APIClient(object):
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
     '''
-    def __init__(self, opts=None):
+    def __init__(self, opts=None, listen=True):
         if not opts:
             opts = salt.config.client_config(
                 os.environ.get(
@@ -62,7 +63,8 @@ class APIClient(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
-                opts=self.opts)
+                opts=self.opts,
+                listen=listen)
 
     def run(self, cmd):
         '''
@@ -250,7 +252,7 @@ class APIClient(object):
         {
             'token': 'tokenstring',
             'start': starttimeinfractionalseconds,
-            'expire': expiretimeinfactionalseconds,
+            'expire': expiretimeinfractionalseconds,
             'name': 'usernamestring',
             'user': 'usernamestring',
             'username': 'usernamestring',

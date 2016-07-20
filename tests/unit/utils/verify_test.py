@@ -4,6 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import getpass
 import os
 import sys
@@ -33,6 +34,9 @@ from salt.utils.verify import (
     check_max_open_files,
     valid_id
 )
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class TestVerify(TestCase):

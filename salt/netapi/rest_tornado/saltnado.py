@@ -20,12 +20,17 @@ add the following to the Salt master config file.
     rest_tornado:
         # can be any port
         port: 8000
+        # address to bind to (defaults to 0.0.0.0)
+        address: 0.0.0.0
+        # socket backlog
+        backlog: 128
         ssl_crt: /etc/pki/api/certs/server.crt
         # no need to specify ssl_key if cert and key
         # are in one single file
         ssl_key: /etc/pki/api/certs/server.key
         debug: False
         disable_ssl: False
+        webhook_disable_auth: False
 
 
 .. _rest_tornado-auth:
@@ -146,25 +151,25 @@ a return like::
 '''
 # pylint: disable=W0232
 
+# Import Python libs
+from __future__ import absolute_import
+import time
+import math
+import fnmatch
 import logging
 from copy import copy
+from collections import defaultdict
 
-import time
-
+# pylint: disable=import-error
+import yaml
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
-
 from tornado.concurrent import Future
-
-from collections import defaultdict
-
-import math
-import yaml
-import fnmatch
-
 from zmq.eventloop import ioloop, zmqstream
+import salt.ext.six as six
+# pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)
 ioloop.install()
@@ -212,6 +217,7 @@ class SaltClientsMixIn(object):
                 'local_batch': local_client.cmd_batch,
                 'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
                 }
         return SaltClientsMixIn.__saltclients
 
@@ -253,9 +259,9 @@ class EventListener(object):
             'master',
             opts['sock_dir'],
             opts['transport'],
-            opts=opts)
-
-        self.event.subscribe()  # start listening for events immediately
+            opts=opts,
+            listen=True,
+        )
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -263,10 +269,13 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
-        self.timeout_map = {}  # map of future -> timeout_callback
+        # map of future -> timeout_callback
+        self.timeout_map = {}
 
-        self.stream = zmqstream.ZMQStream(self.event.sub,
-                                          io_loop=tornado.ioloop.IOLoop.current())
+        self.stream = zmqstream.ZMQStream(
+            self.event.sub,
+            io_loop=tornado.ioloop.IOLoop.current(),
+        )
         self.stream.on_recv(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
@@ -276,7 +285,14 @@ class EventListener(object):
         if request not in self.request_map:
             return
         for tag, future in self.request_map[request]:
+            # timeout the future
             self._timeout_future(tag, future)
+            # remove the timeout
+            if future in self.timeout_map:
+                tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                del self.timeout_map[future]
+
+        del self.request_map[request]
 
     def get_event(self,
                   request,
@@ -287,6 +303,13 @@ class EventListener(object):
         '''
         Get an event (async of course) return a future that will get it later
         '''
+        # if the request finished, no reason to allow event fetching, since we
+        # can't send back to the client
+        if request._finished:
+            future = Future()
+            future.set_exception(TimeoutException())
+            return future
+
         future = Future()
         if callback is not None:
             def handle_future(future):
@@ -320,7 +343,7 @@ class EventListener(object):
         '''
         mtag, data = self.event.unpack(raw[0], self.event.serial)
         # see if we have any futures that need this info:
-        for tag_prefix, futures in self.tag_map.items():
+        for tag_prefix, futures in six.iteritems(self.tag_map):
             if mtag.startswith(tag_prefix):
                 for future in futures:
                     if future.done():
@@ -356,21 +379,11 @@ def get_batch_size(batch, num_minions):
                'of %10, 10% or 3').format(batch))
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
+class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', json.dumps),
         ('application/x-yaml', yaml.safe_dump),
     )
-
-    def min_syndic_wait_done(self):
-        '''
-        Ensure that the request has been open for a minimum of syndic_wait time
-        '''
-        if not self.application.opts['order_masters']:
-            return True
-        elif time.time() > self.start + self.application.opts['syndic_wait']:
-            return True
-        return False
 
     def _verify_client(self, client):
         '''
@@ -378,8 +391,19 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write("We don't serve your kind here")
+            self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
+
+    def initialize(self):
+        '''
+        Initialize the handler before requests are called
+        '''
+        if not hasattr(self.application, 'event_listener'):
+            logger.critical('init a listener')
+            self.application.event_listener = EventListener(
+                self.application.mod_opts,
+                self.application.opts,
+            )
 
     @property
     def token(self):
@@ -458,7 +482,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in self.request.arguments.iteritems():
+        for key, val in six.iteritems(self.request.arguments):
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -474,7 +498,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
             'application/json': json.loads,
             'application/x-yaml': yaml.safe_load,
             'text/yaml': yaml.safe_load,
-            # because people are terrible and dont mean what they say
+            # because people are terrible and don't mean what they say
             'text/plain': json.loads
         }
 
@@ -503,7 +527,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         return lowstate
 
 
-class SaltAuthHandler(BaseSaltAPIHandler):
+class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Handler for login requests
     '''
@@ -658,7 +682,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         self.write(self.serialize(ret))
 
 
-class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
+class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
@@ -694,9 +718,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             Content-Type: application/json
             Content-Legnth: 83
 
-            {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
+            {"clients": ["local", "local_batch", "local_async", "runner", "runner_async"], "return": "Welcome"}
         '''
-        ret = {"clients": self.saltclients.keys(),
+        ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
         self.write(self.serialize(ret))
 
@@ -830,7 +854,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
         if not isinstance(ping_ret, dict):
             raise tornado.gen.Return(chunk_ret)
-        minions = ping_ret.keys()
+        minions = list(ping_ret.keys())
 
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
@@ -866,7 +890,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
         '''
-        Disbatch local client commands
+        Dispatch local client commands
         '''
         chunk_ret = {}
 
@@ -1012,8 +1036,16 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
 
+    @tornado.gen.coroutine
+    def _disbatch_runner_async(self, chunk):
+        '''
+        Disbatch runner client_async commands
+        '''
+        pub_data = self.saltclients['runner'](chunk)
+        raise tornado.gen.Return(pub_data)
 
-class MinionSaltAPIHandler(SaltAPIHandler):
+
+class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for minion related functions
     '''
@@ -1142,7 +1174,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):
         self.disbatch()
 
 
-class JobsSaltAPIHandler(SaltAPIHandler):
+class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for job cache data
     '''
@@ -1248,7 +1280,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):
         self.disbatch()
 
 
-class RunSaltAPIHandler(SaltAPIHandler):
+class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     Endpoint to run commands without normal session handling
     '''
@@ -1312,7 +1344,7 @@ class RunSaltAPIHandler(SaltAPIHandler):
         self.disbatch()
 
 
-class EventsSaltAPIHandler(SaltAPIHandler):
+class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     Expose the Salt event bus
 
@@ -1440,7 +1472,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):
                 break
 
 
-class WebhookSaltAPIHandler(SaltAPIHandler):
+class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A generic web hook entry point that fires an event on Salt's event bus
 
@@ -1563,7 +1595,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
                       revision: {{ revision }}
             {% endif %}
         '''
-        if not self._verify_auth():
+        disable_auth = self.application.mod_opts.get('webhook_disable_auth')
+        if not disable_auth and not self._verify_auth():
             self.redirect('/login')
             return
 
@@ -1577,10 +1610,12 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
             'master',
             self.application.opts['sock_dir'],
             self.application.opts['transport'],
-            opts=self.application.opts)
+            opts=self.application.opts,
+            listen=False)
 
         ret = self.event.fire_event({
             'post': self.raw_data,
+            'get': dict(self.request.query_arguments),
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

@@ -6,10 +6,14 @@ import os
 import urlparse
 
 # Import third party libs
-from mako.lookup import TemplateCollection, TemplateLookup
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
+from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error
 
 # Import salt libs
 import salt.fileclient
+import salt.utils.url
 
 
 class SaltMakoTemplateLookup(TemplateCollection):
@@ -57,7 +61,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
         self.cache = {}
 
     def adjust_uri(self, uri, filename):
-        scheme = urlparse.urlparse(uri).scheme
+        scheme = urlparse(uri).scheme
         if scheme in ('salt', 'file'):
             return uri
         elif scheme:
@@ -70,22 +74,22 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def get_template(self, uri, relativeto=None):
         if uri.startswith("file://"):
-            prefix = "file://"
+            proto = "file://"
             searchpath = "/"
             salt_uri = uri
         else:
-            prefix = "salt://"
+            proto = "salt://"
             if self.opts['file_client'] == 'local':
                 searchpath = self.opts['file_roots'][self.saltenv]
             else:
                 searchpath = [os.path.join(self.opts['cachedir'],
                                            'files',
                                            self.saltenv)]
-            salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
+            salt_uri = uri if uri.startswith(proto) else salt.utils.url.create(uri)
             self.cache_file(salt_uri)
 
         self.lookup = TemplateLookup(directories=searchpath)
-        return self.lookup.get_template(salt_uri[len(prefix):])
+        return self.lookup.get_template(salt_uri[len(proto):])
 
     def cache_file(self, fpath):
         if fpath not in self.cache:

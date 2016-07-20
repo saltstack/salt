@@ -15,17 +15,19 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 
 :depends:    - pyOpenSSL module
 '''
+# Import python libs
+from __future__ import absolute_import
+import logging
 
 # Import third party libs
+# pylint: disable=import-error
 try:
     import Crypto.Util
     import OpenSSL
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
-
-# Import python libs
-import logging
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

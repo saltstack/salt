@@ -10,10 +10,20 @@
 
     Some mix-in classes to be used in salt's logging
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 import logging
+
+
+class LoggingProfileMixIn(object):
+    '''
+    Simple mix-in class to add a trace method to python's logging.
+    '''
+
+    def profile(self, msg, *args, **kwargs):
+        self.log(getattr(logging, 'PROFILE', 15), msg, *args, **kwargs)
 
 
 class LoggingTraceMixIn(object):
@@ -44,7 +54,7 @@ class LoggingMixInMeta(type):
     the bases.
     '''
     def __new__(mcs, name, bases, attrs):
-        include_trace = include_garbage = True
+        include_profile = include_trace = include_garbage = True
         bases = list(bases)
         if name == 'SaltLoggingClass':
             for base in bases:
@@ -52,6 +62,8 @@ class LoggingMixInMeta(type):
                     include_trace = False
                 if hasattr(base, 'garbage'):
                     include_garbage = False
+        if include_profile:
+            bases.append(LoggingProfileMixIn)
         if include_trace:
             bases.append(LoggingTraceMixIn)
         if include_garbage:
@@ -119,7 +131,7 @@ class ExcInfoOnLogLevelFormatMixIn(object):
             #     We also use replace for when there are multiple
             #     encodings, e.g. UTF-8 for the filesystem and latin-1
             #     for a script. See issue 13232.
-            formatted_record += record.record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
-                                                                                    'replace')
+            formatted_record += record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
+                                                                             'replace')
 
         return formatted_record

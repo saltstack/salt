@@ -36,16 +36,13 @@ Module for handling OpenStack Nova calls
 
         salt '*' nova.flavor_list profile=openstack1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
-try:
-    import salt.utils.openstack.nova as suon
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+import salt.utils.openstack.nova as suon
 
 
 # Get logging started
@@ -62,7 +59,10 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return HAS_NOVA
+    if suon.check_nova():
+        return 'nova'
+    else:
+        return False
 
 
 __opts__ = {}
@@ -559,6 +559,12 @@ def list_(profile=None):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.list
     '''
     return server_list(profile=profile)
 

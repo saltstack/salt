@@ -1,44 +1,33 @@
+.. _salt-ssh:
+
 ========
 Salt SSH
 ========
 
-.. note::
+.. raw:: html
+ :file: index.html
 
-    Salt ssh is considered production ready in version 2014.7.0
-
-.. note::
-
-    On many systems, ``salt-ssh`` will be in its own package, usually named
-    ``salt-ssh``.
-
-In version 0.17.0 of Salt a new transport system was introduced, the ability
-to use SSH for Salt communication. This addition allows for Salt routines to
-be executed on remote systems entirely through ssh, bypassing the need for
-a Salt Minion to be running on the remote systems and the need for a Salt
-Master.
-
-.. note::
-
-    The Salt SSH system does not supercede the standard Salt communication
-    systems, it simply offers an SSH based alternative that does not require
-    ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is
-    executed via SSH it is substantially slower than standard Salt with ZeroMQ.
+Getting Started
+===============
 
 Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
-.. note::
-
-    The Salt SSH eventually is supposed to support the same set of commands and 
-    functionality as standard ``salt`` command. 
-    
-    At the moment fileserver operations must be wrapped to ensure that the 
-    relevant files are delivered with the ``salt-ssh`` commands. 
-    The state module is an exception, which compiles the state run on the 
-    master, and in the process finds all the references to ``salt://`` paths and 
-    copies those files down in the same tarball as the state run. 
-    However, needed fileserver wrappers are still under development.
+- Salt ssh is considered production ready in version 2014.7.0
+- Python is required on the remote system (unless using the ``-r`` option to send raw ssh commands)
+- On many systems, the ``salt-ssh`` executable will be in its own package, usually named
+  ``salt-ssh``
+- The Salt SSH system does not supercede the standard Salt communication
+  systems, it simply offers an SSH-based alternative that does not require
+  ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is
+  executed via SSH it is substantially slower than standard Salt with ZeroMQ.
+- At the moment fileserver operations must be wrapped to ensure that the
+  relevant files are delivered with the ``salt-ssh`` commands.
+  The state module is an exception, which compiles the state run on the
+  master, and in the process finds all the references to ``salt://`` paths and
+  copies those files down in the same tarball as the state run.
+  However, needed fileserver wrappers are still under development.
 
 Salt SSH Roster
 ===============
@@ -46,7 +35,6 @@ Salt SSH Roster
 The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
-
     See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
@@ -67,14 +55,59 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
-      
-.. note::
 
+.. note::
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
-    ``fred ALL=(ALL) NOPASSWD: ALL`` 
+    ``fred ALL=(ALL) NOPASSWD: ALL``
+
+Deploy ssh key for salt-ssh
+===========================
+
+By default, salt-ssh will generate key pairs for ssh, the default path will be
+/etc/salt/pki/master/ssh/salt-ssh.rsa
+
+You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
+
+.. code-block:: bash
+
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub user@server.demo.com
+
+One could also create a simple shell script, named salt-ssh-copy-id.sh as follows:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   if [ -z $1 ]; then
+      echo $0 user@host.com
+      exit 0
+   fi
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub $1
+
+
+.. note::
+    Be certain to chmod +x salt-ssh-copy-id.sh.
+
+.. code-block:: bash
+
+   ./salt-ssh-copy-id.sh user@server1.host.com
+   ./salt-ssh-copy-id.sh user@server2.host.com
+
+Once keys are successfully deployed, salt-ssh can be used to control them.
+
 
 Calling Salt SSH
 ================
+
+.. note:: ``salt-ssh`` on RHEL/CentOS 5
+
+    The ``salt-ssh`` command requires at least python 2.6, which is not
+    installed by default on RHEL/CentOS 5.  An easy workaround in this
+    situation is to use the ``-r`` option to run a raw shell command that
+    installs python26:
+
+    .. code-block:: bash
+
+        salt-ssh centos-5-minion -r 'yum -y install epel-release ; yum -y install python26'
 
 The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
@@ -86,7 +119,7 @@ command:
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
-and many of the same flags are available. Please see 
+and many of the same flags are available. Please see
 http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
 options.
 
@@ -118,12 +151,19 @@ Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
 
+.. note::
+    By default, Grains are settable through ``salt-ssh``. By
+    default, these grains will *not* be persisted across reboots.
+
+    See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
+    for more details.
+
 Configuring Salt SSH
 ====================
 
 Salt SSH takes its configuration from a master configuration file. Normally, this
 file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
-the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a
 configuration file named ``master``.
 
 Minion Config
@@ -153,15 +193,15 @@ If you are commonly passing in CLI options to ``salt-ssh``, you can create
 a ``Saltfile`` to automatically use these options. This is common if you're
 managing several different salt projects on the same server.
 
-So if you ``cd`` into a directory with a ``Saltfile`` with the following
+So you can ``cd`` into a directory that has a ``Saltfile`` with the following
 YAML contents:
 
 .. code-block:: yaml
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_prox: 30
-      wipe_ssh: true
+      max_procs: 30
+      wipe_ssh: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -177,5 +217,17 @@ Boolean-style options should be specified in their YAML representation.
    case of the ``--wipe`` command line option, its ``dest`` is configured to
    be ``wipe_ssh`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
-   true`` or ``w: true``, will not work.
+   True`` or ``w: True``, will not work.
 
+Debugging salt-ssh
+==================
+
+One common approach for debugging ``salt-ssh`` is to simply use the tarball that salt
+ships to the remote machine and call ``salt-call`` directly.
+
+To determine the location of ``salt-call``, simply run ``salt-ssh`` with the ``-ldebug``
+flag and look for a line containing the string, ``SALT_ARGV``. This contains the ``salt-call``
+command that ``salt-ssh`` attempted to execute.
+
+It is recommended that one modify this command a bit by removing the ``-l quiet``,
+``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.

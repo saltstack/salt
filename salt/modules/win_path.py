@@ -6,10 +6,13 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import logging
 import re
+import os
+from salt.ext.six.moves import map
 
 # Third party libs
 try:
@@ -70,12 +73,12 @@ def get_path():
 
         salt '*' win_path.get_path
     '''
-    ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE',
+    ret = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE',
                                    'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-                                   'PATH').split(';')
+                                   'PATH')['vdata'].split(';')
 
     # Trim ending backslash
-    return map(_normalize_dir, ret)
+    return list(map(_normalize_dir, ret))
 
 
 def exists(path):
@@ -128,6 +131,11 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     # Check if we are in the system path at the right location
     try:
         currIndex = sysPath.index(path)
@@ -140,7 +148,7 @@ def add(path, index=0):
 
     # Add it to the Path
     sysPath.insert(index, path)
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
@@ -172,12 +180,17 @@ def remove(path):
     path = _normalize_dir(path)
     sysPath = get_path()
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     try:
         sysPath.remove(path)
     except ValueError:
         return True
 
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',

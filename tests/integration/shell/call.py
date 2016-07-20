@@ -8,12 +8,14 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import re
 import shutil
 import yaml
 from datetime import datetime
+import logging
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -23,6 +25,19 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+from salttesting.helpers import (
+    destructiveTest
+)
+
+log = logging.getLogger(__name__)
+
+_PKG_TARGETS = {
+    'Arch': ['python2-django', 'libpng'],
+    'Debian': ['python-plist', 'apg'],
+    'RedHat': ['xz-devel', 'zsh-html'],
+    'FreeBSD': ['aalib', 'pth'],
+    'Suse': ['aalib', 'python-pssh']
+}
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -33,18 +48,14 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         out = self.run_call('-l quiet test.fib 3')
 
         expect = ['local:',
-                  '    |_',
-                  '      - 0',
-                  '      - 1',
-                  '      - 1',
-                  '      - 2']
+                  '    - 2']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
 
         expect = [
-            'local: ([0, 1, 1, 2]'
+            'local: (2'
         ]
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
@@ -69,6 +80,26 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
+
+    @destructiveTest
+    @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_local_pkg_install(self):
+        '''
+        Test to ensure correct output when installing package
+        '''
+        get_os_family = self.run_call('--local grains.get os_family')
+        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        for pkg in pkg_targets:
+            if pkg not in str(check_pkg):
+                out = self.run_call('--local pkg.install {0}'.format(pkg))
+                self.assertIn('local:    ----------', ''.join(out))
+                self.assertIn('{0}:        ----------'.format(pkg), ''.join(out))
+                self.assertIn('new:', ''.join(out))
+                self.assertIn('old:', ''.join(out))
+            else:
+                log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
@@ -106,6 +137,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertNotEqual(0, retcode)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_return(self):
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
@@ -158,7 +190,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'open_mode': True,
             'log_file': logfile,
             'log_level': 'quiet',
-            'log_level_logfile': 'info'
+            'log_level_logfile': 'info',
+            'transport': self.master_opts['transport'],
         }
 
         # Remove existing logfile
@@ -303,9 +336,41 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_issue_15074_output_file_append(self):
+        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        try:
+            # Let's create an initial output file with some data
+            ret = self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+
+            with salt.utils.fopen(output_file_append) as ofa:
+                output = ofa.read()
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            with salt.utils.fopen(output_file_append) as ofa:
+                self.assertEqual(ofa.read(), output + output)
+        finally:
+            if os.path.exists(output_file_append):
+                os.unlink(output_file_append)
+
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(integration.TMP, 'issue-14979')
-        current_umask = os.umask(0077)
+        current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data
             self.run_script(
@@ -320,8 +385,26 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat1 = os.stat(output_file)
 
             # Let's change umask
-            os.umask(0777)
+            os.umask(0o777)
 
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat2 = os.stat(output_file)
+            self.assertEqual(stat1.st_mode, stat2.st_mode)
+            # Data was appeneded to file
+            self.assertTrue(stat1.st_size < stat2.st_size)
+
+            # Let's remove the output file
+            os.unlink(output_file)
+
+            # Not appending data
             self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} -g'.format(
@@ -331,15 +414,28 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 catch_stderr=True,
                 with_retcode=True
             )
-            stat2 = os.stat(output_file)
-            self.assertEqual(stat1.st_mode, stat2.st_mode)
-            # self.assertEqual(stat1.st_ctime, stat2.st_ctime)
+            stat3 = os.stat(output_file)
+            # Mode must have changed since we're creating a new log file
+            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            # Data was appended to file
+            self.assertEqual(stat1.st_size, stat3.st_size)
         finally:
             if os.path.exists(output_file):
                 os.unlink(output_file)
             # Restore umask
             os.umask(current_umask)
 
+    def tearDown(self):
+        '''
+        Teardown method to remove installed packages
+        '''
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        get_os_family = self.run_call('--local grains.get os_family')
+        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        for pkg in pkg_targets:
+            if pkg in str(check_pkg):
+                out = self.run_call('--local pkg.remove {0}'.format(pkg))
 
 if __name__ == '__main__':
     from integration import run_tests

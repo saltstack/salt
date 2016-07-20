@@ -1,7 +1,7 @@
-.. _events:
-
 .. index:: ! Event, event bus, event system
     see: Reactor; Event
+
+.. _events:
 
 =================
 Salt Event System
@@ -27,7 +27,7 @@ Listening for Events
 ====================
 
 Salt's Event Bus is used heavily within Salt and it is also written to
-integrate heavily with existings tooling and scripts. There is a variety of
+integrate heavily with existing tooling and scripts. There is a variety of
 ways to consume it.
 
 From the CLI
@@ -84,9 +84,9 @@ The following code will check for a single event:
 
     data = event.get_event()
 
-Events will also use a "tag". Tags allow for events to be filtered. By
-default all events will be returned. If only authentication events are
-desired, then pass the tag "auth".
+Events will also use a "tag". Tags allow for events to be filtered by prefix.
+By default all events will be returned. If only authentication events are
+desired, then pass the tag "salt/auth".
 
 The ``get_event`` method has a default poll time assigned of 5 seconds. To
 change this time set the "wait" option.
@@ -113,8 +113,6 @@ make a generator which will continually yield salt events.
 The iter_events method also accepts a tag but not a wait time:
 
 .. code-block:: python
-
-    import salt.utils.event
 
     for data in event.iter_events(tag='salt/auth'):
         print(data)
@@ -170,9 +168,19 @@ YAML can be used at the CLI in function arguments:
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
+.. code-block:: python
+
+    # Job on minion
+    import salt.utils.event
+
+    event = salt.utils.event.MinionEvent(**__opts__)
+
+    for evdata in event.iter_events(tag='customtag/'):
+        return evdata # do your processing here...
+
 .. code-block:: bash
 
-    salt minionname event.fire '{"data": "message for the minion"}' 'tag'
+    salt minionname event.fire '{"data": "message for the minion"}' 'customtag/african/unladen'
 
 
 Firing Events from Python

@@ -2,6 +2,7 @@
 '''
 The client libs to communicate with the salt master when running raet
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -16,6 +17,7 @@ import salt.config
 import salt.client
 import salt.utils
 import salt.syspaths as syspaths
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -51,26 +53,34 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
+
         kind = self.opts['__role']
-        if kind == 'master':
-            lanename = 'master'  # self.opts.value.get('id', self.main.data.lanename)
-        else:  # workers currently are only supported for masters
-            emsg = ("Invalid application kind '{0}' for client.".format(kind))
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
+            lanename = 'master'
+        else:
+            emsg = ("Unsupported application kind '{0}' for Raet LocalClient.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
+
+        sockdirpath = self.opts['sock_dir']
         name = 'client' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
                 lanename=lanename,
-                sockdirpath=self.opts['sock_dir'])
-        stack.Pk = raeting.packKinds.pack
-        router_yard = RemoteYard(
+                sockdirpath=sockdirpath)
+        stack.Pk = raeting.PackKind.pack.value
+        manor_yard = RemoteYard(
                 stack=stack,
                 lanename=lanename,
                 name='manor',
-                dirpath=self.opts['sock_dir'])
-        stack.addRemote(router_yard)
-        route = {'dst': (None, router_yard.name, 'local_cmd'),
+                dirpath=sockdirpath)
+        stack.addRemote(manor_yard)
+        route = {'dst': (None, manor_yard.name, 'local_cmd'),
                  'src': (None, stack.local.name, None)}
         msg = {'route': route, 'load': payload_kwargs}
         stack.transmit(msg)

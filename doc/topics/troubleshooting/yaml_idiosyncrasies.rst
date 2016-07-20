@@ -33,8 +33,8 @@ fact that the data is uniform and not deeply nested.
 
 .. _nested-dict-indentation:
 
-Nested Dicts (key=value)
-------------------------
+Nested Dictionaries
+-------------------
 
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
@@ -61,8 +61,8 @@ Notice that while the indentation is two spaces per level, for the values under
 the ``context`` and ``defaults`` options there is a four-space indent. If only
 two spaces are used to indent, then those keys will be considered part of the
 same dictionary that contains the ``context`` key, and so the data will not be
-loaded correctly.  If using a double indent is not desirable, then a deeply-nested dict
-can be declared with curly braces:
+loaded correctly. If using a double indent is not desirable, then a
+deeply-nested dict can be declared with curly braces:
 
 .. code-block:: yaml
 
@@ -272,8 +272,8 @@ This shell command can find wrong characters in your SLS files:
 
 
 Alternatively you can toggle the `yaml_utf8` setting in your master configuration
- file. This is still an experimental setting but it should manage the right
- encoding conversion in salt after yaml states compilations.
+file. This is still an experimental setting but it should manage the right
+encoding conversion in salt after yaml states compilations.
 
 Underscores stripped in Integer Definitions
 ===========================================
@@ -340,3 +340,13 @@ string with quotes:
     ValueError: month must be in 1..12
     >>> yaml.safe_load('"4017-16-20"')
     '4017-16-20'
+
+
+Keys Limited to 1024 Characters
+===============================
+
+Simple keys are limited to a single line and cannot be longer that 1024 characters.
+This is a limitation from PyYaml, as seen in a comment in `PyYAML's code`_, and
+applies to anything parsed by YAML in Salt.
+
+.. _PyYAML's code: http://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91

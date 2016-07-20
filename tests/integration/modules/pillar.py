@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
+from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
@@ -97,7 +98,6 @@ class PillarModuleTest(integration.ModuleCase):
     def no_test_issue_10408_ext_pillar_gitfs_url_update(self):
         import os
         from salt.pillar import git_pillar
-        import git
         original_url = 'git+ssh://original@example.com/home/git/test'
         changed_url = 'git+ssh://changed@example.com/home/git/test'
         rp_location = os.path.join(self.master_opts['cachedir'], 'pillar_gitfs/0/.git')
@@ -106,26 +106,24 @@ class PillarModuleTest(integration.ModuleCase):
             'cachedir': self.master_opts['cachedir'],
         }
 
-        git_pillar.GitPillar('master', original_url, opts)
+        git_pillar._LegacyGitPillar('master', original_url, opts)
         opts['ext_pillar'] = [{'git': 'master {0}'.format(changed_url)}]
-        grepo = git_pillar.GitPillar('master', changed_url, opts)
+        grepo = git_pillar._LegacyGitPillar('master', changed_url, opts)
         repo = git.Repo(rp_location)
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
-    def test_ext_pillar_env_mapping(self):
-        import os
-        from salt.pillar import git_pillar
-        import git
-
-        repo_url = 'https://github.com/saltstack/pillar1.git'
-        pillar = self.run_function('pillar.data')
-
-        for branch, env in [('dev', 'testing')]:
-            repo = git_pillar.GitPillar(branch, repo_url, self.master_opts)
-
-            self.assertIn(repo.working_dir,
-                    pillar['test_ext_pillar_opts']['pillar_roots'][env])
+    def test_pillar_items(self):
+        '''
+        Test to ensure we get expected output
+        from pillar.items
+        '''
+        get_items = self.run_function('pillar.items')
+        self.assertDictContainsSubset({'info': 'bar'}, get_items)
+        self.assertDictContainsSubset({'monty': 'python'}, get_items)
+        self.assertDictContainsSubset(
+            {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
+            get_items)
 
 if __name__ == '__main__':
     from integration import run_tests

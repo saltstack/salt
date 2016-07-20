@@ -2,9 +2,16 @@
 '''
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -12,6 +19,9 @@ import re
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +33,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM'):
+    if __grains__['os'] in ('Arch', 'Arch ARM', 'ManjaroLinux'):
         return __virtualname__
     return False
 
@@ -92,7 +102,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -108,7 +118,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=False):
+def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
@@ -119,20 +129,30 @@ def list_upgrades(refresh=False):
         salt '*' pkg.list_upgrades
     '''
     upgrades = {}
-    options = ['-S', '-p', '-u', '--print-format "%n %v"']
+    cmd = ['pacman', '-S', '-p', '-u', '--print-format', '%n %v']
 
     if refresh:
-        options.append('-y')
+        cmd.append('-y')
 
-    cmd = (
-        'pacman {0} | egrep -v '
-        r'"^\s|^:"'
-    ).format(' '.join(options))
+    call = __salt__['cmd.run_all'](cmd,
+                                   python_shell=False,
+                                   output_loglevel='trace')
 
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         comps = line.split(' ')
-        if len(comps) < 2:
+        if len(comps) != 2:
             continue
         upgrades[comps[0]] = comps[1]
     return upgrades
@@ -215,7 +235,19 @@ def refresh_db():
     '''
     cmd = 'LANG=C pacman -Sy'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
+            python_shell=True)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         if line.strip().startswith('::'):
             continue
@@ -323,7 +355,7 @@ def install(name=None,
         targets = []
         problems = []
         options = ['--noprogressbar', '--noconfirm', '--needed']
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -358,7 +390,7 @@ def install(name=None,
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=False):
+def upgrade(refresh=False, **kwargs):
     '''
     Run a full system upgrade, a pacman -Syu
 
@@ -376,14 +408,27 @@ def upgrade(refresh=False):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     old = list_pkgs()
     cmd = 'pacman -Su --noprogressbar --noconfirm'
     if salt.utils.is_true(refresh):
         cmd += ' -y'
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
@@ -553,5 +598,5 @@ def owner(*paths):
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path))
     if len(ret) == 1:
-        return ret.itervalues().next()
+        return next(six.itervalues(ret))
     return ret

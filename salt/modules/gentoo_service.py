@@ -2,7 +2,16 @@
 '''
 Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -188,7 +197,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

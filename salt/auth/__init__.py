@@ -6,6 +6,8 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
+from __future__ import absolute_import
+
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict
 # 3. Verify with function introspection
@@ -21,15 +23,26 @@ import time
 import logging
 import random
 import getpass
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.transport.client
 import salt.utils
 import salt.utils.minions
 import salt.payload
 
 log = logging.getLogger(__name__)
+
+AUTH_INTERNAL_KEYWORDS = frozenset([
+    'client',
+    'cmd',
+    'eauth',
+    'fun',
+    'kwarg',
+    'match'
+])
 
 
 class LoadAuth(object):
@@ -52,7 +65,9 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return ''
-        fcall = salt.utils.format_call(self.auth[fstr], load)
+        fcall = salt.utils.format_call(self.auth[fstr],
+                                       load,
+                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return fcall['args'][0]
         except IndexError:
@@ -70,15 +85,16 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr], load)
+        fcall = salt.utils.format_call(self.auth[fstr],
+                                       load,
+                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception:
-            err = 'Authentication module threw an exception: '
-            log.critical(err, exc_info=True)
+        except Exception as e:
+            log.debug('Authentication module threw {0}'.format(e))
             return False
 
     def time_auth(self, load):
@@ -111,7 +127,9 @@ class LoadAuth(object):
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr], load)
+        fcall = salt.utils.format_call(self.auth[fstr],
+                                       load,
+                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
@@ -133,12 +151,18 @@ class LoadAuth(object):
         while os.path.isfile(t_path):
             tok = str(hash_type(os.urandom(512)).hexdigest())
             t_path = os.path.join(self.opts['token_dir'], tok)
-        fcall = salt.utils.format_call(self.auth[fstr], load)
+        fcall = salt.utils.format_call(self.auth[fstr],
+                                       load,
+                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         tdata = {'start': time.time(),
                  'expire': time.time() + self.opts['token_expire'],
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
                  'token': tok}
+
+        if 'groups' in load:
+            tdata['groups'] = load['groups']
+
         with salt.utils.fopen(t_path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(tdata))
         return tdata
@@ -181,15 +205,20 @@ class Authorize(object):
         else:
             self.loadauth = loadauth
 
+    @property
     def auth_data(self):
         '''
         Gather and create the authorization data sets
         '''
         auth_data = self.opts['external_auth']
+        merge_lists = self.opts['pillar_merge_lists']
 
         if 'django' in auth_data and '^model' in auth_data['django']:
             auth_from_django = salt.auth.django.retrieve_auth_entries()
-            auth_data = salt.utils.dictupdate.merge(auth_data, auth_from_django)
+            auth_data = salt.utils.dictupdate.merge(auth_data,
+                                                    auth_from_django,
+                                                    strategy='list',
+                                                    merge_lists=merge_lists)
 
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)
@@ -268,29 +297,28 @@ class Authorize(object):
         '''
         Determine what type of authentication is being requested and pass
         authorization
+
+        Note: this will check that the user has at least one right that will let
+        him execute "load", this does not deal with conflicting rules
         '''
 
-        adata = self.auth_data()
+        adata = self.auth_data
         good = False
         if load.get('token', False):
-            good = False
-            for sub_auth in self.token(adata, load):
+            for sub_auth in self.token(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
-                            adata[sub_auth['token']['eauth']],
+                            self.auth_data[sub_auth['token']['eauth']],
                             sub_auth['token']['name'],
                             load,
                             sub_auth['token']['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "token" occurred.'
-                )
-                return False
+                        return True
+            log.warning(
+                'Authentication failure of type "token" occurred.'
+            )
         elif load.get('eauth'):
-            good = False
-            for sub_auth in self.eauth(adata, load):
+            for sub_auth in self.eauth(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
@@ -298,13 +326,11 @@ class Authorize(object):
                             sub_auth['name'],
                             load,
                             load['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "eauth" occurred.'
-                )
-                return False
-        return good
+                        return True
+            log.warning(
+                'Authentication failure of type "eauth" occurred.'
+            )
+        return False
 
 
 class Resolver(object):
@@ -317,21 +343,18 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] == 'zeromq':
-            sreq = salt.payload.SREQ(
-                    'tcp://{0}:{1}'.format(
-                        salt.utils.ip_bracket(self.opts['interface']),
-                        self.opts['ret_port']),
-                        opts=self.opts
-                )
-            tdata = sreq.send('clear', load)
-            return tdata
+        if self.opts['transport'] in ('zeromq', 'tcp'):
+            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                         ':' + str(self.opts['ret_port'])
+            channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                master_uri=master_uri)
+            return channel.send(load)
+
         elif self.opts['transport'] == 'raet':
-            sreq = salt.transport.Channel.factory(
-                    self.opts)
-            sreq.dst = (None, None, 'local_cmd')
-            tdata = sreq.send(load)
-            return tdata
+            channel = salt.transport.client.ReqChannel.factory(self.opts)
+            channel.dst = (None, None, 'local_cmd')
+            return channel.send(load)
 
     def cli(self, eauth):
         '''
@@ -355,12 +378,12 @@ class Resolver(object):
             elif arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
-                ret[arg] = raw_input('{0}: '.format(arg))
-        for kwarg, default in args['kwargs'].items():
+                ret[arg] = input('{0}: '.format(arg))
+        for kwarg, default in list(args['kwargs'].items()):
             if kwarg in self.opts:
                 ret['kwarg'] = self.opts[kwarg]
             else:
-                ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
+                ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
 
         return ret
 
@@ -374,7 +397,7 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
-        oldmask = os.umask(0177)
+        oldmask = os.umask(0o177)
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
@@ -401,3 +424,36 @@ class Resolver(object):
         load['cmd'] = 'get_token'
         tdata = self._send_token_request(load)
         return tdata
+
+
+class AuthUser(object):
+    '''
+    Represents a user requesting authentication to the salt master
+    '''
+
+    def __init__(self, user):
+        '''
+        Instantiate an AuthUser object.
+
+        Takes a user to reprsent, as a string.
+        '''
+        self.user = user
+
+    def is_sudo(self):
+        '''
+        Determines if the user is running with sudo
+
+        Returns True if the user is running with sudo and False if the
+        user is not running with sudo
+        '''
+        return self.user.startswith('sudo_')
+
+    def is_running_user(self):
+        '''
+        Determines if the user is the same user as the one running
+        this process
+
+        Returns True if the user is the same user as the one running
+        this process and False if not.
+        '''
+        return self.user == salt.utils.get_user()

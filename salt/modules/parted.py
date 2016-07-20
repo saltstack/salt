@@ -15,6 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -96,9 +97,13 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def probe(device=''):
+def probe(*devices):
     '''
-    Ask the kernel to update its local partition data
+    Ask the kernel to update its local partition data. When no args are
+    specified all block devices are tried.
+
+    Caution: Generally only works on devices with no mounted partitions and
+    may take a long time to return if specified devices are in use.
 
     CLI Examples:
 
@@ -106,33 +111,18 @@ def probe(device=''):
 
         salt '*' partition.probe
         salt '*' partition.probe /dev/sda
+        salt '*' partition.probe /dev/sda /dev/sdb
     '''
-    if device:
+    for device in devices:
         _validate_device(device)
-    cmd = 'partprobe {0}'.format(device)
+
+    cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
-def part_list(device, unit=None):
-    '''
-    Deprecated. Calls partition.list.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' partition.part_list /dev/sda
-        salt '*' partition.part_list /dev/sda unit=s
-        salt '*' partition.part_list /dev/sda unit=kB
-    '''
-    return list_(device, unit)
-
-
 def list_(device, unit=None):
     '''
-    partition.list device unit
-
     Prints partition information of given <device>
 
     CLI Examples:
@@ -199,8 +189,6 @@ def list_(device, unit=None):
 
 def align_check(device, part_type, partition):
     '''
-    partition.align_check device part_type partition
-
     Check if partition satisfies the alignment constraint of part_type.
     Type must be "minimal" or "optimal".
 
@@ -233,8 +221,6 @@ def align_check(device, part_type, partition):
 
 def check(device, minor):
     '''
-    partition.check device minor
-
     Checks if the file system on partition <minor> has any errors.
 
     CLI Example:
@@ -259,11 +245,9 @@ def check(device, minor):
 
 def cp(device, from_minor, to_minor):  # pylint: disable=C0103
     '''
-    partition.check device from_minor to_minor
-
     Copies the file system on the partition <from-minor> to partition
-        <to-minor>, deleting the original contents of the destination
-        partition.
+    <to-minor>, deleting the original contents of the destination
+    partition.
 
     CLI Example:
 
@@ -288,8 +272,6 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
 
 def get_id(device, minor):
     '''
-    partition.get_id
-
     Prints the system ID for the partition. Some typical values are::
 
          b: FAT32 (vfat)
@@ -321,8 +303,6 @@ def get_id(device, minor):
 
 def set_id(device, minor, system_id):
     '''
-    partition.set_id
-
     Sets the system ID for the partition. Some typical values are::
 
          b: FAT32 (vfat)
@@ -380,12 +360,9 @@ def system_types():
 
 def mkfs(device, fs_type):
     '''
-    partition.mkfs device fs_type
-
     Makes a file system <fs_type> on partition <device>, destroying all data
-        that resides on that partition. <fs_type> must be one of "ext2",
-        "fat32", "fat16", "linux-swap" or "reiserfs" (if libreiserfs is
-        installed)
+    that resides on that partition. <fs_type> must be one of "ext2", "fat32",
+    "fat16", "linux-swap" or "reiserfs" (if libreiserfs is installed)
 
     CLI Example:
 
@@ -409,9 +386,8 @@ def mkfs(device, fs_type):
 
 def mklabel(device, label_type):
     '''
-    partition.mklabel device label_type
-
     Create a new disklabel (partition table) of label_type.
+
     Type should be one of "aix", "amiga", "bsd", "dvh", "gpt", "loop", "mac",
     "msdos", "pc98", or "sun".
 
@@ -436,11 +412,9 @@ def mklabel(device, label_type):
 
 def mkpart(device, part_type, fs_type=None, start=None, end=None):
     '''
-    partition.mkpart device part_type fs_type start end
-
     Make a part_type partition for filesystem fs_type, beginning at start and
-        ending at end (by default in megabytes).  part_type should be one of
-        "primary", "logical", or "extended".
+    ending at end (by default in megabytes).  part_type should be one of
+    "primary", "logical", or "extended".
 
     CLI Examples:
 
@@ -451,7 +425,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     '''
     _validate_device(device)
 
-    if not start or not end:
+    if start in [None, ''] or end in [None, '']:
         raise CommandExecutionError(
             'partition.mkpart requires a start and an end'
         )
@@ -461,7 +435,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
@@ -485,13 +459,12 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
 
 def mkpartfs(device, part_type, fs_type, start, end):
     '''
-    partition.mkpartfs device part_type fs_type start end
-
     Make a <part_type> partition with a new filesystem of <fs_type>, beginning
-        at <start> and ending at <end> (by default in megabytes).  <part_type>
-        should be one of "primary", "logical", or "extended". <fs_type> must be
-        one of "ext2", "fat32", "fat16", "linux-swap" or "reiserfs" (if
-        libreiserfs is installed)
+    at <start> and ending at <end> (by default in megabytes).
+
+    <part_type> should be one of "primary", "logical", or "extended". <fs_type>
+    must be one of "ext2", "fat32", "fat16", "linux-swap" or "reiserfs" (if
+    libreiserfs is installed)
 
     CLI Example:
 
@@ -524,10 +497,8 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
 def name(device, partition, name):
     '''
-    partition.name device partition name
-
-    Set the name of partition to name. This option works only on Mac, PC98,
-        and GPT disklabels. The name can be placed in quotes, if necessary.
+    Set the name of partition to name. This option works only on Mac, PC98, and
+    GPT disklabels. The name can be placed in quotes, if necessary.
 
     CLI Example:
 
@@ -558,11 +529,9 @@ def name(device, partition, name):
 
 def rescue(device, start, end):
     '''
-    partition.rescue device start end
-
     Rescue a lost partition that was located somewhere between start and end.
-        If a partition is found, parted will ask if you want to create an
-        entry for it in the partition table.
+    If a partition is found, parted will ask if you want to create an
+    entry for it in the partition table.
 
     CLI Example:
 
@@ -581,13 +550,12 @@ def rescue(device, start, end):
 
 def resize(device, minor, start, end):
     '''
-    partition.resize device minor, start, end
+    Resizes the partition with number <minor>.
 
-    Resizes the partition with number <minor>. The partition will start <start>
-        from the beginning of the disk, and end <end> from the beginning of the
-        disk. resize never changes the minor number. Extended partitions can be
-        resized, so long as the new extended partition completely contains all
-        logical partitions.
+    The partition will start <start> from the beginning of the disk, and end
+    <end> from the beginning of the disk. resize never changes the minor number.
+    Extended partitions can be resized, so long as the new extended partition
+    completely contains all logical partitions.
 
     CLI Example:
 
@@ -617,8 +585,6 @@ def resize(device, minor, start, end):
 
 def rm(device, minor):  # pylint: disable=C0103
     '''
-    partition.rm device minor
-
     Removes the partition with number <minor>.
 
     CLI Example:
@@ -643,11 +609,10 @@ def rm(device, minor):  # pylint: disable=C0103
 
 def set_(device, minor, flag, state):
     '''
-    partition.set device  minor flag state
+    Changes a flag on the partition with number <minor>.
 
-    Changes a flag on the partition with number <minor>. A flag can be either
-        "on" or "off". Some or all of these flags will be available, depending
-        on what disk label you are using.
+    A flag can be either "on" or "off". Some or all of these flags will be
+    available, depending on what disk label you are using.
 
     CLI Example:
 
@@ -678,8 +643,6 @@ def set_(device, minor, flag, state):
 
 def toggle(device, partition, flag):
     '''
-    partition.toggle device partition flag
-
     Toggle the state of <flag> on <partition>
 
     CLI Example:
@@ -708,8 +671,6 @@ def toggle(device, partition, flag):
 
 def exists(device=''):
     '''
-    partition.exists device
-
     Check to see if the partition exists
 
     CLI Example:

@@ -12,7 +12,7 @@ In Salt 0.10.0 the ability to execute runners from the master was added. This
 allows for the master to return collective data from runners back to the
 minions via the peer interface.
 
-The peer interface is configured through two options in the master 
+The peer interface is configured through two options in the master
 configuration file. For minions to send commands from the master the ``peer``
 configuration is used. To allow for minions to execute runners from the master
 the ``peer_run`` configuration is used.
@@ -67,6 +67,9 @@ allow minions ending with foo.org access to the publisher.
         - ps.*
         - pkg.*
 
+.. note::
+    Functions are matched using regular expressions.
+
 Peer Runner Communication
 =========================
 
@@ -93,6 +96,9 @@ to the manage and jobs runner functions.
         - manage.*
         - jobs.*
 
+.. note::
+    Functions are matched using regular expressions.
+
 Using Peer Communication
 ========================
 
@@ -112,7 +118,7 @@ To execute the manage.up runner:
 .. code-block:: bash
 
     # salt-call publish.runner manage.up
-    
+
 To match minions using other matchers, use ``expr_form``:
 
 .. code-block:: bash

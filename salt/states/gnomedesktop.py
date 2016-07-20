@@ -24,6 +24,7 @@ Control the GNOME settings
             - clock_show_date: true
             - clock_format: 12h
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 import re

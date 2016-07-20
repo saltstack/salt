@@ -21,7 +21,7 @@ no disk space:
 
     > /var/log/messages:
       cmd.run:
-        - unless: echo 'foo' > /tmp/.test
+        - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
 Only run if the file specified by ``creates`` does not exist, in this case
 touch /tmp/foo if it does not exist.
@@ -54,6 +54,11 @@ of the command is unknown to Salt's state system. Therefore, by default, the
 This means that if a ``cmd`` state is watched by another state then the
 state that's watching will always be executed due to the `changed` state in
 the ``cmd`` state.
+
+.. _stateful-argument:
+
+Using the "Stateful" Argument
+-----------------------------
 
 Many state functions in this module now also accept a ``stateful`` argument.
 If ``stateful`` is specified to be true then it is assumed that the command
@@ -113,6 +118,31 @@ a simple protocol described below:
 
    Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
+
+4. :strong:`The stateful argument can optionally include a test_name parameter.`
+
+   This is used to specify a command to run in test mode.  This command should
+   return stateful data for changes that would be made by the command in the
+   name parameter.
+
+   .. versionadded:: 2015.2.0
+
+   .. code-block:: yaml
+
+       Run myscript:
+         cmd.run:
+           - name: /path/to/myscript
+           - cwd: /
+           - stateful:
+             - test_name: /path/to/myscript test
+
+       Run masterscript:
+         cmd.script:
+           - name: masterscript
+           - source: salt://path/to/masterscript
+           - cwd: /
+           - stateful:
+             - test_name: masterscript test
 
 ``cmd.wait`` is not restricted to watching only cmd states. For example
 it can also watch a git state for changes
@@ -175,22 +205,26 @@ To use it one must convert it to a list. Example:
 '''
 
 # Import python libs
+from __future__ import absolute_import
+
 # Windows platform has no 'grp' module
-HAS_GRP = False
-try:
-    import grp
-    HAS_GRP = True
-except ImportError:
-    pass
 import os
 import copy
 import json
 import shlex
 import logging
 
+HAS_GRP = False
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    pass
+
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -228,11 +262,13 @@ def _reinterpreted_state(state):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
-            return _failout(
+            state = _failout(
                 state,
                 'Failed parsing script output! '
                 'Stdout must be JSON or a line of name=value pairs.'
             )
+            state['changes'].update(ret)
+            return state
 
     changed = _is_true(data.get('changed', 'no'))
 
@@ -399,8 +435,8 @@ def wait(name,
 
         .. code-block:: yaml
 
-            salt://scripts/foo.sh:
-              cmd.script:
+            script-foo:
+              cmd.wait:
                 - env:
                   - BATCH: 'yes'
 
@@ -413,12 +449,33 @@ def wait(name,
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            script-bar:
+              cmd.wait:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
     umask
          The umask (in octal) to use when running the command.
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -443,7 +500,7 @@ def wait(name,
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = wait
+watch = salt.utils.alias_function(wait, 'watch')
 
 
 def wait_script(name,
@@ -508,7 +565,7 @@ def wait_script(name,
         .. code-block:: yaml
 
             salt://scripts/foo.sh:
-              cmd.script:
+              cmd.wait_script:
                 - env:
                   - BATCH: 'yes'
 
@@ -521,12 +578,33 @@ def wait_script(name,
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.wait_script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
     umask
          The umask (in octal) to use when running the command.
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -560,6 +638,7 @@ def run(name,
         output_loglevel='debug',
         quiet=False,
         timeout=None,
+        ignore_timeout=False,
         use_vt=False,
         **kwargs):
     '''
@@ -597,8 +676,8 @@ def run(name,
 
         .. code-block:: yaml
 
-            salt://scripts/foo.sh:
-              cmd.script:
+            script-foo:
+              cmd.run:
                 - env:
                   - BATCH: 'yes'
 
@@ -611,9 +690,30 @@ def run(name,
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            script-bar:
+              cmd.run:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     umask
         The umask (in octal) to use when running the command.
@@ -632,6 +732,12 @@ def run(name,
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    ignore_timeout
+        Ignore the timeout of commands, which is useful for running nohup
+        processes.
+
+        .. versionadded:: 2015.8.0
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -668,17 +774,18 @@ def run(name,
     ###       of unsupported arguments in a cmd.run state will result in a
     ###       traceback.
 
+    test_name = None
+    if not isinstance(stateful, list):
+        stateful = stateful is True
+    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
+        test_name = stateful[0]['test_name']
+    if __opts__['test'] and test_name:
+        name = test_name
+
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
-
-    if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
-        return ret
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
@@ -705,23 +812,43 @@ def run(name,
             ret.update(cret)
             return ret
 
-        # Wow, we passed the test, run this sucker!
-        if not __opts__['test']:
-            try:
-                cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, python_shell=True, **cmd_kwargs
-                )
-            except CommandExecutionError as err:
-                ret['comment'] = str(err)
-                return ret
-
-            ret['changes'] = cmd_all
-            ret['result'] = not bool(cmd_all['retcode'])
-            ret['comment'] = 'Command "{0}" run'.format(name)
+        if __opts__['test'] and not test_name:
+            ret['result'] = None
+            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
-        ret['result'] = None
-        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-        return _reinterpreted_state(ret) if stateful else ret
+
+        if cwd and not os.path.isdir(cwd):
+            ret['comment'] = (
+                'Desired working directory "{0}" '
+                'is not available'
+            ).format(cwd)
+            return ret
+
+        # Wow, we passed the test, run this sucker!
+        try:
+            cmd_all = __salt__['cmd.run_all'](
+                name, timeout=timeout, python_shell=True, **cmd_kwargs
+            )
+        except CommandExecutionError as err:
+            ret['comment'] = str(err)
+            return ret
+
+        ret['changes'] = cmd_all
+        ret['result'] = not bool(cmd_all['retcode'])
+        ret['comment'] = 'Command "{0}" run'.format(name)
+
+        # Ignore timeout errors if asked (for nohups) and treat cmd as a success
+        if ignore_timeout:
+            trigger = 'Timed out after'
+            if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
+                ret['changes']['retcode'] = 0
+                ret['result'] = True
+
+        if stateful:
+            ret = _reinterpreted_state(ret)
+        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+            ret['result'] = None
+        return ret
 
     finally:
         if HAS_GRP:
@@ -803,12 +930,36 @@ def script(name,
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    saltenv : ``base``
+        The Salt environment to use
+
     umask
          The umask (in octal) to use when running the command.
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     timeout
         If the command has not terminated after timeout seconds, send the
@@ -836,17 +987,18 @@ def script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
+    test_name = None
+    if not isinstance(stateful, list):
+        stateful = stateful is True
+    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
+        test_name = stateful[0]['test_name']
+    if __opts__['test'] and test_name:
+        name = test_name
+
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
-
-    if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
-        return ret
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
@@ -896,11 +1048,18 @@ def script(name,
             ret.update(cret)
             return ret
 
-        if __opts__['test']:
+        if __opts__['test'] and not test_name:
             ret['result'] = None
-            ret['comment'] = 'Command {0!r} would have been executed'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'Command {0!r} would have been ' \
+                             'executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
+
+        if cwd and not os.path.isdir(cwd):
+            ret['comment'] = (
+                'Desired working directory "{0}" '
+                'is not available'
+            ).format(cwd)
+            return ret
 
         # Wow, we passed the test, run this sucker!
         try:
@@ -919,7 +1078,11 @@ def script(name,
                              '{1!r}'.format(source, __env__)
         else:
             ret['comment'] = 'Command {0!r} run'.format(name)
-        return _reinterpreted_state(ret) if stateful else ret
+        if stateful:
+            ret = _reinterpreted_state(ret)
+        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+            ret['result'] = None
+        return ret
 
     finally:
         if HAS_GRP:

@@ -30,10 +30,19 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 '''
+from __future__ import absolute_import
 
-# Python libs
-import urllib
-import urllib2
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+        urlopen as _urlopen,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=import-error,no-name-in-module
 
 
 def __virtual__():
@@ -48,11 +57,11 @@ def _auth(url, user, passwd, realm):
     returns a authentication handler.
     '''
 
-    basic = urllib2.HTTPBasicAuthHandler()
+    basic = _HTTPBasicAuthHandler()
     basic.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-    digest = urllib2.HTTPDigestAuthHandler()
+    digest = _HTTPDigestAuthHandler()
     digest.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-    return urllib2.build_opener(basic, digest)
+    return _build_opener(basic, digest)
 
 
 def _do_http(opts, profile='default'):
@@ -73,11 +82,11 @@ def _do_http(opts, profile='default'):
 
     if user and passwd:
         auth = _auth(url, realm, user, passwd)
-        urllib2.install_opener(auth)
+        _install_opener(auth)
 
-    url += '?{0}'.format(urllib.urlencode(opts))
+    url += '?{0}'.format(_urlencode(opts))
 
-    for line in urllib2.urlopen(url, timeout=timeout).read().splitlines():
+    for line in _urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split('=', 1)
         if splt[0] in ret:
             ret[splt[0]] += ',{0}'.format(splt[1])
@@ -188,7 +197,7 @@ def list_configured_members(lbn, profile='default'):
     except KeyError:
         return []
 
-    return filter(None, ret.strip().split(','))
+    return [_f for _f in ret.strip().split(',') if _f]
 
 
 def workers(profile='default'):
@@ -321,7 +330,7 @@ def bulk_stop(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -350,7 +359,7 @@ def bulk_activate(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -379,7 +388,7 @@ def bulk_disable(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -408,7 +417,7 @@ def bulk_recover(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:

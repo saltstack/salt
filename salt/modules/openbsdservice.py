@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for OpenBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs
 import salt.utils
@@ -27,11 +38,13 @@ def __virtual__():
     Only work on OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
-        krel = map(int, __grains__['kernelrelease'].split('.'))
+        krel = list(list(map(int, __grains__['kernelrelease'].split('.'))))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
+        # the rcctl(8) command is the preferred way to manage services.
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
-            return __virtualname__
+            if not os.path.exists('/usr/sbin/rcctl'):
+                return __virtualname__
     return False
 
 
@@ -91,7 +104,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
 
 
 def reload_(name):
@@ -241,13 +254,13 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     services = []
-    for daemon, is_enabled in _get_rc().items():
+    for daemon, is_enabled in six.iteritems(_get_rc()):
         if is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -275,7 +288,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     services = []
-    for daemon, is_enabled in _get_rc().items():
+    for daemon, is_enabled in six.iteritems(_get_rc()):
         if not is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))

@@ -3,7 +3,9 @@
 Salt returner that report execution results back to sentry. The returner will
 inspect the payload to identify errors and flag them as such.
 
-Pillar need something like::
+Pillar needs something like:
+
+.. code-block:: yaml
 
     raven:
       servers:
@@ -23,12 +25,13 @@ and https://pypi.python.org/pypi/raven installed
 The tags list (optional) specifies grains items that will be used as sentry tags, allowing tagging of events
 in the sentry ui.
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 
 try:
     from raven import Client
@@ -111,8 +114,8 @@ def returner(ret):
         )
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

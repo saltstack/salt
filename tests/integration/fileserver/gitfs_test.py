@@ -2,6 +2,12 @@
 '''
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
+import os
+import logging
+import pwd
+import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -10,17 +16,12 @@ from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
 
-# Import Python libs
-import os
-import logging
-import pwd
-import shutil
-
 # Import salt libs
 import integration
 from salt.fileserver import gitfs
 
-gitfs.__opts__ = {'gitfs_remotes': [''],
+gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
+                  'gitfs_remotes': [''],
                   'gitfs_root': '',
                   'fileserver_backend': ['git'],
                   'gitfs_base': 'master',
@@ -34,7 +35,8 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'gitfs_insecure_auth': False,
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
-                  'gitfs_passphrase': ''
+                  'gitfs_passphrase': '',
+                  'gitfs_ssl_verify': True
 }
 
 LOAD = {'saltenv': 'base'}
@@ -91,7 +93,8 @@ class GitFSTest(integration.ModuleCase):
 
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             gitfs.update()
 
     def tearDown(self):
@@ -106,7 +109,8 @@ class GitFSTest(integration.ModuleCase):
     def test_file_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.file_list(LOAD)
             self.assertIn('testfile', ret)
 
@@ -114,7 +118,8 @@ class GitFSTest(integration.ModuleCase):
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.dir_list(LOAD)
             self.assertIn('grail', ret)
 
@@ -122,7 +127,8 @@ class GitFSTest(integration.ModuleCase):
     def test_envs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
 

@@ -4,12 +4,14 @@ Module for gathering disk information on Windows
 
 :depends:   - win32api Python module
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import ctypes
 import string
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 try:
@@ -19,6 +21,12 @@ except ImportError:
 
 # Define the module's virtual name
 __virtualname__ = 'disk'
+
+
+if six.PY3:
+    UPPERCASE = string.ascii_uppercase
+else:
+    UPPERCASE = string.uppercase
 
 
 def __virtual__():
@@ -43,7 +51,7 @@ def usage():
     drives = []
     ret = {}
     drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
-    for letter in string.uppercase:
+    for letter in UPPERCASE:
         if drive_bitmask & 1:
             drives.append(letter)
         drive_bitmask >>= 1

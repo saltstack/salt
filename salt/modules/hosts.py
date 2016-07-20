@@ -4,11 +4,16 @@ Manage the information in the hosts file
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 import salt.utils.odict as odict
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 # pylint: disable=C0103
@@ -40,6 +45,7 @@ def _list_hosts():
     '''
     Return the hosts found in the hosts file in as an OrderedDict
     '''
+    count = 0
     hfn = __get_hosts_filename()
     ret = odict.OrderedDict()
     if not os.path.isfile(hfn):
@@ -50,6 +56,8 @@ def _list_hosts():
             if not line:
                 continue
             if line.startswith('#'):
+                ret.setdefault('comment-{0}'.format(count), []).extend(line)
+                count += 1
                 continue
             if '#' in line:
                 line = line[:line.index('#')].strip()
@@ -151,15 +159,15 @@ def set_host(ip, alias):
         comps = tmpline.split()
         if comps[0] == ip:
             if not ovr:
-                lines[ind] = ip + '\t\t' + alias + '\n'
+                lines[ind] = ip + '\t\t' + alias + os.linesep
                 ovr = True
             else:  # remove other entries
                 lines[ind] = ''
     if not ovr:
         # make sure there is a newline
-        if lines and not lines[-1].endswith(('\n', '\r')):
-            lines[-1] = '{0}\n'.format(lines[-1])
-        line = ip + '\t\t' + alias + '\n'
+        if lines and not lines[-1].endswith(os.linesep):
+            lines[-1] += os.linesep
+        line = ip + '\t\t' + alias + os.linesep
         lines.append(line)
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
@@ -188,17 +196,17 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = '{0}\t'.format(comps[0])
+            newline = '{0}\t\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t{0}'.format(existing)
+                newline += ' {0}'.format(existing)
             if newline.strip() == ip:
                 # No aliases exist for the line, make it empty
                 lines[ind] = ''
             else:
                 # Only an alias was removed
-                lines[ind] = '{0}\n'.format(newline)
+                lines[ind] = newline + os.linesep
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
     return True
@@ -224,7 +232,7 @@ def add_host(ip, alias):
 
     hosts = _list_hosts()
     inserted = False
-    for i, h in hosts.items():
+    for i, h in six.iteritems(hosts):
         for j in range(len(h)):
             if h[j].startswith('#') and i == ip:
                 h.insert(j, alias)
@@ -237,11 +245,15 @@ def add_host(ip, alias):
 
 def _write_hosts(hosts):
     lines = []
-    for ip, aliases in hosts.iteritems():
-        line = '{0}\t\t{1}'.format(
-            ip,
-            '\t\t'.join(aliases)
-            )
+    for ip, aliases in six.iteritems(hosts):
+        if ip:
+            if ip.startswith('comment'):
+                line = ''.join(aliases)
+            else:
+                line = '{0}\t\t{1}'.format(
+                    ip,
+                    ' '.join(aliases)
+                    )
         lines.append(line)
 
     hfn = _get_or_create_hostfile()
@@ -250,4 +262,4 @@ def _write_hosts(hosts):
             if line.strip():
                 # /etc/hosts needs to end with EOL so that some utils that read
                 # it do not break
-                ofile.write('{0}\n'.format(line.strip()))
+                ofile.write(line.strip() + os.linesep)

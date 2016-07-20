@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 Pkgutil support for Solaris
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -9,6 +16,7 @@ import copy
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -57,7 +65,7 @@ def upgrade_available(name):
     return ''
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
@@ -224,7 +232,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
@@ -275,7 +283,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     if pkgs is None and version and len(pkg_params) == 1:
         pkg_params = {name: version}
     targets = []
-    for param, pkgver in pkg_params.iteritems():
+    for param, pkgver in six.iteritems(pkg_params):
         if pkgver is None:
             targets.append(param)
         else:

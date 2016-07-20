@@ -2,10 +2,12 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -148,6 +150,24 @@ def destroy(device):
         return False
 
 
+def stop():
+    '''
+    Shut down all arrays that can be shut down (i.e. are not currently in use).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.stop
+    '''
+    cmd = 'mdadm --stop --scan'
+
+    if __salt__['cmd.retcode'](cmd):
+        return True
+
+    return False
+
+
 def create(name,
            level,
            devices,
@@ -182,6 +202,9 @@ def create(name,
 
     devices
         A list of devices used to build the array.
+
+    metadata
+        Version of metadata to use when creating the array.
 
     kwargs
         Optional arguments to be passed to mdadm.
@@ -248,24 +271,29 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).splitlines()
     # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']
-        for bad_tag in buggy_ubuntu_tags:
-            for i, elem in enumerate(scan):
-                if not elem.find(bad_tag):
-                    del scan[i]
+        for i, elem in enumerate(scan):
+            for bad_tag in buggy_ubuntu_tags:
+                pattern = r'\s{0}=\S+'.format(re.escape(bad_tag))
+                pattern = re.compile(pattern, flags=re.I)
+                scan[i] = re.sub(pattern, '', scan[i])
 
-    scan = ' '.join(scan)
     if __grains__.get('os_family') == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    if not __salt__['file.search'](cfg_file, scan):
-        __salt__['file.append'](cfg_file, scan)
+    try:
+        vol_d = dict([(line.split()[1], line) for line in scan])
+        for vol in vol_d:
+            pattern = r'^ARRAY\s+{0}'.format(re.escape(vol))
+            __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
+    except SaltInvocationError:  # File is missing
+        __salt__['file.write'](cfg_file, args=scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
 
@@ -313,10 +341,10 @@ def assemble(name,
                 opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
-    if type(devices) is str:
+    if isinstance(devices, str):
         devices = devices.split(',')
 
-    cmd = ['mdadm', '-A', name, '-v', opts] + devices
+    cmd = ['mdadm', '-A', name, '-v'] + opts + devices
 
     if test_mode is True:
         return cmd

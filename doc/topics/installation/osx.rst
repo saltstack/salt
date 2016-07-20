@@ -5,24 +5,27 @@ OS X
 Dependency Installation
 -----------------------
 
-When installing via Homebrew, dependency resolution is handled for you.
+It should be noted that Homebrew explicitly discourages the `use of sudo`_:
+
+    Homebrew is designed to work without using sudo. You can decide to use it but we strongly recommend not to do so. If you have used sudo and run into a bug then it is likely to be the cause. Please don’t file a bug report unless you can reproduce it after reinstalling Homebrew from scratch without using sudo
+
+So when using Homebrew, if you want support from the Homebrew community, install this way:
 
 .. code-block:: bash
 
     brew install saltstack
 
-When using macports, zmq, swig, and pip may need to be installed this way:
+.. _use of sudo: https://github.com/Homebrew/homebrew/blob/master/share/doc/homebrew/FAQ.md#sudo
+
+
+
+When using MacPorts, install this way:
 
 .. code-block:: bash
 
-    sudo port install py-zmq
-    sudo port install py27-m2crypto
-    sudo port install py27-crypto
-    sudo port install py27-msgpack
-    sudo port install swig-python
-    sudo port install py-pip
+    sudo port install salt
 
-For installs using the OS X system python, pip install needs to use 'sudo':
+When only using the OS X system's pip, install this way:
 
 .. code-block:: bash
 
@@ -32,6 +35,13 @@ Salt-Master Customizations
 --------------------------
 
 To run salt-master on OS X, the root user maxfiles limit must be increased:
+
+.. note::
+
+    On OS X 10.10 (Yosemite) and higher, maxfiles should not be adjusted. The
+    default limits are sufficient in all but the most extreme scenarios.
+    Overriding these values with the setting below will cause system
+    instability!
 
 .. code-block:: bash
 
@@ -47,7 +57,7 @@ Now the salt-master should run without errors:
 
 .. code-block:: bash
 
-    sudo /usr/local/share/python/salt-master --log-level=all
+    sudo salt-master --log-level=all
 
 Post-installation tasks
 =======================

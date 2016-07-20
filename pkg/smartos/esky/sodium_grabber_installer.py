@@ -13,8 +13,8 @@ HERE = path.dirname(__file__)
 
 SETUP_KWARGS = {}
 sodium_grabber = Extension('sodium_grabber',
-    sources = [path.join(HERE, 'sodium_grabber.c')],
-    libraries = ['sodium'],
+    sources=[path.join(HERE, 'sodium_grabber.c')],
+    libraries=['sodium'],
 )
 SETUP_KWARGS['ext_modules'] = [sodium_grabber]
 SETUP_KWARGS['name'] = "sodium_grabber"

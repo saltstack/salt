@@ -1,9 +1,9 @@
-==================================
+===============================
 Getting Started With Aliyun ECS
-==================================
+===============================
 
 The Aliyun ECS (Elastic Computer Service) is one of the most popular public
-cloud providers in China. This cloud provider can be used to manage aliyun
+cloud hosts in China. This cloud host can be used to manage aliyun
 instance using salt-cloud.
 
 http://www.aliyun.com/
@@ -32,8 +32,16 @@ under "My Service" tab.
       # aliyun Access Key Secret
       key: GDd45t43RDBTrkkkg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -89,7 +97,7 @@ command:
                 Architecture:
                     x86_64
                 Description:
-                    
+
                 ImageId:
                     centos5u8_64_20G_aliaegis_20131231.vhd
                 ImageName:
@@ -142,7 +150,7 @@ command:
                 RegionId:
                     cn-qingdao
 
-Security Group can be obtained using the ``-f list_securitygroup`` option 
+Security Group can be obtained using the ``-f list_securitygroup`` option
 for the ``salt-cloud`` command:
 
 .. code-block:: bash

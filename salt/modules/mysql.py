@@ -35,6 +35,7 @@ Module to provide MySQL compatibility to salt.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re
@@ -45,14 +46,29 @@ import shlex
 import salt.utils
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
+from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
+    # Try to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
     HAS_MYSQLDB = True
 except ImportError:
-    HAS_MYSQLDB = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+        from MySQLdb.constants import FIELD_TYPE, FLAG
+        HAS_MYSQLDB = True
+    except ImportError:
+        # No MySQL Connector installed, return False
+        HAS_MYSQLDB = False
 
 log = logging.getLogger(__name__)
 
@@ -142,7 +158,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
 # when using a LIKE query (example in db_exists), as this escape is there to
 # avoid having _ or % characters interpreted in LIKE queries. The string parted
-# of the first query could become (still used with args dictionnary for myval):
+# of the first query could become (still used with args dictionary for myval):
 # 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
 #
 # Check integration tests if you find a hole in theses strings and escapes rules
@@ -318,7 +334,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `mydb`.* TO 'testuser'@'localhost'"
-        or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
+        or a dictionary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -330,7 +346,7 @@ def _grant_to_tokens(grant):
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        # Everything coming in dictionnary form was made for a MySQLdb execute
+        # Everything coming in dictionary form was made for a MySQLdb execute
         # call and contain a '%%' escaping of '%' characters for MySQLdb
         # that we should remove here.
         grant_sql = grant.get('qry', 'undefined').replace('%%', '%')
@@ -344,21 +360,21 @@ def _grant_to_tokens(grant):
     # the shell escape is \` but mysql escape is ``. Spaces should not be
     # exploded as users or db names could contain spaces.
     # Examples of splitting:
-    #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
-    #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
-    #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
-    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
-    #"'localhost'", 'WITH', 'GRANT', 'OPTION']
+    # "GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
+    #                                   TO 'foo'@'localhost' WITH GRANT OPTION"
+    # ['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
+    #  'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
+    # "'localhost'", 'WITH', 'GRANT', 'OPTION']
     #
-    #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
-    #                                  TO \'foo \' bar\'@\'localhost\''
-    #['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
-    # '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
-    # '@', "'localhost'"]
+    # 'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
+    #                                   TO \'foo \' bar\'@\'localhost\''
+    # ['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
+    #  '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
+    #  '@', "'localhost'"]
     #
-    #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
-    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
-    # '@', "'localhost'"]
+    # "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
+    # ['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
+    #  '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
     lex.quotes = '\'`'
     lex.whitespace_split = False
@@ -490,7 +506,7 @@ def _execute(cur, qry, args=None):
     query. For example '%' characters on the query must be encoded as '%%' and
     will be restored as '%' when arguments are applied. But when there're no
     arguments the '%%' is not managed. We cannot apply Identifier quoting in a
-    predictible way if the query are not always applying the same filters. So
+    predictable way if the query are not always applying the same filters. So
     this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
@@ -745,6 +761,8 @@ def free_slave(**connection_args):
         salt '*' mysql.free_slave
     '''
     slave_db = _connect(**connection_args)
+    if slave_db is None:
+        return ''
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
     slave_cur.execute('show slave status')
     slave_status = slave_cur.fetchone()
@@ -757,6 +775,8 @@ def free_slave(**connection_args):
         # servers here, and only overriding the host option in the connect
         # function.
         master_db = _connect(**master)
+        if master_db is None:
+            return ''
         master_cur = master_db.cursor()
         master_cur.execute('flush logs')
         master_db.close()
@@ -775,7 +795,7 @@ def free_slave(**connection_args):
         return 'failed'
 
 
-#Database related actions
+# Database related actions
 def db_list(**connection_args):
     '''
     Return a list of databases of a MySQL server using the output
@@ -1025,7 +1045,7 @@ def user_exists(user,
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
-    # Its password might have previousely change with the same command/state
+    # Its password might have previously change with the same command/state
     if dbc is None \
             and __context__['mysql.error'] \
                 .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
@@ -1052,7 +1072,7 @@ def user_exists(user,
             qry += ' AND Password = \'\''
     elif password:
         qry += ' AND Password = PASSWORD(%(password)s)'
-        args['password'] = password
+        args['password'] = str(password)
     elif password_hash:
         qry += ' AND Password = %(password)s'
         args['password'] = password_hash
@@ -1164,7 +1184,7 @@ def user_create(user,
     args['host'] = host
     if password is not None:
         qry += ' IDENTIFIED BY %(password)s'
-        args['password'] = password
+        args['password'] = str(password)
     elif password_hash is not None:
         qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
@@ -1324,7 +1344,7 @@ def user_remove(user,
     args['user'] = user
     args['host'] = host
     try:
-        result = _execute(cur, qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1463,8 +1483,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = opt.iterkeys().next()
-        value = opt[key]
+        key = next(six.iterkeys(opt))
 
         normal_key = key.strip().upper()
 
@@ -1519,7 +1538,7 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
-    if isinstance(ssl_option, type([])) and len(ssl_option):
+    if isinstance(ssl_option, list) and len(ssl_option):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
@@ -1597,7 +1616,8 @@ def grant_exists(grant,
     grants = user_grants(user, host, **connection_args)
 
     if grants is False:
-        log.debug('Grant does not exist, or is perhaps not ordered properly?')
+        log.error('Grant does not exist or may not be ordered properly. In some cases, '
+                  'this could also indicate a connection error. Check your configuration.')
         return False
 
     target_tokens = None
@@ -1718,6 +1738,11 @@ def grant_revoke(grant,
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
         s_database = quote_identifier(dbc, for_grants=(table is '*'))
+    if dbc is '*':
+        # add revoke for *.*
+        # before the modification query send to mysql will looks like
+        # REVOKE SELECT ON `*`.* FROM %(user)s@%(host)s
+        s_database = dbc
     if table is not '*':
         table = quote_identifier(table)
     # identifiers cannot be used as values, same thing for grants
@@ -1786,6 +1811,8 @@ def processlist(**connection_args):
     ret = []
 
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
     _execute(cur, 'SHOW FULL PROCESSLIST')
     hdr = [c[0] for c in cur.description]
@@ -1849,7 +1876,8 @@ def get_master_status(**connection_args):
     '''
     Retrieves the master status from the minion.
 
-    Returns:
+    Returns::
+
         {'host.domain.com': {'Binlog_Do_DB': '',
                          'Binlog_Ignore_DB': '',
                          'File': 'mysql-bin.000021',
@@ -1865,6 +1893,8 @@ def get_master_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
 
@@ -1933,6 +1963,8 @@ def get_slave_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
 
@@ -1961,6 +1993,8 @@ def showvariables(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
     if len(rtnv) == 0:
@@ -1987,6 +2021,8 @@ def showglobal(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
     if len(rtnv) == 0:

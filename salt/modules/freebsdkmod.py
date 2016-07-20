@@ -2,6 +2,7 @@
 '''
 Module to manage FreeBSD kernel modules
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

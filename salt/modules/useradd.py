@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
-'''
 
-# Import python libs
-import re
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
+'''
+from __future__ import absolute_import
 
 try:
     import pwd
+    HAS_PWD = True
 except ImportError:
-    pass
+    HAS_PWD = False
 import logging
 import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext import six
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
-
-RETCODE_12_ERROR_REGEX = re.compile(
-    r'userdel(.*)warning(.*)/var/mail(.*)No such file or directory'
-)
 
 # Define the module's virtual name
 __virtualname__ = 'user'
@@ -29,11 +31,10 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux or OpenBSD
-    and remove some of the functionality on OS X
+    Set the user module if the kernel is Linux, OpenBSD or NetBSD
     '''
 
-    if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
     return False
 
@@ -66,6 +67,27 @@ def _build_gecos(gecos_dict):
                                     gecos_dict.get('homephone', ''))
 
 
+def _update_gecos(name, key, value):
+    '''
+    Common code to change a user's GECOS information
+    '''
+    if value is None:
+        value = ''
+    elif not isinstance(value, six.string_types):
+        value = str(value)
+    pre_info = _get_gecos(name)
+    if not pre_info:
+        return False
+    if value == pre_info[key]:
+        return True
+    gecos_data = copy.deepcopy(pre_info)
+    gecos_data[key] = value
+    cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
+    post_info = info(name)
+    return _get_gecos(name).get(key) == value
+
+
 def add(name,
         uid=None,
         gid=None,
@@ -78,7 +100,8 @@ def add(name,
         roomnumber='',
         workphone='',
         homephone='',
-        createhome=True):
+        createhome=True,
+        loginclass=None):
     '''
     Add a user to the minion
 
@@ -96,29 +119,49 @@ def add(name,
     if gid not in (None, ''):
         cmd.extend(['-g', str(gid)])
     elif groups is not None and name in groups:
-        try:
-            for line in salt.utils.fopen('/etc/login.defs'):
-                if 'USERGROUPS_ENAB' not in line[:15]:
-                    continue
+        defs_file = '/etc/login.defs'
+        if __grains__['kernel'] != 'OpenBSD':
+            try:
+                with salt.utils.fopen(defs_file) as fp_:
+                    for line in fp_:
+                        if 'USERGROUPS_ENAB' not in line[:15]:
+                            continue
 
-                if 'yes' in line:
-                    cmd.extend([
-                        '-g', str(__salt__['file.group_to_gid'](name))
-                    ])
+                        if 'yes' in line:
+                            cmd.extend([
+                                '-g', str(__salt__['file.group_to_gid'](name))
+                            ])
 
-                # We found what we wanted, let's break out of the loop
-                break
-        except OSError:
-            log.debug('Error reading /etc/login.defs', exc_info=True)
-
-    if isinstance(createhome, bool):
-        if createhome:
-            cmd.append('-m')
+                        # We found what we wanted, let's break out of the loop
+                        break
+            except OSError:
+                log.debug(
+                    'Error reading ' + defs_file,
+                    exc_info_on_loglevel=logging.DEBUG
+                )
         else:
-            cmd.append('-M')
-    else:
-        log.error('Value passes to ``createhome`` must be a boolean')
-        return False
+            usermgmt_file = '/etc/usermgmt.conf'
+            try:
+                with salt.utils.fopen(usermgmt_file) as fp_:
+                    for line in fp_:
+                        if 'group' not in line[:5]:
+                            continue
+
+                        cmd.extend([
+                            '-g', str(line.split()[-1])
+                        ])
+
+                        # We found what we wanted, let's break out of the loop
+                        break
+            except OSError:
+                # /etc/usermgmt.conf not present: defaults will be used
+                pass
+
+    if createhome:
+        cmd.append('-m')
+    elif (__grains__['kernel'] != 'NetBSD'
+            and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-M')
 
     if home is not None:
         cmd.extend(['-d', home])
@@ -126,8 +169,14 @@ def add(name,
     if not unique:
         cmd.append('-o')
 
-    if system and __grains__['kernel'] != 'NetBSD':
+    if (system
+        and __grains__['kernel'] != 'NetBSD'
+        and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-r')
+
+    if __grains__['kernel'] == 'OpenBSD':
+        if loginclass is not None:
+            cmd.extend(['-L', loginclass])
 
     cmd.append(name)
 
@@ -172,7 +221,7 @@ def delete(name, remove=False, force=False):
     if remove:
         cmd.append('-r')
 
-    if force:
+    if force and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-f')
 
     cmd.append(name)
@@ -190,10 +239,10 @@ def delete(name, remove=False, force=False):
         if __grains__['os_family'] not in ('Debian',):
             return False
 
-        if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
+        if 'var/mail' in ret['stderr'] or 'var/spool/mail' in ret['stderr']:
             # We've hit the bug, let's log it and not fail
             log.debug(
-                'While the userdel exited with code 12, this is a know bug on '
+                'While the userdel exited with code 12, this is a known bug on '
                 'debian based distributions. See http://goo.gl/HH3FzT'
             )
             return True
@@ -236,10 +285,7 @@ def chuid(name, uid):
         return True
     cmd = ['usermod', '-u', '{0}'.format(uid), name]
     __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['uid'] != pre_info['uid']:
-        return post_info['uid'] == uid
-    return False
+    return info(name).get('uid') == uid
 
 
 def chgid(name, gid):
@@ -257,10 +303,7 @@ def chgid(name, gid):
         return True
     cmd = ['usermod', '-g', '{0}'.format(gid), name]
     __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['gid'] != pre_info['gid']:
-        return post_info['gid'] == gid
-    return False
+    return info(name).get('gid') == gid
 
 
 def chshell(name, shell):
@@ -278,10 +321,7 @@ def chshell(name, shell):
         return True
     cmd = ['usermod', '-s', shell, name]
     __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['shell'] != pre_info['shell']:
-        return post_info['shell'] == shell
-    return False
+    return info(name).get('shell') == shell
 
 
 def chhome(name, home, persist=False):
@@ -298,49 +338,64 @@ def chhome(name, home, persist=False):
     pre_info = info(name)
     if home == pre_info['home']:
         return True
-    cmd = ['usermod', '-d', home]
-    if persist:
+    cmd = ['usermod', '-d', '{0}'.format(home)]
+    if persist and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-m')
     cmd.append(name)
     __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['home'] != pre_info['home']:
-        return post_info['home'] == home
-    return False
+    return info(name).get('home') == home
 
 
 def chgroups(name, groups, append=False):
     '''
-    Change the groups this user belongs to, add append to append the specified
-    groups
+    Change the groups to which this user belongs
 
-    CLI Example:
+    name
+        User to modify
+
+    groups
+        Groups to set for the user
+
+    append : False
+        If ``True``, append the specified group(s). Otherwise, this function
+        will replace the user's groups with the specified group(s).
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' user.chgroups foo wheel,root True
+        salt '*' user.chgroups foo wheel,root
+        salt '*' user.chgroups foo wheel,root append=True
     '''
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
     cmd = ['usermod']
-    if append:
-        cmd.append('-a')
-    cmd.extend(['-G', ','.join(groups), name])
-    cmdret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    ret = not cmdret['retcode']
+    if __grains__['kernel'] != 'OpenBSD':
+        if append:
+            cmd.append('-a')
+    else:
+        if append:
+            cmd.append('-G')
+        else:
+            cmd.append('-S')
+    if __grains__['kernel'] != 'OpenBSD':
+        cmd.append('-G')
+    cmd.extend([','.join(groups), name])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
-    if not ret and ('not found in' in cmdret['stderr']):
-        ret = True
-        for group in groups:
-            cmd = ['gpasswd', '-a', name, group]
-            cmdret = __salt__['cmd.run_all'](cmd, python_shell=False)
-            if cmdret['retcode']:
-                ret = False
-    return ret
+    if __grains__['kernel'] != 'OpenBSD':
+        if result['retcode'] != 0 and 'not found in' in result['stderr']:
+            ret = True
+            for group in groups:
+                cmd = ['gpasswd', '-a', '{0}'.format(name), '{1}'.format(group)]
+                if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+                    ret = False
+            return ret
+    return result['retcode'] == 0
 
 
 def chfullname(name, fullname):
@@ -353,20 +408,7 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
-    fullname = str(fullname)
-    pre_info = _get_gecos(name)
-    if not pre_info:
-        return False
-    if fullname == pre_info['fullname']:
-        return True
-    gecos_field = copy.deepcopy(pre_info)
-    gecos_field['fullname'] = fullname
-    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
-    __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['fullname'] != pre_info['fullname']:
-        return post_info['fullname'] == fullname
-    return False
+    return _update_gecos(name, 'fullname', fullname)
 
 
 def chroomnumber(name, roomnumber):
@@ -379,20 +421,7 @@ def chroomnumber(name, roomnumber):
 
         salt '*' user.chroomnumber foo 123
     '''
-    roomnumber = str(roomnumber)
-    pre_info = _get_gecos(name)
-    if not pre_info:
-        return False
-    if roomnumber == pre_info['roomnumber']:
-        return True
-    gecos_field = copy.deepcopy(pre_info)
-    gecos_field['roomnumber'] = roomnumber
-    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
-    __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['roomnumber'] != pre_info['roomnumber']:
-        return post_info['roomnumber'] == roomnumber
-    return False
+    return _update_gecos(name, 'roomnumber', roomnumber)
 
 
 def chworkphone(name, workphone):
@@ -403,22 +432,9 @@ def chworkphone(name, workphone):
 
     .. code-block:: bash
 
-        salt '*' user.chworkphone foo "7735550123"
+        salt '*' user.chworkphone foo 7735550123
     '''
-    workphone = str(workphone)
-    pre_info = _get_gecos(name)
-    if not pre_info:
-        return False
-    if workphone == pre_info['workphone']:
-        return True
-    gecos_field = copy.deepcopy(pre_info)
-    gecos_field['workphone'] = workphone
-    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
-    __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['workphone'] != pre_info['workphone']:
-        return post_info['workphone'] == workphone
-    return False
+    return _update_gecos(name, 'workphone', workphone)
 
 
 def chhomephone(name, homephone):
@@ -429,22 +445,31 @@ def chhomephone(name, homephone):
 
     .. code-block:: bash
 
-        salt '*' user.chhomephone foo "7735551234"
+        salt '*' user.chhomephone foo 7735551234
     '''
-    homephone = str(homephone)
-    pre_info = _get_gecos(name)
-    if not pre_info:
+    return _update_gecos(name, 'homephone', homephone)
+
+
+def chloginclass(name, loginclass):
+    '''
+    Change the default login class of the user
+
+    .. note::
+        This function only applies to OpenBSD systems.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.chloginclass foo staff
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
         return False
-    if homephone == pre_info['homephone']:
+    if loginclass == get_loginclass(name):
         return True
-    gecos_field = copy.deepcopy(pre_info)
-    gecos_field['homephone'] = homephone
-    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
+    cmd = ['usermod', '-L', '{0}'.format(loginclass), '{0}'.format(name)]
     __salt__['cmd.run'](cmd, python_shell=False)
-    post_info = info(name)
-    if post_info['homephone'] != pre_info['homephone']:
-        return post_info['homephone'] == homephone
-    return False
+    return get_loginclass(name) == loginclass
 
 
 def info(name):
@@ -463,6 +488,36 @@ def info(name):
         return {}
     else:
         return _format_info(data)
+
+
+def get_loginclass(name):
+    '''
+    Get the login class of the user
+
+    .. note::
+        This function only applies to OpenBSD systems.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_loginclass foo
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
+        return False
+    userinfo = __salt__['cmd.run_stdout'](
+        ['userinfo', name],
+        python_shell=False)
+    for line in userinfo.splitlines():
+        if line.startswith('class'):
+            try:
+                ret = line.split(None, 1)[1]
+                break
+            except ValueError:
+                continue
+    else:
+        ret = ''
+    return ret
 
 
 def _format_info(data):
@@ -512,3 +567,26 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError(
+            'User \'{0}\' already exists'.format(new_name)
+        )
+    cmd = ['usermod', '-l', '{0}'.format(new_name), '{0}'.format(name)]
+    __salt__['cmd.run'](cmd, python_shell=False)
+    return info(name).get('name') == new_name

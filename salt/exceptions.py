@@ -2,16 +2,40 @@
 '''
 This module is a central location for all salt exceptions
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
-import salt.exitcodes
+import logging
+import time
+
+# Import salt libs
+import salt.defaults.exitcodes
+
+log = logging.getLogger(__name__)
+
+
+def get_error_message(error):
+    '''
+    Get human readable message from Python Exception
+    '''
+    return error.args[0] if error.args else ''
 
 
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
+    def __init__(self, message=''):
+        super(SaltException, self).__init__(message)
+        self.strerror = message
+
+    def pack(self):
+        '''
+        Pack this exception into a serializable dictionary that is safe for
+        transport via msgpack
+        '''
+        return dict(message=self.__unicode__(), args=self.args)
 
 
 class SaltClientError(SaltException):
@@ -23,6 +47,12 @@ class SaltClientError(SaltException):
 class SaltMasterError(SaltException):
     '''
     Problem reading the master root key
+    '''
+
+
+class SaltNoMinionsFound(SaltException):
+    '''
+    An attempt to retrieve a list of minions failed
     '''
 
 
@@ -63,6 +93,12 @@ class LoaderError(SaltException):
     '''
 
 
+class PublishError(SaltException):
+    '''
+    Problems encountered when trying to publish a command
+    '''
+
+
 class MinionError(SaltException):
     '''
     Minion problems reading uris such as salt:// or http://
@@ -73,6 +109,39 @@ class FileserverConfigError(SaltException):
     '''
     Used when invalid fileserver settings are detected
     '''
+
+
+class FileLockError(SaltException):
+    '''
+    Used when an error occurs obtaining a file lock
+    '''
+    def __init__(self, msg, time_start=None, *args, **kwargs):
+        super(FileLockError, self).__init__(msg, *args, **kwargs)
+        if time_start is None:
+            log.warning(
+                'time_start should be provided when raising a FileLockError. '
+                'Defaulting to current time as a fallback, but this may '
+                'result in an inaccurate timeout.'
+            )
+            self.time_start = time.time()
+        else:
+            self.time_start = time_start
+
+
+class GitLockError(SaltException):
+    '''
+    Raised when an uncaught error occurs in the midst of obtaining an
+    update/checkout lock in salt.utils.gitfs.
+
+    NOTE: While this uses the errno param similar to an OSError, this exception
+    class is *not* as subclass of OSError. This is done intentionally, so that
+    this exception class can be caught in a try/except without being caught as
+    an OSError.
+    '''
+    def __init__(self, errno, strerror, *args, **kwargs):
+        super(GitLockError, self).__init__(strerror, *args, **kwargs)
+        self.errno = errno
+        self.strerror = strerror
 
 
 class SaltInvocationError(SaltException, TypeError):
@@ -96,13 +165,13 @@ class SaltRenderError(SaltException):
     of the error.
     '''
     def __init__(self,
-                 error,
+                 message,
                  line_num=None,
                  buf='',
                  marker='    <======================',
                  trace=None):
-        self.error = error
-        exc_str = copy.deepcopy(error)
+        self.error = message
+        exc_str = copy.deepcopy(message)
         self.line_num = line_num
         self.buffer = buf
         self.context = ''
@@ -134,6 +203,12 @@ class SaltClientTimeout(SaltException):
         self.jid = jid
 
 
+class SaltCacheError(SaltException):
+    '''
+    Thrown when a problem was encountered trying to read or write from the salt cache
+    '''
+
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
@@ -162,6 +237,13 @@ class TokenAuthenticationError(SaltException):
 class AuthorizationError(SaltException):
     '''
     Thrown when runner or wheel execution fails due to permissions
+    '''
+
+
+class SaltDaemonNotRunning(SaltException):
+    '''
+    Throw when a running master/minion/syndic is not running but is needed to
+    perform the requested operation (e.g., eauth).
     '''
 
 
@@ -198,7 +280,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
+    def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
         self.message = message
         self.exit_code = exit_code
@@ -231,4 +313,11 @@ class SaltCloudExecutionFailure(SaltCloudException):
 class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
+    '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''

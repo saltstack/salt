@@ -2,7 +2,7 @@
 /src
 *.py[co]
 pkg/arch/*.tar.xz
-*.swp
+*.sw[pon]
 doc/_build
 dist
 MANIFEST
@@ -24,9 +24,8 @@ lib64
 pip/
 share/
 tests/integration/tmp/
-
-# tox - ignore any tox-created virtualenv dirs
-.tox
+tests/cachedir/
+tests/unit/templates/roots/
 
 # setuptools stuff
 *.egg-info
@@ -37,11 +36,13 @@ coverage.xml
 htmlcov/
 
 # IDE files
+/.settings
 /.project
 /.pydevproject
 /.idea
 /.ropeproject
 .ropeproject
+*_flymake.py
 /*.iml
 *.sublime-project
 *.sublime-workspace
@@ -50,8 +51,8 @@ htmlcov/
 tags
 
 # ignore Vagrant file
-Vagrantfile
-.vagrant
+**/Vagrantfile
+**/.vagrant
 
 # Compiled translation files should not be VCS'ed
 # locale/zh_CN/LC_MESSAGES/topics/virt/nic.mo
@@ -61,8 +62,15 @@ Vagrantfile
 # Allow a user to set their own _version.py for testing
 _version.py
 
+# Ignore auto generated _syspaths.py file
+_syspaths.py
+
 # Ignore grains file written out during tests
 tests/integration/files/conf/grains
+/salt/_syspaths.py
+
+# ignore the local root
+/root/**
 
 # Ignore file cache created by jinja tests
 tests/unit/templates/roots

@@ -1,16 +1,17 @@
-==================================
+=================================
 Getting Started With DigitalOcean
-==================================
+=================================
 
-DigitalOcean is a public cloud provider that specializes in Linux instances.
+DigitalOcean is a public cloud host that specializes in Linux instances.
 
 
 Configuration
 =============
-Using Salt for DigitalOcean requires a client_key, an api_key, an ssh_key_file,
-and an ssh_key_name. The client_key and api_key can be found in the Digital
-Ocean web interface, in the "My Settings" section, under the API Access tab.
-The ssh_key_name can be found under the "SSH Keys" section. 
+Using Salt for DigitalOcean requires a ``personal_access_token``, an ``ssh_key_file``,
+and at least one SSH key name in ``ssh_key_names``. More ``ssh_key_names`` can be added
+by separating each key with a comma. The ``personal_access_token`` can be found in the
+DigitalOcean web interface in the "Apps & API" section. The SSH key name can be found
+under the "SSH Keys" section.
 
 .. code-block:: yaml
 
@@ -18,13 +19,20 @@ The ssh_key_name can be found under the "SSH Keys" section.
     # /etc/salt/cloud.providers.d/ directory.
 
     my-digitalocean-config:
-      provider: digital_ocean
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      driver: digital_ocean
+      personal_access_token: xxx
       ssh_key_file: /path/to/ssh/key/file
-      ssh_key_name: my-key-name
+      ssh_key_names: my-key-name,my-key-name-2
       location: New York 1
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -37,12 +45,37 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 .. code-block:: yaml
 
     digitalocean-ubuntu:
-        provider: my-digitalocean-config
-        image: Ubuntu 14.04 x32
-        size: 512MB
-        location: New York 1
-        private_networking: True
-        backups_enabled: True
+      provider: my-digitalocean-config
+      image: 14.04 x64
+      size: 512MB
+      location: New York 1
+      private_networking: True
+      backups_enabled: True
+      ipv6: True
+
+Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
+command:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-digitalocean-config
+    my-digitalocean-config:
+        ----------
+        digital_ocean:
+            ----------
+            Amsterdam 1:
+                ----------
+                available:
+                    False
+                features:
+                    [u'backups']
+                name:
+                    Amsterdam 1
+                sizes:
+                    []
+                slug:
+                    ams1
+    ...SNIP...
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -84,19 +117,43 @@ command:
         ----------
         digital_ocean:
             ----------
-            Arch Linux 2013.05 x64:
+            10.1:
                 ----------
+                created_at:
+                    2015-01-20T20:04:34Z
                 distribution:
-                    Arch Linux
+                    FreeBSD
                 id:
-                    350424
+                    10144573
+                min_disk_size:
+                    20
                 name:
-                    Arch Linux 2013.05 x64
+                    10.1
                 public:
                     True
-                slug:
-                    None
     ...SNIP...
+
+
+Profile Specifics:
+------------------
+
+ssh_username
+------------
+
+If using a FreeBSD image from Digital Ocean, you'll need to set the ``ssh_username``
+setting to ``freebsd`` in your profile configuration.
+
+.. code-block:: yaml
+
+    digitalocean-freebsd:
+      provider: my-digitalocean-config
+      image: 10.2
+      size: 512MB
+      ssh_username: freebsd
+
+
+Miscellaneous Information
+=========================
 
 .. note::
 
@@ -106,6 +163,13 @@ command:
     when using the ``--list-images`` option. These names can be used just like
     the rest of the standard instances when specifying an image in the cloud
     profile configuration.
+
+.. note::
+
+    If your domain's DNS is managed with DigitalOcean, you can automatically
+    create A-records for newly created droplets. Use ``create_dns_record: True``
+    in your config to enable this. Add ``delete_dns_record: True`` to also
+    delete records when a droplet is destroyed.
 
 .. note::
 

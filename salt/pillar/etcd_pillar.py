@@ -58,6 +58,7 @@ key with all minions but override its value for a specific minion::
     etcdctl set /salt-private/special_minion_id/mykey my_other_value
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

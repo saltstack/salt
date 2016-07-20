@@ -13,7 +13,7 @@ deployed.
 The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
 cloud that can scale and fully featured. Salt Virt comes with the
 ability to set up and manage complex virtual machine networking, powerful
-image and disk management, as well as virtual machine migration with and without
+image, and disk management, as well as virtual machine migration with and without
 shared storage.
 
 This means that Salt Virt can be used to create a cloud from a blade center

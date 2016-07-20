@@ -28,7 +28,7 @@ DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
 if [ -f $DEBIAN_VERSION ]; then
-   break   
+   break
 elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
@@ -56,7 +56,7 @@ start() {
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
-            echo -n "already started, lock file found" 
+            echo -n "already started, lock file found"
             RETVAL=1
         elif $PYTHON $SALTMASTER -d $MASTER_ARGS >& /dev/null; then
             echo -n "OK"
@@ -64,6 +64,10 @@ start() {
         fi
     else
         daemon --check $SERVICE $SALTMASTER -d $MASTER_ARGS
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
+        echo
+        return $RETVAL
     fi
     RETVAL=$?
     echo
@@ -86,6 +90,10 @@ stop() {
         fi
     else
         killproc $PROCESS
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$SERVICE
+        return $RETVAL
     fi
     RETVAL=$?
     echo

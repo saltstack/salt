@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -16,21 +19,23 @@ from salt.states import (
     postgres_user,
     postgres_group,
     postgres_extension,
+    postgres_schema,
 )
 MODS = (
     postgres_database,
     postgres_user,
     postgres_group,
     postgres_extension,
+    postgres_schema,
 )
 
 
 OPTS = {'test': False}
 
 for postgres in MODS:
-    postgres.__grains__ = None  # in order to stub it w/patch below
-    postgres.__salt__ = None  # in order to stub it w/patch below
-    postgres.__opts__ = OPTS  # in order to stub it w/patch below
+    postgres.__grains__ = {}  # in order to stub it w/patch below
+    postgres.__salt__ = {}  # in order to stub it w/patch below
+    postgres.__opts__ = {}  # in order to stub it w/patch below
 
 if NO_MOCK is False:
     SALT_STUB = {
@@ -46,7 +51,8 @@ else:
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(postgres_user,
                 __grains__={'os_family': 'Linux'},
-                __salt__=SALT_STUB)
+                __salt__=SALT_STUB,
+                __opts__={'test': False})
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
 class PostgresUserTestCase(TestCase):
 
@@ -56,7 +62,7 @@ class PostgresUserTestCase(TestCase):
     })
     def test_present__creation(self):
         # test=True
-        with patch.dict(OPTS, {'test': True}):
+        with patch.dict(postgres_user.__opts__, {'test': True}):
             ret = postgres_user.present('foo')
             self.assertEqual(
                 ret,
@@ -106,7 +112,7 @@ class PostgresUserTestCase(TestCase):
     })
     def test_present__update(self):
         # test=True
-        with patch.dict(OPTS, {'test': True}):
+        with patch.dict(postgres_user.__opts__, {'test': True}):
             ret = postgres_user.present('foo', login=True, replication=False)
             self.assertEqual(
                 ret,
@@ -178,7 +184,8 @@ class PostgresUserTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(postgres_group,
                 __grains__={'os_family': 'Linux'},
-                __salt__=SALT_STUB)
+                __salt__=SALT_STUB,
+                __opts__={'test': False})
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
 class PostgresGroupTestCase(TestCase):
 
@@ -188,7 +195,7 @@ class PostgresGroupTestCase(TestCase):
     })
     def test_present__creation(self):
         # test=True
-        with patch.dict(OPTS, {'test': True}):
+        with patch.dict(postgres_group.__opts__, {'test': True}):
             ret = postgres_group.present('foo')
             self.assertEqual(
                 ret,
@@ -238,7 +245,7 @@ class PostgresGroupTestCase(TestCase):
     })
     def test_present__update(self):
         # test=True
-        with patch.dict(OPTS, {'test': True}):
+        with patch.dict(postgres_group.__opts__, {'test': True}):
             ret = postgres_group.present('foo', login=True, replication=False)
             self.assertEqual(
                 ret,
@@ -310,7 +317,8 @@ class PostgresGroupTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(postgres_extension,
                 __grains__={'os_family': 'Linux'},
-                __salt__=SALT_STUB)
+                __salt__=SALT_STUB,
+                __opts__={'test': False})
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
 class PostgresExtensionTestCase(TestCase):
 
@@ -373,7 +381,7 @@ class PostgresExtensionTestCase(TestCase):
         ret = postgres_extension.present('foo')
         self.assertEqual(
             ret,
-            {'comment': 'The extension foo has been upgradeed',
+            {'comment': 'The extension foo has been upgraded',
              'changes': {}, 'name': 'foo', 'result': True}
         )
 
@@ -394,26 +402,27 @@ class PostgresExtensionTestCase(TestCase):
         scenario of creating upgrading extensions with possible schema and
         version specifications
         '''
-        ret = postgres_extension.present('foo')
-        self.assertEqual(
-            ret,
-            {'comment': 'Extension foo is set to be installed',
-             'changes': {}, 'name': 'foo', 'result': None}
+        with patch.dict(postgres_extension.__opts__, {'test': True}):
+            ret = postgres_extension.present('foo')
+            self.assertEqual(
+                ret,
+                {'comment': 'Extension foo is set to be installed',
+                 'changes': {}, 'name': 'foo', 'result': None}
 
-        )
-        ret = postgres_extension.present('foo')
-        self.assertEqual(
-            ret,
-            {'comment': "Extension foo is set to be created",
-             'changes': {}, 'name': 'foo', 'result': None}
+            )
+            ret = postgres_extension.present('foo')
+            self.assertEqual(
+                ret,
+                {'comment': "Extension foo is set to be created",
+                 'changes': {}, 'name': 'foo', 'result': None}
 
-        )
-        ret = postgres_extension.present('foo')
-        self.assertEqual(
-            ret,
-            {'comment': "Extension foo is set to be upgraded",
-             'changes': {}, 'name': 'foo', 'result': None}
-        )
+            )
+            ret = postgres_extension.present('foo')
+            self.assertEqual(
+                ret,
+                {'comment': "Extension foo is set to be upgraded",
+                 'changes': {}, 'name': 'foo', 'result': None}
+            )
 
     @patch.dict(SALT_STUB, {
         'postgres.is_installed_extension': Mock(side_effect=[
@@ -475,12 +484,90 @@ class PostgresExtensionTestCase(TestCase):
         ]),
     })
     def test_absent_failedtest(self):
-        ret = postgres_extension.absent('foo')
+        with patch.dict(postgres_extension.__opts__, {'test': True}):
+            ret = postgres_extension.absent('foo')
         self.assertEqual(
             ret,
             {'comment': 'Extension foo is set to be removed',
              'changes': {}, 'name': 'foo', 'result': None}
         )
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch.multiple(postgres_schema,
+                __grains__={'os_family': 'Linux'},
+                __salt__=SALT_STUB,
+                __opts__={'test': False})
+@patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+class PostgresSchemaTestCase(TestCase):
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_get': Mock(return_value=None),
+        'postgres.schema_create': MagicMock(),
+    })
+    def test_present_creation(self):
+        ret = postgres_schema.present('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo has been created in database dbname',
+             'changes': {'foo': 'Present'},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_create'].call_count, 1)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_get': Mock(return_value={'foo':
+                                                  {'acl': '',
+                                                   'owner': 'postgres'}
+                                                  }),
+        'postgres.schema_create': MagicMock(),
+    })
+    def test_present_nocreation(self):
+        ret = postgres_schema.present('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo already exists in database dbname',
+             'changes': {},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_create'].call_count, 0)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_exists': Mock(return_value=True),
+        'postgres.schema_remove': MagicMock(),
+    })
+    def test_absent_remove(self):
+        ret = postgres_schema.absent('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo has been removed from database dbname',
+             'changes': {'foo': 'Absent'},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_remove'].call_count, 1)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_exists': Mock(return_value=False),
+        'postgres.schema_remove': MagicMock(),
+    })
+    def test_absent_noremove(self):
+        ret = postgres_schema.absent('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo is not present in database dbname,'
+                        ' so it cannot be removed',
+             'changes': {},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_remove'].call_count, 0)
 
 
 if __name__ == '__main__':

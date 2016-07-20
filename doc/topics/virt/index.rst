@@ -2,8 +2,8 @@
 Salt Virt
 =========
 
-The Salt Virt cloud controller capability was initial added to Salt in version
-0.14.0 as an alpha technology.
+The Salt Virt cloud controller capability was initially added to Salt in
+version 0.14.0 as an alpha technology.
 
 The initial Salt Virt system supports core cloud operations:
 
@@ -26,6 +26,10 @@ the Salt Virt systems.
     to develop the cloud control aspects of Salt was a project called butter.
     This project never took off, but was functional and proves the early
     viability of Salt to be a cloud controller.
+
+.. warning::
+    Salt Virt does not work with KVM that is running in a VM. KVM must be running
+    on the base hardware.
 
 Salt Virt Tutorial
 ==================
@@ -62,4 +66,3 @@ Deploy from Network or Disk
 .. toctree::
     disk
     nic
-

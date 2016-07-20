@@ -2,6 +2,7 @@
 '''
 Module for managing ext2/3/4 file systems
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -241,7 +242,7 @@ def dump(device, args=None):
             comps = line.split(': ')
             if line.startswith('Filesystem features'):
                 ret['attributes'][comps[0]] = comps[1].split()
-            elif line.startswith('Group'):
+            elif line.startswith('Group') and not line.startswith('Group descriptor size'):
                 mode = 'blocks'
             else:
                 ret['attributes'][comps[0]] = comps[1].strip()

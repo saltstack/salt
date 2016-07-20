@@ -18,9 +18,14 @@ Manage the information stored in the known_hosts files.
         - absent
         - user: root
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+
+# Import salt libs
+import salt.utils
+from salt.exceptions import CommandNotFoundError
 
 
 def present(
@@ -31,7 +36,8 @@ def present(
         port=None,
         enc=None,
         config=None,
-        hash_hostname=True):
+        hash_hostname=True,
+        hash_known_hosts=True):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -45,18 +51,21 @@ def present(
     user
         The user who owns the ssh authorized keys file to modify
 
+    fingerprint
+        The fingerprint of the key which must be present in the known_hosts
+        file (optional if key specified)
+
+    key
+        The public key which must be present in the known_hosts file
+        (optional if fingerprint specified)
+
+    port
+        optional parameter, port which will be used to when requesting the
+        public key from the remote host, defaults to port 22.
+
     enc
         Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
         or ssh-dss
-
-    fingerprint
-        The fingerprint of the key which must be presented in the known_hosts
-        file
-
-    port
-        optional parameter, denoting the port of the remote host, which will be
-        used in case, if the public key will be requested from it. By default
-        the port 22 is used.
 
     config
         The location of the authorized keys file relative to the user's home
@@ -65,7 +74,14 @@ def present(
         absolute path when a user is not specified.
 
     hash_hostname : True
-        Hash all hostnames and addresses in the output.
+        Hash all hostnames and addresses in the known hosts file.
+
+        .. deprecated:: Carbon
+
+            Please use hash_known_hosts instead.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
     '''
     ret = {'name': name,
            'changes': {},
@@ -82,6 +98,14 @@ def present(
         ret['result'] = False
         return dict(ret, comment=comment)
 
+    if not hash_hostname:
+        salt.utils.warn_until(
+            'Carbon',
+            'The hash_hostname parameter is misleading as ssh-keygen can only '
+            'hash the whole known hosts file, not entries for individual'
+            'hosts. Please use hash_known_hosts=False instead.')
+        hash_known_hosts = hash_hostname
+
     if __opts__['test']:
         if key and fingerprint:
             comment = 'Specify either "key" or "fingerprint", not both.'
@@ -92,10 +116,15 @@ def present(
             ret['result'] = False
             return dict(ret, comment=comment)
 
-        result = __salt__['ssh.check_known_host'](user, name,
-                                                  key=key,
-                                                  fingerprint=fingerprint,
-                                                  config=config)
+        try:
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      key=key,
+                                                      fingerprint=fingerprint,
+                                                      config=config)
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'ssh.check_known_host error: {0}'.format(err)
+            return ret
 
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
@@ -116,10 +145,10 @@ def present(
                 port=port,
                 enc=enc,
                 config=config,
-                hash_hostname=hash_hostname)
+                hash_known_hosts=hash_known_hosts)
     if result['status'] == 'exists':
         return dict(ret,
-                    Gcomment='{0} already exists in {1}'.format(name, config))
+                    comment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'

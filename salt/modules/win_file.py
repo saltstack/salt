@@ -7,6 +7,7 @@ data
             - win32file
             - win32security
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,6 +16,8 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import operator  # do not remove
+from collections import Iterable, Mapping  # do not remove
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
@@ -27,8 +30,11 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+import mmap  # do not remove, used in imported file.py functions
+# do not remove, used in imported file.py functions
+import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -37,6 +43,7 @@ try:
     import win32api
     import win32file
     import win32security
+    import win32con
     from pywintypes import error as pywinerror
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -46,15 +53,16 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
-        check_managed, check_managed_changes, check_perms, remove, source_list,
+        check_managed, check_managed_changes, check_perms, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, find, psed, get_sum, _get_bkroot,
+        contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, HASHES, comment, uncomment)
+        lstat, path_exists_glob, write, pardir, join, HASHES, comment,
+        uncomment, _add_flags, comment_line, apply_template_on_contents)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -73,14 +81,15 @@ def __virtual__():
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
             global check_managed, check_managed_changes, check_file_meta
-            global remove, append, _error, directory_exists, touch, contains
+            global append, _error, directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash
+            global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global path_exists_glob, comment, uncomment
+            global write, pardir, join, _add_flags, apply_template_on_contents
+            global path_exists_glob, comment, uncomment, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -92,7 +101,6 @@ def __virtual__():
             restore_backup = _namespaced_function(restore_backup, globals())
             delete_backup = _namespaced_function(delete_backup, globals())
             extract_hash = _namespaced_function(extract_hash, globals())
-            remove = _namespaced_function(remove, globals())
             append = _namespaced_function(append, globals())
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
@@ -130,8 +138,15 @@ def __virtual__():
             rename = _namespaced_function(rename, globals())
             lstat = _namespaced_function(lstat, globals())
             path_exists_glob = _namespaced_function(path_exists_glob, globals())
+            write = _namespaced_function(write, globals())
+            pardir = _namespaced_function(pardir, globals())
+            join = _namespaced_function(join, globals())
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
+            comment_line = _namespaced_function(comment_line, globals())
+            _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
+            _add_flags = _namespaced_function(_add_flags, globals())
+            apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
 
             return __virtualname__
     return False
@@ -351,7 +366,7 @@ def get_pgid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
@@ -547,7 +562,7 @@ def get_uid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
@@ -827,7 +842,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlinks=True):
+def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -868,7 +883,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
@@ -929,7 +945,7 @@ def get_attributes(path):
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
@@ -941,7 +957,7 @@ def get_attributes(path):
     attributes['symbolicLink'] = False
     if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
 
@@ -1027,6 +1043,68 @@ def set_mode(path, mode):
                  'always None.'.format(func_name))
 
     return get_mode(path)
+
+
+def remove(path, force=False):
+    '''
+    Remove the named file or directory
+
+    :param str path: The path to the file or directory to remove.
+
+    :param bool force: Remove even if marked Read-Only
+
+    :return: True if successful, False if unsuccessful
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.remove C:\\Temp
+    '''
+    # This must be a recursive function in windows to properly deal with
+    # Symlinks. The shutil.rmtree function will remove the contents of
+    # the Symlink source in windows.
+
+    path = os.path.expanduser(path)
+
+    # Does the file/folder exists
+    if not os.path.exists(path):
+        return 'File/Folder not found: {0}'.format(path)
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    # Remove ReadOnly Attribute
+    if force:
+        # Get current file attributes
+        file_attributes = win32api.GetFileAttributes(path)
+        win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
+
+    try:
+        if os.path.isfile(path):
+            # A file and a symlinked file are removed the same way
+            os.remove(path)
+        elif is_link(path):
+            # If it's a symlink directory, use the rmdir command
+            os.rmdir(path)
+        else:
+            for name in os.listdir(path):
+                item = '{0}\\{1}'.format(path, name)
+                # If it's a normal directory, recurse to remove it's contents
+                remove(item, force)
+
+            # rmdir will work now because the directory is empty
+            os.rmdir(path)
+    except (OSError, IOError) as exc:
+        if force:
+            # Reset attributes to the original if delete fails.
+            win32api.SetFileAttributes(path, file_attributes)
+        raise CommandExecutionError(
+            'Could not remove {0!r}: {1}'.format(path, exc)
+        )
+
+    return True
 
 
 def symlink(src, link):

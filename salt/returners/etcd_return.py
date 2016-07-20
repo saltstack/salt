@@ -9,7 +9,7 @@ configuration file:
 
 .. code-block:: yaml
 
-    my_etd_config:
+    my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
 
@@ -40,6 +40,7 @@ CLI Example:
 
     salt '*' test.ping --return etcd
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -53,6 +54,7 @@ except ImportError:
     HAS_LIBS = False
 
 import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +102,7 @@ def returner(ret):
         client.write(dest, json.dumps(ret[field]))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''
@@ -109,6 +111,13 @@ def save_load(jid, load):
         '/'.join((path, 'jobs', jid, '.load.p')),
         json.dumps(load)
     )
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):
@@ -168,8 +177,8 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

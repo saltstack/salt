@@ -2,20 +2,26 @@
 '''
 Extract the pillar data for this minion
 '''
+from __future__ import absolute_import
+
 # Import python libs
 import collections
 
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 
-def get(key, default='', merge=False, delimiter=':'):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
+
+    If the merge parameter is set to ``True``, the default will be recursively
+    merged into the returned pillar data.
 
     The value can also represent a value in a nested dict using a ":" delimiter
     for the dict. This means that if a dict in pillar looks like this::
@@ -31,12 +37,12 @@ def get(key, default='', merge=False, delimiter=':'):
         Specify whether or not the retrieved values should be recursively
         merged into the passed default.
 
-        .. versionadded:: 2015.5.1
+        .. versionadded:: 2015.5.0
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
-        .. versionadded:: 2015.5.1
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -60,7 +66,7 @@ def item(*args):
     '''
     .. versionadded:: 0.16.2
 
-    Return one ore more pillar entries
+    Return one or more pillar entries
 
     CLI Examples:
 
@@ -100,6 +106,36 @@ def raw(key=None):
         ret = __pillar__
 
     return ret
+
+
+def keys(key, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Attempt to retrieve a list of keys from the named value from the pillar.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict, similar to how pillar.get works.
+
+    delimiter
+        Specify an alternate delimiter to use when traversing a nested dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.keys web:sites
+    '''
+    ret = salt.utils.traverse_dict_and_list(
+        __pillar__, key, KeyError, delimiter)
+
+    if ret is KeyError:
+        raise KeyError("Pillar key not found: {0}".format(key))
+
+    if not isinstance(ret, dict):
+        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+
+    return ret.keys()
 
 
 # Allow pillar.data to also be used to return pillar data

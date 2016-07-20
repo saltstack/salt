@@ -4,6 +4,7 @@ Support for Alternatives system
 
 :codeauthor: Radek Rada <radek.rada@gmail.com>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -77,6 +78,27 @@ def show_current(name):
             'alternatives: path {0} does not exist'.format(alt_link_path)
         )
     return False
+
+
+def check_exists(name, path):
+    '''
+    Check if the given path is an alternative for a name.
+
+    .. versionadded:: 2015.8.4
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.check_exists name path
+    '''
+    cmd = [_get_cmd(), '--display', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if out['retcode'] > 0 and out['stderr'] != '':
+        return False
+
+    return path in out['stdout'].splitlines()
 
 
 def check_installed(name, path):

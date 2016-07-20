@@ -4,6 +4,8 @@ Generate the salt thin tarball from the installed python files
 '''
 
 # Import python libs
+from __future__ import absolute_import
+
 import os
 import shutil
 import tarfile
@@ -13,48 +15,48 @@ import tempfile
 # Import third party libs
 import jinja2
 import yaml
-import requests
+import salt.ext.six as six
+import tornado
+
+# pylint: disable=import-error,no-name-in-module
 try:
     import certifi
     HAS_CERTIFI = True
 except ImportError:
     HAS_CERTIFI = False
+
 try:
-    import urllib3
-    HAS_URLLIB3 = True
+    import singledispatch
+    HAS_SINGLEDISPATCH = True
 except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages import urllib3  # pylint: disable=E0611
-        HAS_URLLIB3 = True
-    except ImportError:
-        HAS_URLLIB3 = False
+    HAS_SINGLEDISPATCH = False
+
 try:
-    import six
-    HAS_SIX = True
+    import singledispatch_helpers
+    HAS_SINGLEDISPATCH_HELPERS = True
 except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages.urllib3.packages import six  # pylint: disable=E0611
-        HAS_SIX = True
-    except ImportError:
-        HAS_SIX = False
+    HAS_SINGLEDISPATCH_HELPERS = False
+
 try:
-    import chardet
-    HAS_CHARDET = True
+    import backports_abc
+    HAS_BACKPORTS_ABC = True
 except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages.urllib3.packages import chardet  # pylint: disable=E0611
-        HAS_CHARDET = True
-    except ImportError:
-        HAS_CHARDET = False
+    HAS_BACKPORTS_ABC = False
+
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
 except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
+
+try:
+    import xml
+    HAS_XML = True
+except ImportError:
+    HAS_XML = False
+# pylint: enable=import-error,no-name-in-module
+
 try:
     # Older python where the backport from pypi is installed
     from backports import ssl_match_hostname
@@ -62,7 +64,7 @@ try:
 except ImportError:
     # Other older python we use our bundled copy
     try:
-        from requests.packages.urllib3.packages import ssl_match_hostname
+        from salt.ext import ssl_match_hostname
         HAS_SSL_MATCH_HOSTNAME = True
     except ImportError:
         HAS_SSL_MATCH_HOSTNAME = False
@@ -109,34 +111,48 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     with salt.utils.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
-        with salt.utils.fopen(thinver) as fh_:
-            if overwrite or not os.path.isfile(thinver):
-                try:
-                    os.remove(thintar)
-                except OSError:
-                    pass
-            elif fh_.read() == salt.__version__:
-                return thintar
+        if not overwrite:
+            if os.path.isfile(thinver):
+                with salt.utils.fopen(thinver) as fh_:
+                    overwrite = fh_.read() != salt.version.__version__
+            else:
+                overwrite = True
+
+        if overwrite:
+            try:
+                os.remove(thintar)
+            except OSError:
+                pass
+        else:
+            return thintar
+
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
-            os.path.dirname(requests.__file__)
+            os.path.dirname(tornado.__file__),
             ]
-    if HAS_URLLIB3:
-        tops.append(os.path.dirname(urllib3.__file__))
 
-    if HAS_SIX:
-        tops.append(six.__file__.replace('.pyc', '.py'))
-
-    if HAS_CHARDET:
-        tops.append(os.path.dirname(chardet.__file__))
+    tops.append(six.__file__.replace('.pyc', '.py'))
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
 
+    if HAS_SINGLEDISPATCH:
+        tops.append(singledispatch.__file__.replace('.pyc', '.py'))
+
+    if HAS_SINGLEDISPATCH_HELPERS:
+        tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
+
+    if HAS_BACKPORTS_ABC:
+        tops.append(backports_abc.__file__.replace('.pyc', '.py'))
+
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
+
+    if HAS_XML:
+        # For openSUSE, which apparently doesn't include the whole stdlib
+        tops.append(os.path.dirname(xml.__file__))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
@@ -164,7 +180,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
-    start_dir = os.getcwd()
+    try:  # cwd may not exist if it was removed but salt was run from it
+        start_dir = os.getcwd()
+    except OSError:
+        start_dir = None
     tempdir = None
     for top in tops:
         base = os.path.basename(top)
@@ -192,10 +211,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     os.chdir(thindir)
     tfp.add('salt-call')
     with salt.utils.fopen(thinver, 'w+') as fp_:
-        fp_.write(salt.__version__)
+        fp_.write(salt.version.__version__)
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')
-    os.chdir(start_dir)
+    if start_dir:
+        os.chdir(start_dir)
     tfp.close()
     return thintar
 

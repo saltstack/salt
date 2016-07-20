@@ -1,6 +1,9 @@
 Target Selection
 ----------------
 
+The default matching that Salt utilizes is shell-style globbing around the
+minion id. See https://docs.python.org/2/library/fnmatch.html#module-fnmatch.
+
 .. option:: -E, --pcre
 
     The target expression will be interpreted as a PCRE regular expression
@@ -40,4 +43,3 @@ Target Selection
     Using the Range option requires that a range server is set up and the
     location of the range server is referenced in the master configuration
     file.
-

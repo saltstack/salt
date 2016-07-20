@@ -1,3 +1,5 @@
+.. _tutorial-standalone-minion:
+
 =================
 Standalone Minion
 =================
@@ -14,6 +16,20 @@ things:
     When running Salt in masterless mode, do not run the salt-minion daemon.
     Otherwise, it will attempt to connect to a master and fail. The salt-call
     command stands on its own and does not need the salt-minion daemon.
+
+
+Minion Configuration
+--------------------
+
+Throughout this document there are several references to setting different
+options to configure a masterless Minion. Salt Minions are easy to configure
+via a configuration file that is located, by default, in ``/etc/salt/minion``.
+Note, however, that on FreeBSD systems, the minion configuration file is located
+in ``/usr/local/etc/salt/minion``.
+
+You can learn more about minion configuration options in the
+:ref:`Configuring the Salt Minion <configuration-salt-minion>` docs.
+
 
 Telling Salt Call to Run Masterless
 ===================================
@@ -35,7 +51,6 @@ minion is configured to not gather this data from the master.
 
 Now the salt-call command will not look for a master and will assume that the
 local system has all of the file and pillar resources.
-
 
 
 Running States Masterless
@@ -70,11 +85,18 @@ The declared state can now be executed with:
 
 .. code-block:: bash
 
-    salt-call state.highstate
+    salt-call state.apply
 
 Or the salt-call command can be executed with the ``--local`` flag, this makes
 it unnecessary to change the configuration file:
 
 .. code-block:: bash
 
-    salt-call state.highstate --local
+    salt-call state.apply --local
+
+
+External Pillars
+================
+
+:ref:`External pillars <external-pillars>` are supported when running in masterless mode.
+

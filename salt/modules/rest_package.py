@@ -1,43 +1,44 @@
 # -*- coding: utf-8 -*-
 '''
-Service support for the REST example
+Package support for the REST example
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+import salt.utils
 
 
 log = logging.getLogger(__name__)
 
-__proxyenabled__ = ['rest_sample']
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
 
 def __virtual__():
     '''
-    Only work on RestExampleOS
+    Only work on systems that are a proxy minion
     '''
-    # Enable on these platforms only.
-    enable = set((
-        'RestExampleOS',
-    ))
-    if __grains__['os'] in enable:
-        return __virtualname__
-    return False
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            return __virtualname__
+    except KeyError:
+        return (False, 'The rest_package execution module failed to load.  Check the proxy key in pillar.')
+
+    return (False, 'The rest_package execution module failed to load: only works on a rest_sample proxy minion.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    return __opts__['proxyobject'].package_list()
+    return __proxy__['rest_sample.package_list']()
 
 
 def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
-    return __opts__['proxyobject'].package_install(name, **kwargs)
+    return __proxy__['rest_sample.package_install'](name, **kwargs)
 
 
 def remove(name=None, pkgs=None, **kwargs):
-    return __opts__['proxyobject'].package_remove(name)
+    return __proxy__['rest_sample.package_remove'](name)
 
 
 def version(*names, **kwargs):
@@ -54,7 +55,15 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     if len(names) == 1:
-        return str(__opts__['proxyobject'].package_status(names))
+        return str(__proxy__['rest_sample.package_status'](names[0]))
+
+
+def upgrade(refresh=True, skip_verify=True, **kwargs):
+    old = __proxy__['rest_sample.package_list']()
+    new = __proxy__['rest_sample.uptodate']()
+    pkg_installed = __proxy__['rest_sample.upgrade']()
+    ret = salt.utils.compare_dicts(old, pkg_installed)
+    return ret
 
 
 def installed(
@@ -67,7 +76,7 @@ def installed(
         sources=None,
         **kwargs):
 
-    p = __opts__['proxyobject'].package_status(name)
+    p = __proxy__['rest_sample.package_status'](name)
     if version is None:
         if 'ret' in p:
             return str(p['ret'])
