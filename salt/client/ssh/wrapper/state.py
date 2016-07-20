@@ -221,7 +221,7 @@ def high(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    chunks = st_.state.compile_high_data(high)
+    chunks = st_.state.compile_high_data(data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
