@@ -153,7 +153,9 @@ def low(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    err = st_.verify_data(data)
+    for chunk in chunks:
+        chunk['__id__'] = chunk['name'] if not chunk.get('__id__') else chunk['__id__']
+    err = st_.state.verify_data(data)
     if err:
         return err
     file_refs = salt.client.ssh.state.lowstate_file_refs(
