@@ -4518,7 +4518,10 @@ def copy(
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        shutil.copy(source, name)
+        if os.path.isdir(source):
+            shutil.copytree(source, name, symlinks=True)
+        else:
+            shutil.copy(source, name)
         ret['changes'] = {name: source}
         # Preserve really means just keep the behavior of the cp command. If
         # the filesystem we're copying to is squashed or doesn't support chown
