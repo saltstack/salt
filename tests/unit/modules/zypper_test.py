@@ -224,7 +224,10 @@ class ZypperTestCase(TestCase):
                 self.assertEqual(len(products), 7)
                 self.assertIn(test_data['vendor'], [product['vendor'] for product in products])
                 for kwd in ['name', 'isbase', 'installed', 'release', 'productline', 'eol_t', 'registerrelease']:
-                    self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
+                    if six.PY3:
+                        self.assertCountEqual(test_data[kwd], [prod.get(kwd) for prod in products])
+                    else:
+                        self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
 
     def test_refresh_db(self):
         '''
