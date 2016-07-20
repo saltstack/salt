@@ -81,7 +81,11 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
-import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
+
+try:
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=name-in-module
+except ImportError:
+    import socketserver
 
 if salt.utils.is_windows():
     import win32api
@@ -441,23 +445,24 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             pass
 
         # Let's begin the shutdown routines
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.send_signal(signal.SIGINT)
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-            timeout = 15
-            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
-                    timeout,
-                     self.display_name,
-                     self.__class__.__name__)
-            while timeout > 0:
-                if terminal.poll() is not None:
-                    break
-                timeout -= 0.0125
-                time.sleep(0.0125)
+        if not sys.platform.startswith('win'):
+            if terminal.poll() is None:
+                try:
+                    log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
+                    terminal.send_signal(signal.SIGINT)
+                except OSError as exc:
+                    if exc.errno not in (errno.ESRCH, errno.EACCES):
+                        raise
+                timeout = 15
+                log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
+                        timeout,
+                         self.display_name,
+                         self.__class__.__name__)
+                while timeout > 0:
+                    if terminal.poll() is not None:
+                        break
+                    timeout -= 0.0125
+                    time.sleep(0.0125)
         if terminal.poll() is None:
             try:
                 log.info('Sending SIGTERM to %s %s DAEMON', self.display_name, self.__class__.__name__)
@@ -510,7 +515,10 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             # Lets log and kill any child processes which salt left behind
             for child in children[:]:
                 try:
-                    child.send_signal(signal.SIGKILL)
+                    if sys.platform.startswith('win'):
+                        child.kill()
+                    else:
+                        child.send_signal(signal.SIGKILL)
                     log.info('Salt left behind the following child process: %s', child.as_dict())
                     try:
                         child.wait(timeout=5)
