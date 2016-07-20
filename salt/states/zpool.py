@@ -281,13 +281,12 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                     for root_dev in layout:
                         if '-' in root_dev:  # special device
                             # NOTE: accomidate non existing 'disk' vdev
-                            if root_dev.split('-')[0] in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare', 'disk']:
-                                if root_dev.split('-')[0] != 'disk':
-                                    params.append(root_dev.split('-')[0])  # add the type by stripping the ID
-                                for sub_dev in layout[root_dev]:  # add all sub devices
-                                    if '/' not in sub_dev and config['device_dir'] and os.path.exists(config['device_dir']):
-                                        sub_dev = os.path.join(config['device_dir'], sub_dev)
-                                    params.append(sub_dev)
+                            if root_dev.split('-')[0] != 'disk':
+                                params.append(root_dev.split('-')[0])  # add the type by stripping the ID
+                            for sub_dev in layout[root_dev]:  # add all sub devices
+                                if '/' not in sub_dev and config['device_dir'] and os.path.exists(config['device_dir']):
+                                    sub_dev = os.path.join(config['device_dir'], sub_dev)
+                                params.append(sub_dev)
                         else:  # normal device
                             if '/' not in root_dev and config['device_dir'] and os.path.exists(config['device_dir']):
                                 root_dev = os.path.join(config['device_dir'], root_dev)
