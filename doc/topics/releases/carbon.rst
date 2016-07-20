@@ -20,6 +20,13 @@ Features
   SSL can be enabled by setting ``ssl_options`` for the returner.
   Also added support for specifying ``protocol_version`` when establishing
   cluster connection.
+- The ``mode`` parameter in the :py:mod:`file.managed
+  <salt.states.file.managed>` state, and the ``file_mode`` parameter in the
+  :py:mod:`file.managed <salt.states.file.managed>`, can both now be set to
+  ``keep`` and the minion will keep the mode of the file from the Salt
+  fileserver. This works only with files coming from sources prefixed with
+  ``salt://``, or files local to the minion (i.e. those which are absolute
+  paths, or are prefixed with ``file://``).
 
 Config Changes
 ==============
