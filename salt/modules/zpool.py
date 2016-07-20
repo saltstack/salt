@@ -671,10 +671,13 @@ def create(zpool, *vdevs, **kwargs):
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
-            if ' ' in properties[prop]:
-                value = "'{0}'".format(properties[prop])
+            if isinstance(properties[prop], bool):
+                value = 'on' if properties[prop] else 'off'
             else:
-                value = properties[prop]
+                if ' ' in properties[prop]:
+                    value = "'{0}'".format(properties[prop])
+                else:
+                    value = properties[prop]
             optlist.append('-o {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
