@@ -30,11 +30,6 @@ try:
 except ImportError:
     pass
 
-try:
-    import salt.ext.six.moves.socketserver as socketserver
-except ImportError:
-    import socketserver
-
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
@@ -67,7 +62,6 @@ import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.process import SignalHandlingMultiprocessingProcess
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
@@ -83,7 +77,7 @@ import msgpack
 import salt.ext.six as six
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=name-in-module
+    import salt.ext.six.moves.socketserver as socketserver
 except ImportError:
     import socketserver
 
@@ -410,7 +404,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         '''
         Start the daemon subprocess
         '''
-        self._process = SignalHandlingMultiprocessingProcess(
+        self._process = salt.utils.process.SignalHandlingMultiprocessingProcess(
             target=self._start, args=(self._running,))
         self._process.start()
         self._running.set()
