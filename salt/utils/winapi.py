@@ -5,7 +5,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import threading
-from salt.loader import minion_mods
 
 try:
     import pythoncom
