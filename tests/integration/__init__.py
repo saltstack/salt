@@ -1015,7 +1015,7 @@ class TestDaemon(object):
         minion_opts['user'] = running_tests_user
         minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'minion')
+        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
