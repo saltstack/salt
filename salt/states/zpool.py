@@ -295,11 +295,11 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
                     # execute zpool.create
                     ret['result'] = __salt__['zpool.create'](*params, force=config['force'], properties=properties, filesystem_properties=filesystem_properties)
-                    if ret['result'].get(name) == 'created':
+                    if ret['result'].get(name).startswith('created'):
                         ret['result'] = True
                     else:
                         if ret['result'].get(name):
-                            ret['comment'] = ret['result'][name]
+                            ret['comment'] = ret['result'].get(name)
                         ret['result'] = False
 
                 if ret['result']:
