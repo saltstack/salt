@@ -329,6 +329,45 @@ def systemctl_reload():
     return True
 
 
+def get_running():
+    '''
+    Return a list of all running services, so far as systemd is concerned
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.get_running
+    '''
+    ret = set()
+    # Get running systemd units
+    out = __salt__['cmd.run'](
+        _systemctl_cmd('--full --no-legend --no-pager'),
+        python_shell=False,
+        ignore_retcode=True,
+    )
+    for line in salt.utils.itertools.split(out, '\n'):
+        try:
+            comps = line.strip().split()
+            fullname = comps[0]
+            if len(comps) > 3:
+                active_state = comps[3]
+        except ValueError as exc:
+            log.error(exc)
+            continue
+        else:
+            if active_state != 'running':
+                continue
+        try:
+            unit_name, unit_type = fullname.rsplit('.', 1)
+        except ValueError:
+            continue
+        if unit_type in VALID_UNIT_TYPES:
+            ret.add(unit_name if unit_type == 'service' else fullname)
+
+    return sorted(ret)
+
+
 def get_enabled():
     '''
     Return a list of all enabled services

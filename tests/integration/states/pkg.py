@@ -416,7 +416,7 @@ class PkgTest(integration.ModuleCase,
             self.skipTest('Package manager is not available')
 
         os_family = grains.get('os_family', '')
-        os_version = grains.get('osmajorrelease', [''])[0]
+        os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
         if target:
             version = latest_version(self.run_function, target)
@@ -444,7 +444,7 @@ class PkgTest(integration.ModuleCase,
             self.skipTest('Package manager is not available')
 
         os_family = grains.get('os_family', '')
-        os_version = grains.get('osmajorrelease', [''])[0]
+        os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
         if target:
             version = latest_version(self.run_function, target)
