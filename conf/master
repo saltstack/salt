@@ -301,6 +301,11 @@ CLI option, only sets this to a single file for all salt commands.
 # running any commands. It would also blacklist any use of the "cmd"
 # module. This is completely disabled by default.
 #
+#
+# Check the list of configured users in client ACL against users on the
+# system and throw errors if they do not exist.
+#client_acl_verify: True
+#
 #client_acl_blacklist:
 #  users:
 #    - root

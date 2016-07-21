@@ -198,7 +198,7 @@ def access_keys(opts):
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
-    if HAS_PWD:
+    if opts['client_acl_verify'] and HAS_PWD:
         for user in pwd.getpwall():
             users.append(user.pw_name)
     for user in acl_users:
@@ -208,7 +208,7 @@ def access_keys(opts):
             )
         )
 
-        if HAS_PWD:
+        if opts['client_acl_verify'] and HAS_PWD:
             if user not in users:
                 try:
                     user = pwd.getpwnam(user).pw_name
