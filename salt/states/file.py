@@ -1471,6 +1471,21 @@ def managed(name,
         usefull for checkers dependant on config file extention
         for example it should be usefull for init-checkconf upstart config checker
         by default it is empty
+        .. code-block:: yaml
+
+            /etc/init/test.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - tmp_ext: '.conf'
+                - contents:
+                  - 'description "Salt Minion"''
+                  - 'start on started mountall'
+                  - 'stop on shutdown'
+                  - 'respawn'
+                  - 'exec salt-minion'
+                - check_cmd: init-checkconf -f
 
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
