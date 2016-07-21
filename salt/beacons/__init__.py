@@ -23,6 +23,7 @@ class Beacon(object):
     '''
     def __init__(self, opts, functions):
         self.opts = opts
+        self.functions = functions
         self.beacons = salt.loader.beacons(opts, functions)
         self.interval_map = dict()
 
@@ -182,7 +183,8 @@ class Beacon(object):
         '''
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        b_conf = self.functions['config.merge']('beacons')
+        evt.fire_event({'complete': True, 'beacons': b_conf},
                        tag='/salt/minion/minion_beacons_list_complete')
 
         return True
