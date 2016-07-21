@@ -1053,14 +1053,14 @@ def installed(
     if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
-    refreshed = False
+    was_refreshed = False
 
     if version is not None and version == 'latest':
         version = __salt__['pkg.latest_version'](name,
                                                  fromrepo=fromrepo,
                                                  refresh=refresh)
 
-        refreshed = refresh
+        was_refreshed = refresh
         refresh = False
 
         # If version is empty, it means the latest version is installed
@@ -1091,7 +1091,7 @@ def installed(
                                    **kwargs)
 
     if salt.utils.is_windows():
-        refreshed = refreshed or refresh
+        was_refreshed = was_refreshed or refresh
         kwargs.pop('refresh')
         refresh = False
 
@@ -1228,7 +1228,7 @@ def installed(
                                               reinstall=reinstall,
                                               normalize=normalize,
                                               **kwargs)
-            refreshed = refreshed or refresh
+            was_refreshed = was_refreshed or refresh
         except CommandExecutionError as exc:
             ret = {'name': name,
                    'changes': {},
@@ -1284,7 +1284,7 @@ def installed(
                         failed_hold = [hold_ret[x] for x in hold_ret
                                        if not hold_ret[x]['result']]
 
-    if os.path.isfile(rtag) and refreshed:
+    if os.path.isfile(rtag) and was_refreshed:
         os.remove(rtag)
 
     if to_unpurge:
