@@ -220,6 +220,12 @@ Boolean-style options should be specified in their YAML representation.
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
 
+.. note::
+
+    For the `Saltfile` to be automatically detected it needs to be named
+    `Saltfile` with a capital `S` and be readable by the user running
+    salt-ssh.
+
 Debugging salt-ssh
 ==================
 
