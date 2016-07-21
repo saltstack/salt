@@ -882,6 +882,7 @@ class AsyncEventPublisher(object):
                         raise
 
         self.publisher = salt.transport.ipc.IPCMessagePublisher(
+            self.opts,
             epub_uri,
             io_loop=self.io_loop
         )
@@ -969,6 +970,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 )
 
             self.publisher = salt.transport.ipc.IPCMessagePublisher(
+                self.opts,
                 epub_uri,
                 io_loop=self.io_loop
             )

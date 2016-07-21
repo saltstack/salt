@@ -41,6 +41,13 @@ import salt.exceptions
 from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
 
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+    import salt.grains.core
+
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
@@ -59,6 +66,31 @@ if salt.utils.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
+
+
+def _gather_buffer_space():
+    '''
+    Gather some system data and then calculate
+    buffer space.
+
+    Result is in bytes.
+    '''
+    if HAS_PSUTIL:
+        # Oh good, we have psutil. This will be quick.
+        total_mem = psutil.virtual_memory().total
+    else:
+        # We need to load up some grains. This will be slow.
+        os_data = salt.grains.core.os_data()
+        grains = salt.grains.core._memdata(os_data)
+        total_mem = grains['mem_total']
+    # Return the higher number between 5% of the system memory and 100MB
+    return max([total_mem * 0.05, 10 << 20])
+
+# For the time being this will be a fixed calculation
+# TODO: Allow user configuration
+_DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
+# TODO: Reserved for future use
+_DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -450,6 +482,10 @@ VALID_OPTS = {
     'salt_event_pub_hwm': int,
     # ZMQ HWM for EventPublisher pub socket
     'event_publisher_pub_hwm': int,
+
+    # IPC buffer size
+    # Refs https://github.com/saltstack/salt/issues/34215
+    'ipc_write_buffer': int,
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
@@ -965,6 +1001,7 @@ DEFAULT_MINION_OPTS = {
     'mine_return_job': False,
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
@@ -1222,6 +1259,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
@@ -3009,6 +3047,11 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+        opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
+    if 'ipc_write_buffer' not in overrides:
+        opts['ipc_write_buffer'] = 0
+
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}
@@ -3083,7 +3126,10 @@ def apply_master_config(overrides=None, defaults=None):
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
-
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+        opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
+    if 'ipc_write_buffer' not in overrides:
+        opts['ipc_write_buffer'] = 0
     using_ip_for_id = False
     append_master = False
     if not opts.get('id'):
