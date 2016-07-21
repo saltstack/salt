@@ -171,7 +171,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         layout_result = {}
         for root_dev in layout:
             if '-' in root_dev:
-                if root_dev.split('-')[0] not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                if root_dev.split('-')[0] not in ['disk', 'mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
                     layout_valid = False
                     layout_result[root_dev] = 'not a valid vdev type'
                 layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
@@ -267,9 +267,12 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                     params.append(name)
                     for root_dev in layout:
                         if '-' in root_dev:  # special device
-                            params.append(root_dev.split('-')[0])  # add the type by stripping the ID
-                            if root_dev.split('-')[0] in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-                                for sub_dev in layout[root_dev]:  # add all sub devices
+                            sub_devs = layout[root_dev]
+                            root_dev = root_dev.split('-')[0]
+                            if root_dev in ['disk', 'mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                                if root_dev not in ('disk', 'file'):
+                                    params.append(root_dev)
+                                for sub_dev in sub_devs:  # add all sub devices
                                     if '/' not in sub_dev and config['device_dir'] and os.path.exists(config['device_dir']):
                                         sub_dev = os.path.join(config['device_dir'], sub_dev)
                                     params.append(sub_dev)
