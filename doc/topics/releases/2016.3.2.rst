@@ -13,8 +13,8 @@ Returner Changes
     have been modified to do so.
 
 
-Changes for v2016.3.1..2016.3
------------------------------
+Changes for v2016.3.1..2016.3.2
+-------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -25,6 +25,8 @@ Statistics:
 - Total Merges: **173**
 
 Changes:
+
+- **PR** `#34844`_: (*vutny*) Fix getting total available memory without `psutil` installed
 
 - **PR** `#34837`_: (*thatch45*) Fix `#34345`_
 
@@ -990,6 +992,7 @@ Changes:
 .. _`#34838`: https://github.com/saltstack/salt/pull/34838
 .. _`#34840`: https://github.com/saltstack/salt/pull/34840
 .. _`#34842`: https://github.com/saltstack/salt/pull/34842
+.. _`#34844`: https://github.com/saltstack/salt/pull/34844
 .. _`bp-32396`: https://github.com/saltstack/salt/pull/32396
 .. _`bp-33698`: https://github.com/saltstack/salt/pull/33698
 .. _`bp-33806`: https://github.com/saltstack/salt/pull/33806
