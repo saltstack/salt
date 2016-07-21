@@ -56,6 +56,66 @@ FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
 FILEPILLARGIT = '/tmp/filepillar-bar'
 
 
+def _test_managed_file_mode_keep_helper(testcase, local=False):
+    '''
+    DRY helper function to run the same test with a local or remote path
+    '''
+    rel_path = 'grail/scene33'
+    name = os.path.join(integration.TMP, os.path.basename(rel_path))
+    grail_fs_path = os.path.join(integration.FILES, 'file', 'base', rel_path)
+    grail = 'salt://' + rel_path if not local else grail_fs_path
+
+    # Get the current mode so that we can put the file back the way we
+    # found it when we're done.
+    grail_fs_mode = os.stat(grail_fs_path).st_mode
+    initial_mode = 504    # 0770 octal
+    new_mode_1 = 384      # 0600 octal
+    new_mode_2 = 420      # 0644 octal
+
+    # Set the initial mode, so we can be assured that when we set the mode
+    # to "keep", we're actually changing the permissions of the file to the
+    # new mode.
+    ret = testcase.run_state(
+        'file.managed',
+        name=name,
+        mode=oct(initial_mode),
+        source=grail,
+    )
+    testcase.assertSaltTrueReturn(ret)
+    try:
+        # Update the mode on the fileserver (pass 1)
+        os.chmod(grail_fs_path, new_mode_1)
+        ret = testcase.run_state(
+            'file.managed',
+            name=name,
+            mode='keep',
+            source=grail,
+        )
+        testcase.assertSaltTrueReturn(ret)
+        managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+        testcase.assertEqual(oct(managed_mode), oct(new_mode_1))
+        # Update the mode on the fileserver (pass 2)
+        # This assures us that if the file in file_roots was originally set
+        # to the same mode as new_mode_1, we definitely get an updated mode
+        # this time.
+        os.chmod(grail_fs_path, new_mode_2)
+        ret = testcase.run_state(
+            'file.managed',
+            name=name,
+            mode='keep',
+            source=grail,
+        )
+        testcase.assertSaltTrueReturn(ret)
+        managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+        testcase.assertEqual(oct(managed_mode), oct(new_mode_2))
+    except Exception:
+        raise
+    finally:
+        # Set the mode of the file in the file_roots back to what it
+        # originally was.
+        os.chmod(grail_fs_path, grail_fs_mode)
+
+
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the file state
@@ -169,60 +229,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Test using "mode: keep" in a file.managed state
         '''
-        rel_path = 'grail/scene33'
-        name = os.path.join(integration.TMP, os.path.basename(rel_path))
-        grail = 'salt://' + rel_path
-        grail_fs_path = os.path.join(integration.FILES, 'file', 'base', rel_path)
+        _test_managed_file_mode_keep_helper(self, local=False)
 
-        # Get the current mode so that we can put the file back the way we
-        # found it when we're done.
-        grail_fs_mode = os.stat(grail_fs_path).st_mode
-        initial_mode = 504    # 0770 octal
-        new_mode_1 = 384      # 0600 octal
-        new_mode_2 = 420      # 0644 octal
-
-        # Set the initial mode, so we can be assured that when we set the mode
-        # to "keep", we're actually changing the permissions of the file to the
-        # new mode.
-        ret = self.run_state(
-            'file.managed',
-            name=name,
-            mode=oct(initial_mode),
-            source=grail,
-        )
-        self.assertSaltTrueReturn(ret)
-        try:
-            # Update the mode on the fileserver (pass 1)
-            os.chmod(grail_fs_path, new_mode_1)
-            ret = self.run_state(
-                'file.managed',
-                name=name,
-                mode='keep',
-                source=grail,
-            )
-            self.assertSaltTrueReturn(ret)
-            managed_mode = stat.S_IMODE(os.stat(name).st_mode)
-            self.assertEqual(oct(managed_mode), oct(new_mode_1))
-            # Update the mode on the fileserver (pass 2)
-            # This assures us that if the file in file_roots was originally set
-            # to the same mode as new_mode_1, we definitely get an updated mode
-            # this time.
-            os.chmod(grail_fs_path, new_mode_2)
-            ret = self.run_state(
-                'file.managed',
-                name=name,
-                mode='keep',
-                source=grail,
-            )
-            self.assertSaltTrueReturn(ret)
-            managed_mode = stat.S_IMODE(os.stat(name).st_mode)
-            self.assertEqual(oct(managed_mode), oct(new_mode_2))
-        except Exception:
-            raise
-        finally:
-            # Set the mode of the file in the file_roots back to what it
-            # originally was.
-            os.chmod(grail_fs_path, grail_fs_mode)
+    def test_managed_file_mode_keep_local_source(self):
+        '''
+        Test using "mode: keep" in a file.managed state, with a local file path
+        as the source.
+        '''
+        _test_managed_file_mode_keep_helper(self, local=True)
 
     def test_managed_file_mode_file_exists_replace(self):
         '''
