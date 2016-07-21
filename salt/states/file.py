@@ -1468,9 +1468,9 @@ def managed(name,
 
     tmp_ext
         provide extention for temp file created by check_cmd
-	usefull for checkers dependant on config file extention
-	for example it should be usefull for init-checkconf upstart config checker
-	by default it is empty
+        usefull for checkers dependant on config file extention
+        for example it should be usefull for init-checkconf upstart config checker
+        by default it is empty
 
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
