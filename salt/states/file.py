@@ -1117,6 +1117,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
             contents_newline=True,
@@ -1465,6 +1466,12 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_ext
+        provide extention for temp file created by check_cmd
+	usefull for checkers dependant on config file extention
+	for example it should be usefull for init-checkconf upstart config checker
+	by default it is empty
+
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
@@ -1763,7 +1770,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()
+        tmp_filename = salt.utils.mkstemp()+'.'+tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
