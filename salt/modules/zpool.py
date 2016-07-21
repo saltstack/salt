@@ -646,7 +646,6 @@ def create(zpool, *vdevs, **kwargs):
             salt '*' zpool.create myzpool /path/to/vdev1 [...] properties="{'property1': 'value1', 'property2': 'value2'}"
     '''
     ret = {}
-    dlist = []
 
     # Check if the pool_name is already being used
     if exists(zpool):
@@ -657,23 +656,7 @@ def create(zpool, *vdevs, **kwargs):
         ret[zpool] = 'no devices specified'
         return ret
 
-    # make sure files are present on filesystem
-    ret[zpool] = {}
-    for vdev in vdevs:
-        if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-            if not os.path.exists(vdev):
-                ret[zpool][vdev] = 'not present on filesystem'
-                continue
-            mode = os.stat(vdev).st_mode
-            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode) and not stat.S_ISCHR(mode):
-                ret[zpool][vdev] = 'not a block device, a file vdev or character special device'
-                continue
-        dlist.append(vdev)
-
-    if len(ret[zpool]) > 0:
-        return ret
-
-    devs = ' '.join(dlist)
+    devs = ' '.join(vdevs)
     zpool_cmd = _check_zpool()
     force = kwargs.get('force', False)
     altroot = kwargs.get('altroot', None)
@@ -688,10 +671,13 @@ def create(zpool, *vdevs, **kwargs):
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
-            if ' ' in properties[prop]:
-                value = "'{0}'".format(properties[prop])
+            if isinstance(properties[prop], bool):
+                value = 'on' if properties[prop] else 'off'
             else:
-                value = properties[prop]
+                if ' ' in properties[prop]:
+                    value = "'{0}'".format(properties[prop])
+                else:
+                    value = properties[prop]
             optlist.append('-o {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
@@ -718,7 +704,7 @@ def create(zpool, *vdevs, **kwargs):
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = 'created'
+        ret[zpool] = 'created with {0}'.format(devs)
 
     return ret
 
@@ -743,7 +729,6 @@ def add(zpool, *vdevs, **kwargs):
         salt '*' zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
     '''
     ret = {}
-    dlist = []
 
     # check for pool
     if not exists(zpool):
@@ -755,24 +740,7 @@ def add(zpool, *vdevs, **kwargs):
         return ret
 
     force = kwargs.get('force', False)
-
-    # make sure files are present on filesystem
-    ret[zpool] = {}
-    for vdev in vdevs:
-        if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-            if not os.path.exists(vdev):
-                ret[zpool][vdev] = 'not present on filesystem'
-                continue
-            mode = os.stat(vdev).st_mode
-            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
-                ret[zpool][vdev] = 'not a block device, a file vdev or character special device'
-                continue
-        dlist.append(vdev)
-
-    if len(ret[zpool]) > 0:
-        return ret
-
-    devs = ' '.join(dlist)
+    devs = ' '.join(vdevs)
 
     # try and add watch out for mismatched replication levels
     zpool_cmd = _check_zpool()
@@ -786,10 +754,7 @@ def add(zpool, *vdevs, **kwargs):
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = {}
-        for device in dlist:
-            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-                ret[zpool][device] = 'added'
+        ret[zpool] = 'added {0}'.format(devs)
 
     return ret
 
@@ -970,8 +935,7 @@ def replace(zpool, old_device, new_device=None, force=False):
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = {}
-        ret[zpool][old_device] = 'replaced with {0}'.format(new_device)
+        ret[zpool] = 'replaced {0} with {1}'.format(old_device, new_device)
 
     return ret
 
@@ -1207,22 +1171,7 @@ def online(zpool, *vdevs, **kwargs):
     # get expand option
     expand = kwargs.get('expand', False)
 
-    # make sure files are present on filesystem
-    ret[zpool] = {}
-    for vdev in vdevs:
-        if not os.path.exists(vdev):
-            ret[zpool][vdev] = 'not present on filesystem'
-            continue
-        mode = os.stat(vdev).st_mode
-        if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
-            ret[zpool][vdev] = 'not a block device, a file vdev or character special device'
-            continue
-        dlist.append(vdev)
-
-    if len(ret[zpool]) > 0:
-        return ret
-
-    devs = ' '.join(dlist)
+    devs = ' '.join(vdevs)
     zpool_cmd = _check_zpool()
     cmd = '{zpool_cmd} online {expand}{zpool} {devs}'.format(
         zpool_cmd=zpool_cmd,
@@ -1235,10 +1184,7 @@ def online(zpool, *vdevs, **kwargs):
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = {}
-        for device in dlist:
-            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-                ret[zpool][device] = 'onlined'
+        ret[zpool] = 'onlined {0}'.format(devs)
     return ret
 
 
@@ -1294,10 +1240,7 @@ def offline(zpool, *vdevs, **kwargs):
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = {}
-        for device in vdevs:
-            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
-                ret[zpool][device] = 'offlined'
+        ret[zpool] = 'offlined {0}'.format(devs)
     return ret
 
 
