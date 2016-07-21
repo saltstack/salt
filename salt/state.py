@@ -51,6 +51,7 @@ import salt.utils.yamlloader as yamlloader
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, reload_module
+from salt.ext.six import string_types
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -523,6 +524,8 @@ class Compiler(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
@@ -788,6 +791,9 @@ class State(object):
             else:
                 low_data_onlyif = low_data['onlyif']
             for entry in low_data_onlyif:
+                if not isinstance(entry, string_types):
+                    ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
+                    return ret
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
@@ -806,6 +812,9 @@ class State(object):
             else:
                 low_data_unless = low_data['unless']
             for entry in low_data_unless:
+                if not isinstance(entry, string_types):
+                    ret.update({'comment': 'unless execution failed, bad type passed', 'result': False})
+                    return ret
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
@@ -1240,6 +1249,8 @@ class State(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
