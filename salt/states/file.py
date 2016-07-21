@@ -1770,7 +1770,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()+'.'+tmp_ext
+        tmp_filename = salt.utils.mkstemp()+tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
