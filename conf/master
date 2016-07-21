@@ -86,7 +86,7 @@
 
 # Set the default output file used by the salt command. Default is to output
 # to the CLI and not to a file. Functions the same way as the "--out-file"
-CLI option, only sets this to a single file for all salt commands.
+# CLI option, only sets this to a single file for all salt commands.
 #output_file: None
 
 # Return minions that timeout when running commands like test.ping
@@ -248,6 +248,14 @@ CLI option, only sets this to a single file for all salt commands.
 # ZMQ high-water-mark for EventPublisher pub socket
 #event_publisher_pub_hwm: 10000
 
+# The master may allocate memory per-event and not
+# reclaim it.
+# To set a high-water mark for memory allocation, use
+# ipc_write_buffer to set a high-water mark for message
+# buffering.
+# Value: In bytes. Set to 'dynamic' to have Salt select
+# a value for you. Default is disabled.
+# ipc_write_buffer: 'dynamic'
 
 
 #####        Security settings       #####
