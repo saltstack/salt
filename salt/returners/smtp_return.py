@@ -189,7 +189,13 @@ def returner(ret):
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
-    subject = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=subject, **ret)
+    subject = compile_template(':string:',
+                               rend,
+                               renderer,
+                               blacklist,
+                               whitelist,
+                               input_data=subject,
+                               **ret)
     if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
     log.debug("smtp_return: Subject is '{0}'".format(subject))
@@ -203,7 +209,13 @@ def returner(ret):
                     'function args: {{fun_args}}\r\n'
                     'jid: {{jid}}\r\n'
                     'return: {{return}}\r\n')
-        content = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=template, **ret)
+        content = compile_template(':string:',
+                                   rend,
+                                   renderer,
+                                   blacklist,
+                                   whitelist,
+                                   input_data=template,
+                                   **ret)
 
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
@@ -215,7 +227,7 @@ def returner(ret):
         else:
             log.error('smtp_return: Encryption failed, only an error message will be sent')
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
-                    encrypted_data.status, encrypted_data.stderr)
+                encrypted_data.status, encrypted_data.stderr)
 
     if isinstance(content, six.moves.StringIO):
         content = content.read()
@@ -233,7 +245,7 @@ def returner(ret):
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    server.set_debuglevel(1) # enable logging SMTP session
+    server.set_debuglevel(1)  # enable logging SMTP session
     if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
