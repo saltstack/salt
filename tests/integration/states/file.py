@@ -165,6 +165,65 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode_keep(self):
+        '''
+        Test using "mode: keep" in a file.managed state
+        '''
+        rel_path = 'grail/scene33'
+        name = os.path.join(integration.TMP, os.path.basename(rel_path))
+        grail = 'salt://' + rel_path
+        grail_fs_path = os.path.join(integration.FILES, 'file', 'base', rel_path)
+
+        # Get the current mode so that we can put the file back the way we
+        # found it when we're done.
+        grail_fs_mode = os.stat(grail_fs_path).st_mode
+        initial_mode = 504    # 0770 octal
+        new_mode_1 = 384      # 0600 octal
+        new_mode_2 = 420      # 0644 octal
+
+        # Set the initial mode, so we can be assured that when we set the mode
+        # to "keep", we're actually changing the permissions of the file to the
+        # new mode.
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            mode=oct(initial_mode),
+            source=grail,
+        )
+        self.assertSaltTrueReturn(ret)
+        try:
+            # Update the mode on the fileserver (pass 1)
+            os.chmod(grail_fs_path, new_mode_1)
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                mode='keep',
+                source=grail,
+            )
+            self.assertSaltTrueReturn(ret)
+            managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+            self.assertEqual(oct(managed_mode), oct(new_mode_1))
+            # Update the mode on the fileserver (pass 2)
+            # This assures us that if the file in file_roots was originally set
+            # to the same mode as new_mode_1, we definitely get an updated mode
+            # this time.
+            os.chmod(grail_fs_path, new_mode_2)
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                mode='keep',
+                source=grail,
+            )
+            self.assertSaltTrueReturn(ret)
+            managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+            self.assertEqual(oct(managed_mode), oct(new_mode_2))
+        except Exception:
+            raise
+        finally:
+            # Set the mode of the file in the file_roots back to what it
+            # originally was.
+            os.chmod(grail_fs_path, grail_fs_mode)
+
     def test_managed_file_mode_file_exists_replace(self):
         '''
         file.managed, existing file with replace=True, change permissions
