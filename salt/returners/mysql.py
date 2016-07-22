@@ -3,7 +3,7 @@
 Return data to a mysql server
 
 :maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>
-:maturity:      new
+:maturity:      mature
 :depends:       python-mysqldb
 :platform:      all
 
@@ -43,6 +43,30 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.mysql.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
     alternative.mysql.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
     alternative.mysql.ssl_key: '/etc/pki/mysql/certs/localhost.key'
+
+Should you wish the returner data to be cleaned out every so often
+provide values for the following variables in the master configuration file.
+These variables accept the same parameters as any scheduler entry, except
+the function and function args, as they will be pre-filled with the functions
+to clean out or archive the returner data. Example:
+
+.. code-block:: yaml
+
+    mysql_returner_purge_schedule:
+
+The archive schedule configuration takes one extra parameter, `archive_name_template`.
+This is a template for the names of the archive tables in your MySQL database.  The
+parameter accepts template variables `date` and `table` which will be replaced with
+the date of the archive and the name of the table being archived.  For example,
+if `archive_name_template` is set to {{ table }}_archive_{{ date }} and the archive
+is performed on July 17, 2016 at 1:00:00 PM the table names will look like
+`jids_archive_20160717130000`, `salt_returns_archive_20160717130000`, etc.
+
+.. code-block:: yaml
+
+    mysql_returner_archive_schedule:
+        archive_name_template: {{table}}_archive_{{ date }}
+
 
 Use the following mysql database schema:
 
