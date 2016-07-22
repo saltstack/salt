@@ -35,6 +35,7 @@ import salt.utils.xdg
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+import salt.exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -337,7 +338,12 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
             'Loading Saltfile from {0!r}'.format(self.options.saltfile)
         )
 
-        saltfile_config = config._read_conf_file(saltfile)
+        try:
+            saltfile_config = config._read_conf_file(saltfile)
+        except salt.exceptions.SaltConfigurationError as error:
+            self.error(error.message)
+            self.exit(salt.defaults.exitcodes.EX_GENERIC,
+                      '{0}: error: {1}\n'.format(self.get_prog_name(), error.message))
 
         if not saltfile_config:
             # No configuration was loaded from the Saltfile
@@ -1496,8 +1502,8 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=True)
+        return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
+                                    cache_minion_id=True, ignore_config_errors=False)
 
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
