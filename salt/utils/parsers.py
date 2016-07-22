@@ -38,6 +38,7 @@ import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+from salt.utils.verify import verify_files
 import salt.exceptions
 
 # Import 3rd-party libs
@@ -595,6 +596,10 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Setup extended logging right before the last step
         self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
+        # Setup the console and log file configuration before the MP logging
+        # listener because the MP logging listener may need that config.
+        self._mixin_after_parsed_funcs.append(self.__setup_logfile_logger_config)
+        self._mixin_after_parsed_funcs.append(self.__setup_console_logger_config)
         # Setup the multiprocessing log queue listener if enabled
         self._mixin_after_parsed_funcs.append(self._setup_mp_logging_listener)
         # Setup the console as the last _mixin_after_parsed_func to run
@@ -640,7 +645,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 # defined default
                 self.options.log_level = self._default_logging_level_
 
-    def setup_logfile_logger(self):
+    def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
         if self._logfile_loglevel_config_setting_name_ in self.config and not \
                 self.config.get(self._logfile_loglevel_config_setting_name_):
             # Remove it from config so it inherits from log_level
@@ -673,11 +678,22 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             cli_log_path,
             self.config.get(
                 # From the config setting
-                self._logfile_config_setting_name_,
-                # From the default setting
-                self._default_logging_logfile_
+                self._logfile_config_setting_name_
             )
         )
+
+        if self.config['verify_env']:
+            # Verify the logfile if it was explicitly set but do not try to
+            # verify the default
+            if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
+                # Logfile is not using Syslog, verify
+                current_umask = os.umask(0o027)
+                verify_files([logfile], self.config['user'])
+                os.umask(current_umask)
+
+        if logfile is None:
+            # Use the default setting if the logfile wasn't explicity set
+            logfile = self._default_logging_logfile_
 
         cli_log_file_fmt = 'cli_{0}_log_file_fmt'.format(
             self.get_prog_name().replace('-', '_')
@@ -782,6 +798,18 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # If we haven't changed the logfile path and it's not writeable,
             # salt will fail once we try to setup the logfile logging.
 
+        # Save the settings back to the configuration
+        self.config[self._logfile_config_setting_name_] = logfile
+        self.config[self._logfile_loglevel_config_setting_name_] = loglevel
+        self.config['log_fmt_logfile'] = log_file_fmt
+        self.config['log_datefmt_logfile'] = log_file_datefmt
+
+    def setup_logfile_logger(self):
+        logfile = self.config[self._logfile_config_setting_name_]
+        loglevel = self.config[self._logfile_loglevel_config_setting_name_]
+        log_file_fmt = self.config['log_fmt_logfile']
+        log_file_datefmt = self.config['log_datefmt_logfile']
+
         log.setup_logfile_logger(
             logfile,
             loglevel,
@@ -804,11 +832,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 self._get_mp_logging_listener_queue()
             )
 
-    def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
-        # If daemon is set force console logger to quiet
-        if getattr(self.options, 'daemon', False) is True:
-            return
-
+    def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
         # Since we're not going to be a daemon, setup the console logger
         cli_log_fmt = 'cli_{0}_log_fmt'.format(
             self.get_prog_name().replace('-', '_')
@@ -849,8 +873,20 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 )
             )
         )
+
+        # Save the settings back to the configuration
+        self.config['log_fmt_console'] = logfmt
+        self.config['log_datefmt_console'] = datefmt
+
+    def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
+        # If daemon is set force console logger to quiet
+        if getattr(self.options, 'daemon', False) is True:
+            return
+
         log.setup_console_logger(
-            self.config['log_level'], log_format=logfmt, date_format=datefmt
+            self.config['log_level'],
+            log_format=self.config['log_fmt_console'],
+            date_format=self.config['log_datefmt_console']
         )
         for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)

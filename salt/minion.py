@@ -1270,15 +1270,6 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if sys.platform.startswith('win') and \
-                opts['multiprocessing'] and \
-                not salt.log.setup.is_logging_configured():
-            # We have to re-init the logging system for Windows
-            salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
-            if opts.get('log_file'):
-                salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
         if opts['multiprocessing'] and not salt.utils.is_windows():
@@ -1457,15 +1448,6 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if sys.platform.startswith('win') and \
-                opts['multiprocessing'] and \
-                not salt.log.is_logging_configured():
-            # We have to re-init the logging system for Windows
-            salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
-            if opts.get('log_file'):
-                salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         ret = {
             'return': {},
             'success': {},
