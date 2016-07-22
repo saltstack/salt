@@ -18,6 +18,7 @@ import traceback
 
 # Import Salt libs
 import salt.state
+import salt.loader
 import salt.payload
 from salt.exceptions import SaltRenderError
 
@@ -43,7 +44,16 @@ class ThorState(salt.state.HighState):
         opts['file_client'] = 'local'
         self.opts = opts
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
-        self.state.inject_globals = {'__reg__': {}}
+
+        self.returners = salt.loader.returners(self.opts, {})
+        self.reg_ret = self.opts.get('register_returner', 'local_cache')
+        try:
+            regdata = self.returners['{0}.load_reg'.format(self.reg_ret)]()
+        except Exception as exc:
+            log.error(exc)
+            regdata = {}
+
+        self.state.inject_globals = {'__reg__': regdata}
         self.event = salt.utils.event.get_master_event(
                 self.opts,
                 self.opts['sock_dir'])
@@ -174,4 +184,5 @@ class ThorState(salt.state.HighState):
             if (start - r_start) > recompile:
                 cache = self.gather_cache()
                 chunks = self.get_chunks()
+                self.returners['{0}.save_reg'.format(self.reg_ret)](chunks)
                 r_start = time.time()
