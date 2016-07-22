@@ -45,8 +45,6 @@ DUMMY_TOKEN = {
     'grant_type': 'refresh_token'
 }
 
-HAS_CERTS = True
-
 # Use certifi if installed
 try:
     import certifi
@@ -54,24 +52,8 @@ except ImportError:
     libcloud.security.CA_CERTS_PATH.append(certifi.where())
 
 
-
-class ExtendedTestCase(TestCase):
-    '''
-    Extended TestCase class containing additional helper methods.
-    '''
-
-    def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
-        try:
-            func(*args, **kwargs)
-            self.assertFail()
-        except Exception as exc:
-            self.assertEqual(type(exc), exc_type)
-            self.assertEqual(exc.message, exc_msg)
-
-
-@skipIf(not HAS_CERTS, 'Cannot find CA cert bundle')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GCETestCase(ExtendedTestCase):
+class GCETestCase(TestCase):
     '''
     Unit TestCase for salt.cloud.clouds.gce module.
     '''
@@ -97,7 +79,7 @@ class GCETestCase(ExtendedTestCase):
         Test that the first configured instance of a gce driver is matched
         """
         p = gce.get_configured_provider()
-        self.assertNotNone(p)
+        self.assertNotEqual(p, None)
 
 if __name__ == '__main__':
     from unit import run_tests
