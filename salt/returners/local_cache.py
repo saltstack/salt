@@ -507,7 +507,7 @@ def save_reg(data):
             msgpack.dump(data, fh_)
         fh_.close()
     except:
-        log.error('Could not write to msgpack file {0}'.format(opts['outdir']))
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
         raise
 
 
@@ -521,5 +521,5 @@ def load_reg():
         with salt.utils.fopen(regfile, 'r') as fh_:
             return msgpack.load(fh_)
     except:
-        log.error('Could not write to msgpack file {0}'.format(opts['outdir']))
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
         raise
