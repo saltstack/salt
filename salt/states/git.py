@@ -177,17 +177,24 @@ def _failed_submodule_update(ret, exc, comments=None):
     return _fail(ret, msg, comments)
 
 
-def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
+def _not_fast_forward(ret, pre, post, branch, local_branch,
+                      local_changes, comments):
+    pre = _short_sha(pre)
+    post = _short_sha(post)
     return _fail(
         ret,
-        'Repository would be updated from {0} to {1}{2}, but this is not a '
-        'fast-forward merge. Set \'force_reset\' to True to force this '
-        'update.'.format(
-            _short_sha(pre),
-            _short_sha(post),
+        'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
+        'True to force this update{3}.'.format(
+            'from {0} to {1}'.format(pre, post)
+                if local_changes and pre != post
+                else 'to {0}'.format(post),
             ' (after checking out local branch \'{0}\')'.format(branch)
                 if _need_branch_change(branch, local_branch)
-                else ''
+                else '',
+            'this is not a fast-forward merge'
+                if not local_changes
+                else 'there are uncommitted changes',
+            ' and discard these changes' if local_changes else ''
         ),
         comments
     )
@@ -700,6 +707,19 @@ def latest(name,
                                               redact_auth=False)
 
             revs_match = _revs_equal(local_rev, remote_rev, remote_rev_type)
+            try:
+                local_changes = bool(
+                    __salt__['git.diff'](target, 'HEAD', user=user)
+                )
+            except CommandExecutionError:
+                # No need to capture the error and log it, the _git_run()
+                # helper in the git execution module will have already logged
+                # the output from the command.
+                log.warning(
+                    'git.latest: Unable to determine if %s has local changes',
+                    target
+                )
+                local_changes = False
 
             if remote_rev_type == 'sha1' \
                     and base_rev is not None \
@@ -789,13 +809,15 @@ def latest(name,
                         elif remote_rev_type == 'sha1':
                             has_remote_rev = True
 
-            if not has_remote_rev:
-                # Either the remote rev could not be found with git
-                # ls-remote (in which case we won't know more until
-                # fetching) or we're going to be checking out a new branch
-                # and don't have to worry about fast-forwarding.
-                fast_forward = None
-            else:
+            # If has_remote_rev is False, then either the remote rev could not
+            # be found with git ls-remote (in which case we won't know more
+            # until fetching) or we're going to be checking out a new branch
+            # and don't have to worry about fast-forwarding. So, we will set
+            # fast_forward to None (to signify uncertainty) unless there are
+            # local changes, in which case we will set it to False.
+            fast_forward = None if not local_changes else False
+
+            if has_remote_rev:
                 # Remote rev already present
                 if (not revs_match and not update_head) \
                         and (branch is None or branch == local_branch):
@@ -809,14 +831,18 @@ def latest(name,
                     )
                     return ret
 
+            # No need to check if this is a fast_forward if we already know
+            # that it won't be (due to local changes).
+            if fast_forward is not False:
                 if base_rev is None:
                     # If we're here, the remote_rev exists in the local
                     # checkout but there is still no HEAD locally. A possible
                     # reason for this is that an empty repository existed there
                     # and a remote was added and fetched, but the repository
                     # was not fast-forwarded. Regardless, going from no HEAD to
-                    # a locally-present rev is considered a fast-forward update.
-                    fast_forward = True
+                    # a locally-present rev is considered a fast-forward
+                    # update, unless there are local changes.
+                    fast_forward = not bool(local_changes)
                 else:
                     fast_forward = __salt__['git.merge_base'](
                         target,
@@ -833,6 +859,7 @@ def latest(name,
                         remote_rev,
                         branch,
                         local_branch,
+                        local_changes,
                         comments)
                 merge_action = 'hard-reset'
             elif fast_forward is True:
@@ -1122,11 +1149,10 @@ def latest(name,
                             remote_rev,
                             branch,
                             local_branch,
+                            local_changes,
                             comments)
 
                 if _need_branch_change(branch, local_branch):
-                    local_changes = __salt__['git.status'](target,
-                                                           user=user)
                     if local_changes and not force_checkout:
                         return _fail(
                             ret,
@@ -1167,6 +1193,9 @@ def latest(name,
                         comments.append(
                             '\'{0}\' was checked out'.format(checkout_rev)
                         )
+
+                if local_changes:
+                    comments.append('Local changes were discarded')
 
                 if fast_forward is False:
                     __salt__['git.reset'](
