@@ -936,6 +936,7 @@ class AESFuncs(object):
         '''
         self.fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = self.fs_.serve_file
+        self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
