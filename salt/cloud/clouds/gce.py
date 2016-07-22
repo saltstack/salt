@@ -29,7 +29,7 @@ Example Provider Configuration
     my-gce-config:
       # The Google Cloud Platform Project ID
       project: "my-project-id"
-      # The Service ACcount client ID
+      # The Service Account client ID
       service_account_email_address: 1234567890@developer.gserviceaccount.com
       # The location of the private key (PEM format)
       service_account_private_key: /home/erjohnso/PRIVKEY.pem

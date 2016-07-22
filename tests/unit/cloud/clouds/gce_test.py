@@ -78,13 +78,8 @@ class ExtendedTestCase(TestCase):
             self.assertEqual(exc.message, exc_msg)
 
 
-@skipIf(True, 'Test mock token is not properly mocked and occassionally causes the test suite to hang.')
 @skipIf(not HAS_CERTS, 'Cannot find CA cert bundle')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.cloud.clouds.gce.__virtual__', MagicMock(return_value='gce'))
-@patch('libcloud.common.google.GoogleInstalledAppAuthConnection.get_new_token', MagicMock(return_value=DUMMY_TOKEN))
-@patch('libcloud.compute.drivers.gce.GCENodeDriver.ex_list_zones', MagicMock(return_value=[]))
-@patch('libcloud.compute.drivers.gce.GCENodeDriver.ex_list_regions', MagicMock(return_value=[]))
 class GCETestCase(ExtendedTestCase):
     '''
     Unit TestCase for salt.cloud.clouds.gce module.
@@ -102,34 +97,13 @@ class GCETestCase(ExtendedTestCase):
             call='function'
         )
 
-    @patch('libcloud.compute.drivers.gce.GCENodeDriver.list_sizes', MagicMock(return_value=[]))
-    def test_avail_sizes(self):
-        '''
-        Tests that avail_sizes returns an empty dictionary.
-        '''
-        sizes = gce.avail_sizes()
-        self.assertEqual(
-            sizes,
-            []
-            )
-
-    @patch('libcloud.compute.drivers.gce.GCENodeDriver.list_nodes', MagicMock(return_value=[]))
-    def test_list_nodes(self):
-        nodes = gce.list_nodes()
-        self.assertEqual(
-            nodes,
-            {}
-        )
-
-    @patch('libcloud.compute.drivers.gce.GCENodeDriver.list_locations', MagicMock(return_value=[]))
-    def test_list_locations(self):
-        locations = gce.avail_locations()
-        self.assertEqual(
-            locations,
-            {}
-        )
-
+    def test_provider_matches(self):
+        """
+        Test that the first configured instance of a gce driver is matched
+        """
+        p = gce.get_configured_provider()
+        self.assertNotNone(p)
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from unit import run_tests
     run_tests(GCETestCase, needs_daemon=False)
