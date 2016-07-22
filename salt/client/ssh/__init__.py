@@ -1299,6 +1299,10 @@ def mod_data(fsclient):
                     ret[ref] = mods_data
     if not ret:
         return {}
+
+    if six.PY3:
+        ver_base = salt.utils.to_bytes(ver_base)
+
     ver = hashlib.sha1(ver_base).hexdigest()
     ext_tar_path = os.path.join(
             fsclient.opts['cachedir'],
