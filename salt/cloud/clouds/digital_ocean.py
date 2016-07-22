@@ -823,7 +823,7 @@ def post_dns_record(**kwargs):
     '''
     Creates a DNS record for the given name if the domain is managed with DO.
     '''
-    if 'kwargs' in kwargs: # flatten kwargs if called via salt-cloud -f
+    if 'kwargs' in kwargs:  # flatten kwargs if called via salt-cloud -f
         f_kwargs = kwargs['kwargs']
         del kwargs['kwargs']
         kwargs.update(f_kwargs)
