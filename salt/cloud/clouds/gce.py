@@ -171,10 +171,14 @@ def get_conn():
     driver = get_driver(Provider.GCE)
     provider = get_configured_provider()
     project = config.get_cloud_config_value('project', provider, __opts__)
-    email = config.get_cloud_config_value('service_account_email_address',
-            provider, __opts__)
-    private_key = config.get_cloud_config_value('service_account_private_key',
-            provider, __opts__)
+    email = config.get_cloud_config_value(
+        'service_account_email_address',
+        provider,
+        __opts__)
+    private_key = config.get_cloud_config_value(
+        'service_account_private_key',
+        provider,
+        __opts__)
     gce = driver(email, private_key, project=project)
     gce.connection.user_agent_append('{0}/{1}'.format(_UA_PRODUCT,
                                                       _UA_VERSION))

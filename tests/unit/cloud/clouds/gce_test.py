@@ -70,9 +70,26 @@ class GCETestCase(TestCase):
             call='function'
         )
 
-    def test_virtual(self):
-        v = gce.__virtual__()
-        self.assertEqual(v, 'gce')
+    def test_fail_virtual_missing_deps(self):
+        # Missing deps
+        with patch('salt.config.check_driver_dependencies', return_value=False):
+            v = gce.__virtual__()
+            self.assertEqual(v, False)
+
+    def test_fail_virtual_deps_missing_config(self):
+        with patch('salt.config.check_driver_dependencies', return_value=True):
+            with patch('salt.config.is_provider_configured', return_value=False):
+                v = gce.__virtual__()
+                self.assertEqual(v, False)
+
+    def test_import(self):
+        """
+        Test that the module picks up installed deps
+        """
+        with patch('salt.config.check_driver_dependencies', return_value=True) as p:
+            get_deps = gce.get_dependencies()
+            self.assertEqual(get_deps, True)
+            p.assert_called_once()
 
     def test_provider_matches(self):
         """
