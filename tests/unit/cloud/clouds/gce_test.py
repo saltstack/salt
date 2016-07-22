@@ -9,8 +9,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import libcloud.security
-import platform
-import os
+
 
 # Import Salt Libs
 from salt.cloud.clouds import gce
@@ -47,21 +46,13 @@ DUMMY_TOKEN = {
 }
 
 HAS_CERTS = True
-ON_SUSE = True if 'SuSE' in platform.dist() else False
-ON_MAC = True if 'Darwin' in platform.system() else False
 
-if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
-    if os.path.isfile('/etc/ssl/ca-bundle.pem'):
-        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
-    else:
-        HAS_CERTS = False
-elif ON_MAC:
-    if os.path.isfile('/opt/local/share/curl/curl-ca-bundle.crt'):
-        pass  # libcloud will already find this file
-    elif os.path.isfile('/usr/local/etc/openssl/cert.pem'):
-        pass  # libcloud will already find this file
-    else:
-        HAS_CERTS = False
+# Use certifi if installed
+try:
+    import certifi
+except ImportError:
+    libcloud.security.CA_CERTS_PATH.append(certifi.where())
+
 
 
 class ExtendedTestCase(TestCase):
@@ -96,6 +87,10 @@ class GCETestCase(ExtendedTestCase):
             vm_name=VM_NAME,
             call='function'
         )
+
+    def test_virtual(self):
+        v = gce.__virtual__()
+        self.assertEqual(v, 'gce')
 
     def test_provider_matches(self):
         """
