@@ -61,7 +61,8 @@ def __virtual__():
         'OEL',
         'SUSE  Enterprise Server',
         'SUSE',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'VirtuozzoLinux'
     ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'XenServer':
