@@ -149,22 +149,6 @@ class DimensionDataTestCase(ExtendedTestCase):
             'default'
         )
 
-    @patch('libcloud.compute.drivers.dimensiondata.DimensionDataNodeDriver.list_nodes', MagicMock(return_value=[]))
-    def test_list_nodes(self):
-        nodes = dimensiondata.list_nodes()
-        self.assertEqual(
-            nodes,
-            {}
-        )
-
-    @patch('libcloud.compute.drivers.dimensiondata.DimensionDataNodeDriver.list_locations', MagicMock(return_value=[]))
-    def test_list_locations(self):
-        locations = dimensiondata.avail_locations()
-        self.assertEqual(
-            locations,
-            {}
-        )
-
 
 if __name__ == '__main__':
     from integration import run_tests
