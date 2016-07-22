@@ -29,7 +29,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
       ssh_auth.present:
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
-        - config: %h/.ssh/authorized_keys
+        - config: '%h/.ssh/authorized_keys'
 
     sshkeys:
       ssh_auth.present:
