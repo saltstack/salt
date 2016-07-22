@@ -140,11 +140,12 @@ def create(vm_info):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_info['name']),
-        {
+        args={
             'name': vm_info['name'],
             'profile': vm_info['profile'],
             'driver': vm_info['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -158,7 +159,8 @@ def create(vm_info):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_info['name']),
-        request_kwargs,
+        args=request_kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     vm_result = vb_clone_vm(**request_kwargs)
@@ -183,7 +185,8 @@ def create(vm_info):
         'event',
         'created machine',
         'salt/cloud/{0}/created'.format(vm_info['name']),
-        vm_result,
+        args=vm_result,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -311,7 +314,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -321,7 +325,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
