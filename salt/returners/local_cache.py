@@ -23,6 +23,7 @@ import salt.utils.jid
 import salt.exceptions
 
 # Import 3rd-party libs
+import msgpack
 import salt.ext.six as six
 
 
@@ -502,7 +503,7 @@ def save_reg(data):
         else:
             raise
     try:
-        with salt.utils.flopen(regfile, 'a') as fh_:
+        with salt.utils.fopen(regfile, 'a') as fh_:
             msgpack.dump(data, fh_)
         fh_.close()
     except:
@@ -517,7 +518,7 @@ def load_reg():
     reg_dir = _reg_dir()
     regfile = os.path.join(reg_dir, 'register')
     try:
-        with salt.utils.flopen(regfile, 'a') as fh_:
+        with salt.utils.fopen(regfile, 'r') as fh_:
             return msgpack.load(fh_)
     except:
         log.error('Could not write to msgpack file {0}'.format(opts['outdir']))
