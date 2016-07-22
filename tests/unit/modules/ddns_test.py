@@ -100,14 +100,14 @@ class DDNSTestCase(TestCase):
             return MockAnswer
 
         if six.PY3:
-            # pylint: disable=E0001
+            # pylint: disable=E0598
             with patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)), \
                     patch.object(dns.query, 'udp', mock_udp_query()), \
                     patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)), \
                     patch.object(ddns, '_get_keyring', return_value=None), \
                     patch.object(ddns, '_config', return_value=None):
                 self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
-            # pylint: enable=E0001
+            # pylint: enable=E0598
         else:
             with contextlib.nested(
                     patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)),
@@ -134,14 +134,14 @@ class DDNSTestCase(TestCase):
             return MockAnswer
 
         if six.PY3:
-            # pylint: disable=E0001
+            # pylint: disable=E0598
             with patch.object(dns.query, 'udp', mock_udp_query()), \
                     patch('salt.utils.fopen', mock_open(read_data=file_data), create=True), \
                     patch.object(dns.tsigkeyring, 'from_text', return_value=True), \
                     patch.object(ddns, '_get_keyring', return_value=None), \
                     patch.object(ddns, '_config', return_value=None):
                 self.assertTrue(ddns.delete(zone='A', name='B'))
-            # pylint: enable=E0001
+            # pylint: enable=E0598
         else:
             with contextlib.nested(
                     patch.object(dns.query, 'udp', mock_udp_query()),
