@@ -1211,7 +1211,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):  # pylint: disable=W0221
         '''
         Execute salt
         '''
