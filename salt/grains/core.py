@@ -1143,6 +1143,7 @@ def os_data():
         grains['osrelease'] = 'proxy'
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
+        grains['osfullname'] = 'proxy'
     elif salt.utils.is_windows():
         with salt.utils.winapi.Com():
             wmi_c = wmi.WMI()
