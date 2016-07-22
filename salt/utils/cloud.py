@@ -511,7 +511,10 @@ def bootstrap(vm_, opts):
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        {'kwargs': event_kwargs},
+        args={'kwargs': event_kwargs},
+        sock_dir=opts.get(
+            'sock_dir',
+            os.path.join(syspaths.SOCK_DIR, 'master')),
         transport=opts.get('transport', 'zeromq')
     )
 
@@ -1152,7 +1155,10 @@ def deploy_windows(host,
             'event',
             '{0} has been deployed at {1}'.format(name, host),
             'salt/cloud/{0}/deploy_windows'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
@@ -1620,10 +1626,13 @@ def deploy_script(host,
                 'event',
                 '{0} has been deployed at {1}'.format(name, host),
                 'salt/cloud/{0}/deploy_script'.format(name),
-                {
+                args={
                     'name': name,
                     'host': host
                 },
+                sock_dir=opts.get(
+                    'sock_dir',
+                    os.path.join(syspaths.SOCK_DIR, 'master')),
                 transport=opts.get('transport', 'zeromq')
             )
             if file_map_fail or file_map_success:
@@ -2864,7 +2873,10 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
                     'event',
                     'cached node missing from provider',
                     'salt/cloud/{0}/cache_node_missing'.format(node),
-                    {'missing node': node},
+                    args={'missing node': node},
+                    sock_dir=opts.get(
+                        'sock_dir',
+                        os.path.join(syspaths.SOCK_DIR, 'master')),
                     transport=opts.get('transport', 'zeromq')
                 )
 
@@ -2897,7 +2909,10 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             'event',
             'new node found',
             'salt/cloud/{0}/cache_node_new'.format(node),
-            {'new_data': event_data},
+            args={'new_data': event_data},
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
         return
@@ -2918,10 +2933,13 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             'event',
             'node data differs',
             'salt/cloud/{0}/cache_node_diff'.format(node),
-            {
+            args={
                 'new_data': _strip_cache_events(new_data, opts),
                 'cache_data': _strip_cache_events(cache_data, opts),
             },
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
