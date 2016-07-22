@@ -175,7 +175,7 @@ def extracted(name,
 
         .. versionadded:: 2016.3.0
 
-   skip_verify:False
+    skip_verify:False
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
         argument will be ignored.
