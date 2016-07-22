@@ -475,7 +475,8 @@ class AsyncAuth(object):
         while True:
             try:
                 creds = yield self.sign_in(channel=channel)
-            except SaltClientError as error:
+            except SaltClientError as exc:
+                error = exc
                 break
             if creds == 'retry':
                 if self.opts.get('caller'):
