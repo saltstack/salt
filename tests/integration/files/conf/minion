@@ -1,17 +1,16 @@
 # basic config
+# Connects to master
 master: localhost
 master_port: 64506
-root_dir: /tmp/salttest
-pki_dir: pki
-id: minion
-cachedir: cachedir
+interface: 127.0.0.1
+tcp_pub_port: 64510
+tcp_pull_port: 64511
 sock_dir: minion_sock
-#acceptance_wait_time: = 1
+id: minion
 open_mode: True
-log_file: minion
+log_file: minion.log
 log_level_logfile: debug
-#loop_interval: 0.05
-config_dir: /tmp/salt-tests-tmpdir
+pidfile: minion.pid
 
 # module extension
 test.foo: baz
