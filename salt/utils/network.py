@@ -93,7 +93,7 @@ def _generate_minion_id():
                               '::1.*', 'ipv6-.*', 'fe00::.*', 'fe02::.*', '1.0.0.*.ip6.arpa']
 
         def append(self, p_object):
-            if p_object not in self and not self.filter(p_object):
+            if p_object and p_object not in self and not self.filter(p_object):
                 super(self.__class__, self).append(p_object)
             return self
 
@@ -111,7 +111,7 @@ def _generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(platform.node()).append(socket.gethostname()).append(socket.getfqdn())
+    hosts = DistinctList().append(socket.getfqdn()).append(platform.node()).append(socket.gethostname())
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first(), None, socket.AF_INET,
