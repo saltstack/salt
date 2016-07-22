@@ -890,9 +890,9 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
-            self.opts,
-            self.key,
-            )
+           self.opts,
+           self.key,
+           )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.reinit_crypto()
         self.__bind()
@@ -924,7 +924,9 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         self.__setup_fileserver()
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
 
@@ -1600,7 +1602,9 @@ class ClearFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
@@ -2106,8 +2110,11 @@ class ClearFuncs(object):
                     return ''
                 publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
+                    publisher_acl = salt.utils.get_values_of_matching_keys(
+                            publisher_acl,
+                            clear_load['user'].split('_', 1)[-1])
                     good = self.ckminions.auth_check(
-                                publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
+                                publisher_acl,
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
@@ -2142,14 +2149,17 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
-                    if clear_load['user'] not in acl:
+                    # Build ACL matching the user name
+                    acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            clear_load['user'])
+                    if not acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                        acl[clear_load['user']],
+                        acl,
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],

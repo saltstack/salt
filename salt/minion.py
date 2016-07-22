@@ -397,7 +397,7 @@ class MinionBase(object):
         if 'config.merge' in functions:
             b_conf = functions['config.merge']('beacons', self.opts['beacons'], omit_opts=True)
             if b_conf:
-                return self.beacons.process(b_conf)  # pylint: disable=no-member
+                return self.beacons.process(b_conf, self.opts['grains'])  # pylint: disable=no-member
         return []
 
     @tornado.gen.coroutine
@@ -670,8 +670,9 @@ class MasterMinion(object):
             states=True,
             rend=True,
             matcher=True,
-            whitelist=None):
-        self.opts = salt.config.minion_config(opts['conf_file'])
+            whitelist=None,
+            ignore_config_errors=True):
+        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)

@@ -58,7 +58,8 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
         return dest
     else:
         try:
-            dest.update(upd)
+            for k in upd.keys():
+                dest[k] = upd[k]
         except AttributeError:
             # this mapping is not a dict
             for k in upd:

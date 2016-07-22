@@ -122,7 +122,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
-            salt.utils.cloud.cache_node(salt.utils.cloud.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
+            salt.utils.cloud.cache_node(salt.utils.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
 
 

@@ -5,7 +5,7 @@ manager.
 
 .. code-block:: bash
 
-    salt '*' certutil.install salt://cert.cer "TrustedPublisher"
+    salt '*' certutil.add_store salt://cert.cer "TrustedPublisher"
 '''
 
 # Import Python Libs
@@ -65,7 +65,7 @@ def add_store(source, store, saltenv='base'):
     Add the given cert into the given Certificate Store
 
     source
-        The source certficate file this can be in the form
+        The source certificate file this can be in the form
         salt://path/to/file
 
     store
@@ -91,7 +91,7 @@ def del_store(source, store, saltenv='base'):
     Delete the given cert into the given Certificate Store
 
     source
-        The source certficate file this can be in the form
+        The source certificate file this can be in the form
         salt://path/to/file
 
     store

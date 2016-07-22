@@ -919,7 +919,7 @@ def _remotes_on(port, which_end):
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
             proc_available = True
-            with salt.utils.fopen(statf, 'rb') as fp_:
+            with salt.utils.fopen(statf, 'r') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue

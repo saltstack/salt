@@ -20,7 +20,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_s3_bucket
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -310,7 +310,7 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
         '''
         Tests describing parameters if bucket exists
         '''
-        for key, value in config_ret.iteritems():
+        for key, value in six.iteritems(config_ret):
             getattr(self.conn, key).return_value = deepcopy(value)
 
         result = boto_s3_bucket.describe(Bucket='mybucket', **conn_parameters)

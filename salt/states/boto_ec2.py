@@ -57,8 +57,9 @@ import logging
 from time import time, sleep
 
 # Import salt libs
+import salt.ext.six as six
+import salt.utils
 import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ def eni_present(
         description=None,
         groups=None,
         source_dest_check=True,
-        allocate_eip=False,
+        allocate_eip=None,
         arecords=None,
         region=None,
         key=None,
@@ -207,9 +208,11 @@ def eni_present(
         the ENI.
 
     allocate_eip
-        True/False - allocate and associate an EIP to the ENI
+        allocate and associate an EIP to the ENI. Could be 'standard' to
+        allocate Elastic IP to EC2 region or 'vpc' to get it for a
+        particular VPC
 
-        .. versionadded:: 2016.3.0
+        .. versionchanged:: Carbon
 
     arecords
         A list of arecord dicts with attributes needed for the DNS add_record state.
@@ -233,7 +236,7 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
     if not groups:
@@ -310,7 +313,8 @@ def eni_present(
             if __opts__['test']:
                 ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
             else:
-                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=None,
+                domain = 'vpc' if allocate_eip == 'vpc' else None
+                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=domain,
                                                                       region=region,
                                                                       key=key,
                                                                       keyid=keyid,
@@ -594,6 +598,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                      additional_info=None, tenancy=None,
                      instance_profile_arn=None, instance_profile_name=None,
                      ebs_optimized=None, network_interfaces=None,
+                     network_interface_name=None,
+                     network_interface_id=None,
                      attributes=None, target_state=None, public_ip=None,
                      allocation_id=None, allocate_eip=False, region=None,
                      key=None, keyid=None, profile=None):
@@ -695,6 +701,12 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
         NetworkInterfaceCollection data structure containing the ENI
         specifications for the instance.
+    network_interface_name
+         (string) - The name of Elastic Network Interface to attach
+    .. versionadded:: Carbon
+    network_interface_id
+         (string) - The id of Elastic Network Interface to attach
+    .. versionadded:: Carbon
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
@@ -748,10 +760,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
 
-    if not exactly_one((image_id, image_name)):
+    if not salt.utils.exactly_one((image_id, image_name)):
         raise SaltInvocationError('Exactly one of image_id OR '
                                   'image_name must be provided.')
-    if (public_ip or allocation_id or allocate_eip) and not exactly_one((public_ip, allocation_id, allocate_eip)):
+    if (public_ip or allocation_id or allocate_eip) and not salt.utils.exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
 
@@ -798,6 +810,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                      instance_profile_arn=instance_profile_arn,
                                      instance_profile_name=instance_profile_name,
                                      ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
+                                     network_interface_name=network_interface_name,
+                                     network_interface_id=network_interface_id,
                                      region=region, key=key, keyid=keyid, profile=profile)
         if not r or 'instance_id' not in r:
             ret['result'] = False
@@ -866,7 +880,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 return ret
 
     if attributes:
-        for k, v in attributes.iteritems():
+        for k, v in six.iteritems(attributes):
             curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
                                                       keyid=keyid, profile=profile)
             if not isinstance(curr, dict):
@@ -1052,7 +1066,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     filters = {}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
-    if not exactly_one((volume_name, volume_id, instance_name, instance_id)):
+    if not salt.utils.exactly_one((volume_name, volume_id, instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   "'instance_name', or 'instance_id' must be provided.")
     if (instance_name or instance_id) and not device:

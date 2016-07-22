@@ -107,7 +107,9 @@ def present(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['boto_sns.exists'](name, region, key, keyid, profile)
+    is_present = __salt__['boto_sns.exists'](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if is_present:
         ret['result'] = True
         ret['comment'] = 'AWS SNS topic {0} present.'.format(name)
@@ -118,8 +120,9 @@ def present(
             ret['result'] = None
             return ret
 
-        created = __salt__['boto_sns.create'](name, region, key, keyid,
-                                              profile)
+        created = __salt__['boto_sns.create'](
+            name, region=region, key=key, keyid=keyid, profile=profile
+        )
         if created:
             msg = 'AWS SNS topic {0} created.'.format(name)
             ret['comment'] = msg
@@ -237,12 +240,14 @@ def absent(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['boto_sns.exists'](name, region, key, keyid, profile)
+    is_present = __salt__['boto_sns.exists'](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
 
     if is_present:
         subscriptions = __salt__['boto_sns.get_all_subscriptions_by_topic'](
-                            name, region, key, keyid, profile
-                        ) if unsubscribe else []
+            name, region=region, key=key, keyid=keyid, profile=profile
+        ) if unsubscribe else []
         failed_unsubscribe_subscriptions = []
 
         if __opts__.get('test'):
@@ -254,12 +259,15 @@ def absent(
             return ret
 
         for subscription in subscriptions:
-            unsubscribed = __salt__['boto_sns.unsubscribe'](name, subscription['SubscriptionArn'])
+            unsubscribed = __salt__['boto_sns.unsubscribe'](
+                name, subscription['SubscriptionArn'], region=region,
+                key=key, keyid=keyid, profile=profile
+            )
             if unsubscribed is False:
                 failed_unsubscribe_subscriptions.append(subscription)
 
-        deleted = __salt__['boto_sns.delete'](name, region, key, keyid,
-                                              profile)
+        deleted = __salt__['boto_sns.delete'](
+            name, region=region, key=key, keyid=keyid, profile=profile)
         if deleted:
             ret['comment'] = 'AWS SNS topic {0} deleted.'.format(name)
             ret['changes']['new'] = None

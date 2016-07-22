@@ -229,6 +229,7 @@ The directory to store the pki authentication keys.
 ---------------------
 
 .. versionchanged:: 2016.3.0
+
     The default location for this directory has been moved. Prior to this
     version, the location was a directory named ``extmods`` in the Salt
     cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
@@ -346,6 +347,21 @@ job cache and executes the scheduler.
 Default: ``nested``
 
 Set the default outputter used by the salt command.
+
+.. conf_master:: output_file
+
+``output_file``
+---------------
+
+Default: None
+
+# Set the default output file used by the salt command. Default is to output
+# to the CLI and not to a file. Functions the same way as the "--out-file"
+CLI option, only sets this to a single file for all salt commands.
+
+.. code-block:: yaml
+
+    output_file: /path/output/file
 
 .. conf_master:: color
 
@@ -517,11 +533,15 @@ Default: ``[]``
 
 Only return events matching tags in a whitelist.
 
+.. versionchanged:: Carbon
+
+    Supports glob matching patterns.
+
 .. code-block:: yaml
 
     event_return_whitelist:
       - salt/master/a_tag
-      - salt/master/another_tag
+      - salt/run/*/ret
 
 .. conf_master:: event_return_blacklist
 
@@ -534,11 +554,15 @@ Default: ``[]``
 
 Store all event returns _except_ the tags in a blacklist.
 
+.. versionchanged:: Carbon
+
+    Supports glob matching patterns.
+
 .. code-block:: yaml
 
     event_return_blacklist:
       - salt/master/not_this_tag
-      - salt/master/or_this_one
+      - salt/wheel/*/ret
 
 .. conf_master:: max_event_size
 
@@ -1264,6 +1288,10 @@ Example:
       - roots
       - git
 
+.. note::
+    For masterless Salt, this parameter must be specified in the minion config
+    file.
+
 .. conf_master:: fileserver_followsymlinks
 
 ``fileserver_followsymlinks``
@@ -1431,6 +1459,10 @@ Example:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
+.. note::
+    For masterless Salt, this parameter must be specified in the minion config
+    file.
+
 git: Git Remote File Server Backend
 -----------------------------------
 
@@ -1566,6 +1598,7 @@ Defines which branch/tag should be used as the ``base`` environment.
     gitfs_base: salt
 
 .. versionchanged:: 2014.7.0
+
     Ability to specify the base on a per-remote basis was added. See :ref:`here
     <gitfs-per-remote-config>` for more info.
 
@@ -3340,6 +3373,7 @@ used.
 ---------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_repo`` to ``winrepo_dir``.
 
 Default: ``/srv/salt/win/repo``
@@ -3376,9 +3410,11 @@ out for 2015.8.0 and later minions.
 ---------------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
 
 .. note::
+
     2015.8.0 and later minions do not use this setting since the cachefile
     is now located on the minion.
 
@@ -3398,6 +3434,7 @@ created.
 -------------------
 
 .. versionchanged:: 2015.8.0
+
     Renamed from ``win_gitrepos`` to ``winrepo_remotes``.
 
 Default: ``['https://github.com/saltstack/salt-winrepo.git']``

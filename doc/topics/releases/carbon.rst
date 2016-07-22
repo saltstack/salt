@@ -16,6 +16,10 @@ Features
         salt-run salt.cmd test.ping
         # call functions with arguments and keyword arguments
         salt-run salt.cmd test.arg 1 2 3 a=1
+- Added SSL support to Cassandra CQL returner.
+  SSL can be enabled by setting ``ssl_options`` for the returner.
+  Also added support for specifying ``protocol_version`` when establishing
+  cluster connection.
 
 Config Changes
 ==============

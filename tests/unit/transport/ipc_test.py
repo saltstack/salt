@@ -19,11 +19,11 @@ import salt.transport.ipc
 import salt.transport.server
 import salt.transport.client
 
+import salt.ext.six as six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 import integration
-
 from salttesting.mock import MagicMock
 from salttesting.helpers import ensure_in_syspath
 
@@ -55,7 +55,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         failures = []
         self.server_channel.close()
         os.unlink(self.socket_path)
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:

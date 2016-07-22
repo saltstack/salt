@@ -1674,7 +1674,7 @@ def replace(path,
 
     Replace occurrences of a pattern in a file. If ``show_changes`` is
     ``True``, then a diff of what changed will be returned, otherwise a
-    ``True`` will be returnd when changes are made, and ``False`` when
+    ``True`` will be returned when changes are made, and ``False`` when
     no changes are made.
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.

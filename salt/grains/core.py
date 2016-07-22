@@ -1461,6 +1461,7 @@ def os_data():
             # freebsd-version was introduced in 10.0.
             # derive osrelease from kernelversion prior to that
             grains['osrelease'] = grains['kernelrelease'].split('-')[0]
+        grains.update(_bsd_cpudata(grains))
     if grains['kernel'] in ('OpenBSD', 'NetBSD'):
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
@@ -1504,32 +1505,6 @@ def os_data():
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
 
-    # Load additional OS family grains
-    if grains['os_family'] == "RedHat":
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-
-        grains['osfinger'] = '{os}-{ver}'.format(
-            os=grains['osfullname'],
-            ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('osfullname') == 'Ubuntu':
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-
-        grains['osfinger'] = '{os}-{ver}'.format(
-            os=grains['osfullname'],
-            ver=grains['osrelease'])
-    elif grains.get('osfullname') == "Debian":
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-
-        grains['osfinger'] = '{os}-{ver}'.format(
-            os=grains['osfullname'],
-            ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian'):
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-
-        grains['osfinger'] = '{os}-{ver}'.format(
-            os=grains['os'],
-            ver=grains['osrelease'])
-
     if grains.get('osrelease', ''):
         osrelease_info = grains['osrelease'].split('.')
         for idx, value in enumerate(osrelease_info):
@@ -1537,6 +1512,9 @@ def os_data():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
+        grains['osmajorrelease'] = grains['osrelease_info'][0]
+        os_name = 'os' if grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname'
+        grains['osfinger'] = '{0}-{1}'.format(grains[os_name], grains['osrelease_info'][0])
 
     return grains
 

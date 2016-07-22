@@ -415,7 +415,7 @@ class PkgTest(integration.ModuleCase,
             self.skipTest('Package manager is not available')
 
         os_family = grains.get('os_family', '')
-        os_version = grains.get('osmajorrelease', [''])[0]
+        os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
         if target:
             version = latest_version(self.run_function, target)
@@ -443,7 +443,7 @@ class PkgTest(integration.ModuleCase,
             self.skipTest('Package manager is not available')
 
         os_family = grains.get('os_family', '')
-        os_version = grains.get('osmajorrelease', [''])[0]
+        os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
         if target:
             version = latest_version(self.run_function, target)
@@ -567,16 +567,23 @@ class PkgTest(integration.ModuleCase,
 
         # Now look for updates and try to run the state on a package which is
         # already up-to-date.
+        installed_pkgs = self.run_function('pkg.list_pkgs')
         updates = self.run_function('pkg.list_upgrades', refresh=False)
-        try:
-            target = next(iter(updates))
-        except StopIteration:
-            log.warning(
-                'No available upgrades, skipping only_upgrade=True test with '
-                'already-installed package. For best results run this test '
-                'on a machine with upgrades available.'
-            )
+
+        for pkgname in updates:
+            if pkgname in installed_pkgs:
+                target = pkgname
+                break
         else:
+            target = ''
+            log.warning(
+                'No available upgrades to installed packages, skipping '
+                'only_upgrade=True test with already-installed package. For '
+                'best results run this test on a machine with upgrades '
+                'available.'
+            )
+
+        if target:
             ret = self.run_state('pkg.latest', name=target, refresh=False,
                                  only_upgrade=True)
             self.assertSaltTrueReturn(ret)

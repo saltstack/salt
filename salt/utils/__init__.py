@@ -1333,47 +1333,39 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     '''
     Check a whitelist and/or blacklist to see if the value matches it.
     '''
-    if not any((whitelist, blacklist)):
-        return True
-    in_whitelist = False
-    in_blacklist = False
-    if whitelist:
-        if not isinstance(whitelist, list):
-            whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    in_whitelist = True
-                    break
-        except TypeError:
-            log.error('Non-iterable whitelist {0}'.format(whitelist))
-            whitelist = None
-    else:
-        whitelist = None
-
-    if blacklist:
-        if not isinstance(blacklist, list):
+    if blacklist is not None:
+        if not hasattr(blacklist, '__iter__'):
             blacklist = [blacklist]
         try:
             for expr in blacklist:
                 if expr_match(value, expr):
-                    in_blacklist = True
-                    break
+                    return False
         except TypeError:
-            log.error('Non-iterable blacklist {0}'.format(whitelist))
-            blacklist = None
-    else:
-        blacklist = None
+            log.error('Non-iterable blacklist {0}'.format(blacklist))
 
-    if whitelist and not blacklist:
-        ret = in_whitelist
-    elif blacklist and not whitelist:
-        ret = not in_blacklist
-    elif whitelist and blacklist:
-        ret = in_whitelist and not in_blacklist
+    if whitelist:
+        if not hasattr(whitelist, '__iter__'):
+            whitelist = [whitelist]
+        try:
+            for expr in whitelist:
+                if expr_match(value, expr):
+                    return True
+        except TypeError:
+            log.error('Non-iterable whitelist {0}'.format(whitelist))
     else:
-        ret = True
+        return True
 
+    return False
+
+
+def get_values_of_matching_keys(pattern_dict, user_name):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    ret = []
+    for expr in pattern_dict:
+        if expr_match(user_name, expr):
+            ret.extend(pattern_dict[expr])
     return ret
 
 
@@ -2325,7 +2317,7 @@ def kwargs_warn_until(kwargs,
         )
 
 
-def version_cmp(pkg1, pkg2):
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Compares two version strings using distutils.version.LooseVersion. This is
     a fallback for providers which don't have a version comparison utility
@@ -2333,6 +2325,10 @@ def version_cmp(pkg1, pkg2):
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
+    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    pkg1 = normalize(pkg1)
+    pkg2 = normalize(pkg2)
+
     try:
         # pylint: disable=no-member
         if distutils.version.LooseVersion(pkg1) < \
@@ -2349,22 +2345,25 @@ def version_cmp(pkg1, pkg2):
     return None
 
 
-def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
+def compare_versions(ver1='',
+                     oper='==',
+                     ver2='',
+                     cmp_func=None,
+                     ignore_epoch=False):
     '''
     Compares two version numbers. Accepts a custom function to perform the
     cmp-style version comparison, otherwise uses version_cmp().
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] and oper not in cmp_map:
-        log.error('Invalid operator "{0}" for version '
-                  'comparison'.format(oper))
+    if oper not in ('!=',) and oper not in cmp_map:
+        log.error('Invalid operator \'%s\' for version comparison', oper)
         return False
 
     if cmp_func is None:
         cmp_func = version_cmp
 
-    cmp_result = cmp_func(ver1, ver2)
+    cmp_result = cmp_func(ver1, ver2, ignore_epoch=ignore_epoch)
     if cmp_result is None:
         return False
 
@@ -3056,3 +3055,40 @@ def str_version_to_evr(verstring):
         release = ''
 
     return epoch, version, release
+
+
+def simple_types_filter(data):
+    '''
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
+    bool, etc.
+    '''
+    if data is None:
+        return data
+
+    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
+    simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
+
+    if isinstance(data, (list, tuple)):
+        simplearray = []
+        for value in data:
+            if value is not None:
+                if isinstance(value, (dict, list)):
+                    value = simple_types_filter(value)
+                elif not isinstance(value, simpletypes_values):
+                    value = repr(value)
+            simplearray.append(value)
+        return simplearray
+
+    if isinstance(data, dict):
+        simpledict = {}
+        for key, value in six.iteritems(data):
+            if key is not None and not isinstance(key, simpletypes_keys):
+                key = repr(key)
+            if value is not None and isinstance(value, (dict, list, tuple)):
+                value = simple_types_filter(value)
+            elif value is not None and not isinstance(value, simpletypes_values):
+                value = repr(value)
+            simpledict[key] = value
+        return simpledict
+
+    return data

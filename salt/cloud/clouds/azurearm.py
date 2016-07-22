@@ -41,6 +41,7 @@ import base64
 import yaml
 import salt.cache
 import salt.config as config
+import salt.utils
 import salt.utils.cloud
 import salt.ext.six as six
 import salt.version
@@ -473,7 +474,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     data['resource_group'] = resource_group
 
     salt.utils.cloud.cache_node(
-        salt.utils.cloud.simple_types_filter(data),
+        salt.utils.simple_types_filter(data),
         __active_provider_name__,
         __opts__
     )
@@ -1256,7 +1257,7 @@ def make_safe(data):
     '''
     Turn object data into something serializable
     '''
-    return salt.utils.cloud.simple_types_filter(object_to_dict(data))
+    return salt.utils.simple_types_filter(object_to_dict(data))
 
 
 def create_security_group(call=None, kwargs=None):  # pylint: disable=unused-argument

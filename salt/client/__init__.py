@@ -675,6 +675,8 @@ class LocalClient(object):
         if not pub_data:
             yield pub_data
         else:
+            if kwargs.get('yield_pub_data'):
+                yield pub_data
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
                                                 timeout=self._get_timeout(timeout),

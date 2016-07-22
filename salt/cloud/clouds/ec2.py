@@ -1434,7 +1434,7 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
 
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
               'NetworkInterfaceId': eni_id}
-    for k, v in properties.iteritems():
+    for k, v in six.iteritems(properties):
         params[k] = v
 
     retries = 5
@@ -1702,7 +1702,7 @@ def request_instance(vm_=None, call=None):
         blacklist = __opts__['renderer_blacklist']
         whitelist = __opts__['renderer_whitelist']
         userdata = compile_template(
-            userdata, rend, renderer, blacklist, whitelist
+            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
         )
 
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
@@ -2122,9 +2122,9 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if 'ipAddress' in data[0]['instancesSet']['item']:
+        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
             log.error(
-                'Public IP not detected.  If private IP is meant for bootstrap you must specify "ssh_interface: private_ips" in your profile.'
+                'Public IP not detected.'
             )
             return data
         if ssh_interface(vm_) == 'private_ips' and \

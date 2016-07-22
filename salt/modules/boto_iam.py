@@ -44,13 +44,13 @@ import json
 import yaml
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.boto
 
 # Import third party libs
 # pylint: disable=unused-import
-from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disable=no-name-in-module
 try:
     import boto
@@ -559,7 +559,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
         return False
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        if not isinstance(policy_json, string_types):
+        if not isinstance(policy_json, six.string_types):
             policy_json = json.dumps(policy_json)
         created = conn.put_group_policy(group_name, policy_name,
                                         policy_json)
@@ -662,6 +662,45 @@ def get_all_groups(path_prefix='/', region=None, key=None, keyid=None,
             _groups.list_groups_response.list_groups_result, 'marker', None
         )
     return groups
+
+
+def get_all_instance_profiles(path_prefix='/', region=None, key=None,
+                              keyid=None, profile=None):
+    '''
+    Get and return all IAM instance profiles, starting at the optional path.
+
+    .. versionadded:: carbon
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_instance_profiles
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    marker = False
+    profiles = []
+    while marker is not None:
+        marker = marker if marker else None
+        p = conn.list_instance_profiles(path_prefix=path_prefix,
+                                                   marker=marker)
+        res = p.list_instance_profiles_response.list_instance_profiles_result
+        profiles += res.instance_profiles
+        marker = getattr(res, 'marker', None)
+    return profiles
+
+
+def list_instance_profiles(path_prefix='/', region=None, key=None,
+                           keyid=None, profile=None):
+    '''
+    List all IAM instance profiles, starting at the optional path.
+
+    .. versionadded:: carbon
+
+    CLI Example:
+
+        salt-call boto_iam.list_instance_profiles
+    '''
+    p = get_all_instance_profiles(path_prefix, region, key, keyid, profile)
+    return [i['instance_profile_name'] for i in p]
 
 
 def get_all_group_policies(group_name, region=None, key=None, keyid=None,
@@ -1129,7 +1168,7 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
         if _policy == policy:
             return True
         mode = 'modify'
-    if isinstance(policy, string_types):
+    if isinstance(policy, six.string_types):
         policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
     try:
         _policy = json.dumps(policy)
@@ -1190,7 +1229,7 @@ def update_assume_role_policy(role_name, policy_document, region=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(policy_document, string_types):
+    if isinstance(policy_document, six.string_types):
         policy_document = json.loads(policy_document,
                                      object_pairs_hook=odict.OrderedDict)
     try:
@@ -1409,7 +1448,7 @@ def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, 
         return False
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        if not isinstance(policy_json, string_types):
+        if not isinstance(policy_json, six.string_types):
             policy_json = json.dumps(policy_json)
         created = conn.put_user_policy(user_name, policy_name,
                                        policy_json)
@@ -1658,7 +1697,7 @@ def create_policy(policy_name, policy_document, path=None, description=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not isinstance(policy_document, string_types):
+    if not isinstance(policy_document, six.string_types):
         policy_document = json.dumps(policy_document)
     params = {}
     for arg in 'path', 'description':
@@ -1786,7 +1825,7 @@ def create_policy_version(policy_name, policy_document, set_as_default=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not isinstance(policy_document, string_types):
+    if not isinstance(policy_document, six.string_types):
         policy_document = json.dumps(policy_document)
     params = {}
     for arg in ('set_as_default',):
@@ -2059,7 +2098,7 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
           'policy_roles': [],
         }
         for ret in salt.utils.boto.paged_call(conn.list_entities_for_policy, policy_arn=policy_arn, **params):
-            for k, v in allret.iteritems():
+            for k, v in six.iteritems(allret):
                 v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
         return allret
     except boto.exception.BotoServerError as e:

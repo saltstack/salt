@@ -231,6 +231,18 @@ def connect(connect_spec=None):
 
         This object should be used as a context manager.  It is safe
         to nest ``with`` statements.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' ldap3.connect "{
+            'url': 'ldaps://ldap.example.com/',
+            'bind': {
+                'method': 'simple',
+                'dn': 'cn=admin,dc=example,dc=com',
+                'password': 'secret'}
+        }"
     '''
     if isinstance(connect_spec, _connect_ctx):
         return connect_spec
@@ -357,6 +369,18 @@ def add(connect_spec, dn, attributes):
 
     :returns:
         ``True`` if successful, raises an exception otherwise.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' ldap3.add "{
+            'url': 'ldaps://ldap.example.com/',
+            'bind': {
+                'method': 'simple',
+                'password': 'secret',
+            },
+        }" "dn='dc=example,dc=com'" "attributes={'example': 'values'}"
     '''
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
@@ -386,6 +410,17 @@ def delete(connect_spec, dn):
 
     :returns:
         ``True`` if successful, raises an exception otherwise.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' ldap3.delete "{
+            'url': 'ldaps://ldap.example.com/',
+            'bind': {
+                'method': 'simple',
+                'password': 'secret'}
+        }" dn='cn=admin,dc=example,dc=com'
     '''
     l = connect(connect_spec)
     log.info('deleting entry: dn: {0}'.format(repr(dn)))
@@ -430,6 +465,18 @@ def modify(connect_spec, dn, directives):
 
     :returns:
         ``True`` if successful, raises an exception otherwise.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' ldap3.modify "{
+            'url': 'ldaps://ldap.example.com/',
+            'bind': {
+                'method': 'simple',
+                'password': 'secret'}
+        }" dn='cn=admin,dc=example,dc=com'
+        directives="('add', 'example', ['example_val'])"
     '''
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
@@ -477,6 +524,19 @@ def change(connect_spec, dn, before, after):
 
     :returns:
         ``True`` if successful, raises an exception otherwise.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' ldap3.change "{
+            'url': 'ldaps://ldap.example.com/',
+            'bind': {
+                'method': 'simple',
+                'password': 'secret'}
+        }" dn='cn=admin,dc=example,dc=com'
+        before="{'example_value': 'before_val'}"
+        after="{'example_value': 'after_val'}"
     '''
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what

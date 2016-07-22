@@ -1083,7 +1083,7 @@ def time_(format='%A, %d. %B %Y %I:%M%p'):
     .. versionadded:: 2016.3.0
 
     Return the current time on the minion,
-    formated based on the format parameter.
+    formatted based on the format parameter.
 
     Default date format: Monday, 27. July 2015 07:55AM
 

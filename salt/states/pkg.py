@@ -151,13 +151,13 @@ def _fulfills_version_spec(versions, oper, desired_version,
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
-    normalize = lambda x: x.split(':', 1)[-1] if ignore_epoch else x
     cmp_func = __salt__.get('pkg.version_cmp')
     for ver in versions:
-        if salt.utils.compare_versions(ver1=normalize(ver),
+        if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
-                                       ver2=normalize(desired_version),
-                                       cmp_func=cmp_func):
+                                       ver2=desired_version,
+                                       cmp_func=cmp_func,
+                                       ignore_epoch=ignore_epoch):
             return True
     return False
 
@@ -450,7 +450,7 @@ def _find_install_targets(name=None,
             # package's name and version
             err = 'Unable to cache {0}: {1}'
             try:
-                cached_path = __salt__['cp.cache_file'](val)
+                cached_path = __salt__['cp.cache_file'](val, saltenv=kwargs['saltenv'])
             except CommandExecutionError as exc:
                 problems.append(err.format(val, exc))
                 continue
@@ -2492,6 +2492,9 @@ def mod_aggregate(low, chunks, running):
                 continue
             # Check for the same function
             if chunk.get('fun') != low.get('fun'):
+                continue
+            # Check for the same repo
+            if chunk.get('fromrepo') != low.get('fromrepo'):
                 continue
             # Pull out the pkg names!
             if 'pkgs' in chunk:

@@ -236,7 +236,7 @@ Changes:
 
 - **PR** `#32588`_: (*anlutro*) Fix salt-ssh module function call argument type juggling by JSON encoding them
 
-* 5e7edfc yumpkg: Ignore epoch in version comparison for explict versions without an epoch (`#32563`_)
+* 5e7edfc yumpkg: Ignore epoch in version comparison for explicit versions without an epoch (`#32563`_)
 
 * fea6056 Fixing critical bug to remove only the specified Host instead of the entire Host cluster (`#32640`_)
 
@@ -296,7 +296,7 @@ Changes:
 
 - **PR** `#32423`_: (*jtand*) Update glusterfs_test to be inline with `#32312`_
 
-- **PR** `#32425`_: (*cachedout*) Fix salt-cloud paralell provisioning
+- **PR** `#32425`_: (*cachedout*) Fix salt-cloud parallel provisioning
 
 * 51fb2ac FreeBSD supports packages in format java/openjdk7 so the prior commit broke that functionality. Check freebsd/pkg`#1409`_ for more info.
 

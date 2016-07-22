@@ -38,6 +38,7 @@ import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+import salt.exceptions
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -396,7 +397,12 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
             'Loading Saltfile from \'{0}\''.format(self.options.saltfile)
         )
 
-        saltfile_config = config._read_conf_file(saltfile)
+        try:
+            saltfile_config = config._read_conf_file(saltfile)
+        except salt.exceptions.SaltConfigurationError as error:
+            self.error(error.message)
+            self.exit(salt.defaults.exitcodes.EX_GENERIC,
+                      '{0}: error: {1}\n'.format(self.get_prog_name(), error.message))
 
         if not saltfile_config:
             # No configuration was loaded from the Saltfile
@@ -748,7 +754,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 # Yep, not the same user!
                 # Is the current user in ACL?
                 acl = self.config.get('publisher_acl') or self.config.get('client_acl', {})
-                if current_user in acl:
+                if salt.utils.check_whitelist_blacklist(current_user, whitelist=six.iterkeys(acl)):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
@@ -1697,7 +1703,8 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
 
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
-                                    cache_minion_id=True)
+                                    cache_minion_id=True,
+                                    ignore_config_errors=False)
         # Optimization: disable multiprocessing logging if running as a
         #               daemon, without engines and without multiprocessing
         if not opts.get('engines') and not opts.get('multiprocessing', True) \

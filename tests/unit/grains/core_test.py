@@ -247,6 +247,7 @@ class CoreGrainsTestCase(TestCase):
         self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
+        self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp3(self):
@@ -262,6 +263,7 @@ PATCHLEVEL = 3
             'osfullname': "SLES",
             'osrelease': '11.3',
             'osrelease_info': [11, 3],
+            'osmajorrelease': 11,
             'files': ["/etc/SuSE-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
@@ -285,6 +287,7 @@ PATCHLEVEL = 3
             'osfullname': "SLES",
             'osrelease': '11.4',
             'osrelease_info': [11, 4],
+            'osmajorrelease': 11,
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
@@ -308,6 +311,7 @@ PATCHLEVEL = 3
             'osfullname': "SLES",
             'osrelease': '12',
             'osrelease_info': [12],
+            'osmajorrelease': 12,
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
@@ -331,6 +335,7 @@ PATCHLEVEL = 3
             'osfullname': "SLES",
             'osrelease': '12.1',
             'osrelease_info': [12, 1],
+            'osmajorrelease': 12,
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
@@ -354,6 +359,7 @@ PATCHLEVEL = 3
             'osfullname': "Leap",
             'osrelease': '42.1',
             'osrelease_info': [42, 1],
+            'osmajorrelease': 42,
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
@@ -377,6 +383,7 @@ PATCHLEVEL = 3
             'osfullname': "Tumbleweed",
             'osrelease': '20160504',
             'osrelease_info': [20160504],
+            'osmajorrelease': 20160504,
             'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)

@@ -40,6 +40,7 @@ import socket
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 
@@ -81,7 +82,7 @@ def setup_handlers():
         }
 
         config_opts = {}
-        for config_opt, arg_name in config_fields.iteritems():
+        for config_opt, arg_name in six.iteritems(config_fields):
             config_opts[arg_name] = __opts__[handler_id].get(config_opt)
 
         config_opts['level'] = LOG_LEVELS[

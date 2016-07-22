@@ -551,12 +551,12 @@ def _decode_secrets(secrets):
     if items:
         for i, secret in enumerate(items):
             log.trace(i, secret)
-            for k, v in secret.get("data", {}).iteritems():
+            for k, v in six.iteritems(secret.get("data", {})):
                 items[i]['data'][k] = base64.b64decode(v)
         secrets["items"] = items
         return secrets
     else:
-        for k, v in secrets.get("data", {}).iteritems():
+        for k, v in six.iteritems(secrets.get("data", {})):
             secrets['data'][k] = base64.b64decode(v)
         return secrets
 
@@ -729,7 +729,7 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
             # format is array of dictionaries:
             # [{public_auth: salt://public_key}, {test: "/tmp/test"}]
             log.trace("source is dictionary: {0}".format(source))
-            for k, v in source.iteritems():
+            for k, v in six.iteritems(source):
                 sname, encoded = _source_encode(v, saltenv)
                 if sname == encoded == "":
                     ret['comment'] += "Source file {0} is missing or name is incorrect\n".format(v)

@@ -50,7 +50,6 @@ from __future__ import absolute_import
 import logging
 import time
 import json
-from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
@@ -65,6 +64,7 @@ try:
     import boto
     import boto.ec2
     # pylint: enable=unused-import
+    from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -686,7 +686,7 @@ def _to_blockdev_map(thing):
         return None
 
     bdm = BlockDeviceMapping()
-    for d, t in thing.iteritems():
+    for d, t in six.iteritems(thing):
         bdt = BlockDeviceType(ephemeral_name=t.get('ephemeral_name'),
                               no_device=t.get('no_device', False),
                               volume_id=t.get('volume_id'),
@@ -859,10 +859,11 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         raise SaltInvocationError('Only one of network_interface_id or '
                                   'network_interface_name may be provided.')
     if network_interface_name:
-        network_interface_id = get_network_interface_id(network_interface_name,
+        result = get_network_interface_id(network_interface_name,
                                                         region=region, key=key,
                                                         keyid=keyid,
                                                         profile=profile)
+        network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
                 "Given network_interface_name '{0}' cannot be mapped to an "

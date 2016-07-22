@@ -81,7 +81,9 @@ class SysModuleTest(integration.ModuleCase):
         noexample = set()
         allow_failure = (
                 'cp.recv',
+                'libcloud_dns.get_driver',
                 'lxc.run_cmd',
+                'ipset.long_range',
                 'pkg.expand_repo_def',
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',

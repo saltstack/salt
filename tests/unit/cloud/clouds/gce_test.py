@@ -78,6 +78,7 @@ class ExtendedTestCase(TestCase):
             self.assertEqual(exc.message, exc_msg)
 
 
+@skipIf(True, 'Test mock token is not properly mocked and occassionally causes the test suite to hang.')
 @skipIf(not HAS_CERTS, 'Cannot find CA cert bundle')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.gce.__virtual__', MagicMock(return_value='gce'))

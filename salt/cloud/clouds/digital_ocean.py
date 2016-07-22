@@ -792,7 +792,7 @@ def destroy(name, call=None):
     log.debug('Deleting DNS records for {0}.'.format(name))
     destroy_dns_records(name)
 
-    # Until the "to do" from line 748 is taken care of, we don't need this logic.
+    # Until the "to do" from line 754 is taken care of, we don't need this logic.
     # if delete_dns_record:
     #    log.debug('Deleting DNS records for {0}.'.format(name))
     #    destroy_dns_records(name)
@@ -868,7 +868,12 @@ def destroy_dns_records(fqdn):
     '''
     domain = '.'.join(fqdn.split('.')[-2:])
     hostname = '.'.join(fqdn.split('.')[:-2])
-    response = query(method='domains', droplet_id=domain, command='records')
+    # TODO: remove this when the todo on 754 is available
+    try:
+        response = query(method='domains', droplet_id=domain, command='records')
+    except SaltCloudSystemExit:
+        log.debug('Failed to find domains.')
+        return False
     log.debug("found DNS records: {0}".format(pprint.pformat(response)))
     records = response['domain_records']
 

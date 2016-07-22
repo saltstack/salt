@@ -757,10 +757,10 @@ def _listeners_present(
     to_delete = []
     to_create = []
 
-    for t, l in expected_listeners_by_tuple.iteritems():
+    for t, l in six.iteritems(expected_listeners_by_tuple):
         if t not in actual_listeners_by_tuple:
             to_create.append(l)
-    for t, l in actual_listeners_by_tuple.iteritems():
+    for t, l in six.iteritems(actual_listeners_by_tuple):
         if t not in expected_listeners_by_tuple:
             to_delete.append(l)
 
@@ -1260,18 +1260,18 @@ def _policies_present(
                 to_delete.append(policy_name)
 
     listeners_to_update = set()
-    for port, policies in expected_policies_by_listener.iteritems():
+    for port, policies in six.iteritems(expected_policies_by_listener):
         if policies != actual_policies_by_listener.get(port, set()):
             listeners_to_update.add(port)
-    for port, policies in actual_policies_by_listener.iteritems():
+    for port, policies in six.iteritems(actual_policies_by_listener):
         if policies != expected_policies_by_listener.get(port, set()):
             listeners_to_update.add(port)
 
     backends_to_update = set()
-    for port, policies in expected_policies_by_backend.iteritems():
+    for port, policies in six.iteritems(expected_policies_by_backend):
         if policies != actual_policies_by_backend.get(port, set()):
             backends_to_update.add(port)
-    for port, policies in actual_policies_by_backend.iteritems():
+    for port, policies in six.iteritems(actual_policies_by_backend):
         if policies != expected_policies_by_backend.get(port, set()):
             backends_to_update.add(port)
 
@@ -1387,7 +1387,7 @@ def _policy_cname(policy_dict):
     policy_name = policy_dict['policy_name']
     policy_type = policy_dict['policy_type']
     policy = policy_dict['policy']
-    canonical_policy_repr = str(sorted(list(policy.iteritems()), key=lambda x: str(x[0])))
+    canonical_policy_repr = str(sorted(list(six.iteritems(policy)), key=lambda x: str(x[0])))
     policy_hash = hashlib.md5(str(canonical_policy_repr)).hexdigest()
     if policy_type.endswith('Type'):
         policy_type = policy_type[:-4]

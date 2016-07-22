@@ -10,18 +10,20 @@ import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_elasticsearch_domain
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import 3rd-party libs
 
@@ -177,7 +179,7 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainTestCaseBase, BotoE
         Tests describing parameters if domain exists
         '''
         domainconfig = {}
-        for k, v in domain_ret.iteritems():
+        for k, v in six.iteritems(domain_ret):
             if k == 'DomainName':
                 continue
             domainconfig[k] = {'Options': v}

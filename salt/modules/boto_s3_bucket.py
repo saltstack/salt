@@ -269,18 +269,19 @@ def describe(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         result = {}
-        for key, query in {
-                'ACL': conn.get_bucket_acl,
-                'CORS': conn.get_bucket_cors,
-                'LifecycleConfiguration': conn.get_bucket_lifecycle_configuration,
-                'Location': conn.get_bucket_location,
-                'Logging': conn.get_bucket_logging,
-                'NotificationConfiguration': conn.get_bucket_notification_configuration,
-                'Policy': conn.get_bucket_policy,
-                'Replication': conn.get_bucket_replication,
-                'RequestPayment': conn.get_bucket_request_payment,
-                'Versioning': conn.get_bucket_versioning,
-                'Website': conn.get_bucket_website}.iteritems():
+        conn_dict = {'ACL': conn.get_bucket_acl,
+                     'CORS': conn.get_bucket_cors,
+                     'LifecycleConfiguration': conn.get_bucket_lifecycle_configuration,
+                     'Location': conn.get_bucket_location,
+                     'Logging': conn.get_bucket_logging,
+                     'NotificationConfiguration': conn.get_bucket_notification_configuration,
+                     'Policy': conn.get_bucket_policy,
+                     'Replication': conn.get_bucket_replication,
+                     'RequestPayment': conn.get_bucket_request_payment,
+                     'Versioning': conn.get_bucket_versioning,
+                     'Website': conn.get_bucket_website}
+
+        for key, query in six.iteritems(conn_dict):
             try:
                 data = query(Bucket=Bucket)
             except ClientError as e:
@@ -340,7 +341,8 @@ def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
     if len(Delete['Objects']):
         ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
                              region=region, key=key, keyid=keyid, profile=profile)
-        if len(ret.get('failed', [])):
+        failed = ret.get('failed', [])
+        if len(failed):
             return {'deleted': False, 'failed': ret[failed]}
     return {'deleted': True}
 
@@ -579,11 +581,10 @@ def put_logging(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         logstate = {}
-        for key, val in {
-                'TargetBucket': TargetBucket,
-                'TargetGrants': TargetGrants,
-                'TargetPrefix': TargetPrefix,
-        }.iteritems():
+        targets = {'TargetBucket': TargetBucket,
+                   'TargetGrants': TargetGrants,
+                   'TargetPrefix': TargetPrefix}
+        for key, val in six.iteritems(targets):
             if val is not None:
                 logstate[key] = val
         if logstate:
@@ -764,7 +765,7 @@ def put_tagging(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})

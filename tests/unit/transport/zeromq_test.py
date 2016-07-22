@@ -19,6 +19,7 @@ from tornado.testing import AsyncTestCase
 import tornado.gen
 
 import salt.config
+import salt.ext.six as six
 import salt.utils
 import salt.transport.server
 import salt.transport.client
@@ -182,7 +183,7 @@ class BaseZMQPubCase(AsyncTestCase):
     def tearDown(self):
         super(BaseZMQPubCase, self).tearDown()
         failures = []
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:

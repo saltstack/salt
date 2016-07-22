@@ -669,7 +669,7 @@ def request_instance(vm_=None, call=None):
     if floating_ip_conf.get('auto_assign', False):
         pool = floating_ip_conf.get('pool', 'public')
         floating_ip = None
-        for fl_ip, opts in conn.floating_ip_list().iteritems():
+        for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
             if opts['fixed_ip'] is None and opts['pool'] == pool:
                 floating_ip = fl_ip
                 break

@@ -374,7 +374,7 @@ def list_jobs(ext_source=None,
             else:
                 log.error(
                     '\'dateutil\' library not available, skipping start_time '
-                    'comparision.'
+                    'comparison.'
                 )
 
         if end_time and _match:
@@ -387,7 +387,7 @@ def list_jobs(ext_source=None,
             else:
                 log.error(
                     '\'dateutil\' library not available, skipping end_time '
-                    'comparision.'
+                    'comparison.'
                 )
 
         if _match:

@@ -1616,7 +1616,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
     ret = {}
-    for host_name, value in response.iteritems():
+    for host_name, value in six.iteritems(response):
         error = value.get('Error')
         if error:
             ret.update({host_name: {'Error': error}})
@@ -3013,7 +3013,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
     ret = {}
-    for host_name, value in response.iteritems():
+    for host_name, value in six.iteritems(response):
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
 

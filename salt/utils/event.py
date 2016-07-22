@@ -489,9 +489,9 @@ class SaltEvent(object):
                     break
                 mtag, data = self.unpack(raw, self.serial)
                 ret = {'data': data, 'tag': mtag}
-            except (KeyboardInterrupt, RuntimeError):
+            except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except tornado.iostream.StreamClosedError:
+            except (tornado.iostream.StreamClosedError, RuntimeError):
                 return None
 
             if not match_func(ret['tag'], tag):
@@ -882,6 +882,7 @@ class AsyncEventPublisher(object):
                         raise
 
         self.publisher = salt.transport.ipc.IPCMessagePublisher(
+            self.opts,
             epub_uri,
             io_loop=self.io_loop
         )
@@ -969,6 +970,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 )
 
             self.publisher = salt.transport.ipc.IPCMessagePublisher(
+                self.opts,
                 epub_uri,
                 io_loop=self.io_loop
             )
@@ -1123,14 +1125,19 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Returns True if event should be stored, else False
         '''
         tag = event['tag']
-        if tag in self.opts['event_return_whitelist']:
-            if tag not in self.opts['event_return_blacklist']:
-                return True
-            else:
-                return False  # Event was whitelisted and blacklisted
-        elif tag in self.opts['event_return_blacklist']:
-            return False
-        return True
+        if self.opts['event_return_whitelist']:
+            ret = False
+        else:
+            ret = True
+        for whitelist_match in self.opts['event_return_whitelist']:
+            if fnmatch.fnmatch(tag, whitelist_match):
+                ret = True
+                break
+        for blacklist_match in self.opts['event_return_blacklist']:
+            if fnmatch.fnmatch(tag, blacklist_match):
+                ret = False
+                break
+        return ret
 
 
 class StateFire(object):
