@@ -246,6 +246,11 @@ def state(
                 isinstance(tmp_ret, dict) else 'highstate'
         }}
 
+    try:
+        state_ret['__jid__'] = cmd_ret[next(iter(cmd_ret))]['jid']
+    except (StopIteration, KeyError):
+        pass
+
     changes = {}
     fail = set()
     failures = {}
