@@ -131,7 +131,7 @@ class TestFileState(TestCase):
         # If the test is failing, check the position of the "contents" param
         # in the manage_file() function in salt/modules/file.py, the fix is
         # likely as simple as updating the 2nd index below.
-        self.assertEqual(expected, returner.call_args[0][-4])
+        self.assertEqual(expected, returner.call_args[0][-5])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
