@@ -74,12 +74,6 @@ class ConfigTest(integration.ModuleCase):
                     'config.option',
                     ['master_port']),
                 64506)
-        # Master conf opt
-        self.assertEqual(
-                self.run_function(
-                    'config.option',
-                    ['syndic_master']),
-                'localhost')
         # pillar conf opt
         self.assertEqual(
                 self.run_function(
