@@ -21,6 +21,7 @@ import copy
 import os
 import re
 import logging
+import time
 import json
 
 # Import third party libs
@@ -235,6 +236,10 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
+    cache_valid_time
+        skip refresh the package database if refresh has already occur within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
@@ -257,6 +262,7 @@ def latest_version(*names, **kwargs):
     fromrepo = _get_repo(**kwargs)
     kwargs.pop('fromrepo', None)
     kwargs.pop('repo', None)
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
         return ''
@@ -270,7 +276,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     virtpkgs = _get_virtual()
     all_virt = set()
@@ -343,7 +349,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(cache_valid_time=0):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -354,13 +360,30 @@ def refresh_db():
     - ``False``: Problem updating database
     - ``None``: Database already up-to-date
 
+    cache_valid_time
+        skip refresh the package database if refresh has already occur within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
+    APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
+    if cache_valid_time:
+        try:
+            latest_update = os.stat(APT_LISTS_PATH).st_mtime
+            now = time.time()
+            log.debug("now: %s, last update time: %s, expire after: %s seconds", now, latest_update, cache_valid_time)
+            if latest_update + cache_valid_time > now:
+                return ret
+        except TypeError as exp:
+            log.warning("expected integer for cache_valid_time parameter, failed with: %s", exp)
+        except IOError as exp:
+            log.warning("could not stat cache directory due to: %s", exp)
+
     cmd = ['apt-get', '-q', 'update']
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
@@ -423,6 +446,10 @@ def install(name=None,
 
     refresh
         Whether or not to refresh the package database before installing.
+
+    cache_valid_time
+        skip refresh the package database if refresh has already occur within
+        <value> seconds
 
     fromrepo
         Specify a package repository to install from
@@ -690,8 +717,9 @@ def install(name=None,
     if not cmds:
         return {}
 
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if _refresh_db:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
@@ -919,6 +947,10 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         .. versionadded:: 2014.7.0
 
+    cache_valid_time
+        skip refresh the package database if refresh has already occur within
+        <value> seconds
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -935,8 +967,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
            'comment': '',
            }
 
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     old = list_pkgs()
     if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
@@ -1304,6 +1337,10 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         Whether to refresh the package database before listing upgrades.
         Default: True.
 
+    cache_valid_time
+        skip refresh the package database if refresh has already occur within
+        <value> seconds
+
     dist_upgrade
         Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
         to use dist-upgrade.
@@ -1314,8 +1351,9 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
     return _get_upgradable(dist_upgrade, **kwargs)
 
 
