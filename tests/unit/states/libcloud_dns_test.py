@@ -68,6 +68,9 @@ class MockDnsModule(object):
     def create_zone(self, *args):
         return True
 
+    def delete_zone(self, *args):
+        return True
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.states.libcloud_dns._get_driver',
@@ -168,6 +171,25 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         with patch.object(MockDnsModule, 'create_zone') as create_patch:
             result = libcloud_dns.zone_present('test.com', 'master', 'test1')
+            self.assertTrue(result)
+        self.assertFalse(create_patch.called)
+
+    def test_zone_absent(self):
+        """
+        Assert that a zone that did exist is absent
+        """
+        with patch.object(MockDnsModule, 'delete_zone') as create_patch:
+            result = libcloud_dns.zone_absent('test.com', 'test1')
+            self.assertTrue(result)
+        self.assertTrue(create_patch.called)
+        create_patch.assert_called_with('zone1', 'test1')
+
+    def test_zone_already_absent(self):
+        """
+        Assert that a zone that did not exist is absent
+        """
+        with patch.object(MockDnsModule, 'delete_zone') as create_patch:
+            result = libcloud_dns.zone_absent('testing.com', 'test1')
             self.assertTrue(result)
         self.assertFalse(create_patch.called)
 
