@@ -59,6 +59,9 @@ class MockDnsModule(object):
     def list_records(self, zone_id, profile):
         return MockDnsModule.test_records[zone_id]
 
+    def create_record(self, *args):
+        return True
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.states.libcloud_dns._get_driver',
@@ -91,9 +94,31 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
             libcloud_dns.__init__(None)
             dunder.assert_called_with('salt.states.libcloud_dns')
 
-    def test_present_record(self):
-        result = libcloud_dns.record_present("www", "test.com", "A", "127.0.0.1", "test")
-        self.assertTrue(result)
+    def test_present_record_exists(self):
+        """
+        Try and create a record that already exists
+        """
+        with patch.object(MockDnsModule, 'create_record', MagicMock(return_value=True)) as create_patch:
+            result = libcloud_dns.record_present("www", "test.com", "A", "127.0.0.1", "test")
+            self.assertTrue(result)
+        self.assertFalse(create_patch.called)
+
+    def test_present_record_does_not_exist(self):
+        """
+        Try and create a record that already exists
+        """
+        with patch.object(MockDnsModule, 'create_record') as create_patch:
+            result = libcloud_dns.record_present("mail", "test.com", "A", "127.0.0.1", "test")
+            self.assertTrue(result)
+        create_patch.assert_called_with('mail', "zone1", "A", "127.0.0.1", "test")
+
+    def test_zone_not_found(self):
+        """
+        Assert that when you try and ensure present state for a record to a zone that doesn't exist
+        it fails gracefully
+        """
+        result = libcloud_dns.record_present("mail", "notatest.com", "A", "127.0.0.1", "test")
+        self.assertFalse(result)
 
 if __name__ == '__main__':
     from unit import run_tests
