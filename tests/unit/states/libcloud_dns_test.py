@@ -139,7 +139,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         it fails gracefully
         """
         result = libcloud_dns.record_present("mail", "notatest.com", "A", "127.0.0.1", "test")
-        self.assertFalse(result)
+        self.assertFalse(result['result'])
 
     def test_absent_zone_not_found(self):
         """
@@ -147,7 +147,7 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         it fails gracefully
         """
         result = libcloud_dns.record_absent("mail", "notatest.com", "A", "127.0.0.1", "test")
-        self.assertTrue(result)
+        self.assertFalse(result['result'])
 
 if __name__ == '__main__':
     from unit import run_tests

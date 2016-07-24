@@ -25,6 +25,19 @@ This module uses ``libcloud``, which can be installed via package, or pip.
             key: blah
             secret: blah
 
+Example:
+
+.. code-block:: yaml
+
+    webserver:
+      libcloud_dns.present:
+        name: www
+        zone: mywebsite.com
+        type: A
+        data: 12.34.32.3
+        profile: profile1
+
+
 :depends: apache-libcloud
 '''
 
@@ -81,6 +94,10 @@ def _get_driver(profile):
     return cls(key, secret, secure, host, port)
 
 
+def state_result(result, message):
+    return {'result': result, 'comment': message}
+
+
 def record_present(name, zone, type, data, profile):
     '''
     Ensures a record is present.
@@ -107,17 +124,19 @@ def record_present(name, zone, type, data, profile):
     try:
         matching_zone = [z for z in zones if z.name == zone][0]
     except IndexError:
-        return False
+        return state_result(False, "Could not locate zone")
     records = libcloud_dns_module.list_records(matching_zone.id, profile)
     matching_records = [record for record in records
                         if record.name == name and
                         record.type == type and
                         record.data == data]
     if len(matching_records) == 0:
-        return libcloud_dns_module.create_record(name, matching_zone.id,
-                                                 type, data, profile)
+        result = libcloud_dns_module.create_record(
+            name, matching_zone.id,
+            type, data, profile)
+        return state_result(result, "Created new record")
     else:
-        return True
+        return state_result(True, "Record already exists")
 
 
 def record_absent(name, zone, type, data, profile):
@@ -146,19 +165,19 @@ def record_absent(name, zone, type, data, profile):
     try:
         matching_zone = [z for z in zones if z.name == zone][0]
     except IndexError:
-        return True
+        return state_result(False, "Zone could not be found")
     records = libcloud_dns_module.list_records(matching_zone.id, profile)
     matching_records = [record for record in records
                         if record.name == name and
                         record.type == type and
                         record.data == data]
     if len(matching_records) > 0:
-        result = [True]
+        result = []
         for record in matching_records:
             result.append(libcloud_dns_module.delete_record(
                 matching_zone.id,
                 record.id,
                 profile))
-        return all(result)
+        return state_result(all(result), "Removed {0} records".format(len(result)))
     else:
-        return True
+        return state_result(True, "Records already absent")
