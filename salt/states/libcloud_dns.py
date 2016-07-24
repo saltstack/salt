@@ -30,7 +30,10 @@ Example:
 .. code-block:: yaml
 
     webserver:
-      libcloud_dns.present:
+      libcloud_dns.zone_present:
+        name: mywebsite.com
+        profile: profile1
+      libcloud_dns.record_present:
         name: www
         zone: mywebsite.com
         type: A
@@ -54,7 +57,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_LIBCLOUD_VERSION = '0.21.0'
+REQUIRED_LIBCLOUD_VERSION = '1.0.0'
 try:
     #pylint: disable=unused-import
     import libcloud
@@ -98,6 +101,30 @@ def state_result(result, message):
     return {'result': result, 'comment': message}
 
 
+def zone_present(domain, type, profile):
+    '''
+    Ensures a record is present.
+
+    :param domain: Zone name, i.e. the domain name
+    :type  domain: ``str``
+
+    :param type: Zone type (master / slave), defaults to master
+    :type  type: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    '''
+    zones = libcloud_dns_module.list_zones(profile)
+    if not type:
+        type = 'master'
+    matching_zone = [z for z in zones if z.domain == domain]
+    if len(matching_zone) > 0:
+        return state_result(True, "Zone already exists")
+    else:
+        result = libcloud_dns_module.create_zone(domain, profile, type)
+        return state_result(result, "Created new zone")
+
+
 def record_present(name, zone, type, data, profile):
     '''
     Ensures a record is present.
@@ -122,7 +149,7 @@ def record_present(name, zone, type, data, profile):
     '''
     zones = libcloud_dns_module.list_zones(profile)
     try:
-        matching_zone = [z for z in zones if z.name == zone][0]
+        matching_zone = [z for z in zones if z.domain == zone][0]
     except IndexError:
         return state_result(False, "Could not locate zone")
     records = libcloud_dns_module.list_records(matching_zone.id, profile)
@@ -163,7 +190,7 @@ def record_absent(name, zone, type, data, profile):
     '''
     zones = libcloud_dns_module.list_zones(profile)
     try:
-        matching_zone = [z for z in zones if z.name == zone][0]
+        matching_zone = [z for z in zones if z.domain == zone][0]
     except IndexError:
         return state_result(False, "Zone could not be found")
     records = libcloud_dns_module.list_records(matching_zone.id, profile)
