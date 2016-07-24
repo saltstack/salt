@@ -498,11 +498,11 @@ def salt_spm():
     spm.run()
 
 
-def salt_quickstart():
+def salt_extend():
     '''
     Quickstart for developing on the saltstack installation
 
     .. versionadded:: Carbon
     '''
-    import salt.utils.quickstart
-    salt.utils.quickstart.run()
+    import salt.utils.extend
+    salt.utils.extend.run()
