@@ -17,7 +17,7 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../../')
@@ -48,8 +48,9 @@ DUMMY_TOKEN = {
 # Use certifi if installed
 try:
     import certifi
-except ImportError:
     libcloud.security.CA_CERTS_PATH.append(certifi.where())
+except ImportError:
+    pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
