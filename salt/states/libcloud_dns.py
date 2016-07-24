@@ -113,7 +113,7 @@ def record_present(name, zone, type, data, profile):
                         if record.name == name and
                         record.type == type and
                         record.data == data]
-    if len(matching_records) > 0:
+    if len(matching_records) == 0:
         return libcloud_dns_module.create_record(name, matching_zone.id,
                                                  type, data, profile)
     else:
