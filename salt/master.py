@@ -157,6 +157,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
         self.rotate = int(time.time())
+        # A serializer for general maint operations
+        self.serial = salt.payload.Serial(self.opts)
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -237,6 +239,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
+            self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
             salt.daemons.masterapi.fileserver_update(self.fileserver)
@@ -251,6 +254,27 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         if self.opts.get('search'):
             if now - last >= self.opts['search_index_interval']:
                 self.search.index()
+    
+    def handle_key_cache(self):
+        '''
+        Evaluate accepted keys and create a msgpack file
+        which contains a list
+        '''
+        if self.opts['key_cache'] == 'maint':
+            keys = []
+            #TODO DRY from CKMinions
+            if self.opts['transport'] in ('zeromq', 'tcp'):
+                acc = 'minions'
+            else:
+                acc = 'accepted'
+
+            for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], acc)):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], acc, fn_)):
+                    keys.append(fn_)
+            log.debug('Writing master key cache')
+            # Write a temporary file securely
+            with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
+                self.serial.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         '''

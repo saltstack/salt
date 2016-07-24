@@ -221,6 +221,12 @@ class CkMinions(object):
         except OSError:
             return []
 
+    def _pki_cache_minions(self):
+        '''
+        Retreive complete minion list from PKI cache
+        '''
+        pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc)
+
     def _check_cache_minions(self,
                              expr,
                              delimiter,

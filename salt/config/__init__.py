@@ -159,6 +159,12 @@ VALID_OPTS = {
     # master
     'syndic_finger': str,
 
+    # The caching mechanism to use for the PKI key store. Can substantially decrease master publish
+    # times. Available types:
+    # 'maint': Runs on a schedule as a part of the maintanence process.
+    # '': Disable the key cache [default]
+    'key_cache': str,
+
     # The user under which the daemon should run
     'user': str,
 
@@ -1134,6 +1140,7 @@ DEFAULT_MASTER_OPTS = {
     'keep_jobs': 24,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
