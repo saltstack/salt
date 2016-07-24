@@ -2,9 +2,7 @@
 '''
 Quickstart for creating an/or extending the functionality of your SaltStack installation
 '''
-
 from salt.scripts import salt_quickstart
-
 
 if __name__ == '__main__':
     salt_quickstart()
