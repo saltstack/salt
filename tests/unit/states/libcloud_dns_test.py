@@ -62,6 +62,9 @@ class MockDnsModule(object):
     def create_record(self, *args):
         return True
 
+    def delete_record(self, *args):
+        return True
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.states.libcloud_dns._get_driver',
@@ -112,13 +115,39 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
             self.assertTrue(result)
         create_patch.assert_called_with('mail', "zone1", "A", "127.0.0.1", "test")
 
-    def test_zone_not_found(self):
+    def test_absent_record_exists(self):
+        """
+        Try and deny a record that already exists
+        """
+        with patch.object(MockDnsModule, 'delete_record', MagicMock(return_value=True)) as create_patch:
+            result = libcloud_dns.record_absent("www", "test.com", "A", "127.0.0.1", "test")
+            self.assertTrue(result)
+        create_patch.assert_called_with('zone1', 0, 'test')
+
+    def test_absent_record_does_not_exist(self):
+        """
+        Try and deny a record that already exists
+        """
+        with patch.object(MockDnsModule, 'delete_record') as create_patch:
+            result = libcloud_dns.record_absent("mail", "test.com", "A", "127.0.0.1", "test")
+            self.assertTrue(result)
+        self.assertFalse(create_patch.called)
+
+    def test_present_zone_not_found(self):
         """
         Assert that when you try and ensure present state for a record to a zone that doesn't exist
         it fails gracefully
         """
         result = libcloud_dns.record_present("mail", "notatest.com", "A", "127.0.0.1", "test")
         self.assertFalse(result)
+
+    def test_absent_zone_not_found(self):
+        """
+        Assert that when you try and ensure absent state for a record to a zone that doesn't exist
+        it fails gracefully
+        """
+        result = libcloud_dns.record_absent("mail", "notatest.com", "A", "127.0.0.1", "test")
+        self.assertTrue(result)
 
 if __name__ == '__main__':
     from unit import run_tests
