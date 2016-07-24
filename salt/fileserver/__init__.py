@@ -480,6 +480,28 @@ class Fileserver(object):
             if fstr in self.servers:
                 self.servers[fstr]()
 
+    def _find_file(self, load):
+        '''
+        Convenience function for calls made using the RemoteClient
+        '''
+        path = load.get('path')
+        if not path:
+            return {'path': '',
+                    'rel': ''}
+        tgt_env = load.get('saltenv', 'base')
+        return self.find_file(path, tgt_env)
+
+    def file_find(self, load):
+        '''
+        Convenience function for calls made using the LocalClient
+        '''
+        path = load.get('path')
+        if not path:
+            return {'path': '',
+                    'rel': ''}
+        tgt_env = load.get('saltenv', 'base')
+        return self.find_file(path, tgt_env)
+
     def find_file(self, path, saltenv, back=None):
         '''
         Find the path and return the fnd structure, this structure is passed
@@ -560,32 +582,52 @@ class Fileserver(object):
             return self.servers[fstr](load, fnd)
         return ret
 
-    def file_hash(self, load):
+    def __file_hash_and_stat(self, load):
         '''
-        Return the hash of a given file
+        Common code for hashing and stating files
         '''
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
-                )
+                'Parameter \'env\' has been detected in the argument list. '
+                'This parameter is no longer used and has been replaced by '
+                '\'saltenv\' as of Salt Carbon. This warning will be removed '
+                'in Salt Oxygen.'
+            )
             load.pop('env')
 
         if 'path' not in load or 'saltenv' not in load:
-            return ''
+            return '', None
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
         fnd = self.find_file(salt.utils.locales.sdecode(load['path']),
                 load['saltenv'])
         if not fnd.get('back'):
-            return ''
+            return '', None
+        stat_result = fnd.get('stat', None)
         fstr = '{0}.file_hash'.format(fnd['back'])
         if fstr in self.servers:
-            return self.servers[fstr](load, fnd)
-        return ''
+            return self.servers[fstr](load, fnd), stat_result
+        return '', None
+
+    def file_hash(self, load):
+        '''
+        Return the hash of a given file
+        '''
+        try:
+            return self.__file_hash_and_stat(load)[0]
+        except (IndexError, TypeError):
+            return ''
+
+    def file_hash_and_stat(self, load):
+        '''
+        Return the hash and stat result of a given file
+        '''
+        try:
+            return self.__file_hash_and_stat(load)
+        except (IndexError, TypeError):
+            return '', None
 
     def file_list(self, load):
         '''

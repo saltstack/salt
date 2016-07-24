@@ -391,7 +391,11 @@ def create(vm_):
         )
         if dns_hostname and dns_domain:
             log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
-            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
+            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain=dns_domain,
+                                                            name=dns_hostname,
+                                                            record_type=t,
+                                                            record_data=d)
+
             log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
@@ -815,18 +819,30 @@ def destroy(name, call=None):
     return node
 
 
-def post_dns_record(dns_domain, name, record_type, record_data):
+def post_dns_record(**kwargs):
     '''
-    Creates or updates a DNS record for the given name if the domain is managed with DO.
+    Creates a DNS record for the given name if the domain is managed with DO.
     '''
-    domain = query(method='domains', droplet_id=dns_domain)
+    if 'kwargs' in kwargs:  # flatten kwargs if called via salt-cloud -f
+        f_kwargs = kwargs['kwargs']
+        del kwargs['kwargs']
+        kwargs.update(f_kwargs)
+    mandatory_kwargs = ('dns_domain', 'name', 'record_type', 'record_data')
+    for i in mandatory_kwargs:
+        if kwargs[i]:
+            pass
+        else:
+            error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(i, kwargs[i], str(mandatory_kwargs))
+            raise salt.exceptions.SaltInvocationError(error)
+
+    domain = query(method='domains', droplet_id=kwargs['dns_domain'])
 
     if domain:
         result = query(
             method='domains',
-            droplet_id=dns_domain,
+            droplet_id=kwargs['dns_domain'],
             command='records',
-            args={'type': record_type, 'name': name, 'data': record_data},
+            args={'type': kwargs['record_type'], 'name': kwargs['name'], 'data': kwargs['record_data']},
             http_method='post'
         )
         return result

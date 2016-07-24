@@ -575,8 +575,8 @@ def _check_dir_meta(name,
             and group != stats.get('gid')):
         changes['group'] = group
     # Normalize the dir mode
-    smode = __salt__['config.manage_mode'](stats['mode'])
-    mode = __salt__['config.manage_mode'](mode)
+    smode = salt.utils.normalize_mode(stats['mode'])
+    mode = salt.utils.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -839,7 +839,7 @@ def symlink(
     name = os.path.expanduser(name)
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    mode = salt.utils.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1254,8 +1254,18 @@ def managed(name,
         is running as on the minion On Windows, this is ignored
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        The mode to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionchanged:: Carbon
+            This option can be set to ``keep``, and Salt will keep the mode
+            from the Salt fileserver. This is only supported when the
+            ``source`` URL begins with ``salt://``, or for files local to the
+            minion. Because the ``source`` option cannot be used with any of
+            the ``contents`` options, setting the ``mode`` to ``keep`` is also
+            incompatible with the ``contents`` options.
 
     template
         If this setting is applied then the named templating engine will be
@@ -1270,7 +1280,8 @@ def managed(name,
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
-        will be assigned permissions from the 'mode' argument.
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
 
     replace : True
         If set to ``False`` and the file already exists, the file will not be
@@ -1478,15 +1489,35 @@ def managed(name,
            'name': name,
            'result': True}
 
-    content_sources = (contents, contents_pillar, contents_grains)
+    if mode is not None and salt.utils.is_windows():
+        return _error(ret, 'The \'mode\' option is not supported on Windows')
+
+    try:
+        keep_mode = mode.lower() == 'keep'
+        if keep_mode:
+            # We're not hard-coding the mode, so set it to None
+            mode = None
+    except AttributeError:
+        keep_mode = False
+
+    # Make sure that any leading zeros stripped by YAML loader are added back
+    mode = salt.utils.normalize_mode(mode)
+
     contents_count = len(
-        [x for x in content_sources if x is not None]
+        [x for x in (contents, contents_pillar, contents_grains)
+         if x is not None]
     )
 
     if source and contents_count > 0:
         return _error(
             ret,
             '\'source\' cannot be used in combination with \'contents\', '
+            '\'contents_pillar\', or \'contents_grains\''
+        )
+    elif (mode or keep_mode) and contents_count > 0:
+        return _error(
+            ret,
+            'Mode management cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
     elif contents_count > 1:
@@ -1608,9 +1639,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
-
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
@@ -1679,6 +1707,7 @@ def managed(name,
             __env__,
             contents,
             skip_verify,
+            keep_mode,
             **kwargs
         )
     else:
@@ -1766,7 +1795,8 @@ def managed(name,
                 contents,
                 dir_mode,
                 follow_symlinks,
-                skip_verify)
+                skip_verify,
+                keep_mode)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1823,7 +1853,8 @@ def managed(name,
                 contents,
                 dir_mode,
                 follow_symlinks,
-                skip_verify)
+                skip_verify,
+                keep_mode)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -2044,8 +2075,8 @@ def directory(name,
         file_mode = dir_mode
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = __salt__['config.manage_mode'](dir_mode)
-    file_mode = __salt__['config.manage_mode'](file_mode)
+    dir_mode = salt.utils.normalize_mode(dir_mode)
+    file_mode = salt.utils.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -2291,16 +2322,31 @@ def recurse(name,
         salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The permissions mode to set on any directories created. Not supported on
-        Windows
+        The mode to set on any directories created.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     file_mode
-        The permissions mode to set on any files created. Not supported on
+        The mode to set on any files created.
         Windows
 
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionchanged:: Carbon
+            This option can be set to ``keep``, and Salt will keep the mode
+            from the Salt fileserver. This is only supported when the
+            ``source`` URL begins with ``salt://``, or for files local to the
+            minion. Because the ``source`` option cannot be used with any of
+            the ``contents`` options, setting the ``mode`` to ``keep`` is also
+            incompatible with the ``contents`` options.
+
     sym_mode
-        The permissions mode to set on any symlink created. Not supported on
-        Windows
+        The mode to set on any symlink created.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     template
         If this setting is applied then the named templating engine will be
@@ -2408,9 +2454,22 @@ def recurse(name,
         )
         return ret
 
+    if any([x is not None for x in (dir_mode, file_mode, sym_mode)]) \
+            and salt.utils.is_windows():
+        return _error(ret, 'mode management is not supported on Windows')
+
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = __salt__['config.manage_mode'](dir_mode)
-    file_mode = __salt__['config.manage_mode'](file_mode)
+    dir_mode = salt.utils.normalize_mode(dir_mode)
+
+    try:
+        keep_mode = file_mode.lower() == 'keep'
+        if keep_mode:
+            # We're not hard-coding the mode, so set it to None
+            file_mode = None
+    except AttributeError:
+        keep_mode = False
+
+    file_mode = salt.utils.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -2509,7 +2568,7 @@ def recurse(name,
             source=source,
             user=user,
             group=group,
-            mode=file_mode,
+            mode='keep' if keep_mode else file_mode,
             template=template,
             makedirs=True,
             context=context,
@@ -4777,7 +4836,11 @@ def serialize(name,
         salt is running as on the minion
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     backup
         Overrides the default backup mode for this specific file.
@@ -4913,6 +4976,9 @@ def serialize(name,
     contents = __serializers__[serializer_name](dataset)
 
     contents += '\n'
+
+    # Make sure that any leading zeros stripped by YAML loader are added back
+    mode = salt.utils.normalize_mode(mode)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
