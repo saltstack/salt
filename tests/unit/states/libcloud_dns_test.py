@@ -26,9 +26,9 @@ libcloud_dns.__utils__ = {}
 
 
 class TestZone(object):
-    def __init__(self, id, name):
+    def __init__(self, id, domain):
         self.id = id
-        self.name = name
+        self.domain = domain
 
 
 class TestRecord(object):
@@ -63,6 +63,9 @@ class MockDnsModule(object):
         return True
 
     def delete_record(self, *args):
+        return True
+
+    def create_zone(self, *args):
         return True
 
 
@@ -148,6 +151,16 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         """
         result = libcloud_dns.record_absent("mail", "notatest.com", "A", "127.0.0.1", "test")
         self.assertFalse(result['result'])
+
+    def test_zone_present(self):
+        """
+        Assert that a zone is present (that did not exist)
+        """
+        with patch.object(MockDnsModule, 'create_zone') as create_patch:
+            result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
+            self.assertTrue(result)
+        self.assertTrue(create_patch.called)
+        create_patch.assert_called_with('testing.com', 'test1', 'master')
 
 if __name__ == '__main__':
     from unit import run_tests
