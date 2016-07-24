@@ -200,7 +200,7 @@ class CkMinions(object):
         Return the minions found by looking via regular expressions
         '''
         reg = re.compile(expr)
-        return [m for m in self._pki_minions if reg.match(m)]
+        return [m for m in self._pki_minions() if reg.match(m)]
 
     def _pki_minions(self):
         '''
@@ -215,7 +215,7 @@ class CkMinions(object):
                 with salt.utils.fopen(pki_cache_fn) as fn_:
                     return self.serial.load(fn_)
             else:
-                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], elf.acc))):
+                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                         minions.append(fn_)
             return minions
