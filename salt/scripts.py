@@ -496,3 +496,13 @@ def salt_spm():
     import salt.cli.spm
     spm = salt.cli.spm.SPM()  # pylint: disable=E1120
     spm.run()
+
+
+def salt_quickstart():
+    '''
+    Quickstart for developing on the saltstack installation
+
+    .. versionadded:: Carbon
+    '''
+    import salt.utils.quickstart
+    quickstart.run()
