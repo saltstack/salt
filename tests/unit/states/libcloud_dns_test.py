@@ -162,6 +162,15 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         self.assertTrue(create_patch.called)
         create_patch.assert_called_with('testing.com', 'test1', 'master')
 
+    def test_zone_already_present(self):
+        """
+        Assert that a zone is present (that did exist)
+        """
+        with patch.object(MockDnsModule, 'create_zone') as create_patch:
+            result = libcloud_dns.zone_present('test.com', 'master', 'test1')
+            self.assertTrue(result)
+        self.assertFalse(create_patch.called)
+
 if __name__ == '__main__':
     from unit import run_tests
     run_tests(LibcloudDnsModuleTestCase)
