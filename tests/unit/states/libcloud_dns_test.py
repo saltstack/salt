@@ -32,8 +32,9 @@ class TestZone(object):
 
 
 class TestRecord(object):
-    def __init__(self, id, type, data):
+    def __init__(self, id, name, type, data):
         self.id = id
+        self.name = name
         self.type = type
         self.data = data
 
@@ -49,11 +50,11 @@ def get_mock_driver():
 
 class MockDnsModule(object):
     test_records = {
-        0: [TestRecord(0, "AAAA", "www")]
+        "zone1": [TestRecord(0, "www", "A", "127.0.0.1")]
     }
 
     def list_zones(self, profile):
-        return [Zone(0, "test.com")]
+        return [TestZone("zone1", "test.com")]
 
     def list_records(self, zone_id, profile):
         return MockDnsModule.test_records[zone_id]
