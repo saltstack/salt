@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+'''
+Quickstart for creating an/or extending the functionality of your SaltStack installation
+'''
+from salt.scripts import salt_extend
+
+if __name__ == '__main__':
+    salt_extend()
