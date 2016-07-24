@@ -505,4 +505,4 @@ def salt_quickstart():
     .. versionadded:: Carbon
     '''
     import salt.utils.quickstart
-    quickstart.run()
+    salt.utils.quickstart.run()
