@@ -45,6 +45,10 @@
 # Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
+# Key cache. Increases master speed for large numbers of accepted
+# keys. Available options: 'sched'. (Updates on a fixed schedule.)
+#key_cache: ''
+
 # Directory to store job and cache data:
 # This directory may contain sensitive data and should be protected accordingly.
 #

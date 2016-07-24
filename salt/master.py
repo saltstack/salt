@@ -260,7 +260,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         Evaluate accepted keys and create a msgpack file
         which contains a list
         '''
-        if self.opts['key_cache'] == 'maint':
+        if self.opts['key_cache'] == 'sched':
             keys = []
             #TODO DRY from CKMinions
             if self.opts['transport'] in ('zeromq', 'tcp'):
