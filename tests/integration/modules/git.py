@@ -579,7 +579,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = os.path.normcase(tempfile.mkdtemp(dir=integration.TMP))
+        new_repo = os.path.normcase(tempfile.mkdtemp(dir=integration.TMP)).lower()
         if salt.utils.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
