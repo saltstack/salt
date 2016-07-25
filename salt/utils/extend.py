@@ -7,9 +7,10 @@ from datetime import date
 import tempfile
 from shutil import copytree
 
+import logging
+log = logging.getLogger(__name__)
+
 try:
-    import logging
-    log = logging.getLogger(__name__)
     from cookiecutter.main import cookiecutter as cookie
     import cookiecutter.prompt as prompt
     HAS_COOKIECUTTER = True
@@ -23,14 +24,15 @@ MODULE_OPTIONS = [
 
 
 def run(extension=None, name=None, salt_dir='.', merge=False, temp_dir=None):
-    assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip"
+    assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip or " \
+                             "from https://github.com/audreyr/cookiecutter"
     
     if extension is None:
         print('Choose which kind of extension you are developing for SaltStack')
         extension_type = 'Extension type'
-        extension_type = prompt.read_user_choice(extension_type, MODULE_OPTIONS)
+        extension_type = prompt.read_user_choice(extension_type, MODULE_OPTIONS)[0]
     else:
-        assert extension in list(zip(MODULE_OPTIONS)[0]), "Module extension option not valid"
+        assert extension in list(zip(*MODULE_OPTIONS))[0], "Module extension option not valid"
         extension_type = extension
     
     if name is None:
@@ -39,7 +41,7 @@ def run(extension=None, name=None, salt_dir='.', merge=False, temp_dir=None):
     
     short_description = prompt.read_user_variable('Short description of the module', '')
     
-    template_dir = 'templates/{0}'.format(extension_type[0])
+    template_dir = 'templates/{0}'.format(extension_type)
     project_name = name
     
     param_dict = {
