@@ -254,7 +254,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         if self.opts.get('search'):
             if now - last >= self.opts['search_index_interval']:
                 self.search.index()
-    
+
     def handle_key_cache(self):
         '''
         Evaluate accepted keys and create a msgpack file
