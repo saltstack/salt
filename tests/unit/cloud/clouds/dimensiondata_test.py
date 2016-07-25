@@ -152,7 +152,6 @@ class DimensionDataTestCase(ExtendedTestCase):
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(DimensionDataTestCase, needs_daemon=False)

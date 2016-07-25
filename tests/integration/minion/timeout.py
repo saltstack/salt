@@ -24,7 +24,7 @@ class MinionTimeoutTestCase(integration.ShellCase):
         '''
         # Launch the command
         sleep_length = 30
-        ret = self.run_salt('minion test.sleep {0}'.format(sleep_length))
+        ret = self.run_salt('minion test.sleep {0}'.format(sleep_length), timeout=45)
         self.assertTrue(isinstance(ret, list), 'Return is not a list. Minion'
                 ' may have returned error: {0}'.format(ret))
         self.assertTrue('True' in ret[1], 'Minion did not return True after '

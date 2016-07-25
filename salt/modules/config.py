@@ -97,17 +97,10 @@ def manage_mode(mode):
 
         salt '*' config.manage_mode
     '''
-    if mode is None:
-        return None
-    if not isinstance(mode, six.string_types):
-        # Make it a string in case it's not
-        mode = str(mode)
-    # Strip any quotes and initial 0, though zero-pad it up to 4
-    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
-    if ret[0] != '0':
-        # Always include a leading zero
-        return '0{0}'.format(ret)
-    return ret
+    # config.manage_mode should no longer be invoked from the __salt__ dunder
+    # in Salt code, this function is only being left here for backwards
+    # compatibility.
+    return salt.utils.normalize_mode(mode)
 
 
 def valid_fileproto(uri):

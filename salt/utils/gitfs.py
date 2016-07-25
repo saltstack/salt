@@ -940,7 +940,7 @@ class GitPython(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
         depth = 0
         while True:
@@ -968,7 +968,9 @@ class GitPython(GitProvider):
             except KeyError:
                 # File not found or repo_path points to a directory
                 break
-        return blob, blob.hexsha if blob is not None else blob
+        if isinstance(blob, git.Blob):
+            return blob, blob.hexsha, blob.mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
@@ -1480,29 +1482,33 @@ class Pygit2(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found in repo
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
                 break
             try:
-                if stat.S_ISLNK(tree[path].filemode):
+                entry = tree[path]
+                mode = entry.filemode
+                if stat.S_ISLNK(mode):
                     # Path is a symlink. The blob data corresponding to this
                     # path's object ID will be the target of the symlink. Follow
                     # the symlink and set path to the location indicated
                     # in the blob data.
-                    link_tgt = self.repo[tree[path].oid].data
+                    link_tgt = self.repo[entry.oid].data
                     path = os.path.normpath(
                         os.path.join(os.path.dirname(path), link_tgt)
                     )
                 else:
-                    oid = tree[path].oid
-                    blob = self.repo[oid]
+                    blob = self.repo[entry.oid]
             except KeyError:
                 break
-        return blob, blob.hex if blob is not None else blob
+        if isinstance(blob, pygit2.Blob):
+            return blob, blob.hex, mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
@@ -1827,8 +1833,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
@@ -1855,7 +1862,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     break
             except KeyError:
                 break
-        return blob, blob.sha().hexdigest() if blob is not None else blob
+        if isinstance(blob, dulwich.objects.Blob):
+            return blob, blob.sha().hexdigest(), mode
+        return None, None, None
 
     def get_conf(self):
         '''
@@ -2697,9 +2706,23 @@ class GitFS(GitBase):
             if repo.root(tgt_env):
                 repo_path = os.path.join(repo.root(tgt_env), repo_path)
 
-            blob, blob_hexsha = repo.find_file(repo_path, tgt_env)
+            blob, blob_hexsha, blob_mode = repo.find_file(repo_path, tgt_env)
             if blob is None:
                 continue
+
+            def _add_file_stat(fnd, mode):
+                '''
+                Add a the mode to the return dict. In other fileserver backends
+                we stat the file to get its mode, and add the stat result
+                (passed through list() for better serialization) to the 'stat'
+                key in the return dict. However, since we aren't using the
+                stat result for anything but the mode at this time, we can
+                avoid unnecessary work by just manually creating the list and
+                not running an os.stat() on all files in the repo.
+                '''
+                if mode is not None:
+                    fnd['stat'] = [mode]
+                return fnd
 
             salt.fileserver.wait_lock(lk_fn, dest)
             if os.path.isfile(blobshadest) and os.path.isfile(dest):
@@ -2708,7 +2731,7 @@ class GitFS(GitBase):
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
-                        return fnd
+                        return _add_file_stat(fnd, blob_mode)
             with salt.utils.fopen(lk_fn, 'w+') as fp_:
                 fp_.write('')
             for filename in glob.glob(hashes_glob):
@@ -2726,7 +2749,7 @@ class GitFS(GitBase):
                 pass
             fnd['rel'] = path
             fnd['path'] = dest
-            return fnd
+            return _add_file_stat(fnd, blob_mode)
 
         # No matching file was found in tgt_env. Return a dict with empty paths
         # so the calling function knows the file could not be found.
@@ -2783,7 +2806,7 @@ class GitFS(GitBase):
             load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
-            return ''
+            return '', None
         ret = {'hash_type': self.opts['hash_type']}
         relpath = fnd['rel']
         path = fnd['path']

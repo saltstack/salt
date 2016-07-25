@@ -1,15 +1,16 @@
 # basic config
+# Connects to master
 master: localhost
+interface: 127.0.0.1
 master_port: 64506
-root_dir: /tmp/subsalttest
-pki_dir: pki
-id: sub_minion
-cachedir: cachedir
+tcp_pub_port: 64520
+tcp_pull_port: 64521
 sock_dir: sub_minion_sock
-#acceptance_wait_time: 1
+id: sub_minion
 open_mode: True
-log_file: sub_minion
+log_file: sub_minion.log
 log_level_logfile: debug
+pidfile: sub_minion.pid
 
 # module extension
 test.foo: baz
@@ -33,6 +34,3 @@ grains:
       - jamie
       - zoe
 
-ipc_mode: tcp
-tcp_pub_port: 64510
-tcp_pull_port: 64511

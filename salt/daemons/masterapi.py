@@ -451,6 +451,7 @@ class RemoteFuncs(object):
         '''
         fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = fs_.serve_file
+        self._file_find = fs_._find_file
         self._file_hash = fs_.file_hash
         self._file_list = fs_.file_list
         self._file_list_emptydirs = fs_.file_list_emptydirs

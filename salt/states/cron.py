@@ -469,7 +469,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = __salt__['config.manage_mode']('0600')
+    mode = salt.utils.normalize_mode('0600')
     owner, group, crontab_dir = _get_cron_info()
 
     cron_path = salt.utils.mkstemp()

@@ -920,9 +920,20 @@ def __process_multiprocessing_logging_queue(opts, queue):
     salt.utils.appendproctitle('MultiprocessingLoggingQueue')
     if salt.utils.is_windows():
         # On Windows, creating a new process doesn't fork (copy the parent
-        # process image). Due to this, we need to setup extended logging
+        # process image). Due to this, we need to setup all of our logging
         # inside this process.
         setup_temp_logger()
+        setup_console_logger(
+            log_level=opts.get('log_level'),
+            log_format=opts.get('log_fmt_console'),
+            date_format=opts.get('log_datefmt_console')
+        )
+        setup_logfile_logger(
+            opts.get('log_file'),
+            log_level=opts.get('log_level_logfile'),
+            log_format=opts.get('log_fmt_logfile'),
+            date_format=opts.get('log_datefmt_logfile')
+        )
         setup_extended_logging(opts)
     while True:
         try:

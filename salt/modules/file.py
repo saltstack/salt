@@ -1149,7 +1149,7 @@ def comment_line(path,
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
-        pre_mode = __salt__['config.manage_mode'](get_mode(path))
+        pre_mode = salt.utils.normalize_mode(get_mode(path))
 
     # Create a copy to read from and to use as a backup later
     try:
@@ -1827,7 +1827,7 @@ def replace(path,
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
-        pre_mode = __salt__['config.manage_mode'](get_mode(path))
+        pre_mode = salt.utils.normalize_mode(get_mode(path))
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
@@ -2195,7 +2195,7 @@ def blockreplace(path,
             perms = {}
             perms['user'] = get_user(path)
             perms['group'] = get_group(path)
-            perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
+            perms['mode'] = salt.utils.normalize_mode(get_mode(path))
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2899,7 +2899,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
     if not salt.utils.is_windows():
         pre_user = get_user(src)
         pre_group = get_group(src)
-        pre_mode = __salt__['config.manage_mode'](get_mode(src))
+        pre_mode = salt.utils.normalize_mode(get_mode(src))
 
     try:
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
@@ -3734,7 +3734,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
-    perms['lmode'] = __salt__['config.manage_mode'](cur['mode'])
+    perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
     # Mode changes if needed
     if mode is not None:
@@ -3743,13 +3743,13 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         if os.path.islink(name) and not follow_symlinks:
             pass
         else:
-            mode = __salt__['config.manage_mode'](mode)
+            mode = salt.utils.normalize_mode(mode)
             if mode != perms['lmode']:
                 if __opts__['test'] is True:
                     ret['changes']['mode'] = mode
                 else:
                     set_mode(name, mode)
-                    if mode != __salt__['config.manage_mode'](get_mode(name)):
+                    if mode != salt.utils.normalize_mode(get_mode(name)):
                         ret['result'] = False
                         ret['comment'].append(
                             'Failed to change mode to {0}'.format(mode)
@@ -3920,6 +3920,7 @@ def check_managed_changes(
         saltenv,
         contents=None,
         skip_verify=False,
+        keep_mode=False,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
@@ -3956,6 +3957,13 @@ def check_managed_changes(
         if comments:
             __clean_tmp(sfn)
             return False, comments
+        if sfn and source and keep_mode:
+            if _urlparse(source).scheme in ('salt', 'file') \
+                    or source.startswith('/'):
+                try:
+                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                except Exception as exc:
+                    log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, saltenv, contents)
     __clean_tmp(sfn)
@@ -4078,8 +4086,8 @@ def check_file_meta(
             and group != lstats['gid']):
         changes['group'] = group
     # Normalize the file mode
-    smode = __salt__['config.manage_mode'](lstats['mode'])
-    mode = __salt__['config.manage_mode'](mode)
+    smode = salt.utils.normalize_mode(lstats['mode'])
+    mode = salt.utils.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -4142,7 +4150,8 @@ def manage_file(name,
                 contents=None,
                 dir_mode=None,
                 follow_symlinks=True,
-                skip_verify=False):
+                skip_verify=False,
+                keep_mode=False):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -4203,6 +4212,11 @@ def manage_file(name,
 
         .. versionadded:: 2016.3.0
 
+    keep_mode : False
+        If ``True``, and the ``source`` is a file from the Salt fileserver (or
+        a local file on the minion), the mode of the destination file will be
+        set to the mode of the source file.
+
     CLI Example:
 
     .. code-block:: bash
@@ -4233,6 +4247,13 @@ def manage_file(name,
             'hash_type': htype,
             'hsum': get_hash(sfn, form=htype)
         }
+        if keep_mode:
+            if _urlparse(source).scheme in ('salt', 'file') \
+                    or source.startswith('/'):
+                try:
+                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                except Exception as exc:
+                    log.warning('Unable to stat %s: %s', sfn, exc)
 
     # Check changes if the target file exists
     if os.path.isfile(name) or os.path.islink(name):
