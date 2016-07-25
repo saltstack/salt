@@ -71,6 +71,7 @@ class DiskModuleTest(integration.ModuleCase):
                 self.assertTrue('available' in val)
                 self.assertTrue('capacity' in val)
 
+    @skipIf(salt.utils.is_windows(), 'inode info not available on Windows')
     def test_inodeusage(self):
         '''
         disk.inodeusage
