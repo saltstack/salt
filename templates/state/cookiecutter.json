@@ -1,0 +1,12 @@
+{
+    "full_name": "",
+    "email": "",
+    "project_name": "project_name",
+    "project_slug": "salt",
+    "repo_name": "project_name",
+    "project_short_description": "short_description",
+    "release_date": "2016-06-06",
+    "year": "2016",
+    "version": "Carbon",
+    "open_source_license": ["Apache Software License 2.0"]
+}
