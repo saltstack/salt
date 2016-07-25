@@ -31,6 +31,7 @@ ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def _git_version():
     git_version = subprocess.Popen(
         ['git', '--version'],
         shell=False,
-        close_fds=True,
+        close_fds=False if salt.utils.is_windows else True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).communicate()[0]
     if not git_version:
@@ -148,13 +149,10 @@ class GitModuleTest(integration.ModuleCase):
                     .format(path)
                 )
         ret = self.run_function('git.add', [self.repo, newdir])
-        self.assertEqual(
-            ret,
-            '\n'.join(
-                sorted(['add \'{0}\''.format(x)
-                        for x in files_relpath])
-            )
-        )
+        res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
+        if salt.utils.is_windows():
+            res = res.replace('\\', '/')
+        self.assertEqual(ret, res)
 
     def test_add_file(self):
         '''
@@ -275,7 +273,7 @@ class GitModuleTest(integration.ModuleCase):
             self.run_function('git.clone', [clone_parent_dir, self.repo])
         )
         # Cleanup after yourself
-        shutil.rmtree(clone_parent_dir)
+        shutil.rmtree(clone_parent_dir, True)
 
     def test_clone_with_alternate_name(self):
         '''
@@ -292,7 +290,7 @@ class GitModuleTest(integration.ModuleCase):
             )
         )
         # Cleanup after yourself
-        shutil.rmtree(clone_parent_dir)
+        shutil.rmtree(clone_parent_dir, True)
 
     def test_commit(self):
         '''
@@ -581,10 +579,13 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = tempfile.mkdtemp(dir=integration.TMP)
+        new_repo = os.path.normcase(tempfile.mkdtemp(dir=integration.TMP))
+        if salt.utils.is_windows():
+            new_repo = new_repo.replace('\\', '/')
+
         self.assertEqual(
-            self.run_function('git.init', [new_repo]),
-            'Initialized empty Git repository in {0}/.git/'.format(new_repo)
+            self.run_function('git.init', [new_repo]).lower(),
+            'initialized empty git repository in {0}/.git/'.format(new_repo)
         )
         shutil.rmtree(new_repo)
 
@@ -803,6 +804,8 @@ class GitModuleTest(integration.ModuleCase):
             sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
                     for x in self.files])
         )
+        if salt.utils.is_windows():
+            expected = expected.replace('\\', '/')
         self.assertEqual(
             self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
             expected
