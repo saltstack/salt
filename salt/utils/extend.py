@@ -24,7 +24,7 @@ MODULE_OPTIONS = [
 ]
 
 
-def _mergetree(src, dst, symlinks=False, ignore=None):
+def _mergetree(src, dst):
     """
     Akin to shutils.copytree but over existing directories
     """
@@ -33,7 +33,10 @@ def _mergetree(src, dst, symlinks=False, ignore=None):
         d = os.path.join(dst, item)
         if os.path.isdir(s):
             log.info("Copying folder {0} to {1}".format(s, d))
-            shutil.copytree(s, d, symlinks, ignore)
+            if os.path.exists(d):
+                _mergetree(s, d)
+            else:
+                shutil.copytree(s, d)
         else:
             log.info("Copying file {0} to {1}".format(s, d))
             shutil.copy2(s, d)
