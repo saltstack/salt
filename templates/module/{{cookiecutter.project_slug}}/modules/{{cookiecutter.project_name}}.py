@@ -3,7 +3,7 @@
 {{cookiecutter.project_name}} execution module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-{{cookiecutter.description}}
+{{cookiecutter.project_short_description}}
 
 .. versionadded:: {{cookiecutter.version}}
 
@@ -37,7 +37,7 @@ except ImportError as ie:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = '{{cookiecutter.project_name}} '
+__virtualname__ = '{{cookiecutter.project_name}}'
 
 
 def __virtual__():
