@@ -14,12 +14,16 @@ if __name__ == '__main__':
         help="Extension type, e.g. 'module', 'state'.")
     parser.add_argument(
         "--salt-directory",
-        "-d",
+        "-o",
         help="Directory where your salt installation is kept (defaults to .).")
     parser.add_argument(
         "--name",
         "-n",
         help="Module name.")
+    parser.add_argument(
+        "--description",
+        "-d",
+        help="Short description of what the module does.")
     parser.add_argument(
         "--no-merge",
         help="Don't merge the module into the salt directory, keep in a temp location",
@@ -28,5 +32,6 @@ if __name__ == '__main__':
 
     salt_extend(extension=args.extension,
                 name=args.name,
+                description=args.description,
                 salt_dir=args.salt_directory,
                 merge=not args.no_merge)

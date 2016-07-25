@@ -17,13 +17,15 @@ try:
 except ImportError as ie:
     HAS_COOKIECUTTER = False
 
+# Extend this list to add new template types, the first element is the name of the directory
+# inside templates/
 MODULE_OPTIONS = [
     ('module', 'Execution module'),
     ('state', 'State module'),
 ]
 
 
-def run(extension=None, name=None, salt_dir='.', merge=False, temp_dir=None):
+def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
     assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip or " \
                              "from https://github.com/audreyr/cookiecutter"
     
@@ -39,7 +41,11 @@ def run(extension=None, name=None, salt_dir='.', merge=False, temp_dir=None):
         print('Enter the short name for the module (e.g. mymodule)')
         name = prompt.read_user_variable('Module name', '')
     
-    short_description = prompt.read_user_variable('Short description of the module', '')
+    if salt_dir is None:
+        salt_dir = '.'
+    
+    if description is None:
+        description = prompt.read_user_variable('Short description of the module', '')
     
     template_dir = 'templates/{0}'.format(extension_type)
     project_name = name
@@ -49,7 +55,7 @@ def run(extension=None, name=None, salt_dir='.', merge=False, temp_dir=None):
         "email": "",
         "project_name": project_name,
         "repo_name": project_name,
-        "project_short_description": short_description,
+        "project_short_description": description,
         "release_date": date.today().strftime('%Y-%m-%d'),
         "year": date.today().strftime('%Y'),
     }
