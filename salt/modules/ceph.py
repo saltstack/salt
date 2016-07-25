@@ -245,7 +245,6 @@ def keyring_purge(**kwargs):
 
         salt '*' ceph.keyring_purge \\
                 'keyring_type'='admin' \\
-                '[mds.]\n\tkey = AQA/vZ9WyDwsKRAAxQ6wjGJH6WV8fDJeyzxHrg==\n\tcaps mds = \"allow *\"\n' \\
                 'cluster_name'='ceph' \\
                 'cluster_uuid'='cluster_uuid'
     Notes:
