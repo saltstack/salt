@@ -36,6 +36,13 @@ _salt_get_keys(){
 }
 
 _salt(){
+    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:='~/.cache/salt-comp-cache_functions'}
+    local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:='last hour'}
+
+    if [ ! -d "$(dirname ${_salt_cache_functions})" ]; then
+        mkdir -p "$(dirname ${_salt_cache_functions})"
+    fi
+
     local cur prev opts _salt_grains _salt_coms pprev ppprev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -122,7 +129,19 @@ _salt(){
      ;;
     esac
 
-    _salt_coms="$(salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
+    # Regenerate cache if timed out
+    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
+        # salt: get all functions on all minions
+        # sed: remove all array overhead and convert to newline separated list
+        # sort: chop out doubled entries, so overhead is minimal later during actual completion
+        salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
+          | sort -u \
+          > "${_salt_cache_functions}"
+    fi
+
+    _salt_coms="$(cat "${_salt_cache_functions}")"
+
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
 
