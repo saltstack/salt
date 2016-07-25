@@ -21,6 +21,7 @@ except ImportError as ie:
 MODULE_OPTIONS = [
     ('module', 'Execution module'),
     ('state', 'State module'),
+    ('module_test', 'Execution module unit test')
 ]
 
 
