@@ -498,11 +498,11 @@ def salt_spm():
     spm.run()
 
 
-def salt_extend():
+def salt_extend(extension, name, salt_dir, merge):
     '''
     Quickstart for developing on the saltstack installation
 
     .. versionadded:: Carbon
     '''
     import salt.utils.extend
-    salt.utils.extend.run()
+    salt.utils.extend.run(extension, name, salt_dir, merge)

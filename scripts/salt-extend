@@ -5,4 +5,28 @@ Quickstart for creating an/or extending the functionality of your SaltStack inst
 from salt.scripts import salt_extend
 
 if __name__ == '__main__':
-    salt_extend()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--extension",
+        "-e",
+        help="Extension type, e.g. 'module', 'state'.")
+    parser.add_argument(
+        "--salt-directory",
+        "-d",
+        help="Directory where your salt installation is kept (defaults to .).")
+    parser.add_argument(
+        "--name",
+        "-n",
+        help="Module name.")
+    parser.add_argument(
+        "--no-merge",
+        help="Don't merge the module into the salt directory, keep in a temp location",
+        action="store_true")
+    args = parser.parse_args()
+
+    salt_extend(extension=args.extension,
+                name=args.name,
+                salt_dir=args.salt_directory,
+                merge=not args.no_merge)
