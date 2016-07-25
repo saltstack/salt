@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Send a message to Slack
-=========================
+=======================
 
 This state is useful for sending messages to Slack during state runs.
 
@@ -24,6 +24,11 @@ The api key can be specified in the master or minion configuration like below:
       api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 
