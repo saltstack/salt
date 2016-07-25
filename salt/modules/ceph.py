@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
+'''
+Module to provide ceph control with salt.
 
+:depends:   - ceph_cfg Python module
+
+.. versionadded:: Carbon
+'''
 import logging
 
 
