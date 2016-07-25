@@ -24,6 +24,7 @@ The api key can be specified in the master or minion configuration like below:
       api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 
 '''
+from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
@@ -96,18 +97,18 @@ def post_message(name,
         ret['comment'] = 'Slack message is missing: {0}'.format(message)
         return ret
 
-    result = __salt__['slack.post_message'](
-        channel=channel,
-        message=message,
-        from_name=from_name,
-        api_key=api_key,
-        icon=icon,
-    )
-
-    if result:
+    try:
+        result = __salt__['slack.post_message'](
+            channel=channel,
+            message=message,
+            from_name=from_name,
+            api_key=api_key,
+            icon=icon,
+        )
+    except SaltInvocationError as sie:
+        ret['comment'] = 'Failed to send message: {0} ({1})'.format(name, sie)
+    else:
         ret['result'] = True
         ret['comment'] = 'Sent message: {0}'.format(name)
-    else:
-        ret['comment'] = 'Failed to send message: {0}'.format(name)
 
     return ret
