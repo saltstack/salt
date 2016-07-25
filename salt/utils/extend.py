@@ -28,7 +28,7 @@ MODULE_OPTIONS = [
 
 def _mergetree(src, dst):
     """
-    Akin to shutils.copytree but over existing directories
+    Akin to shutils.copytree but over existing directories, does a recursive merge copy.
     """
     for item in os.listdir(src):
         s = os.path.join(src, item)
@@ -45,6 +45,27 @@ def _mergetree(src, dst):
 
 
 def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
+    """
+    A template factory for extending the salt ecosystem
+    
+    :param extension: The extension type, e.g. 'module', 'state', if omitted, user will be prompted
+    :type  extension: ``str``
+    
+    :param name: Python-friendly name for the module, if omitted, user will be prompted
+    :type  name: ``str``
+    
+    :param description: A description of the extension, if omitted, user will be prompted
+    :type  description: ``str``
+    
+    :param salt_dir: The targeted Salt source directory
+    :type  salt_dir: ``str``
+    
+    :param merge: Merge with salt directory, `False` to keep seperate, `True` to merge trees.
+    :type  merge: ``bool``
+    
+    :param temp_dir: The directory for generated code, if omitted, system temp will be used
+    :type  temp_dir: ``str``
+    """
     assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip or " \
                              "from https://github.com/audreyr/cookiecutter"
     
