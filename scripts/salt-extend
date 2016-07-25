@@ -1,13 +1,30 @@
 #!/usr/bin/env python
 '''
 Quickstart for creating an/or extending the functionality of your SaltStack installation
+
+    usage: salt-extend [-h] [--extension EXTENSION]
+                   [--salt-directory SALT_DIRECTORY] [--name NAME]
+                   [--description DESCRIPTION] [--no-merge]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --extension EXTENSION, -e EXTENSION
+                            Extension type, e.g. 'module', 'state'.
+      --salt-directory SALT_DIRECTORY, -o SALT_DIRECTORY
+                            Directory where your salt installation is kept
+                            (defaults to .).
+      --name NAME, -n NAME  Module name.
+      --description DESCRIPTION, -d DESCRIPTION
+                            Short description of what the module does.
+      --no-merge            Don't merge the module into the salt directory, keep
+                            in a temp location
 '''
 from salt.scripts import salt_extend
 
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Quickly boilerplate an extension to SaltStack")
     parser.add_argument(
         "--extension",
         "-e",
