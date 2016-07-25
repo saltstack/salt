@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 import logging
 import os
+import yaml
+from pprint import pprint
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -39,7 +41,9 @@ if not salt.utils.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL returner archiver integration tests.'
 )
-class MysqlReturnerArchiverTest(integration.ModuleCase,
+
+@destructiveTest
+class MysqlReturnerArchiverTest(integration.ShellCase,
                                 integration.SaltReturnAssertsMixIn):
     '''
     Module testing the MySQL returner archiver
@@ -53,18 +57,34 @@ class MysqlReturnerArchiverTest(integration.ModuleCase,
         Test presence of MySQL server, enforce a root password
         '''
         super(MysqlReturnerArchiverTest, self).setUp()
-        NO_MYSQL_SERVER = True
 
         # Load test data
+        command = 'mysqladmin -f drop salt'
+        ret = self.run_call('--local cmd.run "{0}"'.format(command), with_retcode=True)
         command = 'mysql mysql < {0}'.format(os.path.join(integration.INTEGRATION_TEST_DIR, 'files/mysql_returner_archiver_data.sql'))
-        ret3 = self.run_state('cmd.run', name=command)
-        self.assertTrue('Traceback' not in ret3)
+        ret3 = self.run_call('--local cmd.run "{0}" python_shell=True'.format(command), with_retcode=True)
+
+        print 'ret3 {0}'.format(ret3)
+        self.assertEqual(ret3[-1], 0)
+
+        tables_present = self.run_call('--local mysql.db_tables salt')
+        pprint(tables_present)
+        table_dictionary = yaml.safe_load('\n'.join(tables_present))
+        pprint(table_dictionary)
+        self.assertIn('jids', table_dictionary['local'])
+        self.assertIn('salt_returns', table_dictionary['local'])
+        self.assertIn('salt_events', table_dictionary['local'])
+
+
+    def testArchiveRecords(self):
+
+        self.run_run('mysql_returner_archiver.archive')
+        tables_present = self.run_call('--local mysql.db_tables salt')
+        table_dictionary = yaml.safe_load('\n'.join(tables_present))
+
+        self.assertIn('jids_archive', table_dictionary['local'])
+        self.assertIn('salt_returns_archive', table_dictionary['local'])
+        self.assertIn('salt_events_archive', table_dictionary['local'])
 
 
 
-    def testTablePresent(self):
-
-        tables_present = self.run_function('mysql.db_tables', ['salt'])
-        self.assertIn('jids', tables_present)
-        self.assertIn('salt_returns', tables_present)
-        self.assertIn('salt_events', tables_present)
