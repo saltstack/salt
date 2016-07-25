@@ -5,7 +5,9 @@ SaltStack Extend
 from __future__ import absolute_import
 from datetime import date
 import tempfile
-import os, shutil
+import os
+import shutil
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -47,28 +49,28 @@ def _mergetree(src, dst):
 def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
     """
     A template factory for extending the salt ecosystem
-    
+
     :param extension: The extension type, e.g. 'module', 'state', if omitted, user will be prompted
     :type  extension: ``str``
-    
+
     :param name: Python-friendly name for the module, if omitted, user will be prompted
     :type  name: ``str``
-    
+
     :param description: A description of the extension, if omitted, user will be prompted
     :type  description: ``str``
-    
+
     :param salt_dir: The targeted Salt source directory
     :type  salt_dir: ``str``
-    
+
     :param merge: Merge with salt directory, `False` to keep seperate, `True` to merge trees.
     :type  merge: ``bool``
-    
+
     :param temp_dir: The directory for generated code, if omitted, system temp will be used
     :type  temp_dir: ``str``
     """
     assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip or " \
                              "from https://github.com/audreyr/cookiecutter"
-    
+
     if extension is None:
         print('Choose which kind of extension you are developing for SaltStack')
         extension_type = 'Extension type'
@@ -76,23 +78,21 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     else:
         assert extension in list(zip(*MODULE_OPTIONS))[0], "Module extension option not valid"
         extension_type = extension
-    
+
     if name is None:
         print('Enter the short name for the module (e.g. mymodule)')
         name = prompt.read_user_variable('Module name', '')
-    
+
     if salt_dir is None:
         salt_dir = '.'
-    
+
     if description is None:
         description = prompt.read_user_variable('Short description of the module', '')
-    
+
     template_dir = 'templates/{0}'.format(extension_type)
     project_name = name
-    
+
     param_dict = {
-        "full_name": "",
-        "email": "",
         "project_name": project_name,
         "repo_name": project_name,
         "project_short_description": description,
@@ -101,12 +101,12 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     }
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
-        
+
     cookie(template=template_dir,
            no_input=True,
            extra_context=param_dict,
            output_dir=temp_dir)
-    
+
     if not merge:
         print('New module stored in {0}'.format(temp_dir))
     else:
