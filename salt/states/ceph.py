@@ -34,7 +34,7 @@ def _ordereddict2dict(input_ordered_dict):
 
 
 def quorum(name, **kwargs):
-    """
+    '''
     Quorum state
 
     This state is needed to allow the cluster to function.
@@ -45,7 +45,7 @@ quorum:
   sesceph.quorum:
     - require:
         - sesceph: mon_running
-    """
+    '''
     paramters = _ordereddict2dict(kwargs)
     if paramters is None:
         return _error(name, "Invalid paramters:%s")
