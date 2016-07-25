@@ -22,7 +22,8 @@ except ImportError:
 
 def __virtual__():
     if HAS_CEPH_CFG is False:
-        return False, 'The %s execution module cannot be loaded: ceph_cfg unavailable.' % (__virtualname__)
+        msg = 'ceph_cfg unavailable: %s execution module cant be loaded ' % (__virtualname__)
+        return False, msg
     return __virtualname__
 
 
