@@ -5,8 +5,7 @@ SaltStack Extend
 from __future__ import absolute_import
 from datetime import date
 import tempfile
-from shutil import copytree
-
+import os, shutil
 import logging
 log = logging.getLogger(__name__)
 
@@ -23,6 +22,21 @@ MODULE_OPTIONS = [
     ('module', 'Execution module'),
     ('state', 'State module'),
 ]
+
+
+def _mergetree(src, dst, symlinks=False, ignore=None):
+    """
+    Akin to shutils.copytree but over existing directories
+    """
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            log.info("Copying folder {0} to {1}".format(s, d))
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            log.info("Copying file {0} to {1}".format(s, d))
+            shutil.copy2(s, d)
 
 
 def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
@@ -70,7 +84,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     if not merge:
         print('New module stored in {0}'.format(temp_dir))
     else:
-        copytree(temp_dir, salt_dir)
+        _mergetree(temp_dir, salt_dir)
         print('New module stored in {0}'.format(salt_dir))
 
 if __name__ == '__main__':
