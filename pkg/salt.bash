@@ -140,7 +140,11 @@ _salt(){
           > "${_salt_cache_functions}"
     fi
 
-    _salt_coms="$(cat "${_salt_cache_functions}")"
+    # filter results, to only print the part to next dot (or end of function)
+    _salt_coms="$(sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u)"
+
+    # If there are still dots in the suggestion, do not append space
+    grep "^${cur}.*\." "${_salt_cache_functions}" &>/dev/null && compopt -o nospace
 
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
