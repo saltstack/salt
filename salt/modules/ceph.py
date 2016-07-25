@@ -60,7 +60,7 @@ def partition_list_journal():
 
 
 def osd_discover():
-    """
+    '''
     List all OSD by cluster
 
     CLI Example:
@@ -69,12 +69,12 @@ def osd_discover():
 
         salt '*' ceph.osd_discover
 
-    """
+    '''
     return ceph_cfg.osd_discover()
 
 
 def partition_is(dev):
-    """
+    '''
     Check whether a given device path is a partition or a full disk.
 
     CLI Example:
@@ -83,14 +83,14 @@ def partition_is(dev):
 
     salt '*' ceph.partition_is /dev/sdc1
 
-    """
+    '''
     return ceph_cfg.partition_is(dev)
 
 
 def zap(dev = None, **kwargs):
-    """
+    '''
     Destroy the partition table and content of a given disk.
-    """
+    '''
 
     if dev is not None:
         log.warning("Depricated use of function, use kwargs")
@@ -100,7 +100,7 @@ def zap(dev = None, **kwargs):
 
 
 def osd_prepare(**kwargs):
-    """
+    '''
     prepare an OSD
 
     CLI Example:
@@ -136,12 +136,12 @@ def osd_prepare(**kwargs):
 
     journal_uuid
         set the OSD journal UUID. If set will return if OSD with journal UUID already exists.
-    """
+    '''
     return ceph_cfg.osd_prepare(**kwargs)
 
 
 def osd_activate(**kwargs):
-    """
+    '''
     Activate an OSD
 
     CLI Example:
@@ -149,12 +149,12 @@ def osd_activate(**kwargs):
 	.. code-block:: bash
 
         salt '*' ceph.osd_activate 'osd_dev'='/dev/vdc'
-    """
+    '''
     return ceph_cfg.osd_activate(**kwargs)
 
 
 def keyring_create(**kwargs):
-    """
+    '''
     Create keyring for cluster
 
     CLI Example:
@@ -177,12 +177,12 @@ def keyring_create(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.keyring_create(**kwargs)
 
 
 def keyring_save(**kwargs):
-    """
+    '''
     Create save keyring locally
 
     CLI Example:
@@ -206,12 +206,12 @@ def keyring_save(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.keyring_save(**kwargs)
 
 
 def keyring_purge(**kwargs):
-    """
+    '''
     Delete keyring for cluster
 
     CLI Example:
@@ -237,12 +237,12 @@ def keyring_purge(**kwargs):
         Set the cluster name. Defaults to "ceph".
 
     If no ceph config file is found, this command will fail.
-    """
+    '''
     return ceph_cfg.keyring_purge(**kwargs)
 
 
 def keyring_present(**kwargs):
-    """
+    '''
     Is keyring on disk
 
     CLI Example:
@@ -265,12 +265,12 @@ def keyring_present(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.keyring_present(**kwargs)
 
 
 def keyring_auth_add(**kwargs):
-    """
+    '''
     Add keyring to authorised list
 
     CLI Example:
@@ -293,12 +293,12 @@ def keyring_auth_add(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.keyring_auth_add(**kwargs)
 
 
 def keyring_auth_del(**kwargs):
-    """
+    '''
     Remove keyring from authorised list
 
     CLI Example:
@@ -321,12 +321,12 @@ def keyring_auth_del(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.keyring_auth_del(**kwargs)
 
 
 def mon_is(**kwargs):
-    """
+    '''
     Is this a mon node
 
     CLI Example:
@@ -343,12 +343,12 @@ def mon_is(**kwargs):
 
     cluster_uuid
         Set the cluster UUID. Defaults to value found in ceph config file.
-    """
+    '''
     return ceph_cfg.mon_is(**kwargs)
 
 
 def mon_status(**kwargs):
-    """
+    '''
     Get status from mon deamon
 
     CLI Example:
@@ -365,12 +365,12 @@ def mon_status(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.status(**kwargs)
 
 
 def mon_quorum(**kwargs):
-    """
+    '''
     Is mon deamon in quorum
 
     CLI Example:
@@ -387,12 +387,12 @@ def mon_quorum(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.mon_quorum(**kwargs)
 
 
 def mon_active(**kwargs):
-    """
+    '''
     Is mon deamon running
 
     CLI Example:
@@ -409,12 +409,12 @@ def mon_active(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.mon_active(**kwargs)
 
 
 def mon_create(**kwargs):
-    """
+    '''
     Create a mon node
 
     CLI Example:
@@ -431,54 +431,54 @@ def mon_create(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.mon_create(**kwargs)
 
 
 def rgw_pools_create(**kwargs):
-    """
+    '''
     Create pools for rgw
-    """
+    '''
     return ceph_cfg.rgw_pools_create()
 
 
 def rgw_pools_missing(**kwargs):
-    """
+    '''
     Show pools missing for rgw
-    """
+    '''
     return ceph_cfg.rgw_pools_missing(**kwargs)
 
 
 def rgw_create(**kwargs):
-    """
+    '''
     Create a rgw
-    """
+    '''
     return ceph_cfg.rgw_create(**kwargs)
 
 
 def rgw_destroy(**kwargs):
-    """
+    '''
     Remove a rgw
-    """
+    '''
     return ceph_cfg.rgw_destroy(**kwargs)
 
 
 def mds_create(**kwargs):
-    """
+    '''
     Create a mds
-    """
+    '''
     return ceph_cfg.mds_create(**kwargs)
 
 
 def mds_destroy(**kwargs):
-    """
+    '''
     Remove a mds
-    """
+    '''
     return ceph_cfg.mds_destroy(**kwargs)
 
 
 def keyring_auth_list(**kwargs):
-    """
+    '''
     List all cephx authorization keys
 
     CLI Example:
@@ -495,12 +495,12 @@ def keyring_auth_list(**kwargs):
 
     cluster_uuid
         Set the cluster UUID. Defaults to value found in ceph config file.
-    """
+    '''
     return ceph_cfg.keyring_auth_list(**kwargs)
 
 
 def pool_list(**kwargs):
-    """
+    '''
     List all pools
 
     CLI Example:
@@ -517,12 +517,12 @@ def pool_list(**kwargs):
 
     cluster_uuid
         Set the cluster UUID. Defaults to value found in ceph config file.
-    """
+    '''
     return ceph_cfg.pool_list(**kwargs)
 
 
 def pool_add(pool_name, **kwargs):
-    """
+    '''
     Create a pool
 
     CLI Example:
@@ -554,12 +554,12 @@ def pool_add(pool_name, **kwargs):
 
     crush_ruleset
         Set the crush map rule set
-    """
+    '''
     return ceph_cfg.pool_add(pool_name, **kwargs)
 
 
 def pool_del(pool_name, **kwargs):
-    """
+    '''
     Delete a pool
 
     CLI Example:
@@ -576,12 +576,12 @@ def pool_del(pool_name, **kwargs):
 
     cluster_uuid
         Set the cluster UUID. Defaults to value found in ceph config file.
-    """
+    '''
     return ceph_cfg.pool_del(pool_name, **kwargs)
 
 
 def purge(**kwargs):
-    """
+    '''
     purge ceph configuration on the node
 
     CLI Example:
@@ -589,19 +589,19 @@ def purge(**kwargs):
 	.. code-block:: bash
 
         salt '*' ceph.purge
-    """
+    '''
     return ceph_cfg.purge(**kwargs)
 
 
 def ceph_version():
-    """
+    '''
     Get the version of ceph installed
-    """
+    '''
     return ceph_cfg.ceph_version()
 
 
 def cluster_quorum(**kwargs):
-    """
+    '''
     Get the cluster's quorum status
 
     CLI Example:
@@ -624,12 +624,12 @@ def cluster_quorum(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.cluster_quorum(**kwargs)
 
 
 def cluster_status(**kwargs):
-    """
+    '''
     Get the cluster status
 
     CLI Example:
@@ -652,5 +652,5 @@ def cluster_status(**kwargs):
 
     cluster_name
         Set the cluster name. Defaults to "ceph".
-    """
+    '''
     return ceph_cfg.cluster_status(**kwargs)
