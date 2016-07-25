@@ -478,7 +478,7 @@ def rgw_pools_create(**kwargs):
     cluster_name
         Set the cluster name. Defaults to "ceph".
     '''
-    return ceph_cfg.rgw_pools_create()
+    return ceph_cfg.rgw_pools_create(**kwargs)
 
 
 def rgw_pools_missing(**kwargs):
