@@ -143,7 +143,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     ret = {}
     for name, data in six.iteritems(get_repo_data().get('repo', {})):
         if version(name):
-            latest = latest_version(name)
+            latest = latest_version(name, refresh=False)
             if latest:
                 ret[name] = latest
     return ret
