@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+Manage ceph with salt.
 
+.. versionadded:: Carbon
+'''
 import logging
 import json
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -37,7 +41,9 @@ def quorum(name, **kwargs):
     '''
     Quorum state
 
-    This state is needed to allow the cluster to function.
+    This state checks the mon daemons are in quorum. It does not alter the
+    cluster but can be used in formula as a dependency for many cluster
+    operations.
 
     Example usage in sls file:
 
