@@ -1056,9 +1056,17 @@ def installed(
     was_refreshed = False
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name,
-                                                 fromrepo=fromrepo,
-                                                 refresh=refresh)
+        try:
+            version = __salt__['pkg.latest_version'](name,
+                                                     fromrepo=fromrepo,
+                                                     refresh=refresh)
+        except CommandExecutionError as exc:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while checking the '
+                               'newest available version of package(s): {0}'
+                               .format(exc)}
 
         was_refreshed = refresh
         refresh = False
@@ -1228,7 +1236,6 @@ def installed(
                                               reinstall=reinstall,
                                               normalize=normalize,
                                               **kwargs)
-            was_refreshed = was_refreshed or refresh
         except CommandExecutionError as exc:
             ret = {'name': name,
                    'changes': {},
@@ -1238,6 +1245,8 @@ def installed(
             if warnings:
                 ret['comment'] += '.' + '. '.join(warnings) + '.'
             return ret
+
+        was_refreshed = was_refreshed or refresh
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
