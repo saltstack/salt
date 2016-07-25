@@ -1468,8 +1468,8 @@ def managed(name,
 
     tmp_ext
         provide extention for temp file created by check_cmd
-        usefull for checkers dependant on config file extention
-        for example it should be usefull for init-checkconf upstart config checker
+        useful for checkers dependant on config file extention
+        for example it should be useful for init-checkconf upstart config checker
         by default it is empty
         .. code-block:: yaml
 
