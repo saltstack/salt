@@ -41,10 +41,12 @@ def quorum(name, **kwargs):
 
     Example usage in sls file:
 
-quorum:
-  sesceph.quorum:
-    - require:
-        - sesceph: mon_running
+    . code-block:: yaml
+
+        quorum:
+          sesceph.quorum:
+            - require:
+              - sesceph: mon_running
     '''
     paramters = _ordereddict2dict(kwargs)
     if paramters is None:
