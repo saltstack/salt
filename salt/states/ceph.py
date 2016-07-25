@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 import json
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
