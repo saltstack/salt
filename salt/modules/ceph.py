@@ -90,6 +90,24 @@ def partition_is(dev):
 def zap(dev = None, **kwargs):
     '''
     Destroy the partition table and content of a given disk.
+
+	.. code-block:: bash
+
+        salt '*' ceph.osd_prepare 'dev'='/dev/vdc' \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    dev
+        The block device to format.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
+
+    cluster_uuid
+        Set the cluster date will be added too. Defaults to the value found in
+        local config.
     '''
 
     if dev is not None:
@@ -438,6 +456,20 @@ def mon_create(**kwargs):
 def rgw_pools_create(**kwargs):
     '''
     Create pools for rgw
+
+    CLI Example:
+
+	.. code-block:: bash
+
+        salt '*' ceph.rgw_pools_create
+
+    Notes:
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.rgw_pools_create()
 
@@ -445,6 +477,20 @@ def rgw_pools_create(**kwargs):
 def rgw_pools_missing(**kwargs):
     '''
     Show pools missing for rgw
+
+    CLI Example:
+
+	.. code-block:: bash
+
+        salt '*' ceph.rgw_pools_missing
+
+    Notes:
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.rgw_pools_missing(**kwargs)
 
@@ -452,6 +498,27 @@ def rgw_pools_missing(**kwargs):
 def rgw_create(**kwargs):
     '''
     Create a rgw
+
+    CLI Example:
+
+	.. code-block:: bash
+
+        salt '*' ceph.rgw_create \\
+                'name' = 'rgw.name' \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    name:
+        Required paramter
+        Set the rgw client name. Must start with 'rgw.'
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.rgw_create(**kwargs)
 
@@ -459,6 +526,27 @@ def rgw_create(**kwargs):
 def rgw_destroy(**kwargs):
     '''
     Remove a rgw
+
+    CLI Example:
+
+	.. code-block:: bash
+
+        salt '*' ceph.rgw_destroy \\
+                'name' = 'rgw.name' \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    name:
+        Required paramter
+        Set the rgw client name. Must start with 'rgw.'
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.rgw_destroy(**kwargs)
 
@@ -466,6 +554,37 @@ def rgw_destroy(**kwargs):
 def mds_create(**kwargs):
     '''
     Create a mds
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ceph.mds_create \\
+                'name' = 'mds.name' \\
+                'port' = 1000, \\
+                'addr' = 'fqdn.example.org' \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    name:
+        Required paramter
+        Set the rgw client name. Must start with 'mds.'
+
+    port:
+        Required paramter
+        Port for the mds to listen to.
+
+    addr:
+        Required paramter
+        Address or IP address for the mds to listen to.
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.mds_create(**kwargs)
 
@@ -473,6 +592,27 @@ def mds_create(**kwargs):
 def mds_destroy(**kwargs):
     '''
     Remove a mds
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ceph.mds_destroy \\
+                'name' = 'mds.name' \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    name:
+        Required paramter
+        Set the rgw client name. Must start with 'mds.'
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
     '''
     return ceph_cfg.mds_destroy(**kwargs)
 
@@ -588,7 +728,17 @@ def purge(**kwargs):
 
 	.. code-block:: bash
 
-        salt '*' ceph.purge
+        salt '*' ceph.purge \\
+                'cluster_name'='ceph' \\
+                'cluster_uuid'='cluster_uuid'
+
+    Notes:
+
+    cluster_name
+        Set the cluster name. Defaults to "ceph".
+
+    cluster_uuid
+        Set the cluster UUID. Defaults to value found in ceph config file.
     '''
     return ceph_cfg.purge(**kwargs)
 
