@@ -94,7 +94,7 @@ def partition_is(dev):
     return ceph_cfg.partition_is(dev)
 
 
-def zap(dev = None, **kwargs):
+def zap(dev=None, **kwargs):
     '''
     Destroy the partition table and content of a given disk.
 
