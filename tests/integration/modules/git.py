@@ -579,13 +579,13 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = os.path.normcase(tempfile.mkdtemp(dir=integration.TMP)).lower()
+        new_repo = tempfile.mkdtemp(dir=integration.TMP)
         if salt.utils.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
         self.assertEqual(
             self.run_function('git.init', [new_repo]).lower(),
-            'initialized empty git repository in {0}/.git/'.format(new_repo)
+            'Initialized empty Git repository in {0}/.git/'.format(new_repo).lower()
         )
         shutil.rmtree(new_repo)
 
