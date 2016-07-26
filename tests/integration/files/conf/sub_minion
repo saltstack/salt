@@ -14,8 +14,6 @@ pidfile: sub_minion.pid
 
 # module extension
 test.foo: baz
-hosts.file: /tmp/salt-tests-tmpdir/hosts
-aliases.file: /tmp/salt-tests-tmpdir/aliases
 integration.test: True
 
 # Grains addons
