@@ -28,6 +28,12 @@ _salt_get_grain_values(){
     fi
 }
 
+_salt_get_keys(){
+    for type in $*; do
+      # remove header from data:
+      salt-key --no-color -l $type | tail -n+2
+    done
+}
 
 _salt(){
     local cur prev opts _salt_grains _salt_coms pprev ppprev
@@ -86,11 +92,11 @@ _salt(){
         return 0
         ;;
      salt)
-        COMPREPLY=($(compgen -W "\'*\' ${opts} `salt-key --no-color -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "\'*\' ${opts} `_salt_get_keys acc`" -- ${cur}))
         return 0
         ;;
      -E|--pcre)
-        COMPREPLY=($(compgen -W "`salt-key --no-color -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "`_salt_get_keys acc`" -- ${cur}))
         return 0
         ;;
      -G|--grain|--grain-pcre)
@@ -158,15 +164,15 @@ _saltkey(){
 
     case "${prev}" in
      -a|--accept)
-        COMPREPLY=($(compgen -W "$(salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys un rej)" -- ${cur}))
         return 0
       ;;
      -r|--reject)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -d|--delete)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc un rej)" -- ${cur}))
         return 0
         ;;
      -c|--config)
@@ -185,7 +191,7 @@ _saltkey(){
         return 0
         ;;
      -p|--print)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc un rej)" -- ${cur}))
         return 0
      ;;
      -l|--list)
@@ -280,7 +286,7 @@ _saltcp(){
 
     case ${prev} in
  	salt-cp)
-	    COMPREPLY=($(compgen -W "${opts} `salt-key -l acc --no-color`" -- ${cur}))
+	    COMPREPLY=($(compgen -W "${opts} `_salt_get_keys acc`" -- ${cur}))
 	    return 0
 	;;
         -t|--timeout)
@@ -289,7 +295,7 @@ _saltcp(){
 	    return 0
         ;;
 	-E|--pcre)
-            COMPREPLY=($(compgen -W "`salt-key -l acc --no-color`" -- ${cur}))
+            COMPREPLY=($(compgen -W "`_salt_get_keys acc`" -- ${cur}))
             return 0
 	;;
 	-L|--list)
@@ -297,7 +303,7 @@ _saltcp(){
 	    prefpart="${cur%,*},"
 	    postpart=${cur##*,}
 	    filt="^\($(echo ${cur}| sed 's:,:\\|:g')\)$"
-            helper=($(salt-key -l acc --no-color | grep -v "${filt}" | sed "s/^/${prefpart}/"))
+            helper=($(_salt_get_keys acc | grep -v "${filt}" | sed "s/^/${prefpart}/"))
 	    COMPREPLY=($(compgen -W "${helper[*]}" -- ${cur}))
 
 	    return 0
