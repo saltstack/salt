@@ -1715,7 +1715,9 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            if ret['pchanges']:
+            if isinstance(ret['pchanges'], tuple):
+                ret['result'], ret['comment'] = ret['pchanges']
+            elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
                 if show_changes and 'diff' in ret['pchanges']:
