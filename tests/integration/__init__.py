@@ -1018,6 +1018,8 @@ class TestDaemon(object):
         minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
@@ -1026,6 +1028,8 @@ class TestDaemon(object):
         sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
+        sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
