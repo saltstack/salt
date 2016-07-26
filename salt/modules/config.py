@@ -31,7 +31,7 @@ if salt.utils.is_windows():
     _HOSTS_FILE = os.path.join(
         os.environ['SystemRoot'], 'System32', 'drivers', 'etc', 'hosts')
 else:
-    _HOSTS_FILE = os.path.join('etc', 'hosts')
+    _HOSTS_FILE = os.path.join('/', 'etc', 'hosts')
 
 log = logging.getLogger(__name__)
 
