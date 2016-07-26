@@ -22,22 +22,37 @@ log = logging.getLogger(__name__)
 
 
 def _unchanged(name, msg):
+    '''
+    Utility function: Return structure unchanged
+    '''
     return {'name': name, 'result': True, 'comment': msg, 'changes': {}}
 
 
 def _test(name, msg):
+    '''
+    Utility function: Return structure test
+    '''
     return {'name': name, 'result': None, 'comment': msg, 'changes': {}}
 
 
 def _error(name, msg):
+    '''
+    Utility function: Return structure error
+    '''
     return {'name': name, 'result': False, 'comment': msg, 'changes': {}}
 
 
 def _changed(name, msg, **changes):
+    '''
+    Utility function: Return structure changed
+    '''
     return {'name': name, 'result': True, 'comment': msg, 'changes': changes}
 
 
 def _ordereddict2dict(input_ordered_dict):
+    '''
+    Convert ordered dictionary to a dictionary
+    '''
     return json.loads(json.dumps(input_ordered_dict))
 
 
