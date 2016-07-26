@@ -29,14 +29,23 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower configparser module.
     '''
 
-    cp = configparser.SafeConfigParser(**options)
+    if six.PY3:
+        cp = configparser.ConfigParser(**options)
+    else:
+        cp = configparser.SafeConfigParser(**options)
 
     try:
         if not isinstance(stream_or_string, (bytes, six.string_types)):
-            cp.readfp(stream_or_string)
+            if six.PY3:
+                cp.read_file(stream_or_string)
+            else:
+                cp.readfp(stream_or_string)
         else:
-            # python2's ConfigParser cannot parse a config from a string
-            cp.readfp(six.moves.StringIO(stream_or_string))
+            if six.PY3:
+                cp.read_file(six.moves.StringIO(stream_or_string))
+            else:
+                # python2's ConfigParser cannot parse a config from a string
+                cp.readfp(six.moves.StringIO(stream_or_string))
         data = {}
         for section_name in cp.sections():
             section = {}
@@ -60,7 +69,10 @@ def serialize(obj, **options):
         if not isinstance(obj, dict):
             raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
         fp = options.pop('fp', None)
-        cp = configparser.SafeConfigParser(**options)
+        if six.PY3:
+            cp = configparser.ConfigParser(**options)
+        else:
+            cp = configparser.SafeConfigParser(**options)
         _read_dict(cp, obj)
 
         if fp:
