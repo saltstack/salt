@@ -126,6 +126,11 @@ def __virtual__():
 
 
 def _check_psql_bin():
+    '''
+    ... versionadded::  2016.3.2
+
+    Helper function when the psql command is not on the path
+    '''
     _PSQL_BIN = __salt__['config.option']('postgres.psql_bin') 
     if _PSQL_BIN is not None and salt.utils.is_bin_file(_PSQL_BIN):
         return _PSQL_BIN
@@ -135,6 +140,11 @@ def _check_psql_bin():
 
 
 def _check_initdb_bin():
+    '''
+    ... versionadded::  2016.3.2
+
+    Helper function when the initdb command is not on the path
+    '''
     _INITDB_BIN  = __salt__['config.option']('postgres.initdb_bin')
     if _INITDB_BIN is not None and salt.utils.is_bin_file(_INITDB_BIN):
         return _INITDB_BIN
