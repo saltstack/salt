@@ -253,8 +253,7 @@ class CkMinions(object):
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
-                        minions.remove(id_)
+                    minions.remove(id_)
                     continue
                 search_results = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
