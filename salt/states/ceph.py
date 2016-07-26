@@ -66,8 +66,8 @@ def quorum(name, **kwargs):
         return _test(name, "cluster quorum")
     try:
         cluster_quorum = __salt__['ceph.cluster_quorum'](**paramters)
-    except (CommandExecutionError, CommandNotFoundError) as e:
-        return _error(name, e.message)
+    except (CommandExecutionError, CommandNotFoundError) as err:
+        return _error(name, err.strerror)
     if cluster_quorum:
         return _unchanged(name, "cluster is quorum")
     return _error(name, "cluster is not quorum")
