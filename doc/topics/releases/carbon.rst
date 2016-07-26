@@ -57,6 +57,15 @@ Beacons Changes
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
+Runner Changes
+==============
+
+- Custom utility modules are now available within runners, allowing for custom
+  runners to call out to these via ``__utils__`` as in Salt's execution
+  modules. :py:mod:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>` has
+  been added to the :py:mod:`saltutil runner <salt.runners.saltutil>` to
+  faciliate the syncing of utility modules to the master.
+
 Returner Changes
 ================
 
