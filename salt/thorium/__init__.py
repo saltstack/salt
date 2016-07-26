@@ -47,12 +47,12 @@ class ThorState(salt.state.HighState):
 
         self.returners = salt.loader.returners(self.opts, {})
         self.reg_ret = self.opts.get('register_returner', None)
+        regdata = {}
         if self.reg_ret is not None:
             try:
                 regdata = self.returners['{0}.load_reg'.format(self.reg_ret)]()
             except Exception as exc:
                 log.error(exc)
-                regdata = {}
 
         self.state.inject_globals = {'__reg__': regdata}
         self.event = salt.utils.event.get_master_event(
