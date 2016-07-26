@@ -1803,14 +1803,14 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-ssh
         '''
         arg_str = '-W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True, timeout=30)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
         '''
@@ -1820,7 +1820,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
                                                   arg_str,
                                                   timeout=timeout,
                                                   async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_run_plus(self, fun, options='', *arg, **kwargs):
         '''
@@ -1848,7 +1848,8 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
             'salt-key',
             arg_str,
             catch_stderr=catch_stderr,
-            with_retcode=with_retcode
+            with_retcode=with_retcode,
+            timeout=30
         )
 
     def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
@@ -1856,14 +1857,14 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-call.
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''

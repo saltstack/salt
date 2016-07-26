@@ -52,7 +52,7 @@ def __virtual__():
     except Exception:
         return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
-    enabled = ('amazon', 'xcp', 'xenserver')
+    enabled = ('amazon', 'xcp', 'xenserver', 'VirtuozzoLinux')
 
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
