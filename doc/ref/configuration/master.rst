@@ -476,8 +476,9 @@ local job cache on the master.
 
 Default: ``''``
 
-Specify the returner to use to log events. A returner may have installation and
-configuration requirements. Read the returner's documentation.
+Specify the returner(s) to use to log events. Each returner may have
+installation and configuration requirements. Read the returner's 
+documentation.
 
 .. note::
 
@@ -486,7 +487,9 @@ configuration requirements. Read the returner's documentation.
 
 .. code-block:: yaml
 
-    event_return: cassandra_cql
+    event_return: 
+      - syslog
+      - splunk
 
 .. conf_master:: event_return_queue
 
