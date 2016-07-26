@@ -69,7 +69,7 @@ class GrainsTargetingTest(integration.ShellCase):
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
             ret = ''
-            for item in self.run_salt('-G \'id:disconnected\' test.ping'):
+            for item in self.run_salt('-G \'id:disconnected\' test.ping', timeout=40):
                 if item != 'disconnected:':
                     ret = item.strip()
             self.assertEqual(ret, test_ret)
