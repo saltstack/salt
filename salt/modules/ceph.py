@@ -35,7 +35,7 @@ def partition_list():
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.partition_list
     '''
@@ -48,7 +48,7 @@ def partition_list_osd():
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.partition_list_osd
     '''
@@ -61,7 +61,7 @@ def partition_list_journal():
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.partition_list_journal
     '''
@@ -74,7 +74,7 @@ def osd_discover():
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.osd_discover
 
@@ -88,7 +88,7 @@ def partition_is(dev):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
     salt '*' ceph.partition_is /dev/sdc1
 
@@ -100,7 +100,7 @@ def zap(dev=None, **kwargs):
     '''
     Destroy the partition table and content of a given disk.
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.osd_prepare 'dev'='/dev/vdc' \\
                 'cluster_name'='ceph' \\
@@ -132,7 +132,7 @@ def osd_prepare(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.osd_prepare 'osd_dev'='/dev/vdc' \\
                 'journal_dev'='device' \\
@@ -173,7 +173,7 @@ def osd_activate(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.osd_activate 'osd_dev'='/dev/vdc'
     '''
@@ -186,7 +186,7 @@ def keyring_create(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_create \\
                 'keyring_type'='admin' \\
@@ -214,7 +214,7 @@ def keyring_save(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_save \\
                 'keyring_type'='admin' \\
@@ -243,7 +243,7 @@ def keyring_purge(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_purge \\
                 'keyring_type'='admin' \\
@@ -273,7 +273,7 @@ def keyring_present(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_present \\
                 'keyring_type'='admin' \\
@@ -301,7 +301,7 @@ def keyring_auth_add(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_auth_add \\
                 'keyring_type'='admin' \\
@@ -329,7 +329,7 @@ def keyring_auth_del(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_osd_auth_del \\
                 'keyring_type'='admin' \\
@@ -357,7 +357,7 @@ def mon_is(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.mon_is \\
                 'cluster_name'='ceph' \\
@@ -379,7 +379,7 @@ def mon_status(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.mon_status \\
                 'cluster_name'='ceph' \\
@@ -401,7 +401,7 @@ def mon_quorum(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.mon_quorum \\
                 'cluster_name'='ceph' \\
@@ -423,7 +423,7 @@ def mon_active(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.mon_active \\
                 'cluster_name'='ceph' \\
@@ -445,7 +445,7 @@ def mon_create(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.mon_create \\
                 'cluster_name'='ceph' \\
@@ -467,7 +467,7 @@ def rgw_pools_create(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.rgw_pools_create
 
@@ -488,7 +488,7 @@ def rgw_pools_missing(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.rgw_pools_missing
 
@@ -509,7 +509,7 @@ def rgw_create(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.rgw_create \\
                 'name' = 'rgw.name' \\
@@ -537,7 +537,7 @@ def rgw_destroy(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.rgw_destroy \\
                 'name' = 'rgw.name' \\
@@ -631,7 +631,7 @@ def keyring_auth_list(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.keyring_auth_list \\
                 'cluster_name'='ceph' \\
@@ -653,7 +653,7 @@ def pool_list(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.pool_list \\
                 'cluster_name'='ceph' \\
@@ -675,7 +675,7 @@ def pool_add(pool_name, **kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.pool_add pool_name \\
                 'cluster_name'='ceph' \\
@@ -712,7 +712,7 @@ def pool_del(pool_name, **kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.pool_del pool_name \\
                 'cluster_name'='ceph' \\
@@ -734,7 +734,7 @@ def purge(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.purge \\
                 'cluster_name'='ceph' \\
@@ -764,7 +764,7 @@ def cluster_quorum(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.cluster_quorum \\
                 'cluster_name'='ceph' \\
@@ -792,7 +792,7 @@ def cluster_status(**kwargs):
 
     CLI Example:
 
-	.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' ceph.cluster_status \\
                 'cluster_name'='ceph' \\
