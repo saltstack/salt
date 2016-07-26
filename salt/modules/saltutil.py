@@ -1154,7 +1154,7 @@ def runner(_fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(_fun, kwarg=kwargs)
+    return rclient.cmd(_fun, kwarg=kwargs, full_return=True)
 
 
 def wheel(_fun, *args, **kwargs):
@@ -1211,7 +1211,11 @@ def wheel(_fun, *args, **kwargs):
             valid_kwargs[key] = val
 
     try:
-        ret = wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+        ret = wheel_client.cmd(_fun,
+                               arg=args,
+                               pub_data=pub_data,
+                               kwarg=valid_kwargs,
+                               full_return=True)
     except SaltInvocationError:
         raise CommandExecutionError('This command can only be executed on a minion '
                                     'that is located on the master.')

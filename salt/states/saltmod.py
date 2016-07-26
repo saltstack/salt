@@ -623,8 +623,12 @@ def runner(name, **kwargs):
     ret['result'] = True
     ret['comment'] = "Runner function '{0}' executed.".format(name)
 
-    if out:
-        ret['changes'] = out
+    if 'jid' in out:
+        ret['__jid__'] = out['jid']
+
+    runner_return = out.get('return')
+    if runner_return:
+        ret['changes'] = runner_return
 
     return ret
 
@@ -653,7 +657,11 @@ def wheel(name, **kwargs):
     ret['result'] = True
     ret['comment'] = "Wheel function '{0}' executed.".format(name)
 
-    if out:
-        ret['changes'] = out
+    if 'jid' in out:
+        ret['__jid__'] = out['jid']
+
+    runner_return = out.get('return')
+    if runner_return:
+        ret['changes'] = runner_return
 
     return ret
