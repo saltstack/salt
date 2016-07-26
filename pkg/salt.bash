@@ -8,7 +8,6 @@
 # TODO: --compound[tab] -- how?
 # TODO: use history to extract some words, esp. if ${cur} is empty
 # TODO: TEST EVERYTHING a lot
-# TODO: cache results of some functions?  where? how long?
 # TODO: is it ok to use '--timeout 2' ?
 
 
