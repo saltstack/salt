@@ -3,29 +3,40 @@
 SaltStack Extend
 '''
 from __future__ import absolute_import
+import json
+from collections import OrderedDict
 from datetime import date
 import tempfile
 import os
 import shutil
 
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger('salt-extend')
 
 try:
-    from cookiecutter.main import cookiecutter as cookie
-    import cookiecutter.prompt as prompt
-    HAS_COOKIECUTTER = True
+    import click
+    HAS_CLICK = True
 except ImportError as ie:
-    HAS_COOKIECUTTER = False
+    HAS_CLICK = False
 
-# Extend this list to add new template types, the first element is the name of the directory
-# inside templates/
-MODULE_OPTIONS = [
-    ('module', 'Execution module'),
-    ('state', 'State module'),
-    ('module_test', 'Execution module unit test'),
-    ('state_test', 'State module unit test')
-]
+
+def _fetch_templates(src):
+    templates = []
+    log.debug('Listing contents of {0}'.format(src))
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        if os.path.isdir(s):
+            template_path = os.path.join(s, 'template.json')
+            if os.path.isfile(template_path):
+                try:
+                    with open(template_path, "r") as template_f:
+                        template = json.load(template_f)
+                        templates.append((item, template.get('description','')))
+                except:
+                    log.error("Could not load template {0}".format(template_path))
+            else:
+                log.debug("Directory does not contain template.json {0}".format(template_path))
+    return templates
 
 
 def _mergetree(src, dst):
@@ -46,7 +57,38 @@ def _mergetree(src, dst):
             shutil.copy2(s, d)
 
 
-def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
+def _prompt_user_variable(var_name, default_value):
+    return click.prompt(var_name, default=default_value)
+
+
+def _prompt_choice(var_name, options):
+    # From https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
+    choice_map = OrderedDict(
+        (u'{}'.format(i), value) for i, value in enumerate(options, 1)
+    )
+    choices = choice_map.keys()
+    default = u'1'
+
+    choice_lines = [u'{} - {}'.format(*c) for c in choice_map.items()]
+    prompt = u'\n'.join((
+        u'Select {}:'.format(var_name),
+        u'\n'.join(choice_lines),
+        u'Choose from {}'.format(u', '.join(choices))
+    ))
+
+    user_choice = click.prompt(
+        prompt, type=click.Choice(choices), default=default
+    )
+    return choice_map[user_choice]
+
+
+def apply_template(template, context, output_dir):
+    #  To a recursive file merge
+    # TODO
+    pass
+
+
+def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None, logger=None):
     """
     A template factory for extending the salt ecosystem
 
@@ -68,44 +110,45 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     :param temp_dir: The directory for generated code, if omitted, system temp will be used
     :type  temp_dir: ``str``
     """
-    assert HAS_COOKIECUTTER, "Cookiecutter is not installed, please install using pip or " \
-                             "from https://github.com/audreyr/cookiecutter"
+    assert HAS_CLICK, "click is not installed, please install using pip"
+
+    if salt_dir is None:
+        salt_dir = '.'
+
+    MODULE_OPTIONS = _fetch_templates(os.path.join(salt_dir, 'templates'))
 
     if extension is None:
-        print('Choose which kind of extension you are developing for SaltStack')
+        print('Choose which type of extension you are developing for SaltStack')
         extension_type = 'Extension type'
-        extension_type = prompt.read_user_choice(extension_type, MODULE_OPTIONS)[0]
+        extension_type = _prompt_choice(extension_type, MODULE_OPTIONS)[0]
     else:
         assert extension in list(zip(*MODULE_OPTIONS))[0], "Module extension option not valid"
         extension_type = extension
 
     if name is None:
         print('Enter the short name for the module (e.g. mymodule)')
-        name = prompt.read_user_variable('Module name', '')
-
-    if salt_dir is None:
-        salt_dir = '.'
+        name = _prompt_user_variable('Module name', '')
 
     if description is None:
-        description = prompt.read_user_variable('Short description of the module', '')
+        description = _prompt_user_variable('Short description of the module', '')
 
     template_dir = 'templates/{0}'.format(extension_type)
-    project_name = name
+    module_name = name
 
     param_dict = {
-        "project_name": project_name,
-        "repo_name": project_name,
-        "project_short_description": description,
+        "module_name": module_name,
+        "short_description": description,
         "release_date": date.today().strftime('%Y-%m-%d'),
         "year": date.today().strftime('%Y'),
     }
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
 
-    cookie(template=template_dir,
-           no_input=True,
-           extra_context=param_dict,
-           output_dir=temp_dir)
+    apply_template(
+        template=template_dir,
+        no_input=True,
+        extra_context=param_dict,
+        output_dir=temp_dir)
 
     if not merge:
         print('New module stored in {0}'.format(temp_dir))

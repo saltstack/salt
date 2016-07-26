@@ -19,6 +19,7 @@ Quickstart for creating an/or extending the functionality of your SaltStack inst
       --no-merge            Don't merge the module into the salt directory, keep
                             in a temp location
 '''
+import logging
 from salt.scripts import salt_extend
 
 if __name__ == '__main__':
@@ -45,8 +46,13 @@ if __name__ == '__main__':
         "--no-merge",
         help="Don't merge the module into the salt directory, keep in a temp location",
         action="store_true")
+    parser.add_argument(
+        "--debug",
+        help="Display detailed logs whilst applying templates",
+        action="store_true")
     args = parser.parse_args()
-
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     salt_extend(extension=args.extension,
                 name=args.name,
                 description=args.description,
