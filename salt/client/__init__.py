@@ -933,6 +933,8 @@ class LocalClient(object):
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     if 'retcode' in raw['data']:
                         ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
+                    if 'jid' in raw['data']:
+                        ret[raw['data']['id']]['jid'] = raw['data']['jid']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
