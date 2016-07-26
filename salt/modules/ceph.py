@@ -282,9 +282,9 @@ def keyring_present(**kwargs):
     Notes:
 
     keyring_type
-    Required paramter
-    Can be set to:
-        admin, mon, osd, rgw, mds
+        Required paramter
+        Can be set to:
+            admin, mon, osd, rgw, mds
 
     cluster_uuid
         Set the cluster UUID. Defaults to value found in ceph config file.
