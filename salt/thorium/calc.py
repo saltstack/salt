@@ -2,6 +2,10 @@
 '''
 Used to manage the thorium register. The thorium register is where compound
 values are stored and computed, such as averages etc.
+
+.. versionadded:: Carbon
+
+:depends: statistics PyPi module
 '''
 
 # import python libs
@@ -90,6 +94,15 @@ def calc(name, num, oper, ref=None):
 def add(name, num, ref=None):
     '''
     Adds together the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.add:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'add', ref)
 
@@ -97,6 +110,15 @@ def add(name, num, ref=None):
 def mul(name, num, ref=None):
     '''
     Multiplies together the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.mul:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'mul', ref)
 
@@ -104,6 +126,15 @@ def mul(name, num, ref=None):
 def mean(name, num, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.mean:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'mean', ref)
 
@@ -111,6 +142,15 @@ def mean(name, num, ref=None):
 def median(name, num, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.median:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'median', ref)
 
@@ -118,6 +158,15 @@ def median(name, num, ref=None):
 def median_low(name, num, ref=None):
     '''
     Calculates the low mean of the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.median_low:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'median_low', ref)
 
@@ -125,6 +174,15 @@ def median_low(name, num, ref=None):
 def median_high(name, num, ref=None):
     '''
     Calculates the high mean of the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.median_high:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'median_high', ref)
 
@@ -133,6 +191,15 @@ def median_grouped(name, num, ref=None):
     '''
     Calculates the grouped mean of the ``num`` most recent values. Requires a
     list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.median_grouped:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'median_grouped', ref)
 
@@ -140,5 +207,14 @@ def median_grouped(name, num, ref=None):
 def mode(name, num, ref=None):
     '''
     Calculates the mode of the ``num`` most recent values. Requires a list.
+
+    USAGE::
+
+    code-block:: yaml
+
+        foo:
+          reg.mode:
+            - name: myregentry
+            - num: 5
     '''
     return calc(name, num, 'mode', ref)
