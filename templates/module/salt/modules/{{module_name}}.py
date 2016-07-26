@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-{{cookiecutter.project_name}} execution module
+{{module_name}} execution module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-{{cookiecutter.project_short_description}}
+{{short_description}}
 
-.. versionadded:: {{cookiecutter.version}}
+.. versionadded:: {{version}}
 
 :configuration:
 
@@ -37,7 +37,7 @@ except ImportError as ie:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = '{{cookiecutter.project_name}}'
+__virtualname__ = '{{module_name}}'
 
 
 def __virtual__():
@@ -46,7 +46,7 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The {{cookiecutter.project_name}} execution module failed to load:'
+    return (False, 'The {{module_name}} execution module failed to load:'
             'import error - {0}.'.format(missing_package))
 
 
