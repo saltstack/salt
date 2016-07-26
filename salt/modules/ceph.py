@@ -6,6 +6,8 @@ Module to provide ceph control with salt.
 
 .. versionadded:: Carbon
 '''
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 
 
