@@ -252,7 +252,7 @@ class CPModuleTest(integration.ModuleCase):
         found = False
         search = 'grail/scene33'
         if salt.utils.is_windows():
-            search = 'grail\scene33'
+            search = r'grail\scene33'
         for path in ret:
             if search in path:
                 found = True
