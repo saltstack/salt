@@ -19,6 +19,14 @@ Module to provide Postgres compatibility to salt.
 
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
+
+:note: When installing postgres from the official postgres repos, on certain
+    linux distributions, either the psql or the initdb binary is *not*
+    automatically placed on the path. Adding a configuration to the relevant
+    minion for this module::
+
+        postgres.psql_bin: '/usr/pgsql-9.5/bin/psql'
+        postgres.initdb_bin: '/usr/pgsql-9.5/bin/initdb'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -103,13 +111,36 @@ _PRIVILEGE_TYPE_MAP = {
 
 def __virtual__():
     '''
-    Only load this module if the psql bin exists
+    Only load this module if the psql and initdb bin exist
     '''
-    if all((salt.utils.which('psql'), HAS_CSV)):
-        return True
-    return (False, 'The postgres execution module failed to load: '
-        'either the psql or initdb binary are not in the path or '
-        'the csv library is not available')
+    if not all((salt.utils.which('psql'), HAS_CSV)):
+        if not _check_psql_bin():
+            return (False, 'The psql binary was not found on the path and a '
+                    'no configuration is set for it')
+
+    if salt.utils.which('initdb') is None and _check_initdb_bin() is None:
+        return (False, 'The initdb binary was not on the path and a '
+                'no configuration is set for it'
+
+    return True
+
+
+def _check_psql_bin():
+    _PSQL_BIN = __salt__['config.option']('postgres.psql_bin') 
+    if _PSQL_BIN is not None and salt.utils.is_bin_file(_PSQL_BIN):
+        return _PSQL_BIN
+    else:
+        log.error('The psql bin cannot be located')
+        return None
+
+
+def _check_initdb_bin():
+    _INITDB_BIN  = __salt__['config.option']('postgres.initdb_bin')
+    if _INITDB_BIN is not None and salt.utils.is_bin_file(_INITDB_BIN):
+        return _INITDB_BIN
+    else:
+        log.error('The initdb bin cannot be located')
+        return None
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -182,9 +213,12 @@ def _run_initdb(name,
 
     if user is None:
         user = runas
-
+    if salt.utils.which('initdb') is None:
+        _INITDB_BIN = _check_initdb_bin()
+    else:
+        _INITDDB_BIN = salt.utils.which('initdb')
     cmd = [
-        salt.utils.which('initdb'),
+        _INITDB_BIN,
         '--pgdata={0}'.format(name),
         '--username={0}'.format(user),
         '--auth={0}'.format(auth),
@@ -302,8 +336,12 @@ def _psql_cmd(*args, **kwargs):
         kwargs.get('port'),
         kwargs.get('maintenance_db'),
         kwargs.get('password'))
+    if not salt.utils.which('psql'):
+      _PSQL_BIN = _check_psql_bin()
+    else:
+      _PSQL_BIN = salt.utils.which('psql')
 
-    cmd = [salt.utils.which('psql'),
+    cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
            '--no-password']  # It is never acceptable to issue a password prompt.
@@ -3053,7 +3091,7 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
-    if salt.utils.which('initdb') is None:
+    if salt.utils.which('initdb') is None and _check_initdb_bin() is None:
         log.error('initdb not found in path')
         return False
 
