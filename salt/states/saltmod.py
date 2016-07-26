@@ -427,6 +427,11 @@ def function(
         func_ret['comment'] = str(exc)
         return func_ret
 
+    try:
+        func_ret['__jid__'] = cmd_ret[next(iter(cmd_ret))]['jid']
+    except (StopIteration, KeyError):
+        pass
+
     changes = {}
     fail = set()
     failures = {}
