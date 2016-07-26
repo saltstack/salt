@@ -395,9 +395,9 @@ VALID_OPTS = {
     'return_retry_timer': int,
     'return_retry_timer_max': int,
 
-    # Specify a returner in which all events will be sent to. Requires that the returner in question
-    # have an event_return(event) function!
-    'event_return': str,
+    # Specify one or more returners in which all events will be sent to. Requires that the returners
+    # in question have an event_return(event) function!
+    'event_return': list,
 
     # The number of events to queue up in memory before pushing them down the pipe to an event returner
     # specified by 'event_return'
