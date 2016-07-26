@@ -92,11 +92,11 @@ _salt(){
         return 0
         ;;
      salt)
-        COMPREPLY=($(compgen -W "\'*\' ${opts} `_salt_get_keys acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "\'*\' ${opts} $(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -E|--pcre)
-        COMPREPLY=($(compgen -W "`_salt_get_keys acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -G|--grain|--grain-pcre)
@@ -286,7 +286,7 @@ _saltcp(){
 
     case ${prev} in
  	salt-cp)
-	    COMPREPLY=($(compgen -W "${opts} `_salt_get_keys acc`" -- ${cur}))
+	    COMPREPLY=($(compgen -W "${opts} $(_salt_get_keys acc)" -- ${cur}))
 	    return 0
 	;;
         -t|--timeout)
@@ -295,7 +295,7 @@ _saltcp(){
 	    return 0
         ;;
 	-E|--pcre)
-            COMPREPLY=($(compgen -W "`_salt_get_keys acc`" -- ${cur}))
+            COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
             return 0
 	;;
 	-L|--list)
