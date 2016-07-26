@@ -804,14 +804,17 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts):
+def runner(opts, utils=None):
     '''
     Directly call a function inside a loader directory
     '''
+    if utils is None:
+        utils = {}
     ret = LazyLoader(
         _module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
         opts,
         tag='runners',
+        pack={'__utils__': utils},
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack['__salt__'] = ret
