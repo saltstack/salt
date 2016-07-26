@@ -16,7 +16,7 @@ _salt_get_grains(){
     if [ "$1" = 'local' ] ; then
         salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --hide-timeout --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
@@ -24,7 +24,7 @@ _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
         salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt '*' --timeout 2 --hide-timeout --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
@@ -122,7 +122,7 @@ _salt(){
      ;;
     esac
 
-    _salt_coms="$(salt '*' --timeout 2 --out=txt -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
+    _salt_coms="$(salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
 
