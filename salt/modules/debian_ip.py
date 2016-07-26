@@ -899,17 +899,18 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             _log_default_iface(iface, binding, bond_def[binding])
             bond.update({binding: bond_def[binding]})
 
-    if 'use_carrier' in opts:
-        if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': '1'})
-        elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': '0'})
+    if not (__grains__['os'] == "Ubuntu" and __grains__['osrelease_info'][0] >= 16):
+        if 'use_carrier' in opts:
+            if opts['use_carrier'] in _CONFIG_TRUE:
+                bond.update({'use_carrier': '1'})
+            elif opts['use_carrier'] in _CONFIG_FALSE:
+                bond.update({'use_carrier': '0'})
+            else:
+                valid = _CONFIG_TRUE + _CONFIG_FALSE
+                _raise_error_iface(iface, 'use_carrier', valid)
         else:
-            valid = _CONFIG_TRUE + _CONFIG_FALSE
-            _raise_error_iface(iface, 'use_carrier', valid)
-    else:
-        _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
-        bond.update({'use_carrier': bond_def['use_carrier']})
+            _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
+            bond.update({'use_carrier': bond_def['use_carrier']})
 
     return bond
 
