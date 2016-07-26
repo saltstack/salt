@@ -44,7 +44,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     @property
     def functions(self):
         if not hasattr(self, '_functions'):
-            self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
+            if not hasattr(self, 'utils'):
+                self.utils = salt.loader.utils(self.opts)
+            # Must be self.functions for mixin to work correctly :-/
+            try:
+                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+            except AttributeError:
+                # Just in case self.utils is still not present (perhaps due to
+                # problems with the loader), load the runner funcs without them
+                self._functions = salt.loader.runner(self.opts)
+
         return self._functions
 
     def _reformat_low(self, low):
