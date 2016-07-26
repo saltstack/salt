@@ -20,6 +20,10 @@ from salt.utils.lazy import verify_fun
 log = logging.getLogger(__name__)
 
 
+# IMPORTANT: If we add a "cmd" function to this class (rather than falling back
+# to using the one from the mixins), then we will need to ensure that this
+# function contains a "full_return=False" argument in the function definition,
+# otherwise runner usage in orchestration will break.
 class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     '''
     The interface used by the :command:`salt-run` CLI tool on the Salt Master
@@ -189,7 +193,7 @@ class Runner(RunnerClient):
                                           user,
                                           async_pub['tag'],
                                           async_pub['jid'],
-                                          False)  # Don't daemonize
+                                          daemonize=False)
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
