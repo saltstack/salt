@@ -393,6 +393,7 @@ def expand_ldap_entries(entries, opts=None):
     for user_or_group_dict in entries:
         if not isinstance(user_or_group_dict, dict):
             acl_tree.append(user_or_group_dict)
+            continue
         for minion_or_ou, matchers in six.iteritems(user_or_group_dict):
             permissions = matchers
             retrieved_minion_ids = []
