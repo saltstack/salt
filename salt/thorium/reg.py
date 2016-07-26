@@ -35,11 +35,13 @@ def set_(name, add, match):
     return ret
 
 
-def list_(name, add, match, stamp=False):
+def list_(name, add, match, stamp=False, prune=0):
     '''
     Add the specified values to the named list
 
     If ``stamp`` is True, then the timestamp from the event will also be added
+    if ``prune`` is set to an integer higher than ``0``, then only the last
+        ``prune`` values will be kept in the list.
 
     USAGE::
 
@@ -69,6 +71,8 @@ def list_(name, add, match, stamp=False):
                     if stamp is True:
                         item['time'] = event['data']['_stamp']
             __reg__[name]['val'].append(item)
+    if prune > 0:
+        __reg__[name]['val'] = __reg__[name]['val'][:prune]
     return ret
 
 
