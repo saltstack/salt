@@ -12,11 +12,6 @@ import json
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-try:
-    import ceph_cfg
-    HAS_CEPH_CFG = True
-except ImportError:
-    HAS_CEPH_CFG = False
 
 log = logging.getLogger(__name__)
 
