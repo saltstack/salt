@@ -2817,6 +2817,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Select a random temp dir to deploy on the remote system. '
                   'The dir will be cleaned after the execution.'))
         self.add_option(
+            '-t', '--regen-thin', '--thin',
+            dest='regen_thin',
+            default=False,
+            action='store_true',
+            help=('Trigger a thin tarball regeneration. This is needed if',
+                  'custom grains/modules/states have been added or updated.'))
+        self.add_option(
             '--python2-bin',
             default='python2',
             help='Path to a python2 binary which has salt installed.'

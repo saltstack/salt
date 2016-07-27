@@ -206,6 +206,8 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        if self.opts['regen_thin']:
+            self.opts['ssh_wipe'] = True
         if not salt.utils.which('ssh'):
             raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
@@ -293,6 +295,7 @@ class SSH(object):
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
+                                             overwrite=self.opts['regen_thin'],
                                              python2_bin=self.opts['python2_bin'],
                                              python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
