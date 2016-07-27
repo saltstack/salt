@@ -120,7 +120,7 @@ class StdTest(integration.ModuleCase):
         '''
         Test return/messaging on a disconnected minion
         '''
-        test_ret = {'ret': 'Minion did not return. [Not connected]', 'out': 'no_return'}
+        test_ret = {'ret': 'Minion did not return. [No response]', 'out': 'no_return'}
 
         # Create a minion key, but do not start the "fake" minion. This mimics
         # a disconnected minion.
