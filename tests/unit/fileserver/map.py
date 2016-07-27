@@ -3,7 +3,7 @@
     :codeauthor: :email:`Joao Mesquita <jmesquita@sangoma.com>`
 '''
 
-# Import pytohn libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs

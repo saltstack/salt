@@ -202,7 +202,7 @@ def diff_mtime_map(map1, map2):
 
     # map1 and map2 are guaranteed to have same keys,
     # so compare mtimes
-    for filename, mtime in map1.iteritems():
+    for filename, mtime in six.iteritems(map1):
         if map2[filename] != mtime:
             return True
 
