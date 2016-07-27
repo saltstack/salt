@@ -10,6 +10,7 @@ Salt Table of Contents
     topics/using_salt
     topics/execution/index
     topics/states/index
+    topics/utils/index
     topics/event/index
     topics/orchestrate/index
     topics/ssh/index
