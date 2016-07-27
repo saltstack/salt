@@ -1021,7 +1021,11 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     poller = compconn.virtual_machines.create_or_update(
         vm_['resource_group'], vm_['name'], params
     )
-    poller.wait()
+    try:
+        poller.wait()
+    except CloudError as exc:
+        log.warn('There was a cloud error: {0}'.format(exc))
+        log.warn('This may or may not indicate an actual problem')
 
     try:
         return show_instance(vm_['name'], call='action')
