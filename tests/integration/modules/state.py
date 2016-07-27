@@ -112,9 +112,19 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        if salt.utils.is_windows():
+            self.run_function('state.request', mods='modules.state.requested_win')
+        else:
+            self.run_function('state.request', mods='modules.state.requested')
+
         ret = self.run_function('state.run_request')
-        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+
+        if salt.utils.is_windows():
+            key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
+        else:
+            key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
+
+        result = ret[key]['result']
         self.assertTrue(result)
 
     def test_run_request_failed_no_request_staged(self):
@@ -145,17 +155,24 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual(textwrap.dedent('''\
+        contents = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
             fi
-            '''), salt.utils.fopen(testfile, 'r').read())
+            ''')
+
+        if salt.utils.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
+        self.assertMultiLineEqual(
+                contents, salt.utils.fopen(testfile, 'r').read())
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -164,17 +181,8 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual(textwrap.dedent('''\
-            # set variable identifying the chroot you work in (used in the prompt below)
-            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-                debian_chroot=$(cat /etc/debian_chroot)
-            fi
-
-            # enable bash completion in interactive shells
-            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-                . /etc/bash_completion
-            fi
-            '''), salt.utils.fopen(testfile, 'r').read())
+        self.assertMultiLineEqual(
+                contents, salt.utils.fopen(testfile, 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -209,6 +217,12 @@ class StateModuleTest(integration.ModuleCase,
                 . /etc/bash_completion
             fi
             ''')
+
+        if salt.utils.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
