@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 SaltStack Extend
+~~~~~~~~~~~~~~~~
+
+A templating tool for extending SaltStack.
+
+Takes a template directory and merges it into a SaltStack source code
+directory. This tool uses Jinja2 for templating.
+
+    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 '''
 from __future__ import absolute_import
 from __future__ import print_function
@@ -26,6 +34,18 @@ except ImportError as ie:
 
 
 def _get_template(path, option_key):
+    """
+    Get the contents of a template file and provide it as a module type
+
+    :param path: path to the template.yml file
+    :type  path: ``str``
+
+    :param option_key: The unique key of this template
+    :type  option_key: ``str``
+
+    :returns: Details about the template
+    :rtype: ``tuple``
+    """
     with open(path, "r") as template_f:
         template = yaml.load(template_f)
         info = (option_key, template.get('description',''), template)
@@ -61,6 +81,12 @@ def _fetch_templates(src):
 def _mergetree(src, dst):
     """
     Akin to shutils.copytree but over existing directories, does a recursive merge copy.
+
+    :param src: The source path
+    :type  src: ``str``
+
+    :param dst: The destination path
+    :type  dst: ``str``
     """
     for item in os.listdir(src):
         s = os.path.join(src, item)
@@ -78,7 +104,17 @@ def _mergetree(src, dst):
 
 def _mergetreejinja(src, dst, context):
     """
-    Akin to shutils.copytree but over existing directories, does a recursive merge copy.
+    Merge directory A to directory B, apply Jinja2 templating to both
+    the file/folder names AND to the contents of the files
+
+    :param src: The source path
+    :type  src: ``str``
+
+    :param dst: The destination path
+    :type  dst: ``str``
+
+    :param context: The dictionary to inject into the Jinja template as context
+    :type  context: ``dict``
     """
     for item in os.listdir(src):
         s = os.path.join(src, item)
@@ -103,6 +139,15 @@ def _mergetreejinja(src, dst, context):
 def _prompt_user_variable(var_name, default_value):
     """
     Prompt the user to enter the value of a variable
+
+    :param var_name: The question to ask the user
+    :type  var_name: ``str``
+
+    :param default_value: The default value
+    :type  default_value: ``str``
+
+    :rtype: ``str``
+    :returns: the value from the user
     """
     return click.prompt(var_name, default=default_value)
 
@@ -110,8 +155,17 @@ def _prompt_user_variable(var_name, default_value):
 def _prompt_choice(var_name, options):
     """
     Prompt the user to choose between a list of options, index each one by adding an enumerator
+    based on https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
+
+    :param var_name: The question to ask the user
+    :type  var_name: ``str``
+
+    :param options: A list of options
+    :type  options: ``list`` of ``tupple``
+
+    :rtype: ``tuple``
+    :returns: The selected user
     """
-    # based on https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
     choice_map = OrderedDict(
         (u'{}'.format(i), value) for i, value in enumerate(options, 1)
     )
@@ -132,11 +186,23 @@ def _prompt_choice(var_name, options):
 
 
 def apply_template(template_dir, output_dir, context):
-    #  To a recursive file merge
+    """
+    Apply the template from the template directory to the output
+    using the supplied context dict.
+
+    :param src: The source path
+    :type  src: ``str``
+
+    :param dst: The destination path
+    :type  dst: ``str``
+
+    :param context: The dictionary to inject into the Jinja template as context
+    :type  context: ``dict``
+    """
     _mergetreejinja(template_dir, output_dir, context)
 
 
-def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None, logger=None):
+def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
     """
     A template factory for extending the salt ecosystem
 
@@ -192,7 +258,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         "release_date": date.today().strftime('%Y-%m-%d'),
         "year": date.today().strftime('%Y'),
     }
-    
+
     context = param_dict.copy()
     context.update(extension_context)
 
