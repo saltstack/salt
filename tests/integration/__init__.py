@@ -566,7 +566,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                     del sock
                 elif isinstance(port, str):
                     joined = self.run_run('manage.joined', config_dir=self.config_dir)
-                    joined = [x.lstrip('- ') for x in joined]
+                    joined = [x.decode().lstrip('- ') for x in joined]
                     if port in joined:
                         check_ports.remove(port)
             yield gen.sleep(0.125)
