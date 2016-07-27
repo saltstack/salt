@@ -44,9 +44,10 @@ from functools import partial
 from salt.loader import minion_mods
 
 # Import salt libs
-from salt.ext.six import string_types  # pylint: disable=import-error
+import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+import salt.utils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -87,7 +88,7 @@ def __virtual__():
 
 def _get_profile(service, region, key, keyid, profile):
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -106,7 +107,10 @@ def _get_profile(service, region, key, keyid, profile):
 
     label = 'boto_{0}:'.format(service)
     if keyid:
-        cxkey = label + hashlib.md5(region + keyid + key).hexdigest()
+        hash_string = region + keyid + key
+        if six.PY3:
+            hash_string = salt.utils.to_bytes(hash_string)
+        cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
 

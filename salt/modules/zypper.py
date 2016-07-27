@@ -357,8 +357,9 @@ def info_installed(*names, **kwargs):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
-            if type(value) == str:
+            if six.PY2 and type(value) == str:
                 # Check, if string is encoded in a proper UTF-8
+                # We only need to check this in Py2 as Py3 strings are already unicode
                 value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
                     value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'

@@ -6,19 +6,25 @@ Unit tests for the Snapper module
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 
-from salttesting import TestCase
+# Import Salt Testing libs
+from salttesting import TestCase, skipIf
 from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
     MagicMock,
     patch,
     mock_open,
 )
-
-from salt.exceptions import CommandExecutionError
 from salttesting.helpers import ensure_in_syspath
+
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 from salt.modules import snapper
 
 # Globals
@@ -132,6 +138,7 @@ MODULE_RET = {
 }
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase):
     def setUp(self):
         self.dbus_mock = MagicMock()
@@ -220,10 +227,16 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper.snapper.GetComparison', MagicMock())
     @patch('salt.modules.snapper.snapper.GetFiles', MagicMock(return_value=DBUS_RET['GetFiles']))
     def test_status(self):
-        self.assertItemsEqual(snapper.status(), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
+        if six.PY3:
+            self.assertCountEqual(snapper.status(), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
+        else:
+            self.assertItemsEqual(snapper.status(), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
 
     @patch('salt.modules.snapper.status', MagicMock(return_value=MODULE_RET['GETFILES']))
     def test_changed_files(self):
