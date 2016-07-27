@@ -385,7 +385,8 @@ class MinionBase(object):
                     opts,
                     timeout=60,
                     safe=True,
-                    failed=False):
+                    failed=False,
+                    failback=False):
         '''
         Evaluates and returns a tuple of the current master address and the pub_channel.
 
@@ -448,16 +449,20 @@ class MinionBase(object):
                 # because a master connection loss was detected. remove
                 # the possibly failed master from the list of masters.
                 elif failed:
-                    log.info('Moving possibly failed master {0} to the end of'
-                             ' the list of masters'.format(opts['master']))
-                    if opts['master'] in opts['master_list']:
-                        # create new list of master with the possibly failed
-                        # one moved to the end
-                        failed_master = opts['master']
-                        opts['master'] = [x for x in opts['master_list'] if opts['master'] != x]
-                        opts['master'].append(failed_master)
-                    else:
+                    if failback:
+                        # failback list of masters to original config
                         opts['master'] = opts['master_list']
+                    else:
+                        log.info('Moving possibly failed master {0} to the end of'
+                                 ' the list of masters'.format(opts['master']))
+                        if opts['master'] in opts['local_masters']:
+                            # create new list of master with the possibly failed
+                            # one moved to the end
+                            failed_master = opts['master']
+                            opts['master'] = [x for x in opts['local_masters'] if opts['master'] != x]
+                            opts['master'].append(failed_master)
+                        else:
+                            opts['master'] = opts['master_list']
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
                            'is not of type list but of type '
@@ -492,7 +497,7 @@ class MinionBase(object):
         if isinstance(opts['master'], list):
             conn = False
             # shuffle the masters and then loop through them
-            local_masters = copy.copy(opts['master'])
+            opts['local_masters'] = copy.copy(opts['master'])
             last_exc = None
 
             while True:
@@ -505,16 +510,17 @@ class MinionBase(object):
                     log.debug('Connecting to master. Attempt {0} '
                               '(infinite attempts)'.format(attempts)
                     )
-                for master in local_masters:
+                for master in opts['local_masters']:
                     opts['master'] = master
                     opts.update(prep_ip_port(opts))
                     opts.update(resolve_dns(opts))
-                    self.opts = opts
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
                     if 'master_list' not in opts:
-                        opts['master_list'] = local_masters
+                        opts['master_list'] = copy.copy(opts['local_masters'])
+
+                    self.opts = opts
 
                     try:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
@@ -1854,7 +1860,8 @@ class Minion(MinionBase):
                     try:
                         master, self.pub_channel = yield self.eval_master(
                                                             opts=self.opts,
-                                                            failed=True)
+                                                            failed=True,
+                                                            failback=package.startswith('__master_failback'))
                     except SaltClientError:
                         pass
 
