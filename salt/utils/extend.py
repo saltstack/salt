@@ -23,10 +23,13 @@ from jinja2 import Template
 
 # zip compat for PY2/3
 from salt.ext.six.moves import zip
+import salt.utils.fopen
 from salt.utils.odict import OrderedDict
 
+import salt.version
+
 import logging
-log = logging.getLogger('salt-extend')
+log = logging.getLogger(__name__)
 
 try:
     import click
@@ -36,7 +39,7 @@ except ImportError as ie:
 
 
 def _get_template(path, option_key):
-    """
+    '''
     Get the contents of a template file and provide it as a module type
 
     :param path: path to the template.yml file
@@ -47,15 +50,15 @@ def _get_template(path, option_key):
 
     :returns: Details about the template
     :rtype: ``tuple``
-    """
-    with open(path, "r") as template_f:
+    '''
+    with salt.utils.fopen(path, "r") as template_f:
         template = yaml.load(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
 
 
 def _fetch_templates(src):
-    """
+    '''
     Fetch all of the templates in the src directory
 
     :param src: The source path
@@ -63,7 +66,7 @@ def _fetch_templates(src):
 
     :rtype: ``list`` of ``tuple``
     :returns: ``list`` of ('key', 'description')
-    """
+    '''
     templates = []
     log.debug('Listing contents of {0}'.format(src))
     for item in os.listdir(src):
@@ -73,7 +76,7 @@ def _fetch_templates(src):
             if os.path.isfile(template_path):
                 try:
                     templates.append(_get_template(template_path, item))
-                except: # pylint disable=bare-except
+                except:  # pylint disable=bare-except
                     log.error("Could not load template {0}".format(template_path))
             else:
                 log.debug("Directory does not contain template.yml {0}".format(template_path))
@@ -81,7 +84,7 @@ def _fetch_templates(src):
 
 
 def _mergetree(src, dst):
-    """
+    '''
     Akin to shutils.copytree but over existing directories, does a recursive merge copy.
 
     :param src: The source path
@@ -89,7 +92,7 @@ def _mergetree(src, dst):
 
     :param dst: The destination path
     :type  dst: ``str``
-    """
+    '''
     for item in os.listdir(src):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
@@ -105,7 +108,7 @@ def _mergetree(src, dst):
 
 
 def _mergetreejinja(src, dst, context):
-    """
+    '''
     Merge directory A to directory B, apply Jinja2 templating to both
     the file/folder names AND to the contents of the files
 
@@ -117,7 +120,7 @@ def _mergetreejinja(src, dst, context):
 
     :param context: The dictionary to inject into the Jinja template as context
     :type  context: ``dict``
-    """
+    '''
     for item in os.listdir(src):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
@@ -131,15 +134,15 @@ def _mergetreejinja(src, dst, context):
         else:
             log.info("Copying file {0} to {1}".format(s, d))
             d = Template(d).render(context)
-            with open(s, 'r') as source_file:
+            with salt.utils.fopen(s, 'r') as source_file:
                 src_contents = source_file.read()
                 dest_contents = Template(src_contents).render(context)
-            with open(d, 'w') as dest_file:
+            with salt.utils.fopen(d, 'w') as dest_file:
                 dest_file.write(dest_contents)
 
 
 def _prompt_user_variable(var_name, default_value):
-    """
+    '''
     Prompt the user to enter the value of a variable
 
     :param var_name: The question to ask the user
@@ -150,12 +153,12 @@ def _prompt_user_variable(var_name, default_value):
 
     :rtype: ``str``
     :returns: the value from the user
-    """
+    '''
     return click.prompt(var_name, default=default_value)
 
 
 def _prompt_choice(var_name, options):
-    """
+    '''
     Prompt the user to choose between a list of options, index each one by adding an enumerator
     based on https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
 
@@ -167,7 +170,7 @@ def _prompt_choice(var_name, options):
 
     :rtype: ``tuple``
     :returns: The selected user
-    """
+    '''
     choice_map = OrderedDict(
         (u'{0}'.format(i), value) for i, value in enumerate(options, 1)
     )
@@ -188,7 +191,7 @@ def _prompt_choice(var_name, options):
 
 
 def apply_template(template_dir, output_dir, context):
-    """
+    '''
     Apply the template from the template directory to the output
     using the supplied context dict.
 
@@ -200,12 +203,12 @@ def apply_template(template_dir, output_dir, context):
 
     :param context: The dictionary to inject into the Jinja template as context
     :type  context: ``dict``
-    """
+    '''
     _mergetreejinja(template_dir, output_dir, context)
 
 
 def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None):
-    """
+    '''
     A template factory for extending the salt ecosystem
 
     :param extension: The extension type, e.g. 'module', 'state', if omitted, user will be prompted
@@ -225,8 +228,10 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
 
     :param temp_dir: The directory for generated code, if omitted, system temp will be used
     :type  temp_dir: ``str``
-    """
-    assert HAS_CLICK, "click is not installed, please install using pip"
+    '''
+    if not HAS_CLICK:
+        print("click is not installed, please install using pip")
+        exit(1)
 
     if salt_dir is None:
         salt_dir = '.'
@@ -238,7 +243,10 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         extension_type = 'Extension type'
         chosen_extension = _prompt_choice(extension_type, MODULE_OPTIONS)
     else:
-        assert extension in list(zip(*MODULE_OPTIONS))[0], "Module extension option not valid"
+        if extension not in list(zip(*MODULE_OPTIONS))[0]:
+            print("Module extension option not valid")
+            exit(1)
+
         chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension]
 
     extension_type = chosen_extension[0]
@@ -255,6 +263,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     module_name = name
 
     param_dict = {
+        "version": salt.version.SaltStackVersion.next_release().name,
         "module_name": module_name,
         "short_description": description,
         "release_date": date.today().strftime('%Y-%m-%d'),
