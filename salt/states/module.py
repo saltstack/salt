@@ -141,7 +141,7 @@ def run(name, **kwargs):
     ``returner``
         Specify the returner to send the return of the module execution to
 
-    ``**kwargs``
+    ``kwargs``
         Pass any arguments needed to execute the function
     '''
     ret = {'name': name,
