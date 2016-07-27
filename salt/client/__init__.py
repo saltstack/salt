@@ -967,7 +967,7 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
