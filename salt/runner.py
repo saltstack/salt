@@ -130,6 +130,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         reformatted_low = self._reformat_low(low)
         return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
 
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, full_return=False):
+        '''
+        Execute a function
+        '''
+        return super(RunnerClient, self).cmd(fun,
+                                             arg,
+                                             pub_data,
+                                             kwarg,
+                                             full_return)
+
 
 class Runner(RunnerClient):
     '''
@@ -189,7 +199,7 @@ class Runner(RunnerClient):
                                           user,
                                           async_pub['tag'],
                                           async_pub['jid'],
-                                          False)  # Don't daemonize
+                                          daemonize=False)
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):

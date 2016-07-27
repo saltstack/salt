@@ -167,7 +167,7 @@ class SyncClientMixin(object):
 
         return ret['data']['return']
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, full_return=False):
         '''
         Execute a function
 
@@ -227,7 +227,7 @@ class SyncClientMixin(object):
         low = {'fun': fun,
                'arg': args,
                'kwarg': kwargs}
-        return self.low(fun, low)
+        return self.low(fun, low, full_return=full_return)
 
     @property
     def mminion(self):
@@ -235,7 +235,7 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low):
+    def low(self, fun, low, full_return=False):
         '''
         Check for deprecated usage and allow until Salt Oxygen.
         '''
@@ -250,9 +250,9 @@ class SyncClientMixin(object):
         if msg:
             salt.utils.warn_until('Oxygen', ' '.join(msg))
 
-        return self._low(fun, low)
+        return self._low(fun, low, full_return=full_return)
 
-    def _low(self, fun, low):
+    def _low(self, fun, low, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -391,7 +391,7 @@ class SyncClientMixin(object):
         log.info('Runner completed: {0}'.format(data['jid']))
         del event
         del namespaced_event
-        return data['return']
+        return data if full_return else data['return']
 
     def get_docs(self, arg=None):
         '''
@@ -435,7 +435,7 @@ class AsyncClientMixin(object):
         low['__user__'] = user
         low['__tag__'] = tag
 
-        return self.low(fun, low)
+        return self.low(fun, low, full_return=False)
 
     def cmd_async(self, low):
         '''
