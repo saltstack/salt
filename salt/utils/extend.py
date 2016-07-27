@@ -25,6 +25,13 @@ except ImportError as ie:
     HAS_CLICK = False
 
 
+def _get_template(path, option_key):
+    with open(path, "r") as template_f:
+        template = yaml.load(template_f)
+        info = (option_key, template.get('description',''), template)
+    return info
+
+
 def _fetch_templates(src):
     """
     Fetch all of the templates in the src directory
@@ -43,9 +50,7 @@ def _fetch_templates(src):
             template_path = os.path.join(s, 'template.yml')
             if os.path.isfile(template_path):
                 try:
-                    with open(template_path, "r") as template_f:
-                        template = yaml.load(template_f)
-                        templates.append((item, template.get('description','')))
+                    templates.append(_get_template(template_path, item))
                 except:
                     log.error("Could not load template {0}".format(template_path))
             else:
@@ -96,18 +101,24 @@ def _mergetreejinja(src, dst, context):
 
 
 def _prompt_user_variable(var_name, default_value):
+    """
+    Prompt the user to enter the value of a variable
+    """
     return click.prompt(var_name, default=default_value)
 
 
 def _prompt_choice(var_name, options):
-    # From https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
+    """
+    Prompt the user to choose between a list of options, index each one by adding an enumerator
+    """
+    # based on https://github.com/audreyr/cookiecutter/blob/master/cookiecutter/prompt.py#L51
     choice_map = OrderedDict(
         (u'{}'.format(i), value) for i, value in enumerate(options, 1)
     )
     choices = choice_map.keys()
     default = u'1'
 
-    choice_lines = [u'{} - {}'.format(*c) for c in choice_map.items()]
+    choice_lines = [u'{} - {} - {}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
     prompt = u'\n'.join((
         u'Select {}:'.format(var_name),
         u'\n'.join(choice_lines),
@@ -157,10 +168,13 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     if extension is None:
         print('Choose which type of extension you are developing for SaltStack')
         extension_type = 'Extension type'
-        extension_type = _prompt_choice(extension_type, MODULE_OPTIONS)[0]
+        chosen_extension = _prompt_choice(extension_type, MODULE_OPTIONS)
     else:
         assert extension in list(zip(*MODULE_OPTIONS))[0], "Module extension option not valid"
-        extension_type = extension
+        chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension]
+
+    extension_type = chosen_extension[0]
+    extension_context = chosen_extension[2]
 
     if name is None:
         print('Enter the short name for the module (e.g. mymodule)')
@@ -178,13 +192,17 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         "release_date": date.today().strftime('%Y-%m-%d'),
         "year": date.today().strftime('%Y'),
     }
+    
+    context = param_dict.copy()
+    context.update(extension_context)
+
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
 
     apply_template(
         template_dir,
         temp_dir,
-        param_dict)
+        context)
 
     if not merge:
         print('New module stored in {0}'.format(temp_dir))
