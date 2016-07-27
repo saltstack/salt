@@ -22,20 +22,33 @@ Features
   cluster connection.
 - The ``mode`` parameter in the :py:mod:`file.managed
   <salt.states.file.managed>` state, and the ``file_mode`` parameter in the
-  :py:mod:`file.managed <salt.states.file.managed>`, can both now be set to
-  ``keep`` and the minion will keep the mode of the file from the Salt
+  :py:mod:`file.recurse <salt.states.file.recurse>` state, can both now be set
+  to ``keep`` and the minion will keep the mode of the file from the Salt
   fileserver. This works only with files coming from sources prefixed with
   ``salt://``, or files local to the minion (i.e. those which are absolute
-  paths, or are prefixed with ``file://``).
+  paths, or are prefixed with ``file://``). For example:
+
+  .. code-block:: yaml
+
+      /etc/myapp/myapp.conf:
+        file.managed:
+          - source: salt://conf/myapp/myapp.conf
+          - mode: keep
+
+      /var/www/myapp:
+        file.recurse:
+          - source: salt://path/to/myapp
+          - dir_mode: 755
+          - file_mode: keep
 
 Config Changes
 ==============
 
 The following default config values were changed:
 
-- gitfs_ssl_verify: Changed from ``False`` to ``True``
-- git_pillar_ssl_verify: Changed from ``False`` to ``True``
-- winrepo_ssl_verify: Changed from ``False`` to ``True``
+- ``gitfs_ssl_verify``: Changed from ``False`` to ``True``
+- ``git_pillar_ssl_verify``: Changed from ``False`` to ``True``
+- ``winrepo_ssl_verify``: Changed from ``False`` to ``True``
 
 Grains Changes
 ==============
@@ -60,11 +73,23 @@ Beacons Changes
 Runner Changes
 ==============
 
-- Custom utility modules are now available within runners, allowing for custom
-  runners to call out to these via ``__utils__`` as in Salt's execution
-  modules. :py:mod:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>` has
-  been added to the :py:mod:`saltutil runner <salt.runners.saltutil>` to
-  faciliate the syncing of utility modules to the master.
+- Runners can now call out to :ref:`utility modules <writing-utility-modules>`
+  via ``__utils__``.
+- ref:`Utility modules <writing-utility-modules>` (placed in
+  ``salt://_utils/``) are now able to be synced to the master, making it easier
+  to use them in custom runners. A :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` function has been added to the
+  :py:mod:`saltutil runner <salt.runners.saltutil>` to faciliate the syncing of
+  utility modules to the master.
+
+Pillar Changes
+==============
+
+- Thanks to the new :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` runner, it is now easier to get
+  ref:`utility modules <writing-utility-modules>` synced to the correct
+  location on the Master so that they are available in execution modules called
+  from Pillar SLS files.
 
 Returner Changes
 ================
