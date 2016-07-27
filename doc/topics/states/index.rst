@@ -32,8 +32,25 @@ resources to learn more about state and renderers.
 .. note::
 
     Salt execution modules are different from state modules and cannot be
-    called directly within state files.  You must use the :mod:`module <salt.states.module>`
-    state module to call execution modules within state runs.
+    called as a state in an SLS file. In other words, this will not work:
+
+    .. code-block:: yaml
+
+        moe:
+          user.rename:
+            - new_name: larry
+            - onlyif: id moe
+
+    You must use the :mod:`module <salt.states.module>` states to call
+    execution modules directly. Here's an example:
+
+    .. code-block:: yaml
+
+       rename_moe:
+         module.run:
+           - m_name: moe
+           - new_name: larry
+           - onlyif: id moe
 
 **Renderers**
     Renderers use state configuration files written in a variety of languages,
