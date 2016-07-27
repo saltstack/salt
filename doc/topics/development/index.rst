@@ -7,6 +7,7 @@ Developing Salt
     :glob:
 
     *
+    extend/index
     tests/index
     raet/index
     git/index
