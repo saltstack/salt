@@ -3,12 +3,17 @@
 SaltStack Extend
 '''
 from __future__ import absolute_import
+from __future__ import print_function
 import yaml
 from collections import OrderedDict
 from datetime import date
 import tempfile
 import os
 import shutil
+from jinja2 import Template
+
+# zip compat for Py2/3
+from salt.ext.six.moves import zip
 
 import logging
 log = logging.getLogger('salt-extend')
@@ -21,6 +26,15 @@ except ImportError as ie:
 
 
 def _fetch_templates(src):
+    """
+    Fetch all of the templates in the src directory
+
+    :param src: The source path
+    :type  src: ``str``
+
+    :rtype: ``list`` of ``tuple``
+    :returns: ``list`` of ('key', 'description')
+    """
     templates = []
     log.debug('Listing contents of {0}'.format(src))
     for item in os.listdir(src):
@@ -57,6 +71,30 @@ def _mergetree(src, dst):
             shutil.copy2(s, d)
 
 
+def _mergetreejinja(src, dst, context):
+    """
+    Akin to shutils.copytree but over existing directories, does a recursive merge copy.
+    """
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            log.info("Copying folder {0} to {1}".format(s, d))
+            if os.path.exists(d):
+                _mergetreejinja(s, d, context)
+            else:
+                os.mkdir(d)
+                _mergetreejinja(s, d, context)
+        else:
+            log.info("Copying file {0} to {1}".format(s, d))
+            d = Template(d).render(context)
+            with open(s, 'r') as source_file:
+                src_contents = source_file.read()
+                dest_contents = Template(src_contents).render(context)
+            with open(d, 'w') as dest_file:
+                dest_file.write(dest_contents)
+
+
 def _prompt_user_variable(var_name, default_value):
     return click.prompt(var_name, default=default_value)
 
@@ -82,10 +120,9 @@ def _prompt_choice(var_name, options):
     return choice_map[user_choice]
 
 
-def apply_template(template, context, output_dir):
+def apply_template(template_dir, output_dir, context):
     #  To a recursive file merge
-    # TODO
-    pass
+    _mergetreejinja(template_dir, output_dir, context)
 
 
 def run(extension=None, name=None, description=None, salt_dir=None, merge=False, temp_dir=None, logger=None):
@@ -145,10 +182,9 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         temp_dir = tempfile.mkdtemp()
 
     apply_template(
-        template=template_dir,
-        no_input=True,
-        extra_context=param_dict,
-        output_dir=temp_dir)
+        template_dir,
+        temp_dir,
+        param_dict)
 
     if not merge:
         print('New module stored in {0}'.format(temp_dir))
