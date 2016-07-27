@@ -3,7 +3,7 @@
 SaltStack Extend
 '''
 from __future__ import absolute_import
-import json
+import yaml
 from collections import OrderedDict
 from datetime import date
 import tempfile
@@ -26,16 +26,16 @@ def _fetch_templates(src):
     for item in os.listdir(src):
         s = os.path.join(src, item)
         if os.path.isdir(s):
-            template_path = os.path.join(s, 'template.json')
+            template_path = os.path.join(s, 'template.yml')
             if os.path.isfile(template_path):
                 try:
                     with open(template_path, "r") as template_f:
-                        template = json.load(template_f)
+                        template = yaml.load(template_f)
                         templates.append((item, template.get('description','')))
                 except:
                     log.error("Could not load template {0}".format(template_path))
             else:
-                log.debug("Directory does not contain template.json {0}".format(template_path))
+                log.debug("Directory does not contain template.yml {0}".format(template_path))
     return templates
 
 
