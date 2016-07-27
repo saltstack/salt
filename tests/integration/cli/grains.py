@@ -59,7 +59,7 @@ class GrainsTargetingTest(integration.ShellCase):
         '''
         Tests return of minion using grains targeting on a disconnected minion.
         '''
-        test_ret = 'Minion did not return. [Not connected]'
+        test_ret = 'Minion did not return. [No response]'
 
         # Create a minion key, but do not start the "fake" minion. This mimics a
         # disconnected minion.

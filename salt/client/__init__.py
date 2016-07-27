@@ -1279,7 +1279,12 @@ class LocalClient(object):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    if connected_minions and id_ not in connected_minions:
+                    minion_cache = os.path.join(self.opts['cachedir'], 'minions', id_, 'data.p')
+                    if self.opts['minion_data_cache'] \
+                            and os.path.exists(minion_cache) \
+                            and connected_minions \
+                            and id_ not in connected_minions:
+
                         yield {id_: {'out': 'no_return',
                                      'ret': 'Minion did not return. [Not connected]'}}
                     else:
