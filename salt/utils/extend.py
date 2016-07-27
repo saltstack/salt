@@ -23,7 +23,7 @@ from jinja2 import Template
 
 # zip compat for PY2/3
 from salt.ext.six.moves import zip
-import salt.utils.fopen
+from salt.utils import fopen
 from salt.utils.odict import OrderedDict
 
 import salt.version
@@ -36,6 +36,8 @@ try:
     HAS_CLICK = True
 except ImportError as ie:
     HAS_CLICK = False
+
+TEMPLATE_FILE_NAME = 'template.yml'
 
 
 def _get_template(path, option_key):
@@ -51,7 +53,7 @@ def _get_template(path, option_key):
     :returns: Details about the template
     :rtype: ``tuple``
     '''
-    with salt.utils.fopen(path, "r") as template_f:
+    with fopen(path, "r") as template_f:
         template = yaml.load(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
@@ -72,14 +74,15 @@ def _fetch_templates(src):
     for item in os.listdir(src):
         s = os.path.join(src, item)
         if os.path.isdir(s):
-            template_path = os.path.join(s, 'template.yml')
+            template_path = os.path.join(s, TEMPLATE_FILE_NAME)
             if os.path.isfile(template_path):
                 try:
                     templates.append(_get_template(template_path, item))
                 except:  # pylint disable=bare-except
                     log.error("Could not load template {0}".format(template_path))
             else:
-                log.debug("Directory does not contain template.yml {0}".format(template_path))
+                log.debug("Directory does not contain {1} {0}".format(template_path,
+                                                                      TEMPLATE_FILE_NAME))
     return templates
 
 
@@ -132,13 +135,14 @@ def _mergetreejinja(src, dst, context):
                 os.mkdir(d)
                 _mergetreejinja(s, d, context)
         else:
-            log.info("Copying file {0} to {1}".format(s, d))
-            d = Template(d).render(context)
-            with salt.utils.fopen(s, 'r') as source_file:
-                src_contents = source_file.read()
-                dest_contents = Template(src_contents).render(context)
-            with salt.utils.fopen(d, 'w') as dest_file:
-                dest_file.write(dest_contents)
+            if s != TEMPLATE_FILE_NAME:
+                d = Template(d).render(context)
+                log.info("Copying file {0} to {1}".format(s, d))
+                with fopen(s, 'r') as source_file:
+                    src_contents = source_file.read()
+                    dest_contents = Template(src_contents).render(context)
+                with fopen(d, 'w') as dest_file:
+                    dest_file.write(dest_contents)
 
 
 def _prompt_user_variable(var_name, default_value):
@@ -270,8 +274,18 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         "year": date.today().strftime('%Y'),
     }
 
+    # get additional questions from template
+    additional_context = {}
+    for key, val in extension_context.get('questions', {}).items():
+        # allow templates to be used in default values.
+        default = Template(val.get('default', '')).render(param_dict)
+
+        prompt_var = _prompt_user_variable(val['question'], default)
+        additional_context[key] = prompt_var
+
     context = param_dict.copy()
     context.update(extension_context)
+    context.update(additional_context)
 
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()

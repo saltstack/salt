@@ -30,14 +30,16 @@ log = logging.getLogger(__name__)
 HAS_LIBS = False
 try:
     #  Import libs...
-
+    {% if depending_libraries %}
+    import {{depending_libraries}}
+    {% endif %}
     HAS_LIBS = True
 except ImportError as ie:
     missing_package = ie.message
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = '{{module_name}}'
+__virtualname__ = '{{virtual_name}}'
 
 
 def __virtual__():
