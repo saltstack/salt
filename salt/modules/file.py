@@ -2187,15 +2187,22 @@ def blockreplace(path,
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
-            # backup old content
-            if backup is not False:
-                shutil.copy2(path, '{0}{1}'.format(path, backup))
-
             # backup file attrs
             perms = {}
             perms['user'] = get_user(path)
             perms['group'] = get_group(path)
             perms['mode'] = salt.utils.normalize_mode(get_mode(path))
+
+            # backup old content
+            if backup is not False:
+                backup_path = '{0}{1}'.format(path, backup)
+                shutil.copy2(path, backup_path)
+                # copy2 does not preserve ownership
+                check_perms(backup_path,
+                        None,
+                        perms['user'],
+                        perms['group'],
+                        perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
