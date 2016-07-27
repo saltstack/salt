@@ -8,6 +8,8 @@ A templating tool for extending SaltStack.
 Takes a template directory and merges it into a SaltStack source code
 directory. This tool uses Jinja2 for templating.
 
+This tool is accessed using `salt-extend`
+
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 '''
 from __future__ import absolute_import
@@ -20,7 +22,7 @@ import os
 import shutil
 from jinja2 import Template
 
-# zip compat for Py2/3
+# zip compat for PY2/3
 from salt.ext.six.moves import zip
 
 import logging
