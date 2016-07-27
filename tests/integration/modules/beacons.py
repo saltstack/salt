@@ -31,6 +31,7 @@ if salt.utils.is_windows():
     if current_user == 'SYSTEM':
         IS_ADMIN = True
     else:
+        import salt.utils.win_functions
         IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
 else:
     IS_ADMIN = os.geteuid() == 0
