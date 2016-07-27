@@ -494,12 +494,15 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         Terminate the started daemon
         '''
         log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
+
+        children = []
         if HAS_PSUTIL:
             try:
                 parent = psutil.Process(self._process.pid)
-                children = parent.children(recursive=True)
+                if hasattr(parent, 'children'):
+                    children = parent.children(recursive=True)
             except psutil.NoSuchProcess:
-                children = []
+                pass
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
