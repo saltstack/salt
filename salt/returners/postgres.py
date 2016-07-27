@@ -122,7 +122,6 @@ from __future__ import absolute_import
 # Import python libs
 import json
 import sys
-import time
 import logging
 from contextlib import contextmanager
 
