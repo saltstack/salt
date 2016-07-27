@@ -289,6 +289,9 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 logger.info('request files: {0}'.format(str(reqs)))
 
                 for req_file in reqs:
+                    if not os.path.isabs(req_file):
+                        req_file = os.path.join(cwd, req_file)
+
                     logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_file))
                     target_path = os.path.join(treq, os.path.basename(req_file))
 
