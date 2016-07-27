@@ -289,14 +289,13 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 logger.info('request files: {0}'.format(str(reqs)))
 
                 for req_file in reqs:
+                    if not os.path.isabs(req_file):
+                        req_file = os.path.join(cwd, req_file)
 
-                    req_filename = os.path.basename(req_file)
+                    logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_file))
+                    target_path = os.path.join(treq, os.path.basename(req_file))
 
-                    logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_filename))
-                    source_path = os.path.join(cwd, req_filename)
-                    target_path = os.path.join(treq, req_filename)
-
-                    logger.debug('S: %s', source_path)
+                    logger.debug('S: %s', req_file)
                     logger.debug('T: %s', target_path)
 
                     target_base = os.path.dirname(target_path)
@@ -307,9 +306,9 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
                     if not os.path.exists(target_path):
                         logger.debug(
-                            'Copying %s to %s', source_path, target_path
+                            'Copying %s to %s', req_file, target_path
                         )
-                        __salt__['file.copy'](source_path, target_path)
+                        __salt__['file.copy'](req_file, target_path)
 
                     logger.debug(
                         'Changing ownership of requirements file \'{0}\' to '
