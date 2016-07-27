@@ -1078,15 +1078,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if isinstance(self.opts['event_return'], list):
             # Multiple event returners
             for r in self.opts['event_return']:
-                if log.level <= logging.DEBUG:
-                    log.debug('Calling event returner {0}, one of many.'.format(r))
+                log.debug('Calling event returner {0}, one of many.'.format(r))
                 event_return = '{0}.event_return'.format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
-            if log.level <= logging.DEBUG:
-                log.debug('Calling event returner {0}, only one '
-                          'configured.'.format(self.opts['event_return']))
+            log.debug('Calling event returner {0}, only one '
+                      'configured.'.format(self.opts['event_return']))
             event_return = '{0}.event_return'.format(
                 self.opts['event_return']
                 )
