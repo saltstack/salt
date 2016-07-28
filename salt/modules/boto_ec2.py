@@ -1581,6 +1581,115 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
         return []
 
 
+def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
+                    region=None, key=None, keyid=None, profile=None):
+    '''
+    tag_maps
+        (list) - List of dicts of filters and tags, where 'filters' is a dict suitable for passing
+                 to the 'filters' argument of get_all_volumes() above, and 'tags' is a dict of tags
+                 to be set on volumes (via create_tags/delete_tags) as matched by the given filters.
+                 The filter syntax is extended to permit passing either a list of volume_ids or an
+                 instance_name (with instance_name being the Name tag of the instance to which the
+                 desired volumes are mapped).  Each mapping in the list is applied separately, so
+                 multiple sets of volumes can be all tagged differently with one call to this
+                 function.
+
+    YAML example fragment:
+
+    .. code-block:: yaml
+        - filters:
+            attachment.instance_id: i-abcdef12
+          tags:
+            Name: dev-int-abcdef12.aws-foo.com
+        - filters:
+            attachment.device: /dev/sdf
+          tags:
+            ManagedSnapshots: true
+            BillingGroup: bubba.hotep@aws-foo.com
+        - filters:
+            instance_name: prd-foo-01.aws-foo.com
+          tags:
+            Name: prd-foo-01.aws-foo.com
+            BillingGroup: infra-team@aws-foo.com
+        - filters:
+            volume_ids: [ vol-12345689, vol-abcdef12 ]
+          tags:
+            BillingGroup: infra-team@aws-foo.com
+
+    authoritative
+        (bool) - If true, any existing tags on the matched volumes, and not explicitly requested
+                 here, will be removed.
+    dry_run
+        (bool) - If true, don't change anything, just return a dictionary describing any changes
+                 which would have been applied.
+
+    returns
+        (dict) - A dict dsecribing status and any changes.
+
+    .. versionadded:: Carbon
+    '''
+    ret = {'success': True, 'comment': "", 'changes': {}}
+    for tm in tag_maps:
+        filters = tm.get('filters')
+        tags = tm.get('tags')
+        if not isinstance(filters, dict):
+            raise SaltInvocationError('Tag filters must be a dictionary: got {0}'.format(filters))
+        if not isinstance(tags, dict):
+            raise SaltInvocationError('Tags must be a dictionary: got {0}'.format(tags))
+        args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+        new_filters = {}
+        log.debug('got filters: {0}'.format(filters))
+        for k, v in six.iteritems(filters):
+            if k == 'volume_ids':
+                args['volume_ids'] = v
+            elif k == 'instance_name':
+                try:
+                    instance_id = get_id(name=v, region=region, key=key, keyid=keyid, profile=profile)
+                except CommandExecutionError as e:
+                    log.warning(e)
+                    continue  # Hmme, abort or do what we can...?  Guess the latter for now.
+                if not instance_id:
+                    log.warning("Couldn't resolve instance Name {0} to an ID.".format(v))
+                    continue
+                new_filters['attachment.instance_id'] = instance_id
+            else:
+                new_filters[k] = v
+        args['filters'] = new_filters
+        volumes = get_all_volumes(**args)
+        changes = {'old': {}, 'new': {}}
+        for vol in volumes:
+            log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+            curr = set(dict(getattr(vol, 'tags', {})).keys())
+            log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+            req = set(tags.keys())
+            add = list(req - curr)
+            update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
+            remove = list(curr - req)
+            if add or update or (authoritative and remove):
+                changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
+                changes['new'][vol.id] = tags
+            else:
+                log.debug('No changes needed for vol.id {0}'.format(vol.id))
+            if len(add):
+                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, {k: tags[k] for k in add}))
+            if len(update):
+                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, {k: tags[k] for k in update}))
+            if not dry_run:
+                if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
+                    ret['success'] = False
+                    ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
+                    return ret
+                if authoritative:
+                    if len(remove):
+                        log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                        if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
+                            ret['success'] = False
+                            ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
+                            return ret
+    ret['changes'] = changes if changes['old'] or changes['new'] else {}
+    return ret
+
+
 def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Create new metadata tags for the specified resource ids.
@@ -1608,6 +1717,43 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.create_tags(resource_ids, tags)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete metadata tags for the specified resource ids.
+
+    resource_ids
+        (string) or (list) – List of resource IDs.  A plain string will be converted to a list of one element.
+    tags
+        (dict) or (list) – Either a dictionary containing name/value pairs or a list containing just tag names.
+                           If you pass in a dictionary, the values must match the actual tag values or the tag
+                           will not be deleted. If you pass in a value of None for the tag value, all tags with
+                           that name will be deleted.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.delete_tags vol-12345678 '{"Name": "myVolume01"}'
+        salt-call boto_ec2.delete_tags vol-12345678 '["Name","MountPoint"]'
+
+    .. versionadded:: Carbon
+
+    '''
+    if not isinstance(resource_ids, list):
+        resource_ids = [resource_ids]
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.delete_tags(resource_ids, tags)
         return True
     except boto.exception.BotoServerError as e:
         log.error(e)
