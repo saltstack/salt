@@ -9,6 +9,7 @@ Manage DACLs on Windows
 from __future__ import absolute_import
 import os
 import logging
+import re
 
 # TODO: Figure out the exceptions that could be raised and properly catch
 #       them instead of a bare except that catches any exception at all
@@ -306,14 +307,34 @@ def _getUserSid(user):
     if user is None, sid will also be None
     '''
     ret = {}
-    try:
-        sid = win32security.LookupAccountName('', user)[0] if user else None
-        ret['result'] = True
-        ret['sid'] = sid
-    except Exception as e:
-        ret['result'] = False
-        ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
-            user, e)
+
+    sid_pattern = '^S-1(-\d+){1,}$'
+
+    if user and re.match(sid_pattern, user, re.I):
+        try:
+            sid = win32security.GetBinarySid(user)
+        except Exception as e:
+            ret['result'] = False
+            ret['comment'] = 'Unable to obtain the binary security identifier for {0}.  The exception was {1}.'.format(
+                user, e)
+        else:
+            try:
+                win32security.LookupAccountSid('', sid)
+                ret['result'] = True
+                ret['sid'] = sid
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = 'Unable to lookup the account for the security identifier {0}.  The exception was {1}.'.format(
+                    user, e)
+    else:
+        try:
+            sid = win32security.LookupAccountName('', user)[0] if user else None
+            ret['result'] = True
+            ret['sid'] = sid
+        except Exception as e:
+            ret['result'] = False
+            ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
+                user, e)
     return ret
 
 
