@@ -536,6 +536,10 @@ def system(name, **kwargs):
         ret['result'] = False
         ret['comment'] = str(error)
         return ret
+    except KeyError as error:
+        ret['result'] = False
+        ret['comment'] = str(error)
+        return ret
 
     # Apply global network settings
     if apply_net_settings:
