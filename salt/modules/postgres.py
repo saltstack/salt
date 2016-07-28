@@ -120,7 +120,7 @@ def __virtual__():
 
     if salt.utils.which('initdb') is None and _check_initdb_bin() is None:
         return (False, 'The initdb binary was not on the path and a '
-                'no configuration is set for it'
+                'no configuration is set for it')
 
     return True
 
