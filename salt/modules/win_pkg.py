@@ -1182,6 +1182,21 @@ def get_repo_data(saltenv='base'):
 
 
 def get_name_map(saltenv='base'):
+    '''
+    Return a reverse map of full pkg names to the names recognized by winrepo.
+
+    Args:
+        saltenv: The environment to pull use
+
+    Returns: A dictionary of the name map
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_name_map
+
+    '''
     return _get_name_map(saltenv)
 
 
