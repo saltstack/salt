@@ -751,6 +751,7 @@ class SaltMessageClient(object):
     '''
     def __init__(self, opts, host, port, io_loop=None, resolver=None,
                  connect_callback=None, disconnect_callback=None):
+        self.opts = opts
         self.host = host
         self.port = port
         self.connect_callback = connect_callback
@@ -880,7 +881,11 @@ class SaltMessageClient(object):
                 yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
-                raise SaltClientError
+                if '__last_transport' in self.opts:
+                    log.warn('There was an error trying to use TCP transport; '
+                             'attempting to fallback to another transport')
+                else:
+                    raise SaltClientError
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
                 for future in six.itervalues(self.send_future_map):
