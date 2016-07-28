@@ -792,6 +792,60 @@ class VMwareTestCase(ExtendedTestCase):
                 kwargs=None,
                 call='function')
 
+    def test_no_clonefrom_just_image(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+        import salt.config as config
+
+        profile = {
+            'base-gold': {
+                'provider': 'vcenter01:vmware',
+                'datastore': 'Datastore1',
+                'resourcepool': 'Resources',
+                'folder': 'vm',
+                'image': 'test-image'
+            }
+
+        }
+        provider_config_additions = {
+            'profiles': profile
+        }
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+        vm_ = {'profile': profile}
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
+                                         'base-gold', vm_=vm_), True)
+
+    def test_just_clonefrom(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+        import salt.config as config
+
+        profile = {
+            'base-gold': {
+                'provider': 'vcenter01:vmware',
+                'datastore': 'Datastore1',
+                'resourcepool': 'Resources',
+                'folder': 'vm',
+                'clonefrom': 'test-template'
+            }
+
+        }
+        provider_config_additions = {
+            'profiles': profile
+        }
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+        vm_ = {'profile': profile}
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
+                                                          'base-gold', vm_=vm_), True)
+
     def test_add_host_no_host_in_kwargs(self):
         '''
         Tests that a SaltCloudSystemExit is raised when host is not present in
