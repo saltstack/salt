@@ -70,7 +70,7 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     '''
-    contextkey = 'systemd._check_for_unit_changes'
+    contextkey = 'systemd._check_for_unit_changes.{0}'.format(name)
     if contextkey not in __context__:
         if _untracked_custom_unit_found(name) or _unit_file_changed(name):
             systemctl_reload()
