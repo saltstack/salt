@@ -3,7 +3,7 @@
     tests.unit.utils.extend_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test the salt extend script
+    Test the salt extend script, leave templates/test alone to keep this working!
 '''
 
 # Import python libs
@@ -11,9 +11,11 @@ from __future__ import absolute_import
 
 import os
 import shutil
+from datetime import date
 
 # Import salt libs
 import salt.utils.extend
+from salt.utils import fopen
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -33,9 +35,13 @@ class ExtendTestCase(TestCase):
     def test_run(self):
         out = salt.utils.extend.run('test', 'test', 'this description', '.', False)
         self.out = out
+        year = date.today().strftime('%Y')
         self.assertTrue(os.path.exists(out))
         self.assertFalse(os.path.exists(os.path.join(out, 'template.yml')))
-
+        self.assertTrue(os.path.exists(os.path.join(out, 'directory')))
+        self.assertTrue(os.path.exists(os.path.join(out, 'directory', 'test.py')))
+        with fopen(os.path.join(out, 'directory', 'test.py'), 'r') as test_f:
+            self.assertEqual(test_f.read(), year)
 
 if __name__ == '__main__':
     from unit import run_tests
