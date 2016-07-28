@@ -245,13 +245,14 @@ def returner(ret):
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    server.set_debuglevel(1)  # enable logging SMTP session
     if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
     if user and passwd:
         server.login(user, passwd)
         log.debug('smtp_return: Authenticated')
+    # enable logging SMTP session after the login credentials were passed
+    server.set_debuglevel(1)
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
