@@ -159,9 +159,9 @@ class StateModuleTest(integration.ModuleCase,
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
-            fi''')
+            fi
+            ''')
 
-        contents += os.linesep
         if not salt.utils.is_windows():
             contents += os.linesep
 
