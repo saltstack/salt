@@ -26,6 +26,12 @@ salt-cp
 
     salt-cp
 
+salt-extend
+===========
+.. toctree::
+
+    salt-extend
+
 salt-key
 ========
 .. toctree::
