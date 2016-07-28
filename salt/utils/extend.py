@@ -248,7 +248,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
             print("Module extension option not valid")
             exit(1)
 
-        chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension]
+        chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension][0]
 
     extension_type = chosen_extension[0]
     extension_context = chosen_extension[2]
