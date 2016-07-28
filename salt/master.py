@@ -833,8 +833,14 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
-        with salt.utils.fopen(pub_path, 'r') as fp_:
-            minion_pub = fp_.read()
+        try:
+            with salt.utils.fopen(pub_path, 'r') as fp_:
+                minion_pub = fp_.read()
+        except (IOError, OSError):
+            log.warning('Salt minion claiming to be {0} attempted to communicate '
+                    'with master but key could not be read and verification was '
+                    'denied.'.format(id_))
+            return False
         tmp_pub = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
