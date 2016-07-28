@@ -106,9 +106,12 @@ class CommandExecutionError(SaltException):
             except IndexError:
                 pass
             exc_str_prefix += ' Additional info follows:\n\n'
+            # Get rid of leading space if the exception was raised with an
+            # empty message.
+            exc_str_prefix = exc_str_prefix.lstrip()
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
-            exc_str = exc_str_prefix.lstrip() + _nested_output(self.info)
+            exc_str = exc_str_prefix + _nested_output(self.info)
 
             # For states, if self.info is a dict also provide an attribute
             # containing a nested output of the info dict without the changes
