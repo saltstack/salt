@@ -1671,9 +1671,11 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             else:
                 log.debug('No changes needed for vol.id {0}'.format(vol.id))
             if len(add):
-                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, {k: tags[k] for k in add}))
+                d = dict((k, tags[k]) for k in add)
+                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
             if len(update):
-                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, {k: tags[k] for k in update}))
+                d = dict((k, tags[k]) for k in update)
+                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
             if not dry_run:
                 if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
                     ret['success'] = False
