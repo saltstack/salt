@@ -27,6 +27,12 @@ import salt.utils.sdb as sdb
 # Import 3rd-party libs
 import salt.ext.six as six
 
+if salt.utils.is_windows():
+    _HOSTS_FILE = os.path.join(
+        os.environ['SystemRoot'], 'System32', 'drivers', 'etc', 'hosts')
+else:
+    _HOSTS_FILE = os.path.join(os.sep, 'etc', 'hosts')
+
 log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['*']
@@ -65,7 +71,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.attrs': None,
             'ldap.binddn': '',
             'ldap.bindpw': '',
-            'hosts.file': '/etc/hosts',
+            'hosts.file': _HOSTS_FILE,
             'aliases.file': '/etc/aliases',
             'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
             'virt.tunnel': False,
