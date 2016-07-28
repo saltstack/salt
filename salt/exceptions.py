@@ -100,12 +100,15 @@ class CommandExecutionError(SaltException):
         self.error = exc_str_prefix = message
         self.info = info
         if self.info:
-            if not exc_str_prefix.endswith('.'):
-                exc_str_prefix += '.'
+            try:
+                if exc_str_prefix[-1] not in '.?!':
+                    exc_str_prefix += '.'
+            except IndexError:
+                pass
             exc_str_prefix += ' Additional info follows:\n\n'
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
-            exc_str = exc_str_prefix + _nested_output(self.info)
+            exc_str = exc_str_prefix.lstrip() + _nested_output(self.info)
 
             # For states, if self.info is a dict also provide an attribute
             # containing a nested output of the info dict without the changes
