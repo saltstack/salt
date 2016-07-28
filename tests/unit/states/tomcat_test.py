@@ -109,9 +109,9 @@ class TomcatTestCase(TestCase):
         mock_deploy = MagicMock(return_value='deploy')
         mock_undeploy = MagicMock(return_value='SUCCESS')
         mock_ls_version = MagicMock(return_value={'salt': {'version': '1.2.4',
-                                                       'mode': 'running'}})
+                                                           'mode': 'running'}})
         mock_ls_no_version = MagicMock(return_value={'salt': {'version': '',
-                                                        'mode': 'running'}})
+                                                              'mode': 'running'}})
 
         # We're just checking what it *would* do.
         with patch.dict(tomcat.__opts__, {"test": True}):
@@ -202,7 +202,7 @@ class TomcatTestCase(TestCase):
         with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
                                           "tomcat.ls": mock1,
                                           "tomcat.undeploy": mock2}):
-            ret.update({'comment': 'Tomcat Manager does not response'})
+            ret.update({'comment': 'Tomcat Manager does not respond'})
             self.assertDictEqual(tomcat.undeployed('salt'), ret)
 
             ret.update({'comment': '', 'result': True})
