@@ -100,6 +100,7 @@ class SysModuleTest(integration.ModuleCase):
                 'lowpkg.bin_pkg_info',
                 'state.apply',
                 'cmd.win_runas',
+                'status.list2cmdline'
         )
 
         for fun in docs:
