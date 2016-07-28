@@ -103,9 +103,15 @@ class CommandExecutionError(SaltException):
         self.error = exc_str_prefix = message
         self.info = info
         if self.info:
-            if not exc_str_prefix.endswith('.'):
-                exc_str_prefix += '.'
+            try:
+                if exc_str_prefix[-1] not in '.?!':
+                    exc_str_prefix += '.'
+            except IndexError:
+                pass
             exc_str_prefix += ' Additional info follows:\n\n'
+            # Get rid of leading space if the exception was raised with an
+            # empty message.
+            exc_str_prefix = exc_str_prefix.lstrip()
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
             exc_str = exc_str_prefix + _nested_output(self.info)
