@@ -20,7 +20,7 @@ from salt.modules import {{module_name}}
 ensure_in_syspath('../../')
 
 SERVICE_NAME = '{{module_name}}'
-{{cookiecutter.project_name}}.__salt__ = {}
+{{module_name}}.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
