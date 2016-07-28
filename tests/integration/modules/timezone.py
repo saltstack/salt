@@ -56,7 +56,7 @@ class TimezoneWindowsModuleTest(integration.ModuleCase):
         ret_grain = self.run_function('grains.item', ['os_family'])
         if 'Windows' not in ret_grain['os_family']:
             self.skipTest('For Windows only')
-        super(TimezoneSolarisModuleTest, self).setUp()
+        super(TimezoneWindowsModuleTest, self).setUp()
 
     def test_get_hwclock(self):
         timescale = ['UTC', 'localtime']
