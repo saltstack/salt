@@ -751,6 +751,34 @@ def installed(
         ``refresh`` to ``True``. This prevents needless additional refreshes
         from slowing down the Salt run.
 
+    :param str cache_valid_time:
+        This parameter sets the value in seconds after which cache marked as invalid,
+        and cache update is necessary. This overwrite ``refresh`` parameter
+        default behavior.
+
+        Example:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed:
+                - fromrepo: mycustomrepo
+                - skip_verify: True
+                - skip_suggestions: True
+                - version: 2.0.6~ubuntu3
+                - refresh: True
+                - cache_valid_time: 300
+                - allow_updates: True
+                - hold: False
+
+        In this case refresh will not take place for 5 minutes since last
+        ``apt-get update`` executed on the system.
+
+        .. note::
+
+            This parameter available only on Debian based distributions, and
+            have no effect on the rest.
+
     :param str fromrepo:
         Specify a repository from which to install
 
@@ -1630,6 +1658,28 @@ def latest(
         ``refresh`` to ``True``. This prevents needless additional refreshes
         from slowing down the Salt run.
 
+    :param str cache_valid_time:
+        This parameter sets the value in seconds after which cache marked as invalid,
+        and cache update is necessary. This overwrite ``refresh`` parameter
+        default behavior.
+
+        Example:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.latest:
+                - refresh: True
+                - cache_valid_time: 300
+
+        In this case refresh will not take place for 5 minutes since last
+        ``apt-get update`` executed on the system.
+
+        .. note::
+
+            This parameter available only on Debian based distributions, and
+            have no effect on the rest.
+
 
     Multiple Package Installation Options:
 
@@ -2232,6 +2282,19 @@ def uptodate(name, refresh=False, **kwargs):
 
     refresh
         refresh the package database before checking for new upgrades
+
+    :param str cache_valid_time:
+        This parameter sets the value in seconds after which cache marked as invalid,
+        and cache update is necessary. This overwrite ``refresh`` parameter
+        default behavior.
+
+        In this case cache_valid_time is set, refresh will not take place for
+        amount in seconds since last ``apt-get update`` executed on the system.
+
+        .. note::
+
+            This parameter available only on Debian based distributions, and
+            have no effect on the rest.
 
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
