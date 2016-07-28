@@ -88,11 +88,14 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
     config_dir = os.path.join('etc')
     configs = {}
     config_types = (str, six.string_types,)
-    config_caster = lambda x: str(x)
 
     dirtree = [
         '&config_dirs',
     ]
+
+    @staticmethod
+    def config_caster(cfg):
+        return str(cfg)
 
     def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True, **kwargs):
         self.program = program or getattr(self, 'program', None)
@@ -568,7 +571,6 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     auxiliary program.
     '''
     config_types = (dict,)
-    config_caster = lambda x: yaml.safe_load(x)
     config_attrs = set([
         'log_dir',
         'script_dir',
@@ -588,6 +590,10 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
     script = ''
     script_dir = 'bin'
+
+    @staticmethod
+    def config_caster(cfg):
+        return yaml.safe_load(cfg)
 
     def __init__(self, *args, **kwargs):
         if len(args) < 2 and 'program' not in kwargs:
