@@ -132,7 +132,7 @@ def _mergetreejinja(src, dst, context):
                 os.mkdir(d)
                 _mergetreejinja(s, d, context)
         else:
-            if s != TEMPLATE_FILE_NAME:
+            if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
                 log.info("Copying file {0} to {1}".format(s, d))
                 with fopen(s, 'r') as source_file:
@@ -173,7 +173,7 @@ def _prompt_choice(var_name, options):
     :returns: The selected user
     '''
     choice_map = OrderedDict(
-        (u'{0}'.format(i), value) for i, value in enumerate(options, 1)
+        (u'{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
     )
     choices = choice_map.keys()
     default = u'1'
