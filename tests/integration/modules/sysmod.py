@@ -19,6 +19,60 @@ class SysModuleTest(integration.ModuleCase):
     '''
     Validate the sys module
     '''
+    def test_list_functions(self):
+        '''
+        sys.list_functions
+        '''
+        # Get all functions
+        funcs = self.run_function('sys.list_functions')
+        self.assertIn('hosts.list_hosts', funcs)
+        self.assertIn('pkg.install', funcs)
+
+        # Just pkg
+        funcs = self.run_function('sys.list_functions', ('pkg.',))
+        self.assertNotIn('sys.doc', funcs)
+        self.assertIn('pkg.install', funcs)
+
+        # Just sys
+        funcs = self.run_function('sys.list_functions', ('sys.',))
+        self.assertNotIn('pkg.install', funcs)
+        self.assertIn('sys.doc', funcs)
+
+        # Starting with sys
+        funcs = self.run_function('sys.list_functions', ('sys',))
+        self.assertNotIn('sysctl.get', funcs)
+        self.assertIn('sys.doc', funcs)
+
+    def test_list_modules(self):
+        '''
+        sys.list_modules
+        '''
+        mods = self.run_function('sys.list_modules')
+        self.assertTrue('hosts' in mods)
+        self.assertTrue('pkg' in mods)
+
+    def test_list_modules_with_arg_glob(self):
+        '''
+        sys.list_modules u*
+
+        Tests getting the list of modules with 'u*', and looking for the
+        "user" module
+        '''
+        mods = self.run_function('sys.list_modules', ['u*'])
+        self.assertNotIn('bigip', mods)
+        self.assertIn('user', mods)
+
+    def test_list_modules_with_arg_exact_match(self):
+        '''
+        sys.list_modules user
+
+        Tests getting the list of modules looking for the "user" module with
+        an exact match of 'user' being passed at the CLI instead of something
+        with '*'.
+        '''
+        mods = self.run_function('sys.list_modules', ['user'])
+        self.assertEqual(mods, ['user'])
+
     def test_valid_docs(self):
         '''
         Make sure no functions are exposed that don't have valid docstrings
@@ -45,6 +99,7 @@ class SysModuleTest(integration.ModuleCase):
                 'nspawn.restart',
                 'lowpkg.bin_pkg_info',
                 'state.apply',
+                'cmd.win_runas',
         )
 
         for fun in docs:
