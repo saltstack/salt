@@ -882,7 +882,7 @@ class SaltMessageClient(object):
             except TypeError:
                 # This is an invalid transport
                 if '__last_transport' in self.opts:
-                    log.warn('There was an error trying to use TCP transport; '
+                    log.info('There was an error trying to use TCP transport; '
                              'attempting to fallback to another transport')
                 else:
                     raise SaltClientError
