@@ -186,12 +186,12 @@ def _extract_war_version(war):
     .. code-block::
 
         /path/salt-2015.8.6.war -> 2015.8.6
-        /path/V6R2013xD5.war -> V6R2013xD5
+        /path/V6R2013xD5.war -> None
     '''
     basename = os.path.basename(war)
     war_package = os.path.splitext(basename)[0]  # remove '.war'
     version = re.findall("-([\\d.-]+)$", war_package)  # try semver
-    return version[0] if version and len(version) == 1 else war_package  # default to whole name
+    return version[0] if version and len(version) == 1 else None # default to none
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -603,8 +603,17 @@ def deploy_war(war,
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': version or _extract_war_version(war),
     }
+    
+    # If parallel versions are desired or not disabled
+    if version != False:
+        # Set it to defined version or attempt extract
+        version = version or _extract_war_version(war)
+
+        if version != ('' or None):
+            # Only pass version to Tomcat if not undefined
+            opts['version'] = version
+
     if force == 'yes':
         opts['update'] = 'true'
 
