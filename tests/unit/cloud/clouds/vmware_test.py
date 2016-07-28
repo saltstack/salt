@@ -14,6 +14,7 @@ from copy import deepcopy
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 from salttesting.helpers import ensure_in_syspath
+from salt import config
 
 ensure_in_syspath('../../../')
 
@@ -43,6 +44,14 @@ PROVIDER_CONFIG = {
   }
 }
 VM_NAME = 'test-vm'
+PROFILE = {
+  'base-gold': {
+    'provider': 'vcenter01:vmware',
+    'datastore': 'Datastore1',
+    'resourcepool': 'Resources',
+    'folder': 'vm'
+  }
+}
 
 
 class ExtendedTestCase(TestCase):
@@ -791,6 +800,73 @@ class VMwareTestCase(ExtendedTestCase):
                 vmware.add_host,
                 kwargs=None,
                 call='function')
+
+    def test_no_clonefrom_just_image(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+
+        profile_additions = {
+            'image': 'some-image.iso'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        profile = deepcopy(PROFILE)
+        profile['base-gold'].update(profile_additions)
+
+        provider_config_additions = {
+            'profiles': profile
+        }
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+        vm_ = {'profile': profile}
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
+                                                          'base-gold', vm_=vm_), True)
+
+    def test_just_clonefrom(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+
+        profile_additions = {
+            'clonefrom': 'test-template'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        profile = deepcopy(PROFILE)
+        profile['base-gold'].update(profile_additions)
+
+        provider_config_additions = {
+            'profiles': profile
+        }
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+        vm_ = {'profile': profile}
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
+                                                          'base-gold', vm_=vm_), True)
+
+    def test_no_clonefrom_expect_fail(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+
+        profile_additions = {}
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        profile = deepcopy(PROFILE)
+        profile['base-gold'].update(profile_additions)
+
+        provider_config_additions = {
+            'profiles': profile
+        }
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+        vm_ = {'profile': profile}
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
+                                                          'base-gold', vm_=vm_), False)
 
     def test_add_host_no_host_in_kwargs(self):
         '''
