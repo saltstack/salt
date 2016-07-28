@@ -2165,7 +2165,8 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              RunUserMixin,
                                              HardCrashMixin,
-                                             SaltfileMixIn)):
+                                             SaltfileMixIn,
+                                             EAuthMixIn)):
 
     description = 'Salt key is used to manage Salt authentication keys'
 
@@ -2181,6 +2182,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
     def _mixin_setup(self):
         actions_group = optparse.OptionGroup(self, 'Actions')
+        actions_group.set_conflict_handler('resolve')
         actions_group.add_option(
             '-l', '--list',
             default='',
@@ -2206,7 +2208,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             default='',
             help='Accept the specified public key (use --include-rejected and '
                  '--include-denied to match rejected and denied keys in '
-                 'addition to pending keys). Globs are supported.'
+                 'addition to pending keys). Globs are supported.',
         )
 
         actions_group.add_option(
