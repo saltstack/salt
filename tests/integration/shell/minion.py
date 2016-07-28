@@ -28,8 +28,6 @@ import integration
 from integration.utils import testprogram
 import salt.utils
 
-# Import ext libs
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -108,30 +106,38 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         Wrapper that runs the initscript for the configured minions and
         verifies the results.
         '''
+        user = getpass.getuser()
         ret = init_script.run(
             [action],
             catch_stderr=True,
             with_retcode=True,
+            env={
+                'SALTMINION_CONFIGS': '\n'.join([
+                    '{0} {1}'.format(user, minion.abs_path(minion.config_dir)) for minion in minions
+                ]),
+            },
             timeout=90,
         )
+
+        for line in ret[0]:
+            log.debug('script: salt-minion: stdout: {0}'.format(line))
+        for line in ret[1]:
+            log.debug('script: salt-minion: stderr: {0}'.format(line))
+        log.debug('exit status: {0}'.format(ret[2]))
 
         # Check minion state
         for minion in minions:
             self.assertEqual(
                 minion.is_running(),
                 minion_running,
-                'Minion "{0}" must be {1} and is not.\nSTDOUT:{2}\nSTDERR:{3}'.format(
+                'script action "{0}" should result in minion "{1}" {2} and is not.\nSTDOUT:{3}\nSTDERR:{4}'.format(
+                    action,
                     minion.name,
                     ["stopped", "running"][minion_running],
                     '\nSTDOUT:'.join(ret[0]),
                     '\nSTDERR:'.join(ret[1]),
                 )
             )
-
-        for line in ret[0]:
-            log.debug('script: salt-minion: stdout: {0}'.format(line))
-        for line in ret[1]:
-            log.debug('script: salt-minion: stderr: {0}'.format(line))
 
         if exitstatus is not None:
             self.assertEqual(
@@ -150,20 +156,22 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
     def _initscript_setup(self, minions):
         '''Re-usable setup for running salt-minion tests'''
-        user = getpass.getuser()
 
         _minions = []
         for mname in minions:
+            pid_file = 'salt-{0}.pid'.format(mname)
             minion = testprogram.TestDaemonSaltMinion(
                 name=mname,
                 root_dir='init_script',
                 config_dir=os.path.join('etc', mname),
                 parent_dir=self._test_dir,
-                configs = {
+                pid_file=pid_file,
+                configs={
                     'minion':{
                         'map':{
-                            'pidfile':os.path.join('var', 'run', 'salt-{0}.pid'.format(mname)),
+                            'pidfile':os.path.join('var', 'run', pid_file),
                             'sock_dir':os.path.join('var', 'run', 'salt', mname),
+                            'log_file':os.path.join('var', 'log', 'salt', mname),
                         },
                     },
                 },
@@ -183,9 +191,6 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             'SALTMINION_PYTHON': sys.executable,
             'SALTMINION_SYSCONFDIR': sysconf_dir,
             'SALTMINION_BINDIR': _minions[0].abs_path(_minions[0].script_dir),
-            'SALTMINION_CONFIGS': '\n'.join([
-                '{0} {1}'.format(user, minion.abs_path(minion.config_dir)) for minion in _minions
-            ]),
         }
 
         default_dir = os.path.join(sysconf_dir, 'default')
@@ -225,32 +230,36 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             # I take visual readability with aligned columns over strict PEP8
             # (bad-whitespace) Exactly one space required after comma
             # pylint: disable=C0326
-            ret = self._run_initscript(init_script, minions, False, 'bogusaction', 2)
-            ret = self._run_initscript(init_script, minions, False, 'reload',      3)  # Not implemented
-            ret = self._run_initscript(init_script, minions, False, 'stop',        0, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'status',      3, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'condrestart', 7, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'try-restart', 7, 'when not running')
-            ret = self._run_initscript(init_script, minions, True,  'start',       0, 'when not running')
+            ret = self._run_initscript(init_script, minions[:1], False, 'bogusaction', 2)
+            ret = self._run_initscript(init_script, minions[:1], False, 'reload',      3)  # Not implemented
+            ret = self._run_initscript(init_script, minions[:1], False, 'stop',        0, 'when not running')
+            ret = self._run_initscript(init_script, minions[:1], False, 'status',      3, 'when not running')
+            ret = self._run_initscript(init_script, minions[:1], False, 'condrestart', 7, 'when not running')
+            ret = self._run_initscript(init_script, minions[:1], False, 'try-restart', 7, 'when not running')
+            ret = self._run_initscript(init_script, minions,     True,  'start',       0, 'when not running')
 
-            ret = self._run_initscript(init_script, minions, True,  'status',      0, 'when running')
+            ret = self._run_initscript(init_script, minions,     True,  'status',      0, 'when running')
             # Verify that PIDs match
-            for (minion, stdout) in zip(minions, ret[0]):
-                status_pid = int(stdout.rsplit(' ', 1)[-1])
+            mpids = {}
+            for line in ret[0]:
+                segs = line.split()
+                minfo = segs[0].split(':')
+                mpids[minfo[-1]] = int(segs[-1]) if segs[-1].isdigit() else None
+            for minion in minions:
                 self.assertEqual(
-                    status_pid,
                     minion.daemon_pid,
+                    mpids[minion.name],
                     'PID in "{0}" is {1} and does not match status PID {2}'.format(
-                        minion.pid_path,
+                        minion.abs_path(minion.pid_path),
                         minion.daemon_pid,
-                        status_pid
+                        mpids[minion.name],
                     )
                 )
 
-            ret = self._run_initscript(init_script, minions, True,  'start',       0, 'when running')
-            ret = self._run_initscript(init_script, minions, True,  'condrestart', 0, 'when running')
-            ret = self._run_initscript(init_script, minions, True,  'try-restart', 0, 'when running')
-            ret = self._run_initscript(init_script, minions, False, 'stop',        0, 'when running')
+            ret = self._run_initscript(init_script, minions,     True,  'start',       0, 'when running')
+            ret = self._run_initscript(init_script, minions,     True,  'condrestart', 0, 'when running')
+            ret = self._run_initscript(init_script, minions,     True,  'try-restart', 0, 'when running')
+            ret = self._run_initscript(init_script, minions,     False, 'stop',        0, 'when running')
 
         finally:
             # Ensure that minions are shutdown
