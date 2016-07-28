@@ -201,8 +201,9 @@ def post_message(channel,
     if not channel:
         log.error('channel is a required option.')
 
-    # channel must start with a hash
-    if not channel.startswith('#'):
+    # channel must start with a hash or an @ (direct-message channels)
+    if not channel.startswith('#') and not channel.startswith('@'):
+        log.warning('Channel name must start with a hash or @. Prepending a hash and using "#{0}" as channel name instead of {1}'.format(channel, channel))
         channel = '#{0}'.format(channel)
 
     if not from_name:
