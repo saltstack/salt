@@ -74,11 +74,11 @@ import logging
 # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
-        urlopen as _urlopen,
-        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-        HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-        build_opener as _build_opener,
-        install_opener as _install_opener
+    urlopen as _urlopen,
+    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+    build_opener as _build_opener,
+    install_opener as _install_opener
 )
 # pylint: enable=no-name-in-module,import-error
 
@@ -111,7 +111,8 @@ def __virtual__():
     '''
     if __catalina_home() or _auth('dummy'):
         return 'tomcat'
-    return (False, 'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
+    return (False,
+            'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
 
 
 def __catalina_home():
@@ -168,10 +169,10 @@ def _auth(uri):
 
     basic = _HTTPBasicAuthHandler()
     basic.add_password(realm='Tomcat Manager Application', uri=uri,
-            user=user, passwd=password)
+                       user=user, passwd=password)
     digest = _HTTPDigestAuthHandler()
     digest.add_password(realm='Tomcat Manager Application', uri=uri,
-            user=user, passwd=password)
+                        user=user, passwd=password)
     return _build_opener(basic, digest)
 
 
@@ -191,7 +192,7 @@ def _extract_war_version(war):
     basename = os.path.basename(war)
     war_package = os.path.splitext(basename)[0]  # remove '.war'
     version = re.findall("-([\\d.-]+)$", war_package)  # try semver
-    return version[0] if version and len(version) == 1 else None # default to none
+    return version[0] if version and len(version) == 1 else None  # default to none
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -291,7 +292,7 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
     '''
 
     return _wget('findleaks', {'statusLine': 'true'},
-        url, timeout=timeout)['msg']
+                 url, timeout=timeout)['msg']
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -604,9 +605,9 @@ def deploy_war(war,
         'war': 'file:{0}'.format(tfile),
         'path': context,
     }
-    
+
     # If parallel versions are desired or not disabled
-    if version != False:
+    if version is True:
         # Set it to defined version or attempt extract
         version = version or _extract_war_version(war)
 
@@ -649,7 +650,7 @@ def passwd(passwd,
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
-            digest.update('{0}:{1}:{2}'.format(user, realm, passwd,))
+            digest.update('{0}:{1}:{2}'.format(user, realm, passwd, ))
         else:
             digest.update(passwd)
 

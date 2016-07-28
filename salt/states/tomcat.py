@@ -27,7 +27,7 @@ a valid user in the file ``conf/tomcat-users.xml``.
     <?xml version='1.0' encoding='utf-8'?>
     <tomcat-users>
         <role rolename="manager-script"/>
-        <user username="tomcat" password="tomcat" roles="manager-script"/>
+        <user username="tomcat-manager" password="Passw0rd" roles="manager-script"/>
     </tomcat-users>
 
 Notes
