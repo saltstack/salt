@@ -252,11 +252,15 @@ main() {
 
     # Pre-filter for unhandled commands
     case "$1" in
-        (start|stop|status|restart|condrestart|try-restart|reload) ;;
+        (start|stop|status|restart|condrestart|try-restart) ;;
+        (reload)
+            echo "Can't reload $SERVICE - you must restart it"
+            exit 3
+            ;;
         (*)
-        echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
-        exit 2
-        ;;
+            echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
+            exit 2
+            ;;
     esac
 
     while read MINION_USER CONFIG_DIR; do
@@ -299,10 +303,6 @@ main() {
                     stop
                     start || RETVAL=$?
                 fi
-                ;;
-            (reload)
-                echo "Can't reload $SERVICE configuration - you must restart it"
-                RETVAL=3
                 ;;
             (*)
                 echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
