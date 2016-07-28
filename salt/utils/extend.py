@@ -14,7 +14,7 @@ This tool is accessed using `salt-extend`
 '''
 from __future__ import absolute_import
 from __future__ import print_function
-import yaml
+
 from datetime import date
 import tempfile
 import os
@@ -22,6 +22,7 @@ import shutil
 from jinja2 import Template
 
 # zip compat for PY2/3
+from salt.serializers.yaml import deserialize
 from salt.ext.six.moves import zip
 from salt.utils import fopen
 from salt.utils.odict import OrderedDict
@@ -54,7 +55,7 @@ def _get_template(path, option_key):
     :rtype: ``tuple``
     '''
     with fopen(path, "r") as template_f:
-        template = yaml.load(template_f)
+        template = deserialize(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
 
