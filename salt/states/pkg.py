@@ -752,9 +752,12 @@ def installed(
         from slowing down the Salt run.
 
     :param str cache_valid_time:
-        This parameter sets the value in seconds after which cache marked as invalid,
-        and cache update is necessary. This overwrite ``refresh`` parameter
-        default behavior.
+
+        .. versionadded:: Carbon
+
+        This parameter sets the value in seconds after which the cache is
+        marked as invalid, and a cache update is necessary. This overwrites
+        the ``refresh`` parameter's default behavior.
 
         Example:
 
@@ -771,13 +774,13 @@ def installed(
                 - allow_updates: True
                 - hold: False
 
-        In this case refresh will not take place for 5 minutes since last
-        ``apt-get update`` executed on the system.
+        In this case, a refresh will not take place for 5 minutes since the last
+        ``apt-get update`` was executed on the system.
 
         .. note::
 
-            This parameter available only on Debian based distributions, and
-            have no effect on the rest.
+            This parameter is available only on Debian based distributions and
+            has no effect on the rest.
 
     :param str fromrepo:
         Specify a repository from which to install
@@ -1659,9 +1662,12 @@ def latest(
         from slowing down the Salt run.
 
     :param str cache_valid_time:
-        This parameter sets the value in seconds after which cache marked as invalid,
-        and cache update is necessary. This overwrite ``refresh`` parameter
-        default behavior.
+
+        .. versionadded:: Carbon
+
+        This parameter sets the value in seconds after which the cache is
+        marked as invalid, and a cache update is necessary. This overwrites
+        the ``refresh`` parameter's default behavior.
 
         Example:
 
@@ -1672,13 +1678,13 @@ def latest(
                 - refresh: True
                 - cache_valid_time: 300
 
-        In this case refresh will not take place for 5 minutes since last
-        ``apt-get update`` executed on the system.
+        In this case, a refresh will not take place for 5 minutes since the last
+        ``apt-get update`` was executed on the system.
 
         .. note::
 
-            This parameter available only on Debian based distributions, and
-            have no effect on the rest.
+            This parameter is available only on Debian based distributions and
+            has no effect on the rest.
 
 
     Multiple Package Installation Options:

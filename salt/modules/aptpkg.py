@@ -237,7 +237,10 @@ def latest_version(*names, **kwargs):
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
     cache_valid_time
-        skip refresh the package database if refresh has already occur within
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
     CLI Example:
@@ -361,7 +364,10 @@ def refresh_db(cache_valid_time=0):
     - ``None``: Database already up-to-date
 
     cache_valid_time
-        skip refresh the package database if refresh has already occur within
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
     CLI Example:
@@ -448,7 +454,10 @@ def install(name=None,
         Whether or not to refresh the package database before installing.
 
     cache_valid_time
-        skip refresh the package database if refresh has already occur within
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
     fromrepo
@@ -948,7 +957,10 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         .. versionadded:: 2014.7.0
 
     cache_valid_time
-        skip refresh the package database if refresh has already occur within
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
     force_conf_new
@@ -1338,7 +1350,10 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         Default: True.
 
     cache_valid_time
-        skip refresh the package database if refresh has already occur within
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
     dist_upgrade
