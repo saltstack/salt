@@ -76,10 +76,7 @@ def _fetch_templates(src):
         if os.path.isdir(s):
             template_path = os.path.join(s, TEMPLATE_FILE_NAME)
             if os.path.isfile(template_path):
-                try:
-                    templates.append(_get_template(template_path, item))
-                except:  # pylint disable=bare-except
-                    log.error("Could not load template {0}".format(template_path))
+                templates.append(_get_template(template_path, item))
             else:
                 log.debug("Directory does not contain {1} {0}".format(template_path,
                                                                       TEMPLATE_FILE_NAME))
@@ -296,10 +293,13 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         context)
 
     if not merge:
-        print('New module stored in {0}'.format(temp_dir))
+        path = temp_dir
     else:
         _mergetree(temp_dir, salt_dir)
-        print('New module stored in {0}'.format(salt_dir))
+        path = salt_dir
+
+    print('New module stored in {0}'.format(path))
+    return path
 
 if __name__ == '__main__':
     run()
