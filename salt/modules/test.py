@@ -37,7 +37,7 @@ def attr_call():
     '''
     Call grains.items via the attribute
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -51,7 +51,7 @@ def module_report():
     Return a dict containing all of the execution modules with a report on
     the overall availability via different references
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
