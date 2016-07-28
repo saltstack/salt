@@ -86,7 +86,7 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         master = testprogram.TestDaemonSaltMaster(
             name='unknown_user',
-            configs={'master':{'map':{'user': 'unknown'}}},
+            configs={'master': {'map': {'user': 'unknown'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist

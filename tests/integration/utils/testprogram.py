@@ -669,20 +669,20 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 class TestProgramSalt(TestSaltProgram):
     '''Class to manage salt'''
 
-    configs = {'master':{}}
+    configs = {'master': {}}
     script = 'salt'
 
 
 class TestProgramSaltCall(TestSaltProgram):
     '''Class to manage salt-call'''
 
-    configs = {'minion':{'map':{'id':'{name}'}}}
+    configs = {'minion': {'map': {'id': '{name}'}}}
 
 
 class TestProgramSaltRun(TestSaltProgram):
     '''Class to manage salt-run'''
 
-    configs = {'master':{}}
+    configs = {'master': {}}
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
@@ -799,7 +799,7 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    configs = {'master':{}}
+    configs = {'master': {}}
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
@@ -812,7 +812,7 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    configs = {'minion':{'map':{'id':'{name}'}}}
+    configs = {'minion': {'map': {'id': '{name}'}}}
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
@@ -833,8 +833,8 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
 
     configs = {
-        'master':{'map':{'syndic_master':'localhost',},},
-        'minion':{'map':{'id':'{name}',},},
+        'master': {'map': {'syndic_master': 'localhost'}},
+        'minion': {'map': {'id': '{name}'}},
     }
 
     def __init__(self, *args, **kwargs):
@@ -849,7 +849,7 @@ class TestDaemonSaltProxy(TestSaltDaemon):
     '''
 
     pid_file = 'salt-minion.pid'
-    configs = {'proxy':{}}
+    configs = {'proxy': {}}
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})

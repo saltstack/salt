@@ -167,11 +167,11 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
                 parent_dir=self._test_dir,
                 pid_file=pid_file,
                 configs={
-                    'minion':{
-                        'map':{
-                            'pidfile':os.path.join('var', 'run', pid_file),
-                            'sock_dir':os.path.join('var', 'run', 'salt', mname),
-                            'log_file':os.path.join('var', 'log', 'salt', mname),
+                    'minion': {
+                        'map': {
+                            'pidfile': os.path.join('var', 'run', pid_file),
+                            'sock_dir': os.path.join('var', 'run', 'salt', mname),
+                            'log_file': os.path.join('var', 'log', 'salt', mname),
                         },
                     },
                 },
@@ -273,7 +273,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_user',
-            configs={'minion':{'map':{'user': 'unknown'}}},
+            configs={'minion': {'map': {'user': 'unknown'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
