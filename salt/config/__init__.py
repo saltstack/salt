@@ -1072,7 +1072,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'keysize': 2048,
-    'transport': 'zeromq',
+    'transport': 'detect',
     'auth_timeout': 60,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
