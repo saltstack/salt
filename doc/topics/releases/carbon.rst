@@ -64,6 +64,31 @@ Grains Changes
 
       {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
 
+
+- On Windows the ``cpu_model`` grain has been changed to provide the actual cpu
+  model name and not the cpu family.
+
+  Old behavior:
+
+  .. code-block:: bash
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel64 Family 6 Model 58 Stepping 9, GenuineIntel
+
+  New behavior:
+
+  .. code-block:: bash
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel(R) Core(TM) i7-3520M CPU @ 2.90GHz
+
+
 Beacons Changes
 ===============
 
