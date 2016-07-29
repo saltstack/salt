@@ -2358,7 +2358,7 @@ def create(vm_):
 
     # If the hardware version is specified and if it is different from the current
     # hardware version, then schedule a hardware version upgrade
-    if hardware_version:
+    if hardware_version and object_ref is not None:
         hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
         if hardware_version != object_ref.config.version:
             log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
