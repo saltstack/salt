@@ -22,9 +22,20 @@ import integration
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+IS_ADMIN = False
+if salt.utils.is_windows():
+    import salt.utils.win_functions
+    current_user = salt.utils.win_functions.get_current_user()
+    if current_user == 'SYSTEM':
+        IS_ADMIN = True
+    else:
+        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
+else:
+    IS_ADMIN = os.geteuid() == 0
+
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'you must be root to run these tests')
+@skipIf(not IS_ADMIN, 'You must be root to run these tests')
 # Only run on linux for now until or if we can figure out a way to use
 # __grains__ inside of useradd.__virtual__
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
@@ -33,7 +44,7 @@ class UseraddModuleTest(integration.ModuleCase):
     def setUp(self):
         super(UseraddModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in ('Linux', 'Darwin'):
+        if os_grain['kernel'] not in ('Linux', 'Darwin', 'Windows'):
             self.skipTest(
                 'Test not applicable to \'{kernel}\' kernel'.format(
                     **os_grain
