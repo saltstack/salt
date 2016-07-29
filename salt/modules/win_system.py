@@ -301,7 +301,7 @@ def shutdown_abort():
     displayed to the user. Once the shutdown has initiated, it cannot be aborted
 
     :return: True if successful
-    :rtype: boo
+    :rtype: bool
 
     CLI Example:
 

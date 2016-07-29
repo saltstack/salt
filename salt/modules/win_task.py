@@ -842,7 +842,7 @@ def edit_task(name=None,
     - Stop Existing
 
     :return: True if successful, False if unsuccessful
-    :rtype: boo
+    :rtype: bool
 
     CLI Example:
 
