@@ -263,7 +263,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     if only_on_pending_reboot and not get_pending_reboot():
         return True
 
-    if message:
+    if message and not isinstance(message, str):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -420,7 +420,9 @@ def set_computer_desc(desc=None):
 
     # If desc is passed, decode it for unicode
     if desc:
-        system_info['comment'] = desc.decode('utf-8')
+        if not isinstance(desc, str):
+            desc = desc.decode('utf-8')
+        system_info['comment'] = desc
     else:
         return False
 
