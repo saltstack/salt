@@ -2246,10 +2246,9 @@ def create(vm_):
     win_user_fullname = config.get_cloud_config_value(
         'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
     )
-
+    container_ref = None
     if 'clonefrom' in vm_:
         # If datacenter is specified, set the container reference to start search from it instead
-        container_ref = None
         if datacenter:
             datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
             container_ref = datacenter_ref if datacenter_ref else None
