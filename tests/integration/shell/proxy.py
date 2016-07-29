@@ -38,7 +38,10 @@ class ProxyTest(testprogram.TestProgramCase):
         # Call setup here to ensure config and script exist
         proxy.setup()
         stdout, stderr, status = proxy.run(
-            args=['-d'],
+            args=[
+                '--config-dir', proxy.abs_path(proxy.config_dir),  # Needed due to verbatim_args=True
+                '-d',
+            ],
             verbatim_args=True,   # prevents --proxyid from being added automatically
             catch_stderr=True,
             with_retcode=True,
@@ -57,7 +60,10 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_user',
-            configs={'minion': {'map': {'user': 'unknown'}}},
+            configs={
+                'proxy': {'map': {'user': 'unknown'}},
+                'minion': {'map': {'user': 'unknown'}},
+            },
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
