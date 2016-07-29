@@ -308,7 +308,7 @@ def _getUserSid(user):
     '''
     ret = {}
 
-    sid_pattern = '^S-1(-\d+){1,}$'
+    sid_pattern = r'^S-1(-\d+){1,}$'
 
     if user and re.match(sid_pattern, user, re.I):
         try:
