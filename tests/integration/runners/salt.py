@@ -23,7 +23,7 @@ class SaltRunnerTest(integration.ShellCase):
         '''
         salt.cmd
         '''
-        ret = self.run_run_plus('salt.cmd', 'test.ping')
+        ret = self.run_run_plus('salt.cmd', '', 'test.ping')
         self.assertTrue(ret.get('out')[0])
 
 

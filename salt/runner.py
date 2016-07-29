@@ -183,9 +183,9 @@ class Runner(RunnerClient):
                 low['arg'] = args
                 low['kwarg'] = kwargs
 
-                skip_perm_errors = self.opts['eauth'] != ''
+                skip_perm_errors = self.opts.get('eauth', '') != ''
 
-                if self.opts['eauth']:
+                if self.opts.get('eauth'):
                     if 'token' in self.opts:
                         try:
                             with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
