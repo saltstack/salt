@@ -477,7 +477,7 @@ def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number)
 
     .. versionadded:: 2016.3.0
     '''
-    random_key = randint(-200, -250)
+    random_key = randint(-200, 250)
 
     ide_spec = vim.vm.device.VirtualDeviceSpec()
     ide_spec.device = vim.vm.device.VirtualIDEController()
