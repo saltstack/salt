@@ -52,6 +52,7 @@ with ``m_``:
 * name
 * names
 * state
+* saltenv
 
 For example:
 
@@ -183,6 +184,9 @@ def run(name, **kwargs):
         elif arg == 'state':
             if 'm_state' in kwargs:
                 defaults[arg] = kwargs.pop('m_state')
+        elif arg == 'saltenv':
+            if 'm_saltenv' in kwargs:
+                defaults[arg] = kwargs.pop('m_saltenv')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
@@ -195,6 +199,8 @@ def run(name, **kwargs):
             rarg = 'm_names'
         elif arg == 'state':
             rarg = 'm_state'
+        elif arg == 'saltenv':
+            rarg = 'm_saltenv'
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
