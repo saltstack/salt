@@ -281,6 +281,13 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
+    if 'enabled' in kwargs:
+        salt.utils.warn_until(
+            'Carbon',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
+
     repo = name
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
@@ -308,13 +315,9 @@ def managed(name, ppa=None, **kwargs):
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    if kwargs.pop('enabled', None):
-        kwargs['disabled'] = False
-        salt.utils.warn_until(
-            'Carbon',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
+    # Replace 'enabled' from kwargs with 'disabled'
+    enabled = kwargs.pop('enabled', True)
+    kwargs['disabled'] = not salt.utils.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)

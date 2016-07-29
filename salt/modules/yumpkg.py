@@ -2165,7 +2165,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
 
     # Build a list of keys to be deleted
-    todelete = []
+    todelete = ['disabled']
     for key in repo_opts:
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
@@ -2174,6 +2174,8 @@ def mod_repo(repo, basedir=None, **kwargs):
     # convert disabled to enabled respectively from pkgrepo state
     if 'enabled' not in repo_opts:
         repo_opts['enabled'] = int(str(repo_opts.pop('disabled', False)).lower() != 'true')
+    else:
+        repo_opts.pop('disabled', False)
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts
@@ -2302,6 +2304,7 @@ def _parse_repo_file(filename):
                         'Failed to parse line in %s, offending line was '
                         '\'%s\'', filename, line.rstrip()
                     )
+                # YUM uses enabled field - create the disabled field so that comparisons works correctly in state
                 if comps[0].strip() == 'enabled':
                     repos[repo]['disabled'] = comps[1] != "1"
 
