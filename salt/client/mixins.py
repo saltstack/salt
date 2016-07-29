@@ -463,12 +463,12 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN'):
+    def async(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        async_pub = self._gen_async_pub()
+        async_pub = pub if pub is not None else self._gen_async_pub()
 
         proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
