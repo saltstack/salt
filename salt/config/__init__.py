@@ -2835,7 +2835,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox']
+    drivers_requiring_an_image = ['nova', 'virtualbox']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
@@ -2848,14 +2848,14 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     # If cloning on Linode, size and image are not necessary.
     # They are obtained from the to-be-cloned VM.
     if driver == 'linode' and profile_key.get('clonefrom', False):
-        non_image_drivers.append('linode')
+        drivers_requiring_an_image.append('linode')
         non_size_drivers.append('linode')
 
     # If cloning on VMware, specifying image is not necessary.
-    if driver == 'vmware' and profile_key.get('clonefrom', False):
-        non_image_drivers.append('vmware')
+    if driver == 'vmware' and profile_key.get('clonefrom') is None:
+        drivers_requiring_an_image.append('vmware')
 
-    if driver not in non_image_drivers:
+    if driver in drivers_requiring_an_image:
         required_keys.append('image')
         if driver == 'vmware':
             required_keys.append('datastore')
