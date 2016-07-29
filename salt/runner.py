@@ -233,7 +233,12 @@ class Runner(RunnerClient):
 
                 # otherwise run it in the main process
                 ret = self.cmd_sync(low)
-                display_output(ret, opts=self.opts)
+                if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                    outputter = ret['outputter']
+                    ret = ret['data']
+                else:
+                    outputter = None
+                display_output(ret, outputter, self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
