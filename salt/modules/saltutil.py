@@ -45,6 +45,7 @@ import salt.runner
 import salt.state
 import salt.transport
 import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.minion
