@@ -96,6 +96,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__env__',
     '__sls__',
     '__id__',
+    '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
     '__pub_jid',
@@ -1259,7 +1260,7 @@ class State(object):
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
-    def compile_high_data(self, high):
+    def compile_high_data(self, high, orchestration_jid=None):
         '''
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
@@ -1275,6 +1276,8 @@ class State(object):
                     continue
                 chunk = {'state': state,
                          'name': name}
+                if orchestration_jid is not None:
+                    chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
                     chunk['__sls__'] = body['__sls__']
                 if '__env__' in body:
@@ -1727,6 +1730,10 @@ class State(object):
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
+
+            if '__orchestration_jid__' in low:
+                inject_globals['__orchestration_jid__'] = \
+                    low['__orchestration_jid__']
 
             if 'result' not in ret or ret['result'] is False:
                 self.states.inject_globals = inject_globals
@@ -2229,7 +2236,7 @@ class State(object):
         running.update(errors)
         return running
 
-    def call_high(self, high):
+    def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
@@ -2247,7 +2254,7 @@ class State(object):
         if errors:
             return errors
         # Compile and verify the raw chunks
-        chunks = self.compile_high_data(high)
+        chunks = self.compile_high_data(high, orchestration_jid)
 
         # Check for any disabled states
         disabled = {}
@@ -3223,7 +3230,7 @@ class BaseHighState(object):
         return ret_matches
 
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False, whitelist=None):
+                       force=False, whitelist=None, orchestration_jid=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -3245,7 +3252,7 @@ class BaseHighState(object):
             if os.path.isfile(cfn):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
-                    return self.state.call_high(high)
+                    return self.state.call_high(high, orchestration_jid)
         # File exists so continue
         err = []
         try:
@@ -3299,7 +3306,7 @@ class BaseHighState(object):
             log.error(msg.format(cfn))
 
         os.umask(cumask)
-        return self.state.call_high(high)
+        return self.state.call_high(high, orchestration_jid)
 
     def compile_highstate(self):
         '''
