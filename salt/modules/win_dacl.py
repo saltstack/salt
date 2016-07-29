@@ -39,7 +39,7 @@ __virtualname__ = 'win_dacl'
 
 class daclConstants(object):
     '''
-    dacl constants used throughout the module
+    DACL constants used throughout the module
     '''
     # Definition in ntsecuritycon is incorrect (does not match winnt.h). The version
     # in ntsecuritycon has the extra bits 0x200 enabled.
@@ -349,7 +349,7 @@ def __virtual__():
 
 def _get_dacl(path, objectType):
     '''
-    gets the dacl of a path
+    Gets the DACL of a path
     '''
     try:
         dacl = win32security.GetNamedSecurityInfo(
@@ -362,14 +362,14 @@ def _get_dacl(path, objectType):
 
 def get(path, objectType, user=None):
     '''
-    Get the acl ef an object. Will filter by user if one is provided.
+    Get the ACL of an object. Will filter by user if one is provided.
 
     Args:
         path: The path to the object
         objectType: The type of object (FILE, DIRECTORY, REGISTRY)
         user: A user name to filter by
 
-    Returns (dict): A dictionary containing the acl
+    Returns (dict): A dictionary containing the ACL
 
     CLI Example:
 
