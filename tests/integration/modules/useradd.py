@@ -178,7 +178,8 @@ class UseraddModuleTestWindows(integration.ModuleCase):
         user_name = self.__random_string()
         try:
             # Let's create a group
-            if self.run_function('group.add', [group_name]) is not True:
+            if self.run_function(
+                    'group.add', [group_name])['result'] is not True:
                 self.run_function('group.delete', [group_name, True, True])
                 self.skipTest('Failed to create group')
 
