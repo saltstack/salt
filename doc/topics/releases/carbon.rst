@@ -133,20 +133,38 @@ for more information.
 Functionality Changes
 =====================
 
-- The ``onfail`` requisite now uses OR logic instead of AND logic. :issue:`22370`
-- The consul external pillar now strips leading and trailing whitespace. :issue:`31165`
+- The ``onfail`` requisite now uses OR logic instead of AND logic.
+  :issue:`22370`
+- The consul external pillar now strips leading and trailing whitespace.
+  :issue:`31165`
 - The win_system.py state is now case sensitive for computer names. Previously
   computer names set with a state were converted to all caps. If you have a
   state setting computer names with lower case letters in the name that has
   been applied, the computer name will be changed again to apply the case
   sensitive name.
-- The ``mac_user.list_groups`` function in the ``mac_user`` execution module now
-  lists all groups for the specified user, including groups beginning with an
-  underscore. In previous releases, groups beginning with an underscore were
+- The ``mac_user.list_groups`` function in the ``mac_user`` execution module
+  now lists all groups for the specified user, including groups beginning with
+  an underscore. In previous releases, groups beginning with an underscore were
   excluded from the list of groups.
-- A new option for minions called ``master_tries`` has been added. This specifies
-  the number of times a minion should attempt to contact a master to attempt a connection.
-  This allows better handling of occasional master downtime in a multi-master topology.
+- A new option for minions called ``master_tries`` has been added. This
+  specifies the number of times a minion should attempt to contact a master to
+  attempt a connection.  This allows better handling of occasional master
+  downtime in a multi-master topology.
+- Nodegroups consisting of a simple list of minion IDs can now also be declared
+  as a yaml list. The below two examples are equivalent:
+
+  .. code-block:: yaml
+
+      # Traditional way
+      nodegroups:
+        - group1: L@host1,host2,host3
+
+      # New way (optional)
+      nodegroups:
+        - group1:
+          - host1
+          - host2
+          - host3
 
 Deprecations
 ============
