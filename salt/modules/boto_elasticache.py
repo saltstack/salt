@@ -355,6 +355,47 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     return host
 
 
+def get_all_cache_subnet_groups(name=None, region=None, key=None,
+                                keyid=None, profile=None):
+    '''
+    Return a list of all cache subnet groups with details
+
+    CLI example::
+
+        salt myminion boto_elasticache.get_all_subnet_groups region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        marker = ''
+        groups = []
+        while marker is not None:
+            ret = conn.describe_cache_subnet_groups(cache_subnet_group_name=name,
+                                                    marker=marker)
+            trimmed = ret.get('DescribeCacheSubnetGroupsResponse',
+                              {}).get('DescribeCacheSubnetGroupsResult', {})
+            groups += trimmed.get('CacheSubnetGroups', [])
+            marker = trimmed.get('Marker', None)
+        if not groups:
+            log.debug('No ElastiCache subnet groups found.')
+        return groups
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_cache_subnet_groups(name=None, region=None, key=None,
+                             keyid=None, profile=None):
+    '''
+    Return a list of all cache subnet group names
+
+    CLI example::
+
+        salt myminion boto_elasticache.list_subnet_groups region=us-east-1
+    '''
+    return [g['CacheSubnetGroupName'] for g in
+            get_all_cache_subnet_groups(name, region, key, keyid, profile)]
+
+
 def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an ElastiCache subnet group exists.
@@ -401,7 +442,7 @@ def create_subnet_group(name, description, subnet_ids=None, subnet_names=None, t
     if subnet_names:
         subnet_ids = []
         for n in subnet_names:
-            r = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
+            r = __salt__['boto_vpc.get_resource_id']('subnet', n,
                                                      region=region, key=key,
                                                      keyid=keyid, profile=profile)
             if 'id' not in r:
