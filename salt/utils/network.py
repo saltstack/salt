@@ -125,40 +125,53 @@ def _sort_hostnames(hostname_list):
     ]
 
     def _key_hostname(e):
+        hn = socket.gethostname()
+        # If the hostname contains dots, it should be assumed to be the fqdn
+        if '.' in hn and e == socket:
+            first = -1
+        else:
+            first = 1
+
+        # Favor where the host matches the hostname
+        if e.split('.')[0] == socket.gethostname().split('.')[0]:
+            second = -1
+        else:
+            second = 1
+
         # should never have a space in hostname
         # favor hostnames w/o spaces
         if ' ' in e:
-            first = 1
+            third = 1
         else:
-            first = -1
+            third = -1
 
         # punish localhost list
         if e in punish:
-            second = punish.index(e)
+            fourth = punish.index(e)
         else:
-            second = -1
+            fourth = -1
 
         # punish ipv6
-        third = e.count(':')
+        fifth = e.count(':')
 
         # punish ipv4
         # punish ipv4 addresses that start with '127.' more
         e_is_ipv4 = e.count('.') == 3 and not any(c.isalpha() for c in e)
         if e_is_ipv4:
             if e.startswith('127.'):
-                fourth = 1
+                sixth = 1
             else:
-                fourth = 0
+                sixth = 0
         else:
-            fourth = -1
+            sixth = -1
 
         # favor hosts with more dots
-        fifth = -(e.count('.'))
+        seventh = -(e.count('.'))
 
         # favor longest fqdn
-        sixth = -(len(e))
+        eighth = -(len(e))
 
-        return (first, second, third, fourth, fifth, sixth)
+        return (first, second, third, fourth, fifth, sixth, seventh, eighth)
 
     return sorted(hostname_list, key=_key_hostname)
 
