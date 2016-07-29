@@ -48,6 +48,18 @@ def __virtual__():
     return __virtualname__
 
 
+def _fire_args(tag_data):
+    try:
+        salt.utils.event.fire_args(__opts__,
+                                   __orchestration_jid__,
+                                   tag_data,
+                                   'run')
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+
+
 def state(
         name,
         tgt,
@@ -67,7 +79,8 @@ def state(
         concurrent=False,
         timeout=None,
         batch=None,
-        queue=False):
+        queue=False,
+        orchestration_jid=None):
     '''
     Invoke a state run on a given target
 
@@ -233,6 +246,7 @@ def state(
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
     if not masterless:
+        _fire_args({'type': 'state', 'tgt': tgt, 'name': name, 'args': cmd_kw})
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     else:
         if top:
@@ -421,6 +435,7 @@ def function(
         func_ret['result'] = None
         return func_ret
     try:
+        _fire_args({'type': 'function', 'tgt': tgt, 'name': name, 'args': cmd_kw})
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
         func_ret['result'] = False
@@ -618,7 +633,17 @@ def runner(name, **kwargs):
             - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
-    out = __salt__['saltutil.runner'](name, **kwargs)
+    try:
+        jid = __orchestration_jid__
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+        jid = None
+    out = __salt__['saltutil.runner'](name,
+                                      __orchestration_jid__=jid,
+                                      __env__=__env__,
+                                      **kwargs)
 
     ret['result'] = True
     ret['comment'] = "Runner function '{0}' executed.".format(name)
@@ -652,7 +677,17 @@ def wheel(name, **kwargs):
             - match: frank
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
-    out = __salt__['saltutil.wheel'](name, **kwargs)
+    try:
+        jid = __orchestration_jid__
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+        jid = None
+    out = __salt__['saltutil.wheel'](name,
+                                     __orchestration_jid__=jid,
+                                     __env__=__env__,
+                                     **kwargs)
 
     ret['result'] = True
     ret['comment'] = "Wheel function '{0}' executed.".format(name)
