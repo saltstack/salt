@@ -496,3 +496,17 @@ def salt_spm():
     import salt.cli.spm
     spm = salt.cli.spm.SPM()  # pylint: disable=E1120
     spm.run()
+
+
+def salt_extend(extension, name, description, salt_dir, merge):
+    '''
+    Quickstart for developing on the saltstack installation
+
+    .. versionadded:: Carbon
+    '''
+    import salt.utils.extend
+    salt.utils.extend.run(extension=extension,
+                          name=name,
+                          description=description,
+                          salt_dir=salt_dir,
+                          merge=merge)

@@ -64,7 +64,6 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
             libcloud_dns.__init__(None)
             dunder.assert_called_with('salt.modules.libcloud_dns')
 
-
 if __name__ == '__main__':
     from unit import run_tests
     run_tests(LibcloudDnsModuleTestCase)

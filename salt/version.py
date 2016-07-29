@@ -275,6 +275,16 @@ class SaltStackVersion(object):
             ]
         )
 
+    @classmethod
+    def next_release(cls):
+        return cls.from_name(
+            cls.VNAMES[
+                min([version_info for version_info in
+                     cls.VNAMES if
+                     version_info > cls.from_last_named_version().info])
+            ]
+        )
+
     @property
     def sse(self):
         # Higher than 0.17, lower than first date based
