@@ -145,7 +145,7 @@ def install(pkg=None,
         cmd.append('--global')
 
     if registry:
-        cmd.append('--registry="{}"'.format(registry))
+        cmd.append('--registry="{0}"'.format(registry))
 
     if dry_run:
         cmd.append('--dry-run')
