@@ -30,7 +30,7 @@ def __virtual__():
 
 def _get_components(type_regex, plural_type, install_value, image=None):
     cmd = ['DISM',
-           '/English'
+           '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-{0}'.format(plural_type)]
     out = __salt__['cmd.run'](cmd)
@@ -163,7 +163,7 @@ def get_capabilities(image=None):
             'Windows: {0}'.format(__grains__['osversion']))
 
     cmd = ['DISM',
-           '/English'
+           '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Capabilities']
     out = __salt__['cmd.run'](cmd)
