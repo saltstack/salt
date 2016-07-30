@@ -108,12 +108,13 @@ RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
 
+__virtualname__ = 'postgres_local_cache'
+
 
 def __virtual__():
     if not HAS_POSTGRES:
-        log.info("Could not import psycopg2, postges_local_cache disabled.")
-        return False
-    return 'postgres_local_cache'
+        return (False, 'Could not import psycopg2; postges_local_cache disabled')
+    return __virtualname__
 
 
 def _get_conn():
