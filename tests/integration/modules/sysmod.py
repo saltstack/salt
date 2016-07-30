@@ -59,6 +59,7 @@ class SysModuleTest(integration.ModuleCase):
         "user" module
         '''
         mods = self.run_function('sys.list_modules', ['u*'])
+        self.assertNotIn('bigip', mods)
         self.assertIn('user', mods)
 
     def test_list_modules_with_arg_exact_match(self):
