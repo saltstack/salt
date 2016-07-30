@@ -1728,6 +1728,11 @@ def run_inline_script(host,
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
+        salt.utils.warn_until(
+            'Nitrogen',
+            '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
+            'parameter be passed in when calling the function.'
+        )
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
     event = salt.utils.event.get_event(
         'master',
