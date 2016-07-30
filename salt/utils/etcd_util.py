@@ -116,7 +116,7 @@ class EtcdClient(object):
             }
 
         if ca_cert and cli_cert and cli_key:
-            cert = (cli_cert, cli_key);
+            cert = (cli_cert, cli_key)
             certs = {
                 'ca_cert': str(ca_cert),
                 'cert': cert,
