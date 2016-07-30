@@ -162,7 +162,8 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_functions(), functions)
 
-        self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+        self.assertListEqual(sysmod.list_functions('sys'),  ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+        self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
 
     # 'list_modules' function tests: 1
 
