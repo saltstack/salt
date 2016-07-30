@@ -131,7 +131,7 @@ def _check_psql_bin():
 
     Helper function when the psql command is not on the path
     '''
-    _PSQL_BIN = __salt__['config.option']('postgres.psql_bin') 
+    _PSQL_BIN = __salt__['config.option']('postgres.psql_bin')
     if _PSQL_BIN is not None and salt.utils.is_bin_file(_PSQL_BIN):
         return _PSQL_BIN
     else:
@@ -145,7 +145,7 @@ def _check_initdb_bin():
 
     Helper function when the initdb command is not on the path
     '''
-    _INITDB_BIN  = __salt__['config.option']('postgres.initdb_bin')
+    _INITDB_BIN = __salt__['config.option']('postgres.initdb_bin')
     if _INITDB_BIN is not None and salt.utils.is_bin_file(_INITDB_BIN):
         return _INITDB_BIN
     else:
@@ -347,9 +347,9 @@ def _psql_cmd(*args, **kwargs):
         kwargs.get('maintenance_db'),
         kwargs.get('password'))
     if not salt.utils.which('psql'):
-      _PSQL_BIN = _check_psql_bin()
+        _PSQL_BIN = _check_psql_bin()
     else:
-      _PSQL_BIN = salt.utils.which('psql')
+        _PSQL_BIN = salt.utils.which('psql')
 
     cmd = [_PSQL_BIN,
            '--no-align',
