@@ -192,10 +192,7 @@ def _extract_json(npm_output):
     return None
 
 
-def uninstall(pkg,
-              dir=None,
-              runas=None,
-              env=None):
+def uninstall(pkg, dir=None, runas=None, env=None):
     '''
     Uninstall an NPM package.
 
@@ -250,10 +247,7 @@ def uninstall(pkg,
     return True
 
 
-def list_(pkg=None,
-          dir=None,
-          runas=None,
-          env=None):
+def list_(pkg=None, dir=None, runas=None, env=None):
     '''
     List installed NPM packages.
 
@@ -293,7 +287,7 @@ def list_(pkg=None,
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = ['npm', 'list', '--json']
+    cmd = ['npm', 'list', '--json', '--silent']
 
     if not dir:
         cmd.append('--global')
@@ -302,6 +296,7 @@ def list_(pkg=None,
         # Protect against injection
         pkg = _cmd_quote(pkg)
         cmd.append('"{0}"'.format(pkg))
+    cmd = ' '.join(cmd)
 
     result = __salt__['cmd.run_all'](
         cmd, cwd=dir, runas=runas, env=env, python_shell=True, ignore_retcode=True)
@@ -314,9 +309,7 @@ def list_(pkg=None,
     return json.loads(result['stdout']).get('dependencies', {})
 
 
-def cache_clean(path=None,
-                runas=None,
-                env=None):
+def cache_clean(path=None, runas=None, env=None):
     '''
     Clean cached NPM packages.
 
@@ -361,9 +354,7 @@ def cache_clean(path=None,
     return True
 
 
-def cache_list(path=None,
-               runas=None,
-               env=None):
+def cache_list(path=None, runas=None, env=None):
     '''
     List NPM cached packages.
 
@@ -408,8 +399,7 @@ def cache_list(path=None,
     return result['stdout']
 
 
-def cache_path(runas=None,
-               env=None):
+def cache_path(runas=None, env=None):
     '''
     List path of the NPM cache directory.
 
