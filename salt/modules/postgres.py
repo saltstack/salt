@@ -22,11 +22,10 @@ Module to provide Postgres compatibility to salt.
 
 :note: When installing postgres from the official postgres repos, on certain
     linux distributions, either the psql or the initdb binary is *not*
-    automatically placed on the path. Adding a configuration to the relevant
-    minion for this module::
+    automatically placed on the path. Add a configuration to the location
+    of the postgres bin's path to the relevant minion for this module::
 
-        postgres.psql_bin: '/usr/pgsql-9.5/bin/psql'
-        postgres.initdb_bin: '/usr/pgsql-9.5/bin/initdb'
+        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -113,44 +112,24 @@ def __virtual__():
     '''
     Only load this module if the psql and initdb bin exist
     '''
-    if not all((salt.utils.which('psql'), HAS_CSV)):
-        if not _check_psql_bin():
-            return (False, 'The psql binary was not found on the path and a '
-                    'no configuration is set for it')
-
-    if salt.utils.which('initdb') is None and _check_initdb_bin() is None:
-        return (False, 'The initdb binary was not on the path and a '
-                'no configuration is set for it')
-
+    utils = ['psql', 'initdb']
+    for util in utils:
+        if not _find_pg_binary(util):
+            return (False, '{0} was not found'.format(util))
     return True
 
 
-def _check_psql_bin():
+def _find_pg_binary(util):
     '''
     ... versionadded::  2016.3.2
 
-    Helper function when the psql command is not on the path
+    Helper function to locate various psql related binaries
     '''
-    _PSQL_BIN = __salt__['config.option']('postgres.psql_bin')
-    if _PSQL_BIN is not None and salt.utils.is_bin_file(_PSQL_BIN):
-        return _PSQL_BIN
+    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
+    if pg_bin_dir:
+        return os.path.join(pg_bin_dir, util)
     else:
-        log.error('The psql bin cannot be located')
-        return None
-
-
-def _check_initdb_bin():
-    '''
-    ... versionadded::  2016.3.2
-
-    Helper function when the initdb command is not on the path
-    '''
-    _INITDB_BIN = __salt__['config.option']('postgres.initdb_bin')
-    if _INITDB_BIN is not None and salt.utils.is_bin_file(_INITDB_BIN):
-        return _INITDB_BIN
-    else:
-        log.error('The initdb bin cannot be located')
-        return None
+        return salt.utils.which(util)
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -223,10 +202,7 @@ def _run_initdb(name,
 
     if user is None:
         user = runas
-    if salt.utils.which('initdb') is None:
-        _INITDB_BIN = _check_initdb_bin()
-    else:
-        _INITDDB_BIN = salt.utils.which('initdb')
+    _INITDB_BIN = _find_pg_binary('initdb')
     cmd = [
         _INITDB_BIN,
         '--pgdata={0}'.format(name),
@@ -346,11 +322,7 @@ def _psql_cmd(*args, **kwargs):
         kwargs.get('port'),
         kwargs.get('maintenance_db'),
         kwargs.get('password'))
-    if not salt.utils.which('psql'):
-        _PSQL_BIN = _check_psql_bin()
-    else:
-        _PSQL_BIN = salt.utils.which('psql')
-
+    _PSQL_BIN = _find_pg_binary('psql')
     cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
@@ -3101,10 +3073,6 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
-    if salt.utils.which('initdb') is None and _check_initdb_bin() is None:
-        log.error('initdb not found in path')
-        return False
-
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False
