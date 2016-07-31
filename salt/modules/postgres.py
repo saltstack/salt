@@ -46,7 +46,6 @@ try:
     HAS_CSV = True
 except ImportError:
     HAS_CSV = False
-    log.error('the python csv module is required')
 
 # Import salt libs
 import salt.utils
@@ -118,8 +117,8 @@ def __virtual__():
         return False
     for util in utils:
         if not salt.utils.which(util):
-          if not _find_pg_binary(util):
-              return (False, '{0} was not found'.format(util))
+            if not _find_pg_binary(util):
+                return (False, '{0} was not found'.format(util))
     return True
 
 
