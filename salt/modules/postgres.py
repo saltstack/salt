@@ -46,6 +46,7 @@ try:
     HAS_CSV = True
 except ImportError:
     HAS_CSV = False
+    log.error('the python csv module is required')
 
 # Import salt libs
 import salt.utils
@@ -113,9 +114,12 @@ def __virtual__():
     Only load this module if the psql and initdb bin exist
     '''
     utils = ['psql', 'initdb']
+    if not HAS_CSV:
+        return False
     for util in utils:
-        if not _find_pg_binary(util):
-            return (False, '{0} was not found'.format(util))
+        if not salt.utils.which(util):
+          if not _find_pg_binary(util):
+              return (False, '{0} was not found'.format(util))
     return True
 
 
@@ -126,10 +130,14 @@ def _find_pg_binary(util):
     Helper function to locate various psql related binaries
     '''
     pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-    if pg_bin_dir:
-        return os.path.join(pg_bin_dir, util)
+    util_bin = salt.utils.which(util)
+    if not util_bin:
+        if pg_bin_dir:
+            return os.path.join(pg_bin_dir, util)
+        else:
+            log.error('{0} was not found'.format(util))
     else:
-        return salt.utils.which(util)
+        return util_bin
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
