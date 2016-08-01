@@ -2540,6 +2540,7 @@ def create(vm_):
         salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
 
     # If it a template or if it does not need to be powered on then do not wait for the IP
+    out = None
     if not template and power:
         ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
         if ip:
@@ -2552,7 +2553,8 @@ def create(vm_):
                 out = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
-    if deploy:
+    # out is only assigned when  it has an ip, deploy and power but not template
+    if deploy and out is not None:
         data['deploy_kwargs'] = out['deploy_kwargs']
 
     salt.utils.cloud.fire_event(
