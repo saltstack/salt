@@ -58,7 +58,7 @@ For this tutorial, simply create a small state file in `/srv/salt/vim.sls`:
     The base image you choose will need to have python 2.6 or 2.7 installed.
     We are hoping to resolve this constraint in a future release.
 
-    If `base` is ommited the default image used is a minimal OpenSUSE
+    If `base` is omitted the default image used is a minimal OpenSUSE
     image with Python support, maintained by SUSE
 
 Next run the `docker.sls_build` command:
