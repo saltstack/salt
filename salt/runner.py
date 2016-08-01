@@ -182,9 +182,17 @@ class Runner(RunnerClient):
 
                 user = salt.utils.get_specific_user()
 
+                # Allocate a jid
+                async_pub = self._gen_async_pub()
+                if low['fun'] == 'state.orchestrate':
+                    low['kwarg']['__pub_orchestration_jid'] = async_pub['jid']
+
                 # Run the runner!
                 if self.opts.get('async', False):
-                    async_pub = self.async(self.opts['fun'], low, user=user)
+                    async_pub = self.async(self.opts['fun'],
+                                           low,
+                                           user=user,
+                                           pub=async_pub)
                     # by default: info will be not enougth to be printed out !
                     log.warning('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
@@ -192,8 +200,6 @@ class Runner(RunnerClient):
                              'This execution is running under tag {tag}'.format(**async_pub))
                     return async_pub['jid']  # return the jid
 
-                # otherwise run it in the main process
-                async_pub = self._gen_async_pub()
                 ret = self._proc_function(self.opts['fun'],
                                           low,
                                           user,

@@ -148,6 +148,27 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None):
         )
 
 
+def fire_args(opts, jid, tag_data, prefix=''):
+    '''
+    Fire an event containing the arguments passed to an orchestration job
+    '''
+    try:
+        tag_suffix = [jid, 'args']
+    except NameError:
+        pass
+    else:
+        try:
+            _event = get_master_event(opts, opts['sock_dir'], listen=False)
+            tag = tagify(tag_suffix, prefix)
+            _event.fire_event(tag_data, tag=tag)
+        except Exception as exc:
+            # Don't let a problem here hold up the rest of the orchestration
+            log.warning(
+                'Failed to fire args event %s with data %s: %s',
+                tag, tag_data, exc
+            )
+
+
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string

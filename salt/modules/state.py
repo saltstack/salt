@@ -765,14 +765,15 @@ def highstate(test=None,
 
     st_.push_active()
     ret = {}
+    orchestration_jid = kwargs.get('orchestration_jid')
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
                 cache_name=kwargs.get('cache_name', 'highstate'),
                 force=kwargs.get('force', False),
-                whitelist=kwargs.get('whitelist')
-                )
+                whitelist=kwargs.get('whitelist'),
+                orchestration_jid=orchestration_jid)
     finally:
         st_.pop_active()
 
@@ -966,12 +967,13 @@ def sls(mods,
                                    pillar_enc=pillar_enc,
                                    mocked=kwargs.get('mock', False))
 
+    orchestration_jid = kwargs.get('orchestration_jid')
     umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with salt.utils.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
-                return st_.state.call_high(high_)
+                return st_.state.call_high(high_, orchestration_jid)
     os.umask(umask)
 
     if isinstance(mods, six.string_types):
@@ -993,7 +995,7 @@ def sls(mods,
                 high_['__exclude__'].extend(exclude)
             else:
                 high_['__exclude__'] = exclude
-        ret = st_.state.call_high(high_)
+        ret = st_.state.call_high(high_, orchestration_jid)
     finally:
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
@@ -1072,14 +1074,15 @@ def top(topfn,
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     ret = {}
+    orchestration_jid = kwargs.get('orchestration_jid')
     if saltenv:
         st_.opts['state_top_saltenv'] = saltenv
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
-                cache_name=kwargs.get('cache_name', 'highstate')
-                )
+                cache_name=kwargs.get('cache_name', 'highstate'),
+                orchestration_jid=orchestration_jid)
     finally:
         st_.pop_active()
 
