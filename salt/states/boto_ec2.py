@@ -914,7 +914,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
 
 def instance_absent(name, instance_name=None, instance_id=None,
                     release_eip=False, region=None, key=None, keyid=None,
-                    profile=None):
+                    profile=None, filters=None):
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
@@ -935,8 +935,17 @@ def instance_absent(name, instance_name=None, instance_id=None,
     profile
         (variable) - A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+    filters
+        (dict) - A dict of additional filters to use in matching the instance to
+        delete.
 
-    .. versionadded:: 2016.3.0
+    YAML example fragment:
+
+    .. code-block:: yaml
+        - filters:
+            vpc-id: vpc-abcdef12
+
+    .. versionupdated:: Carbon
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
@@ -951,7 +960,8 @@ def instance_absent(name, instance_name=None, instance_id=None,
         try:
             instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
                                                       region=region, key=key, keyid=keyid,
-                                                      profile=profile, in_states=running_states)
+                                                      profile=profile, in_states=running_states,
+                                                      filters=filters)
         except CommandExecutionError as e:
             ret['result'] = None
             ret['comment'] = ("Couldn't determine current status of instance "
@@ -960,7 +970,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
 
     instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
                                                     key=key, keyid=keyid, profile=profile,
-                                                    return_objs=True)
+                                                    return_objs=True, filters=filters)
     if not len(instances):
         ret['result'] = True
         ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
