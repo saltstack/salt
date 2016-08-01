@@ -272,10 +272,14 @@ class SyncClientMixin(object):
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
+        # This avoids including kwargs dict as args list in low data.
+        # We only need to update event data.
+        fun_args = low.get('args', [])
         data = {'fun': '{0}.{1}'.format(self.client, fun),
+                'fun_args': fun_args + ([low['kwargs']] if low.get('kwargs', False) else []),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
-                }
+               }
 
         event = salt.utils.event.get_event(
                 'master',

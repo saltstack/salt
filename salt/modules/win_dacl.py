@@ -368,8 +368,7 @@ def get(path, objectType, user=None):
            'ACLs': []}
 
     sidRet = _getUserSid(user)
-    if not sidRet['result']:
-        return sidRet
+
     if path and objectType:
         dc = daclConstants()
         objectTypeBit = dc.getObjectTypeBit(objectType)
@@ -666,8 +665,6 @@ def check_inheritance(path, objectType, user=None):
            'comment': ''}
 
     sidRet = _getUserSid(user)
-    if not sidRet['result']:
-        return sidRet
 
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -686,7 +683,8 @@ def check_inheritance(path, objectType, user=None):
         if (ace[0][1] & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
             if not sidRet['sid'] or ace[2] == sidRet['sid']:
                 ret['Inheritance'] = True
-                return ret
+                break
+
     ret['result'] = True
     return ret
 
