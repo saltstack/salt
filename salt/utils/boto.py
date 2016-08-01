@@ -11,7 +11,7 @@ until 2015.8.0. The `salt.utils.compat.pack_dunder` helper function
 provides backwards compatibility.
 
 This module provides common functionality for the boto execution modules.
-The expected usage is to call `apply_funcs` from the `__virtual__` function
+The expected usage is to call `assign_funcs` from the `__virtual__` function
 of the module. This will bring properly initialized partials of  `_get_conn`
 and `_cache_id` into the module's namespace.
 
@@ -25,7 +25,7 @@ Example Usage:
             # only required in 2015.2
             salt.utils.compat.pack_dunder(__name__)
 
-            __utils__['boto.apply_funcs'](__name__, 'vpc')
+            __utils__['boto.assign_funcs'](__name__, 'vpc')
 
         def test():
             conn = _get_conn()
