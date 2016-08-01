@@ -241,7 +241,7 @@ def _fingerprint(public_key):
         if six.PY2:
             raw_key = public_key.decode('base64')
         else:
-            raw_key = base64.b64decode(public_key, validate=True)
+            raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
