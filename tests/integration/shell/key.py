@@ -53,7 +53,6 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         elif self.master_opts['transport'] == 'raet':
             expect = [
                 'Accepted Keys:',
-                'master',
                 'minion',
                 'sub_minion',
                 'Unaccepted Keys:',
@@ -66,135 +65,95 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt-key -L --json-out
         '''
         data = self.run_key('-L --out json')
+        ret = {}
+        try:
+            import json
+            ret = json.loads('\n'.join(data))
+        except ValueError:
+            pass
+
         expect = None
         if self.master_opts['transport'] in ('zeromq', 'tcp'):
-            expect = [
-                '{',
-                '    "minions_rejected": [], ',
-                '    "minions_denied": [], ',
-                '    "minions_pre": [], ',
-                '    "minions": [',
-                '        "minion", ',
-                '        "sub_minion"',
-                '    ]',
-                '}',
-            ]
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expect = [
-                '{',
-                '    "accepted": [',
-                '        "master", ',
-                '        "minion", ',
-                '        "sub_minion"',
-                '    ], ',
-                '    "rejected": [], ',
-                '    "pending": []',
-                '}'
-            ]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):
         '''
         test salt-key -L --yaml-out
         '''
         data = self.run_key('-L --out yaml')
+        ret = {}
+        try:
+            import yaml
+            ret = yaml.load('\n'.join(data))
+        except Exception:
+            pass
+
         expect = []
         if self.master_opts['transport'] in ('zeromq', 'tcp'):
-            expect = [
-                'minions:',
-                '- minion',
-                '- sub_minion',
-                'minions_denied: []',
-                'minions_pre: []',
-                'minions_rejected: []',
-            ]
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expect = [
-                'accepted:',
-                '- master',
-                '- minion',
-                '- sub_minion',
-                'pending: []',
-                'rejected: []'
-            ]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_raw_out(self):
         '''
         test salt-key -L --raw-out
         '''
         data = self.run_key('-L --out raw')
+        self.assertEqual(len(data), 1)
+
+        ret = {}
+        try:
+            import ast
+            ret = ast.literal_eval(data[0])
+        except ValueError:
+            pass
+
         expect = None
         if self.master_opts['transport'] in ('zeromq', 'tcp'):
-            expect = [
-                "{'minions_rejected': [], 'minions_denied': [], 'minions_pre': [], "
-                "'minions': ['minion', 'sub_minion']}"
-            ]
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expected_txt = (
-                '{\'accepted\': '
-                '[\'master\', \'minion\', \'sub_minion\'], '
-                '\'rejected\': [], \'pending\': []}'
-            )
-            expect = [expected_txt]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_acc(self):
         '''
         test salt-key -l
         '''
         data = self.run_key('-l acc')
-        if self.master_opts['transport'] in ('zeromq', 'tcp'):
-            self.assertEqual(
-                data,
-                ['Accepted Keys:', 'minion', 'sub_minion']
-            )
-        elif self.master_opts['transport'] == 'raet':
-            self.assertEqual(
-                data,
-                [
-                    'minions:',
-                    '    - master',
-                    '    - minion',
-                    '    - sub_minion'
-                ]
-            )
+        expect = ['Accepted Keys:', 'minion', 'sub_minion']
+        self.assertEqual(data, expect)
 
     def test_list_un(self):
         '''
         test salt-key -l
         '''
         data = self.run_key('-l un')
-        expect = None
-        if self.master_opts['transport'] in ('zeromq', 'tcp'):
-            expect = ['Unaccepted Keys:']
-        elif self.master_opts['transport'] == 'raet':
-            expect = ['minions_pre:']
-        self.assertEqual(
-            data,
-            expect
-        )
+        expect = ['Unaccepted Keys:']
+        self.assertEqual(data, expect)
 
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
-        try:
-            key_names = None
-            if self.master_opts['transport'] in ('zeromq', 'tcp'):
-                key_names = ('minibar.pub', 'minibar.pem')
-            elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
-            for fname in key_names:
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
-        finally:
-            shutil.rmtree(tempdir)
-
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_keys_generation_no_configdir(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-        arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
-        self.run_script('salt-key', arg_str)
         try:
             key_names = None
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
