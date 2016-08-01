@@ -591,7 +591,9 @@ def runner(name, **kwargs):
             - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
-    out = __salt__['saltutil.runner'](name, **kwargs)
+    out = __salt__['saltutil.runner'](name,
+                                      __env__=__env__,
+                                      **kwargs)
 
     ret['result'] = True
     ret['comment'] = "Runner function '{0}' executed.".format(name)
@@ -621,7 +623,9 @@ def wheel(name, **kwargs):
             - match: frank
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
-    out = __salt__['saltutil.wheel'](name, **kwargs)
+    out = __salt__['saltutil.wheel'](name,
+                                     __env__=__env__,
+                                     **kwargs)
 
     ret['result'] = True
     ret['comment'] = "Wheel function '{0}' executed.".format(name)
