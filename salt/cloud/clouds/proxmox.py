@@ -520,11 +520,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -618,11 +619,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
     )
 
     return ret
@@ -707,7 +709,8 @@ def create_node(vm_, newid):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': newnode},
+        args={'kwargs': newnode},
+        sock_dir=__opts__['sock_dir'],
     )
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
@@ -825,7 +828,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -850,7 +854,8 @@ def destroy(name, call=None):
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         if __opts__.get('update_cachedir', False) is True:

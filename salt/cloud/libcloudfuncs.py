@@ -346,7 +346,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -386,7 +387,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
@@ -426,7 +428,8 @@ def reboot(name, conn=None):
             'event',
             '{0} has been rebooted'.format(name), 'salt-cloud'
             'salt/cloud/{0}/rebooting'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         return True
