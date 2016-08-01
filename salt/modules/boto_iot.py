@@ -49,6 +49,7 @@ Connection module for Amazon IoT
 from __future__ import absolute_import
 import logging
 import json
+import datetime
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
@@ -68,6 +69,7 @@ try:
     import boto3
     #pylint: enable=unused-import
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -81,6 +83,7 @@ def __virtual__():
     a given version.
     '''
     required_boto3_version = '1.2.1'
+    required_botocore_version = '1.4.41'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -88,8 +91,11 @@ def __virtual__():
         return (False, 'The boto_iot module could not be loaded: '
                 'boto libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
+        return (False, 'The boto_iot module could not be loaded: '
+                'boto3 version {0} or later must be installed.'.format(required_boto3_version))
+    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
+        return (False, 'The boto_iot module could not be loaded: '
+                'botocore version {0} or later must be installed.'.format(required_botocore_version))
     else:
         return True
 
@@ -98,6 +104,167 @@ def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__['boto3.assign_funcs'](__name__, 'iot')
+
+
+def thing_type_exists(thingTypeName,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a thing type name, check to see if the given thing type exists
+
+    Returns True if the given thing type exists and returns False if the
+    given thing type does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iot.thing_type_exists mythingtype
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        res = conn.describe_thing_type(thingTypeName=thingTypeName)
+        if res.get('thingTypeName'):
+            return {'exists': True}
+        else:
+            return {'exists': False}
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+
+
+def describe_thing_type(thingTypeName,
+    region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a thing type name describe its properties.
+
+    Returns a dictionary of interesting properties.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iot.describe_thing_type mythingtype
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        res = conn.describe_thing_type(thingTypeName=thingTypeName)
+        if res:
+            res.pop('ResponseMetadata', None)
+            thingTypeMetadata = res.get('thingTypeMetadata')
+            if thingTypeMetadata:
+                for dtype in ('creationDate', 'deprecationDate'):
+                    dval = thingTypeMetadata.get(dtype)
+                    if dval and isinstance(dval, datetime.date):
+                        thingTypeMetadata[dtype] = '{0}'.format(dval)
+            return {'thing_type': res}
+        else:
+            return {'thing_type': None}
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'thing_type': None}
+        return {'error': err}
+
+
+def create_thing_type(thingTypeName, thingTypeDescription,
+    searchableAttributesList, region=None, key=None,
+    keyid=None, profile=None):
+    '''
+    Given a valid config, create a thing type.
+
+    Returns {created: true} if the thing type was created and returns
+    {created: False} if the thing type was not created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iot.create_thing_type mythingtype \\
+              thingtype_description_string '["searchable_attr_1", "searchable_attr_2"]'
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        thingTypeProperties = dict(
+            thingTypeDescription=thingTypeDescription,
+            searchableAttributes=searchableAttributesList
+        )
+        thingtype = conn.create_thing_type(
+            thingTypeName=thingTypeName,
+            thingTypeProperties=thingTypeProperties
+        )
+
+        if thingtype:
+            log.info('The newly created thing type ARN is {0}'.format(thingtype['thingTypeArn']))
+
+            return {'created': True, 'thingTypeArn': thingtype['thingTypeArn']}
+        else:
+            log.warning('thing type was not created')
+            return {'created': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def deprecate_thing_type(thingTypeName, undoDeprecate=False,
+    region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a thing type name, deprecate it when undoDeprecate is False
+    and undeprecate it when undoDeprecate is True.
+
+    Returns {deprecated: true} if the thing type was deprecated and returns
+    {deprecated: false} if the thing type was not deprecated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iot.deprecate_thing_type mythingtype
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.deprecate_thing_type(
+            thingTypeName=thingTypeName,
+            undoDeprecate=undoDeprecate
+        )
+        deprecated = True if undoDeprecate is False else False
+        return {'deprecated': deprecated}
+    except ClientError as e:
+        return {'deprecated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_thing_type(thingTypeName,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a thing type name, delete it.
+
+    Returns {deleted: true} if the thing type was deleted and returns
+    {deleted: false} if the thing type was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iot.delete_thing_type mythingtype
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_thing_type(thingTypeName=thingTypeName)
+        return {'deleted': True}
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'deleted': True}
+        return {'deleted': False, 'error': err}
 
 
 def policy_exists(policyName,
