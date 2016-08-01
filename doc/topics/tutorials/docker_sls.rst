@@ -37,8 +37,8 @@ For this tutorial we will be using Salt Call, which is available in the
 `salt-minion` package, please follow the Salt Installation docs found here:
 https://repo.saltstack.com/
 
-Step 3 - Creat With Salt States
-===============================
+Step 3 - Create With Salt States
+================================
 
 Next some Salt States are needed, for this example a very basic state which
 installs `vim` is used, but anything Salt States can do can be done here,
