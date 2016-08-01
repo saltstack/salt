@@ -93,10 +93,7 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    if pkgs is not None:
-        pkg_list = pkgs
-    else:
-        pkg_list = [name]
+    pkg_list = pkgs if pkgs else [name]
 
     try:
         installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
@@ -215,9 +212,7 @@ def installed(name,
     return ret
 
 
-def removed(name,
-            dir=None,
-            user=None):
+def removed(name, dir=None, user=None):
     '''
     Verify that the given package is not installed.
 
@@ -260,9 +255,7 @@ def removed(name,
     return ret
 
 
-def bootstrap(name,
-              user=None,
-              silent=True):
+def bootstrap(name, user=None, silent=True):
     '''
     Bootstraps a node.js application.
 
@@ -278,13 +271,12 @@ def bootstrap(name,
     if __opts__['test']:
         try:
             call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
+            ret['result'] = None
+            ret['changes'] = {'old': [], 'new': call}
+            ret['comment'] = '{0} is set to be bootstrapped'.format(name)
         except (CommandNotFoundError, CommandExecutionError) as err:
             ret['result'] = False
             ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
-            return ret
-        ret['result'] = None
-        ret['changes'] = {'old': [], 'new': call}
-        ret['comment'] = '{0} is set to be bootstrapped'.format(name)
         return ret
 
     try:
