@@ -970,6 +970,7 @@ class Minion(MinionBase):
                     'seconds': self.opts['master_alive_interval'],
                     'jid_include': True,
                     'maxrunning': 1,
+                    'return_job': False,
                     'kwargs': {'master': self.opts['master'],
                                'connected': True}
                 }
@@ -984,6 +985,7 @@ class Minion(MinionBase):
                         'seconds': self.opts['master_failback_interval'],
                         'jid_include': True,
                         'maxrunning': 1,
+                        'return_job': False,
                         'kwargs': {'master': self.opts['master_list'][0]}
                     }
                 }, persist=True)
@@ -1838,6 +1840,7 @@ class Minion(MinionBase):
                        'seconds': self.opts['master_alive_interval'],
                        'jid_include': True,
                        'maxrunning': 1,
+                       'return_job': False,
                        'kwargs': {'master': self.opts['master'],
                                   'connected': False}
                     }
@@ -1883,6 +1886,7 @@ class Minion(MinionBase):
                                'seconds': self.opts['master_alive_interval'],
                                'jid_include': True,
                                'maxrunning': 1,
+                               'return_job': False,
                                'kwargs': {'master': self.opts['master'],
                                           'connected': True}
                             }
@@ -1896,6 +1900,7 @@ class Minion(MinionBase):
                                        'seconds': self.opts['master_failback_interval'],
                                        'jid_include': True,
                                        'maxrunning': 1,
+                                       'return_job': False,
                                        'kwargs': {'master': self.opts['master_list'][0]}
                                     }
                                     self.schedule.modify_job(name='__master_failback',
@@ -1919,6 +1924,7 @@ class Minion(MinionBase):
                        'seconds': self.opts['master_alive_interval'],
                        'jid_include': True,
                        'maxrunning': 1,
+                       'return_job': False,
                        'kwargs': {'master': self.opts['master'],
                                   'connected': True}
                     }
@@ -3046,6 +3052,7 @@ class ProxyMinion(Minion):
                         'seconds': self.opts['master_alive_interval'],
                         'jid_include': True,
                         'maxrunning': 1,
+                        'return_job': False,
                         'kwargs': {'master': self.opts['master'],
                                    'connected': True}
                     }
@@ -3060,6 +3067,7 @@ class ProxyMinion(Minion):
                         'seconds': self.opts['master_failback_interval'],
                         'jid_include': True,
                         'maxrunning': 1,
+                        'return_job': False,
                         'kwargs': {'master': self.opts['master_list'][0]}
                     }
                 }, persist=True)
