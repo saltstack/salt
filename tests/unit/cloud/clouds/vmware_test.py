@@ -868,6 +868,45 @@ class VMwareTestCase(ExtendedTestCase):
             self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
                                                           'base-gold', vm_=vm_), False)
 
+    @patch('salt.cloud.clouds.vmware.randint', return_value=101)
+    def test_add_new_ide_controller_helper(self, randint_mock):
+        controller_label = 'Some label'
+        bus_number = 1
+        spec = vmware._add_new_ide_controller_helper(controller_label, None, bus_number)
+        self.assertEqual(spec.device.key, randint_mock.return_value)
+
+        spec = vmware._add_new_ide_controller_helper(controller_label, 200, bus_number)
+        self.assertEqual(spec.device.key, 200)
+
+        self.assertEqual(spec.device.busNumber, bus_number)
+        self.assertEqual(spec.device.deviceInfo.label, controller_label)
+        self.assertEqual(spec.device.deviceInfo.summary, controller_label)
+
+
+    def test_manage_devices_just_cd(self):
+        device_map = {
+            'ide': {
+                'IDE 0': {},
+                'IDE 1': {}
+            },
+            'cd': {
+                'CD/DVD Drive 1': {'controller': 'IDE 0'}
+            }
+        }
+        with patch('salt.cloud.clouds.vmware.get_vcenter_version', return_value='VMware ESXi 5.5.0'):
+            specs = vmware._manage_devices(device_map, vm=None)['device_specs']
+
+            self.assertEqual(specs[0].device.key, vmware.SAFE_ESX_5_5_CONTROLLER_KEY_INDEX)
+            self.assertEqual(specs[1].device.key, vmware.SAFE_ESX_5_5_CONTROLLER_KEY_INDEX+1)
+            self.assertEqual(specs[2].device.controllerKey, vmware.SAFE_ESX_5_5_CONTROLLER_KEY_INDEX)
+
+        with patch('salt.cloud.clouds.vmware.get_vcenter_version', return_value='VMware ESXi 6'),\
+             patch('salt.cloud.clouds.vmware.randint', return_value=100) as first_key:
+            specs = vmware._manage_devices(device_map, vm=None)['device_specs']
+
+            self.assertEqual(specs[0].device.key, first_key.return_value)
+            self.assertEqual(specs[2].device.controllerKey, first_key.return_value)
+
     def test_add_host_no_host_in_kwargs(self):
         '''
         Tests that a SaltCloudSystemExit is raised when host is not present in

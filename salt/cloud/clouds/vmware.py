@@ -134,7 +134,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
-ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5.0'
+ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
 SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
 try:
     from pyVmomi import vim
@@ -602,9 +602,9 @@ def _manage_devices(devices, vm=None, container_ref=None):
     existing_cd_drives_label = []
     ide_controllers = {}
     nics_map = []
+    cloning_from_vm = vm is not None
 
-    # this would be None when we aren't cloning a VM
-    if vm:
+    if cloning_from_vm:
         # loop through all the devices the vm/template has
         # check if the device needs to be created or configured
         for device in vm.config.hardware.device:
