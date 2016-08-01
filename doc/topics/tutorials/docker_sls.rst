@@ -12,7 +12,7 @@ well as gathering operating data from containers.
 
 This new feature is simple and straightforward, and can be used via a running
 Salt Minion, the Salt Call command, or via Salt SSH. For this tutorial we will
-use the `salt-call` command, but like all salt commands these cals are
+use the `salt-call` command, but like all salt commands these calls are
 directly translatable to `salt` and `salt-ssh`.
 
 Step 1 - Install Docker
@@ -58,8 +58,8 @@ For this tutorial, simply create a small state file in `/srv/salt/vim.sls`:
     The base image you choose will need to have python 2.6 or 2.7 installed.
     We are hoping to resolve this constraint in a future release.
 
-    If `base` is ommited the default image used is a JeOS OpenSuse Leap
-    image maintained by Suse
+    If `base` is ommited the default image used is a minimal OpenSUSE
+    image with Python support, maintained by SUSE
 
 Next run the `docker.sls_build` command:
 
