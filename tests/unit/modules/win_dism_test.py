@@ -71,7 +71,7 @@ class WinDismTestCase(TestCase):
             with patch.dict(dism.__grains__, {'osversion': 10}):
                 out = dism.get_capabilities()
                 mock.assert_called_once_with(
-                    ['DISM', '/Online', '/Get-Capabilities'])
+                    ['DISM', '/English', '/Online', '/Get-Capabilities'])
                 self.assertEqual(out, ['Capa1', 'Capa2'])
 
     def test_installed_capabilities(self):
@@ -86,7 +86,7 @@ class WinDismTestCase(TestCase):
             with patch.dict(dism.__grains__, {'osversion': 10}):
                 out = dism.installed_capabilities()
                 mock.assert_called_once_with(
-                    ['DISM', '/Online', '/Get-Capabilities'])
+                    ['DISM', '/English', '/Online', '/Get-Capabilities'])
                 self.assertEqual(out, ["Capa1"])
 
     def test_available_capabilities(self):
@@ -101,7 +101,7 @@ class WinDismTestCase(TestCase):
             with patch.dict(dism.__grains__, {'osversion': 10}):
                 out = dism.available_capabilities()
                 mock.assert_called_once_with(
-                    ['DISM', '/Online', '/Get-Capabilities'])
+                    ['DISM', '/English', '/Online', '/Get-Capabilities'])
                 self.assertEqual(out, ["Capa2"])
 
     def test_add_feature(self):
@@ -159,7 +159,7 @@ class WinDismTestCase(TestCase):
         mock = MagicMock(return_value=features)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
             out = dism.get_features()
-            mock.assert_called_once_with(['DISM', '/Online', '/Get-Features'])
+            mock.assert_called_once_with(['DISM', '/English', '/Online', '/Get-Features'])
             self.assertEqual(out, ['Capa1', 'Capa2'])
 
     def test_installed_features(self):
@@ -172,7 +172,7 @@ class WinDismTestCase(TestCase):
         mock = MagicMock(return_value=features)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
             out = dism.installed_features()
-            mock.assert_called_once_with(['DISM', '/Online', '/Get-Features'])
+            mock.assert_called_once_with(['DISM', '/English', '/Online', '/Get-Features'])
             self.assertEqual(out, ["Capa1"])
 
     def test_available_features(self):
@@ -185,7 +185,7 @@ class WinDismTestCase(TestCase):
         mock = MagicMock(return_value=features)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
             out = dism.available_features()
-            mock.assert_called_once_with(['DISM', '/Online', '/Get-Features'])
+            mock.assert_called_once_with(['DISM', '/English', '/Online', '/Get-Features'])
             self.assertEqual(out, ["Capa2"])
 
     def test_add_package(self):
@@ -232,7 +232,7 @@ class WinDismTestCase(TestCase):
         mock = MagicMock(return_value=features)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
             out = dism.installed_packages()
-            mock.assert_called_once_with(['DISM', '/Online', '/Get-Packages'])
+            mock.assert_called_once_with(['DISM', '/English', '/Online', '/Get-Packages'])
             self.assertEqual(out, ['Capa1', 'Capa2'])
 
 if __name__ == '__main__':
