@@ -1882,10 +1882,16 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+
     nic_opts
         give extra opts overriding network profile values
+
     path
         parent path for the container creation (default: /var/lib/lxc)
+
+    zfsroot
+        Name of the ZFS root in which to create the volume for this container.
+        Only applicable if ``backing=zfs``. (default: tank/lxc)
 
         .. versionadded:: 2015.8.0
     '''
@@ -1935,6 +1941,7 @@ def create(name,
     lvname = select('lvname')
     fstype = select('fstype')
     size = select('size', '1G')
+    zfsroot = select('zfsroot')
     if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
         fstype = None
         size = None
@@ -1961,6 +1968,9 @@ def create(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
+        if backing in ('zfs',):
+            if zfsroot:
+                cmd += ' --zfsroot {0}'.format(zfsroot)
         if backing in ('lvm',):
             if lvname:
                 cmd += ' --lvname {0}'.format(lvname)
