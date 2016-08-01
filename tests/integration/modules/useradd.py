@@ -192,7 +192,7 @@ class UseraddModuleTestWindows(integration.ModuleCase):
 
             user_info = self.run_function('user.info', [user_name])
             self.assertIn(group_name, user_info['groups'])
-            
+
         except AssertionError:
             raise
 
