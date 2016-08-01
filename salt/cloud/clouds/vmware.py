@@ -134,6 +134,8 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
+ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5.0'
+SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
 try:
     from pyVmomi import vim
     HAS_PYVMOMI = True
@@ -471,20 +473,29 @@ def _add_new_scsi_controller_helper(scsi_controller_label, properties, bus_numbe
     return scsi_spec
 
 
-def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number):
+def _add_new_ide_controller_helper(ide_controller_label, controller_key, bus_number):
     '''
     Helper function for adding new IDE controllers
 
     .. versionadded:: 2016.3.0
+
+    Args:
+      ide_controller_label: label of the IDE controller
+      controller_key: if not None, the controller key to use; otherwise it is randomly generated
+      bus_number: bus number
+
+    Returns: created device spec for an IDE controller
+
     '''
-    random_key = randint(-200, 250)
+    if controller_key is None:
+        controller_key = randint(-200, 250)
 
     ide_spec = vim.vm.device.VirtualDeviceSpec()
     ide_spec.device = vim.vm.device.VirtualIDEController()
 
     ide_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
-    ide_spec.device.key = random_key
+    ide_spec.device.key = controller_key
     ide_spec.device.busNumber = bus_number
     ide_spec.device.deviceInfo = vim.Description()
     ide_spec.device.deviceInfo.label = ide_controller_label
@@ -687,11 +698,22 @@ def _manage_devices(devices, vm=None, container_ref=None):
         ide_controllers_to_create = list(set(devices['ide'].keys()) - set(existing_ide_controllers_label))
         ide_controllers_to_create.sort()
         log.debug('IDE controllers to create: {0}'.format(ide_controllers_to_create)) if ide_controllers_to_create else None  # pylint: disable=W0106
+
+        # ESX 5.5 (and possibly earlier?) set the IDE controller key themselves, indexed starting at
+        # 200. Rather than doing a create task/get vm/reconfig task dance we query the server and
+        # if it's ESX 5.5 we supply a controller starting at 200 and work out way upwards from there
+        # ESX 6 (and, one assumes, vCenter) does not display this problem and so continues to use
+        # the randomly generated indexes
+        vcenter_name = get_vcenter_version(call='function')
+        controller_index = SAFE_ESX_5_5_CONTROLLER_KEY_INDEX if ESX_5_5_NAME_PORTION in vcenter_name else None
+
         for ide_controller_label in ide_controllers_to_create:
             # create the IDE controller
-            ide_spec = _add_new_ide_controller_helper(ide_controller_label, None, bus_number)
+            ide_spec = _add_new_ide_controller_helper(ide_controller_label, controller_index, bus_number)
             device_specs.append(ide_spec)
             bus_number += 1
+            if controller_index is not None:
+                controller_index += 1
 
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
