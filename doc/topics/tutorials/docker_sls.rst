@@ -53,11 +53,19 @@ For this tutorial, simply create a small state file in `/srv/salt/vim.sls`:
     vim:
       pkg.installed
 
+.. note::
+
+    The base image you choose will need to have python 2.6 or 2.7 installed.
+    We are hoping to resolve this constraint in a future release.
+
+    If `base` is ommited the default image used is a JeOS OpenSuse Leap
+    image maintained by Suse
+
 Next run the `docker.sls_build` command:
 
 .. code-block:: bash
 
-    salt-call --local dockerng.sls_build test base=leapy mods=vim
+    salt-call --local dockerng.sls_build test base=my_base_image mods=vim
 
 Now we have a fresh container called `test` to work with and vim has been
 installed.
