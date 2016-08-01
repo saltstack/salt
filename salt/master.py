@@ -961,7 +961,13 @@ class AESFuncs(object):
 
         try:
             with salt.utils.fopen(pub_path, 'r') as fp_:
-                pub = RSA.importKey(fp_.read())
+                minion_pub = fp_.read()
+                pub = RSA.importKey(minion_pub)
+        except (IOError, OSError):
+            log.warning('Salt minion claiming to be {0} attempted to communicate '
+                    'with master but key could not be read and verification was '
+                    'denied.'.format(id_))
+            return False
         except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load public key "{0}": {1}'
                       .format(pub_path, err))
