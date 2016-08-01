@@ -121,6 +121,9 @@ def thing_type_present(name, thingTypeName, thingTypeDescription,
     profile
         A dict with region, key, keyid, or a pillar key (string) that
         contains a dict with region, key, and keyid
+
+    .. versionadded:: Carbon
+
     '''
     ret = {
         'name': thingTypeName,
@@ -194,6 +197,9 @@ def thing_type_absent(name, thingTypeName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+
     '''
 
     ret = {'name': thingTypeName,
