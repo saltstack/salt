@@ -157,6 +157,7 @@ class LocalemodTestCase(TestCase):
             with patch.dict(localemod.__grains__, {'os': 'Ubuntu'}):
                 self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
 
+    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
     def test_gen_locale_gentoo(self):
         '''
@@ -170,6 +171,7 @@ class LocalemodTestCase(TestCase):
                              'cmd.run_all': MagicMock(return_value=ret)}):
                 self.assertTrue(localemod.gen_locale('en_US.UTF-8 UTF-8'))
 
+    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
     def test_gen_locale_gentoo_no_charmap(self):
         '''
