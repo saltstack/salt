@@ -1053,8 +1053,24 @@ def installed(
     if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
+    was_refreshed = False
+
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name)
+        try:
+            version = __salt__['pkg.latest_version'](name,
+                                                     fromrepo=fromrepo,
+                                                     refresh=refresh)
+        except CommandExecutionError as exc:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while checking the '
+                               'newest available version of package(s): {0}'
+                               .format(exc)}
+
+        was_refreshed = refresh
+        refresh = False
+
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
@@ -1067,6 +1083,13 @@ def installed(
                         'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
+
+    # if windows and a refresh
+    # is required, we will have to do a refresh when _find_install_targets
+    # calls pkg.list_pkgs
+    if salt.utils.is_windows():
+        kwargs['refresh'] = refresh
+
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
@@ -1074,6 +1097,11 @@ def installed(
                                    normalize=normalize,
                                    ignore_epoch=ignore_epoch,
                                    **kwargs)
+
+    if salt.utils.is_windows():
+        was_refreshed = was_refreshed or refresh
+        kwargs.pop('refresh')
+        refresh = False
 
     try:
         (desired, targets, to_unpurge,
@@ -1208,9 +1236,6 @@ def installed(
                                               reinstall=reinstall,
                                               normalize=normalize,
                                               **kwargs)
-
-            if os.path.isfile(rtag) and refresh:
-                os.remove(rtag)
         except CommandExecutionError as exc:
             ret = {'name': name,
                    'changes': {},
@@ -1220,6 +1245,8 @@ def installed(
             if warnings:
                 ret['comment'] += '.' + '. '.join(warnings) + '.'
             return ret
+
+        was_refreshed = was_refreshed or refresh
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
@@ -1265,6 +1292,9 @@ def installed(
                                              and hold_ret[x]['result']]
                         failed_hold = [hold_ret[x] for x in hold_ret
                                        if not hold_ret[x]['result']]
+
+    if os.path.isfile(rtag) and was_refreshed:
+        os.remove(rtag)
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
