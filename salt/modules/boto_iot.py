@@ -120,6 +120,8 @@ def thing_type_exists(thingTypeName,
 
         salt myminion boto_iot.thing_type_exists mythingtype
 
+    .. versionadded:: Carbon
+
     '''
 
     try:
@@ -148,6 +150,8 @@ def describe_thing_type(thingTypeName,
     .. code-block:: bash
 
         salt myminion boto_iot.describe_thing_type mythingtype
+
+    .. versionadded:: Carbon
 
     '''
     try:
@@ -186,6 +190,8 @@ def create_thing_type(thingTypeName, thingTypeDescription,
 
         salt myminion boto_iot.create_thing_type mythingtype \\
               thingtype_description_string '["searchable_attr_1", "searchable_attr_2"]'
+
+    .. versionadded:: Carbon
 
     '''
 
@@ -226,6 +232,8 @@ def deprecate_thing_type(thingTypeName, undoDeprecate=False,
 
         salt myminion boto_iot.deprecate_thing_type mythingtype
 
+    .. versionadded:: Carbon
+
     '''
 
     try:
@@ -253,6 +261,8 @@ def delete_thing_type(thingTypeName,
     .. code-block:: bash
 
         salt myminion boto_iot.delete_thing_type mythingtype
+
+    .. versionadded:: Carbon
 
     '''
 
