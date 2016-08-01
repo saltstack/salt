@@ -45,6 +45,7 @@ import salt.runner
 import salt.state
 import salt.transport
 import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.minion
@@ -1087,13 +1088,13 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(_fun, **kwargs):
+def runner(name, **kwargs):
     '''
     Execute a runner module (this function must be run on the master)
 
     .. versionadded:: 2014.7.0
 
-    _fun
+    name
         The name of the function to run
 
     kwargs
@@ -1105,6 +1106,7 @@ def runner(_fun, **kwargs):
 
         salt '*' saltutil.runner jobs.list_jobs
     '''
+    saltenv = kwargs.pop('__env__', 'base')
     kwargs = salt.utils.clean_kwargs(**kwargs)
 
     if 'master_job_cache' not in __opts__:
@@ -1115,10 +1117,15 @@ def runner(_fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(_fun, kwarg=kwargs)
+    if name in rclient.functions:
+        aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
+        if 'saltenv' in aspec.args:
+            kwargs['saltenv'] = saltenv
+
+    return rclient.cmd(name, kwarg=kwargs)
 
 
-def wheel(_fun, *args, **kwargs):
+def wheel(name, *args, **kwargs):
     '''
     Execute a wheel module and function. This function must be run against a
     minion that is local to the master.
@@ -1153,6 +1160,8 @@ def wheel(_fun, *args, **kwargs):
         their return data.
 
     '''
+    saltenv = kwargs.pop('__env__', 'base')
+
     if __opts__['__role'] == 'minion':
         master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
                                      'master')
@@ -1172,10 +1181,22 @@ def wheel(_fun, *args, **kwargs):
             valid_kwargs[key] = val
 
     try:
-        ret = wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+        if name in wheel_client.functions:
+            aspec = salt.utils.args.get_function_argspec(
+                wheel_client.functions[name]
+            )
+            if 'saltenv' in aspec.args:
+                valid_kwargs['saltenv'] = saltenv
+
+        ret = wheel_client.cmd(name,
+                               arg=args,
+                               pub_data=pub_data,
+                               kwarg=valid_kwargs)
     except SaltInvocationError:
-        raise CommandExecutionError('This command can only be executed on a minion '
-                                    'that is located on the master.')
+        raise CommandExecutionError(
+            'This command can only be executed on a minion that is located on '
+            'the master.'
+        )
 
     return ret
 
