@@ -559,10 +559,11 @@ def create_network(kwargs=None, call=None):
         'event',
         'create network',
         'salt/cloud/net/creating',
-        {
+        args={
             'name': name,
             'cidr': cidr,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -572,10 +573,11 @@ def create_network(kwargs=None, call=None):
         'event',
         'created network',
         'salt/cloud/net/created',
-        {
+        args={
             'name': name,
             'cidr': cidr,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(network)
@@ -609,9 +611,10 @@ def delete_network(kwargs=None, call=None):
         'event',
         'delete network',
         'salt/cloud/net/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -632,9 +635,10 @@ def delete_network(kwargs=None, call=None):
         'event',
         'deleted network',
         'salt/cloud/net/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -709,11 +713,12 @@ def create_fwrule(kwargs=None, call=None):
         'event',
         'create firewall',
         'salt/cloud/firewall/creating',
-        {
+        args={
             'name': name,
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -729,11 +734,12 @@ def create_fwrule(kwargs=None, call=None):
         'event',
         'created firewall',
         'salt/cloud/firewall/created',
-        {
+        args={
             'name': name,
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(fwrule)
@@ -767,9 +773,10 @@ def delete_fwrule(kwargs=None, call=None):
         'event',
         'delete firewall',
         'salt/cloud/firewall/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -790,9 +797,10 @@ def delete_fwrule(kwargs=None, call=None):
         'event',
         'deleted firewall',
         'salt/cloud/firewall/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -858,7 +866,7 @@ def create_hc(kwargs=None, call=None):
         'event',
         'create health_check',
         'salt/cloud/healthcheck/creating',
-        {
+        args={
             'name': name,
             'host': host,
             'path': path,
@@ -868,6 +876,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -881,7 +890,7 @@ def create_hc(kwargs=None, call=None):
         'event',
         'created health_check',
         'salt/cloud/healthcheck/created',
-        {
+        args={
             'name': name,
             'host': host,
             'path': path,
@@ -891,6 +900,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(hc)
@@ -924,9 +934,10 @@ def delete_hc(kwargs=None, call=None):
         'event',
         'delete health_check',
         'salt/cloud/healthcheck/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -947,9 +958,10 @@ def delete_hc(kwargs=None, call=None):
         'event',
         'deleted health_check',
         'salt/cloud/healthcheck/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1015,7 +1027,8 @@ def create_address(kwargs=None, call=None):
         'event',
         'create address',
         'salt/cloud/address/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1025,7 +1038,8 @@ def create_address(kwargs=None, call=None):
         'event',
         'created address',
         'salt/cloud/address/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1070,9 +1084,10 @@ def delete_address(kwargs=None, call=None):
         'event',
         'delete address',
         'salt/cloud/address/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1093,9 +1108,10 @@ def delete_address(kwargs=None, call=None):
         'event',
         'deleted address',
         'salt/cloud/address/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1195,7 +1211,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1209,7 +1226,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_balancer(lb)
@@ -1243,9 +1261,10 @@ def delete_lb(kwargs=None, call=None):
         'event',
         'delete load_balancer',
         'salt/cloud/loadbalancer/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1266,9 +1285,10 @@ def delete_lb(kwargs=None, call=None):
         'event',
         'deleted load_balancer',
         'salt/cloud/loadbalancer/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1334,7 +1354,8 @@ def attach_lb(kwargs=None, call=None):
         'event',
         'attach load_balancer',
         'salt/cloud/loadbalancer/attaching',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1344,7 +1365,8 @@ def attach_lb(kwargs=None, call=None):
         'event',
         'attached load_balancer',
         'salt/cloud/loadbalancer/attached',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(result)
@@ -1399,7 +1421,8 @@ def detach_lb(kwargs=None, call=None):
         'event',
         'detach load_balancer',
         'salt/cloud/loadbalancer/detaching',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1409,7 +1432,8 @@ def detach_lb(kwargs=None, call=None):
         'event',
         'detached load_balancer',
         'salt/cloud/loadbalancer/detached',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1443,9 +1467,10 @@ def delete_snapshot(kwargs=None, call=None):
         'event',
         'delete snapshot',
         'salt/cloud/snapshot/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1466,9 +1491,10 @@ def delete_snapshot(kwargs=None, call=None):
         'event',
         'deleted snapshot',
         'salt/cloud/snapshot/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1503,11 +1529,12 @@ def delete_disk(kwargs=None, call=None):
         'event',
         'delete disk',
         'salt/cloud/disk/deleting',
-        {
+        args={
             'name': disk.name,
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1526,11 +1553,12 @@ def delete_disk(kwargs=None, call=None):
         'event',
         'deleted disk',
         'salt/cloud/disk/deleted',
-        {
+        args={
             'name': disk.name,
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1590,12 +1618,13 @@ def create_disk(kwargs=None, call=None):
         'event',
         'create disk',
         'salt/cloud/disk/creating',
-        {
+        args={
             'name': name,
             'location': location.name,
             'image': image,
             'snapshot': snapshot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1607,12 +1636,13 @@ def create_disk(kwargs=None, call=None):
         'event',
         'created disk',
         'salt/cloud/disk/created',
-        {
+        args={
             'name': name,
             'location': location.name,
             'image': image,
             'snapshot': snapshot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_disk(disk)
@@ -1665,10 +1695,11 @@ def create_snapshot(kwargs=None, call=None):
         'event',
         'create snapshot',
         'salt/cloud/snapshot/creating',
-        {
+        args={
             'name': name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1678,10 +1709,11 @@ def create_snapshot(kwargs=None, call=None):
         'event',
         'created snapshot',
         'salt/cloud/snapshot/created',
-        {
+        args={
             'name': name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(snapshot)
@@ -1769,10 +1801,11 @@ def detach_disk(name=None, kwargs=None, call=None):
         'event',
         'detach disk',
         'salt/cloud/disk/detaching',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1782,10 +1815,11 @@ def detach_disk(name=None, kwargs=None, call=None):
         'event',
         'detached disk',
         'salt/cloud/disk/detached',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1840,12 +1874,13 @@ def attach_disk(name=None, kwargs=None, call=None):
         'event',
         'attach disk',
         'salt/cloud/disk/attaching',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
             'mode': mode,
             'boot': boot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1855,12 +1890,13 @@ def attach_disk(name=None, kwargs=None, call=None):
         'event',
         'attached disk',
         'salt/cloud/disk/attached',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
             'mode': mode,
             'boot': boot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1923,7 +1959,8 @@ def destroy(vm_name, call=None):
         'event',
         'delete instance',
         'salt/cloud/{0}/deleting'.format(vm_name),
-        {'name': vm_name},
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1960,7 +1997,8 @@ def destroy(vm_name, call=None):
         'event',
         'delete instance',
         'salt/cloud/{0}/deleted'.format(vm_name),
-        {'name': vm_name},
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1973,7 +2011,8 @@ def destroy(vm_name, call=None):
             'event',
             'delete disk',
             'salt/cloud/disk/deleting',
-            {'name': vm_name},
+            args={'name': vm_name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         try:
@@ -1994,7 +2033,8 @@ def destroy(vm_name, call=None):
             'event',
             'deleted disk',
             'salt/cloud/disk/deleted',
-            {'name': vm_name},
+            args={'name': vm_name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2084,11 +2124,12 @@ def request_instance(vm_):
         'event',
         'create instance',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2147,11 +2188,12 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
