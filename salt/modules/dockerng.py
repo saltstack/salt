@@ -5785,7 +5785,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     return ret
 
 
-def sls_build(name, base='fedora', mods=None, saltenv='base',
+def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
               **kwargs):
     '''
     Build a docker image using the specified sls modules and base image.
