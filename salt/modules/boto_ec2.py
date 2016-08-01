@@ -439,7 +439,7 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
 
 def find_instances(instance_id=None, name=None, tags=None, region=None,
                    key=None, keyid=None, profile=None, return_objs=False,
-                   in_states=None):
+                   in_states=None, filters=None):
 
     '''
     Given instance properties, find and return matching instance ids
@@ -451,6 +451,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         salt myminion boto_ec2.find_instances # Lists all instances
         salt myminion boto_ec2.find_instances name=myinstance
         salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+        salt myminion boto_ec2.find_instances filters='{"vpc-id": "vpc-12345678"}'
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -468,7 +469,10 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
             for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
-        reservations = conn.get_all_instances(**filter_parameters)
+        if filters:
+            filter_parameters['filters'].update(filters)
+
+        reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
         log.debug('The filters criteria {0} matched the following '
                   'instances:{1}'.format(filter_parameters, instances))
@@ -490,7 +494,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
 def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
                  key=None, keyid=None, profile=None, description=None, no_reboot=False,
-                 dry_run=False):
+                 dry_run=False, filters=None):
     '''
     Given instance properties that define exactly one instance, create AMI and return AMI-id.
 
@@ -505,7 +509,7 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
 
     instances = find_instances(instance_id=instance_id, name=instance_name, tags=tags,
                                region=region, key=key, keyid=keyid, profile=profile,
-                               return_objs=True)
+                               return_objs=True, filters=filters)
 
     if not instances:
         log.error('Source instance not found')
@@ -533,7 +537,7 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+        salt myminion boto_ec2.find_images tags='{"mytag": "value"}'
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -573,7 +577,7 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
 
 
 def terminate(instance_id=None, name=None, region=None,
-              key=None, keyid=None, profile=None):
+              key=None, keyid=None, profile=None, filters=None):
     '''
     Terminate the instance described by instance_id or name.
 
@@ -586,7 +590,8 @@ def terminate(instance_id=None, name=None, region=None,
     '''
     instances = find_instances(instance_id=instance_id, name=name,
                                region=region, key=key, keyid=keyid,
-                               profile=profile, return_objs=True)
+                               profile=profile, return_objs=True,
+                               filters=filters)
     if instances in (False, None, []):
         return instances
 
@@ -599,7 +604,7 @@ def terminate(instance_id=None, name=None, region=None,
 
 
 def get_id(name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=None):
+           keyid=None, profile=None, in_states=None, filters=None):
 
     '''
     Given instance properties, return the instance id if it exists.
@@ -612,7 +617,8 @@ def get_id(name=None, tags=None, region=None, key=None,
 
     '''
     instance_ids = find_instances(name=name, tags=tags, region=region, key=key,
-                                  keyid=keyid, profile=profile, in_states=in_states)
+                                  keyid=keyid, profile=profile, in_states=in_states,
+                                  filters=filters)
     if instance_ids:
         log.info("Instance ids: {0}".format(" ".join(instance_ids)))
         if len(instance_ids) == 1:
@@ -626,7 +632,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=None):
+           keyid=None, profile=None, in_states=None, filters=None):
     '''
     Given a instance id, check to see if the given instance id exists.
 
@@ -641,7 +647,7 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
     '''
     instances = find_instances(instance_id=instance_id, name=name, tags=tags,
                                region=region, key=key, keyid=keyid,
-                               profile=profile, in_states=in_states)
+                               profile=profile, in_states=in_states, filters=filters)
     if instances:
         log.info('Instance exists.')
         return True
@@ -1049,7 +1055,7 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
 
 
 def get_attribute(attribute, instance_name=None, instance_id=None, region=None, key=None,
-                  keyid=None, profile=None):
+                  keyid=None, profile=None, filters=None):
     '''
     Get an EC2 instance attribute.
 
@@ -1088,7 +1094,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
+                                      filters=filters)
             if len(instances) > 1:
                 log.error('Found more than one EC2 instance matching the criteria.')
                 return False
@@ -1106,7 +1113,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
 
 
 def set_attribute(attribute, attribute_value, instance_name=None, instance_id=None, region=None, key=None, keyid=None,
-                  profile=None):
+                  profile=None, filters=None):
     '''
     Set an EC2 instance attribute.
     Returns whether the operation succeeded or not.
@@ -1145,7 +1152,8 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
+                                      filters=filters)
             if len(instances) != 1:
                 raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
             instance_id = instances[0]
