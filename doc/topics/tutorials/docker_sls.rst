@@ -67,7 +67,7 @@ Next run the `docker.sls_build` command:
 
     salt-call --local dockerng.sls_build test base=my_base_image mods=vim
 
-Now we have a fresh container called `test` to work with and vim has been
+Now we have a fresh image called `test` to work with and vim has been
 installed.
 
 Step 4 - Running Commands Inside the Container
