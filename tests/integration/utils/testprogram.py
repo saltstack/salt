@@ -99,7 +99,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True, **kwargs):
         self.program = program or getattr(self, 'program', None)
-        self.name = name or getattr(self, 'name', None)
+        self.name = name or getattr(self, 'name', '')
         self.env = env or {}
         self.shell = shell
         self._parent_dir = parent_dir or None
@@ -138,6 +138,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self.process = None
         self.created_parent_dir = False
         self._setup_done = False
+
+        dirtree = set(self.dirtree)
+        dirtree.update(kwargs.pop('dirtree', []))
+        self.dirtree = dirtree
 
         # Register the exit clean-up before making anything needing clean-up
         atexit.register(self.cleanup)
@@ -189,7 +193,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         '''
         if self._parent_dir is None:
             self.created_parent_dir = True
-            self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-XXXX')
+            self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
         else:
             self._parent_dir = os.path.abspath(os.path.normpath(self._parent_dir))
             if not os.path.exists(self._parent_dir):
@@ -638,7 +642,10 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         subs = self.config_subs()
         cfg = {}
         for key, val in self.config_get(config).items():
-            cfg[key] = val.format(**subs)
+            if isinstance(val, six.string_types):
+                cfg[key] = val.format(**subs)
+            else:
+                cfg[key] = val
         scfg = yaml.safe_dump(cfg, default_flow_style=False)
         return scfg
 
