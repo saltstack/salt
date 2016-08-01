@@ -51,8 +51,8 @@ class SaltUtilModuleTest(integration.ModuleCase):
         just need this for testing purposes.
         '''
         ret = self.run_function('saltutil.wheel', ['key.gen'], keysize=1024)
-        self.assertIn('pub', ret)
-        self.assertIn('priv', ret)
+        self.assertIn('pub', ret['return'])
+        self.assertIn('priv', ret['return'])
 
 
 if __name__ == '__main__':
