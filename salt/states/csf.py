@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
+from salt.ext.six.moves import map
+
 '''
 CSF Ip tables management
 ========================
@@ -13,10 +16,12 @@ CSF Ip tables management
       csf.rule_present:
         ip: 1.2.3.4
         method: allow
+'''  # pylint: disable=W0105
 
-'''
+
 def __virtual__():
     return 'csf'
+
 
 def rule_present(name,
                 method,
@@ -36,7 +41,7 @@ def rule_present(name,
 
     method
         The type of rule.  Either 'allow' or 'deny'.
-    
+
     port
         Optional port to be open or closed for the
         iptables rule.
@@ -47,11 +52,11 @@ def rule_present(name,
 
     direction
         The diretion of traffic to apply the rule to.
-        Either 'in', or 'out'. Only applicable if 
+        Either 'in', or 'out'. Only applicable if
         port is specified.
 
     port_origin
-        Specifies either the source or destination 
+        Specifies either the source or destination
         port is relevant for this rule. Only applicable
         if port is specified.  Either 's', or 'd'.
 
@@ -59,7 +64,7 @@ def rule_present(name,
         Specifies whether the ip in this rule refers to
         the source or destination ip. Either 's', or
         'd'. Only applicable if port is specified.
-    
+
     ttl
         How long the rule should exist. If supplied,
         `csf.tempallow()` or csf.tempdeny()` are used.
@@ -89,7 +94,7 @@ def rule_present(name,
                                     ip_origin=ip_origin,
                                     ttl=ttl,
                                     comment=comment)
-    
+
     if exists:
         return ret
     else:
@@ -104,7 +109,7 @@ def rule_present(name,
                     ip_origin=ip_origin,
                     ttl=ttl,
                     comment=comment)
-        
+
         if rule:
             comment = 'Rule has been added.'
         if reload:
@@ -135,7 +140,7 @@ def rule_absent(name,
 
     method
         The type of rule.  Either 'allow' or 'deny'.
-    
+
     port
         Optional port to be open or closed for the
         iptables rule.
@@ -146,11 +151,11 @@ def rule_absent(name,
 
     direction
         The diretion of traffic to apply the rule to.
-        Either 'in', or 'out'. Only applicable if 
+        Either 'in', or 'out'. Only applicable if
         port is specified.
 
     port_origin
-        Specifies either the source or destination 
+        Specifies either the source or destination
         port is relevant for this rule. Only applicable
         if port is specified.  Either 's', or 'd'.
 
@@ -158,11 +163,11 @@ def rule_absent(name,
         Specifies whether the ip in this rule refers to
         the source or destination ip. Either 's', or
         'd'. Only applicable if port is specified.
-    
+
     ttl
         How long the rule should exist. If supplied,
         `csf.tempallow()` or csf.tempdeny()` are used.
-    
+
     reload
         Reload the csf service after applying this rule.
         Default false.
@@ -172,7 +177,7 @@ def rule_absent(name,
            'changes': {},
            'result': True,
            'comment': 'Rule not present.'}
-    
+
     exists = __salt__['csf.exists'](method,
                                     ip,
                                     port=port,
@@ -194,7 +199,7 @@ def rule_absent(name,
                                             ip_origin=ip_origin,
                                             comment='',
                                             ttl=ttl)
-        
+
         if rule:
             comment = 'Rule has been removed.'
         if reload:
@@ -205,18 +210,19 @@ def rule_absent(name,
         ret['comment'] = comment
         ret['changes']['Rule'] = 'Removed'
     return ret
-   
+
+
 def ports_open(name, ports, proto='tcp', direction='in'):
     '''
     Ensure ports are open for a protocol, in a direction.
     e.g. - proto='tcp', direction='in' would set the values
     for TCP_IN in the csf.conf file.
-    
+
     ports
         A list of ports that should be open.
 
     proto
-        The protocol. May be one of 'tcp', 'udp', 
+        The protocol. May be one of 'tcp', 'udp',
         'tcp6', or 'udp6'.
 
     direction
@@ -225,19 +231,19 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         traffic, or both.
     '''
 
-    ports = map(str, ports)
+    ports = list(map(str, ports))
     diff = False
     ret = {'name': ','.join(ports),
            'changes': {},
            'result': True,
            'comment': 'Ports open.'}
 
-    current_ports = __salt__['csf.get_ports'](proto=proto, direction=direction)  
+    current_ports = __salt__['csf.get_ports'](proto=proto, direction=direction)
     direction = direction.upper()
     directions = __salt__['csf.build_directions'](direction)
     for direction in directions:
-        print current_ports[direction]
-        print ports
+        print(current_ports[direction])  # pylint: disable=C0325
+        print(ports)  # pylint: disable=C0325
         if current_ports[direction] != ports:
             diff = True
     if diff:
@@ -258,10 +264,10 @@ def nics_skipped(name, nics, ipv6=False):
     '''
     name
         Meaningless arg, but required for state.
-    
+
     nics
         A list of nics to skip.
-    
+
     ipv6
         Boolean. Set to true if you want to skip
         the ipv6 interface. Default false (ipv4).
@@ -277,8 +283,8 @@ def nics_skipped(name, nics, ipv6=False):
     result = __salt__['csf.skip_nics'](nics, ipv6=ipv6)
     ret['changes']['Skipped NICs'] = 'Changed'
     return ret
-    
-    
+
+
 def testing_on(name, reload=False):
     '''
     Ensure testing mode is enabled in csf.
@@ -310,7 +316,7 @@ def testing_on(name, reload=False):
 def testing_off(name, reload=False):
     '''
     Ensure testing mode is enabled in csf.
-    
+
     reload
         Reload CSF after changing the testing status.
         Default false.
@@ -339,13 +345,13 @@ def testing_off(name, reload=False):
 def option_present(name, value, reload=False):
     '''
     Ensure the state of a particular option/setting in csf.
-    
+
     name
         The option name in csf.conf
 
     value
         The value it should be set to.
-    
+
     reload
         Boolean. If set to true, csf will be reloaded after.
     '''
@@ -376,4 +382,3 @@ def option_present(name, value, reload=False):
             ret['comment'] += '. Csf failed to reload.'
             ret['result'] = False
     return ret
-
