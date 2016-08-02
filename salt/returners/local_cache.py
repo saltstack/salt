@@ -233,7 +233,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
                          recurse_count=recurse_count+1)
 
     # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
+    if 'tgt' in clear_load and clear_load['tgt'] != '':
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
