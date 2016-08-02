@@ -23,12 +23,12 @@ from salt.modules import sysmod
 
 modules = set()
 functions = [
-    'sys.doc',     'sys.list_functions', 'sys.list_modules',
-    'sysctl.get',  'sysctl.show',
+    'sys.doc', 'sys.list_functions', 'sys.list_modules',
+    'sysctl.get', 'sysctl.show',
     'system.halt', 'system.reboot',
 
-    'udev.name',   'udev.path',
-    'user.add',    'user.info',          'user.rename',
+    'udev.name', 'udev.path',
+    'user.add', 'user.info', 'user.rename',
 ]
 
 sysmod.__salt__ = {}
@@ -162,7 +162,7 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_functions(), functions)
 
-        self.assertListEqual(sysmod.list_functions('sys'),  ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+        self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
         self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
 
     # 'list_modules' function tests: 1
