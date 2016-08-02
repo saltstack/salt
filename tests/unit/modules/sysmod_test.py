@@ -162,8 +162,17 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_functions(), functions)
 
+        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+
         self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
         self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        self.assertListEqual(sysmod.list_functions('sys.l'), [])
+
+        self.assertListEqual(sysmod.list_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
 
     # 'list_modules' function tests: 1
 
@@ -173,9 +182,11 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_modules(), modules)
 
-        self.assertListEqual(sysmod.list_modules('s*'), ['sys', 'sysctl', 'system'])
+        self.assertListEqual(sysmod.list_modules('nonexist'), [])
 
         self.assertListEqual(sysmod.list_modules('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_modules('s*'), ['sys', 'sysctl', 'system'])
 
     # 'reload_modules' function tests: 1
 
