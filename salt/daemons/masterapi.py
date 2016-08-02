@@ -1191,6 +1191,7 @@ class LocalFuncs(object):
         '''
         # All wheel ops pass through eauth
         if 'token' in load:
+            atype = 'token'
             try:
                 token = self.loadauth.get_tok(load['token'])
             except Exception as exc:
@@ -1209,122 +1210,106 @@ class LocalFuncs(object):
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][token['eauth']][token['name']]
-                    if token['name'] in self.opts['external_auth'][token['eauth']]
-                    else self.opts['external_auth'][token['eauth']]['*'],
-                    load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
-            jid = salt.utils.jid.gen_jid()
-            fun = load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': token['name']}
+            username = token['name']
+        elif 'eauth' in load:
+            atype = 'eauth'
             try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+                if load['eauth'] not in self.opts['external_auth']:
+                    # The eauth system is not enabled, fail
+                    msg = ('Authentication failure of type "eauth" occurred for '
+                           'user {0}.').format(load.get('username', 'UNKNOWN'))
+                    log.warning(msg)
+                    return dict(error=dict(name='EauthAuthenticationError',
+                                           message=msg))
+
+                username = self.loadauth.load_name(load)
+                if not ((username in self.opts['external_auth'][load['eauth']]) |
+                        ('*' in self.opts['external_auth'][load['eauth']])):
+                    msg = ('Authentication failure of type "eauth" occurred for '
+                           'user {0}.').format(load.get('username', 'UNKNOWN'))
+                    log.warning(msg)
+                    return dict(error=dict(name='EauthAuthenticationError',
+                                           message=msg))
+                if not self.loadauth.time_auth(load):
+                    msg = ('Authentication failure of type "eauth" occurred for '
+                           'user {0}.').format(load.get('username', 'UNKNOWN'))
+                    log.warning(msg)
+                    return dict(error=dict(name='EauthAuthenticationError',
+                                           message=msg))
             except Exception as exc:
-                log.error(exc)
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                                            fun,
-                                            exc.__class__.__name__,
-                                            exc,
-                                            )
-                data['success'] = False
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-
-        if 'eauth' not in load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
+                log.error(
+                    'Exception occurred in the wheel system: {0}'.format(exc)
+                )
+                return dict(error=dict(name=exc.__class__.__name__,
+                                       args=exc.args,
+                                       message=str(exc)))
+        else:
+            atype = 'user'
+            if 'key' not in load:
+                msg = 'Authentication failure of type "user" occurred'
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
                                        message=msg))
-        if load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
+            key = load.pop('key')
+
+            if 'user' in load:
+                username = load['user']
+                auth_user = salt.auth.AuthUser(username)
+                if auth_user.is_sudo:
+                    username = self.opts.get('user', 'root')
+            else:
+                username = salt.utils.get_user()
+
+            if username not in self.key and \
+                    key != self.key[username] and \
+                    key != self.key['root']:
+                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
                                        message=msg))
 
+        if not atype == 'user':
+            auth_list = []
+            if '*' in self.opts['external_auth'][load['eauth']]:
+                auth_list.extend(self.opts['external_auth'][load['eauth']]['*'])
+            if username in self.opts['external_auth'][load['eauth']]:
+                auth_list = self.opts['external_auth'][load['eauth']][username]
+            good = self.ckminions.wheel_check(auth_list, load['fun'])
+            if not good:
+                msg = ('Authentication failure of type "{0}" occurred for '
+                       'user {1}.').format(atype, load.get('username', 'UNKNOWN'))
+                log.warning(msg)
+                return dict(error=dict(name='EauthAuthenticationError',
+                                       message=msg))
+
+        # Authenticated. Do the job.
+        jid = salt.utils.jid.gen_jid()
+        fun = load.pop('fun')
+        tag = tagify(jid, prefix='wheel')
+        data = {'fun': "wheel.{0}".format(fun),
+                'jid': jid,
+                'tag': tag,
+                'user': username}
         try:
-            name = self.loadauth.load_name(load)
-            if not ((name in self.opts['external_auth'][load['eauth']]) |
-                    ('*' in self.opts['external_auth'][load['eauth']])):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-            if not self.loadauth.time_auth(load):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][load['eauth']][name]
-                        if name in self.opts['external_auth'][load['eauth']]
-                        else self.opts['external_auth'][token['eauth']]['*'],
-                    load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return dict(error=dict(name='EauthAuthenticationError',
-                                       message=msg))
-
-            jid = salt.utils.jid.gen_jid()
-            fun = load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': load.get('username', 'UNKNOWN')}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                                            fun,
-                                            exc.__class__.__name__,
-                                            exc,
-                                            )
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-
+            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            ret = self.wheel_.call_func(fun, **load)
+            data['return'] = ret
+            data['success'] = True
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
         except Exception as exc:
-            log.error(
-                'Exception occurred in the wheel system: {0}'.format(exc)
-            )
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+            log.error('Exception occurred while '
+                    'introspecting {0}: {1}'.format(fun, exc))
+            data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
+                                        fun,
+                                        exc.__class__.__name__,
+                                        exc,
+                                        )
+            data['success'] = False
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
 
     def mk_token(self, load):
         '''

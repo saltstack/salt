@@ -1702,6 +1702,45 @@ class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
 
+class EAuthMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        group = self.eauth_group = optparse.OptionGroup(
+            self,
+            'External Authentication',
+            # Include description here as a string
+        )
+        group.add_option(
+            '-a', '--auth', '--eauth', '--external-auth',
+            default='',
+            dest='eauth',
+            help=('Specify an external authentication system to use.')
+        )
+        group.add_option(
+            '-T', '--make-token',
+            default=False,
+            dest='mktoken',
+            action='store_true',
+            help=('Generate and save an authentication token for re-use. The '
+                  'token is generated and made available for the period '
+                  'defined in the Salt Master.')
+        )
+        group.add_option(
+            '--username',
+            dest='username',
+            nargs=1,
+            help=('Username for external authentication.')
+        )
+        group.add_option(
+            '--password',
+            dest='password',
+            nargs=1,
+            help=('Password for external authentication.')
+        )
+        self.add_option_group(group)
+
+
 class MasterOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
                                             ConfigDirMixIn,
@@ -1808,7 +1847,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              LogLevelMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
-                                             ArgsStdinMixIn)):
+                                             ArgsStdinMixIn,
+                                             EAuthMixIn)):
 
     default_timeout = 5
 
@@ -1899,21 +1939,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
-            '-a', '--auth', '--eauth', '--external-auth',
-            default='',
-            dest='eauth',
-            help=('Specify an external authentication system to use.')
-        )
-        self.add_option(
-            '-T', '--make-token',
-            default=False,
-            dest='mktoken',
-            action='store_true',
-            help=('Generate and save an authentication token for re-use. The '
-                  'token is generated and made available for the period '
-                  'defined in the Salt Master.')
-        )
-        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -1968,18 +1993,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help=('Display summary information about a salt command.')
-        )
-        self.add_option(
-            '--username',
-            dest='username',
-            nargs=1,
-            help=('Username for external authentication.')
-        )
-        self.add_option(
-            '--password',
-            dest='password',
-            nargs=1,
-            help=('Password for external authentication.')
         )
         self.add_option(
             '--metadata',
@@ -2152,7 +2165,8 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              RunUserMixin,
                                              HardCrashMixin,
-                                             SaltfileMixIn)):
+                                             SaltfileMixIn,
+                                             EAuthMixIn)):
 
     description = 'Salt key is used to manage Salt authentication keys'
 
@@ -2168,6 +2182,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
     def _mixin_setup(self):
         actions_group = optparse.OptionGroup(self, 'Actions')
+        actions_group.set_conflict_handler('resolve')
         actions_group.add_option(
             '-l', '--list',
             default='',
@@ -2193,7 +2208,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             default='',
             help='Accept the specified public key (use --include-rejected and '
                  '--include-denied to match rejected and denied keys in '
-                 'addition to pending keys). Globs are supported.'
+                 'addition to pending keys). Globs are supported.',
         )
 
         actions_group.add_option(
@@ -2659,7 +2674,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              SaltfileMixIn,
                                              OutputOptionsMixIn,
                                              ArgsStdinMixIn,
-                                             ProfilingPMixIn)):
+                                             ProfilingPMixIn,
+                                             EAuthMixIn)):
 
     default_timeout = 1
 
@@ -2715,7 +2731,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['arg'] = []
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path())
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,

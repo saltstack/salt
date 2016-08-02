@@ -411,6 +411,31 @@ def get_specific_user():
     return user
 
 
+def get_master_key(key_user, opts, skip_perm_errors=False):
+    if key_user == 'root':
+        if opts.get('user', 'root') != 'root':
+            key_user = opts.get('user', 'root')
+    if key_user.startswith('sudo_'):
+        key_user = opts.get('user', 'root')
+    if salt.utils.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        key_user = key_user.replace('\\', '_')
+    keyfile = os.path.join(opts['cachedir'],
+                           '.{0}_key'.format(key_user))
+    # Make sure all key parent directories are accessible
+    salt.utils.verify.check_path_traversal(opts['cachedir'],
+                                           key_user,
+                                           skip_perm_errors)
+
+    try:
+        with salt.utils.fopen(keyfile, 'r') as key:
+            return key.read()
+    except (OSError, IOError):
+        # Fall back to eauth
+        return ''
+
+
 def reinit_crypto():
     '''
     When a fork arrises, pycrypto needs to reinit
