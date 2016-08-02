@@ -281,13 +281,14 @@ class IPCClient(object):
         else:
             future = tornado.concurrent.Future()
             self._connecting_future = future
-            self.io_loop.add_callback(self._connect, timeout=timeout)
+            self._connect(timeout=timeout)
 
         if callback is not None:
             def handle_future(future):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
+
         return future
 
     @tornado.gen.coroutine
@@ -674,14 +675,6 @@ class IPCMessageSubscriber(IPCClient):
 
     @tornado.gen.coroutine
     def _read_async(self, callback):
-        while not self.connected():
-            try:
-                yield self.connect()
-            except tornado.iostream.StreamClosedError:
-                log.trace('Subscriber closed stream on IPC {0} before connect'.format(self.socket_path))
-            except Exception as exc:
-                log.error('Exception occurred while Subscriber connecting: {0}'.format(exc))
-
         while not self.stream.closed():
             try:
                 self._read_stream_future = self.stream.read_bytes(4096, partial=True)
@@ -703,6 +696,14 @@ class IPCMessageSubscriber(IPCClient):
 
         :param callback: A callback with the received data
         '''
+        while not self.connected():
+            try:
+                self.connect()
+            except tornado.iostream.StreamClosedError:
+                log.trace('Subscriber closed stream on IPC {0} before connect'.format(self.socket_path))
+            except Exception as exc:
+                log.error('Exception occurred while Subscriber connecting: {0}'.format(exc))
+
         self.io_loop.spawn_callback(self._read_async, callback)
 
     def close(self):
