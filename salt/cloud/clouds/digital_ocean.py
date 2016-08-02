@@ -341,6 +341,22 @@ def create(vm_):
             'because it does not supply a root password upon building the server.'
         )
 
+    ssh_interface = config.get_cloud_config_value(
+        'ssh_interface', vm_, __opts__, search_global=False, default='public'
+    )
+
+    if ssh_interface == 'private':
+        log.info("ssh_interafce: Setting interface for ssh to 'private'.")
+        kwargs['ssh_interface'] = ssh_interface
+    else:
+        if ssh_interface != 'public':
+            raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+            )
+        else:
+            log.info("ssh_interafce: Setting interface for ssh to 'public'.")
+            kwargs['ssh_interface'] = ssh_interface
+
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,
     )
@@ -349,6 +365,12 @@ def create(vm_):
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
         kwargs['private_networking'] = private_networking
+
+    if not private_networking and ssh_interface == 'private':
+        raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface if defined as 'private' "
+                "then private_networking should be set as 'True'."
+    )
 
     backups_enabled = config.get_cloud_config_value(
         'backups_enabled', vm_, __opts__, search_global=False, default=None,
@@ -472,6 +494,7 @@ def create(vm_):
         if facing == 'public':
             if create_dns_record:
                 __add_dns_addr__(dns_rec_type, ip_address)
+        if facing == ssh_interface:
             if not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
 
