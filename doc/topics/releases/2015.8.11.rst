@@ -12,6 +12,12 @@ Returner Changes
   accept a ``minions`` keyword argument. All returners which ship with Salt
   have been modified to do so.
 
+Ubuntu 16.04 Packages
+=====================
+
+SaltStack is now providing official Salt 2015.8 `packages
+<http://repo.saltstack.com/2015.8.html#ubuntu>`_ for Ubuntu 16.04.
+
 Changes for v2015.8.10..v2015.8.11
 ----------------------------------
 
