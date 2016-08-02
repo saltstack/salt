@@ -12,7 +12,6 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
-import salt.ext.six as six
 
 
 class BatchTest(integration.ShellCase):

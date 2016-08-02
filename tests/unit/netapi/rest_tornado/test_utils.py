@@ -103,7 +103,8 @@ class TestEventListener(AsyncTestCase):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
-            event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self, 'evt1', self.stop)  # get an event future
             me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
             me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
             self.wait()  # wait for the future
@@ -113,6 +114,27 @@ class TestEventListener(AsyncTestCase):
             self.assertEqual(event_future.result()['tag'], 'evt1')
             self.assertEqual(event_future.result()['data']['data'], 'foo1')
 
+    def test_set_event_handler(self):
+        '''
+        Test subscribing events using set_event_handler
+        '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
+                                                    {'sock_dir': SOCK_DIR,
+                                                     'transport': 'zeromq'})
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self,
+                                                    tag='evt',
+                                                    callback=self.stop,
+                                                    timeout=1,
+                                                    )  # get an event future
+            me.fire_event({'data': 'foo'}, 'evt')  # fire an event we do want
+            self.wait()
+
+            # check that we subscribed the event we wanted
+            self.assertEqual(len(event_listener.timeout_map), 0)
+
     def test_timeout(self):
         '''
         Make sure timeouts work correctly
@@ -121,7 +143,8 @@ class TestEventListener(AsyncTestCase):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
-            event_future = event_listener.get_event(1,
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self,
                                                     tag='evt1',
                                                     callback=self.stop,
                                                     timeout=1,
