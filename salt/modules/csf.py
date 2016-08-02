@@ -9,6 +9,7 @@ Support for Config Server Firewall (CSF)
 
 # Import Python Libs
 from __future__ import absolute_import
+import re
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -145,7 +146,14 @@ def _access_rule(method,
         else:
             if method not in ['allow', 'deny']:
                 return {'error': 'Only allow and deny rules are allowed when specifying a port.'}
-            return _access_rule_with_port(method, ip, port, proto, direction, port_origin, ip_origin, comment)
+            return _access_rule_with_port(method=method,
+                                            ip=ip,
+                                            port=port,
+                                            proto=proto,
+                                            direction=direction,
+                                            port_origin=port_origin,
+                                            ip_origin=ip_origin,
+                                            comment=comment)
 
 def _build_port_rule(ip, port, proto, direction, port_origin, ip_origin, comment):
     kwargs = {
@@ -165,19 +173,26 @@ def _build_port_rule(ip, port, proto, direction, port_origin, ip_origin, comment
 def _remove_access_rule_with_port(method,
                                     ip,
                                     port,
-                                    proto,
-                                    port_origin,
-                                    ip_origin):
-    rule = _build_port_rule(ip,
-                            port,
-                            proto,
-                            direction,
-                            port_origin,
-                            ip_origin)
+                                    proto='tcp', 
+                                    direction='in',
+                                    port_origin='d',
+                                    ip_origin='d',
+                                    ttl=None):
 
+    rule = _build_port_rule(ip,
+                            port=port,
+                            proto=proto,
+                            direction=direction,
+                            port_origin=port_origin,
+                            ip_origin=ip_origin,
+                            comment='')
+
+    
+    rule = rule.replace('|', '[|]')
+    rule = rule.replace('.', '[.]')
     result = __salt__['file.replace']('/etc/csf/csf.{0}'.format(method),
-                                        '^{0} +\#.*$\n'.format(rule),
-                                        '')
+                                        pattern='^{0}(( +)?\#.*)?$\n'.format(rule),
+                                        repl='')
 
     return result
 
@@ -188,16 +203,34 @@ def _csf_to_list(option):
     option and return a list.
     '''
     result = []
-    pattern = '^{0}(\ +)?\=(\ +)?".*"$'.format(option)
-    grep = __salt__['file.grep']('/etc/csf/csf.conf', pattern, '-E')
-    if not grep or grep['stderr']:
-        raise CommandExecutionError(
-            'Could not find {0} in csf.conf. grep stderr: {1}'.format(option, grep['stderr'])
-        )
-    if 'stdout' in grep and grep['stdout']:
-        line = grep['stdout']
+    line = get_option(option)
+    if line:
         csv = line.split('=')[1].replace(' ', '').replace('"', '')
         result = csv.split(',')
+    return result
+
+def split_option(option):
+    l = re.split("(?: +)?\=(?: +)?", option)
+    return l
+
+
+def get_option(option):
+    pattern = '^{0}(\ +)?\=(\ +)?".*"$'.format(option)
+    grep = __salt__['file.grep']('/etc/csf/csf.conf', pattern, '-E')
+    if 'stdout' in grep and grep['stdout']:
+        line = grep['stdout']
+        return line
+    return None
+
+
+def set_option(option, value):
+    current_option = get_option(option)
+    if not current_option:
+        return {'error': 'No such option exists in csf.conf'}
+    result = __salt__['file.replace']('/etc/csf/csf.conf',
+                                        pattern='^{0}(\ +)?\=(\ +)?".*"'.format(option),
+                                        repl='{0} = "{1}"'.format(option, value))
+    
     return result
 
 
@@ -240,26 +273,29 @@ def _access_rule_with_port(method,
 
     results = {}
     if direction == 'both':
-        for direction in ['in', 'out']:
-            _exists = exists(method,
-                                ip,
-                                port=port,
-                                proto=proto,
-                                direction=direction,
-                                port_origin=port_origin,
-                                ip_origin=ip_origin,
-                                ttl=ttl,
-                                comment=comment)
-            if not _exists:
-                rule = _build_port_rule(ip,
-                                        port=port,
-                                        proto=proto,
-                                        direction=direction,
-                                        port_origin=port_origin,
-                                        ip_origin=ip_origin,
-                                        comment=comment)
-                path = '/etc/csf/csf.{0}'.format(method)
-                results[direction] = __salt__['file.append'](path, rule)
+        directions = ['in', 'out']
+    else:
+        directions = [direction]
+    for direction in directions:
+        _exists = exists(method,
+                            ip,
+                            port=port,
+                            proto=proto,
+                            direction=direction,
+                            port_origin=port_origin,
+                            ip_origin=ip_origin,
+                            ttl=ttl,
+                            comment=comment)
+        if not _exists:
+            rule = _build_port_rule(ip,
+                                    port=port,
+                                    proto=proto,
+                                    direction=direction,
+                                    port_origin=port_origin,
+                                    ip_origin=ip_origin,
+                                    comment=comment)
+            path = '/etc/csf/csf.{0}'.format(method)
+            results[direction] = __salt__['file.append'](path, rule)
     return results
 
 
@@ -281,7 +317,7 @@ def _tmp_access_rule(method,
             return {'error': 'You must supply a ttl.'}
         args = _build_tmp_access_args(method, ip, ttl, port, direction, comment)
         return __csf_cmd(args)
-
+            
 
 def _build_tmp_access_args(method, ip, ttl, port, direction, comment):
     '''
@@ -337,8 +373,7 @@ def reload():
     .. code-block:: bash
         salt '*' csf.reload
     '''
-    if not _status_csf():
-        return __csf_cmd('-r')
+    return __csf_cmd('-r')
 
 
 def tempallow(ip=None, ttl=None, port=None, direction=None, comment=''):
@@ -459,13 +494,14 @@ def remove_rule(method,
             return undeny(ip)
 
     if port:
-        return _remove_access_rule_with_port(method,
-                                            ip,
-                                            port,
-                                            proto,
-                                            port_origin,
-                                            ip_origin)
-
+        return _remove_access_rule_with_port(method=method,
+                                            ip=ip,
+                                            port=port,
+                                            proto=proto,
+                                            direction=direction,
+                                            port_origin=port_origin,
+                                            ip_origin=ip_origin)
+                                    
 
 def allow_ports(ports, proto='tcp', direction='in'):
     '''
@@ -479,18 +515,20 @@ def allow_ports(ports, proto='tcp', direction='in'):
     '''
 
     results = []
+    ports = set(ports)
+    ports = list(ports)
     proto = proto.upper() 
     direction = direction.upper()
     _validate_direction_and_proto(direction, proto)
     ports_csv = ','.join(map(str, ports))
     directions = build_directions(direction)
-
+    
     for direction in directions:
         result = __salt__['file.replace']('/etc/csf/csf.conf',
                                     pattern='^{0}_{1}(\ +)?\=(\ +)?".*"$'.format(proto, direction),
                                     repl='{0}_{1} = "{2}"'.format(proto, direction, ports_csv))
         results.append(result)
-
+    
     return results
 
 def get_ports(proto='tcp', direction='in'):
@@ -511,7 +549,7 @@ def get_ports(proto='tcp', direction='in'):
     for direction in directions:
         option = '{0}_{1}'.format(proto, direction)
         results[direction] = _csf_to_list(option)
-
+            
     return results
 
 
@@ -525,7 +563,7 @@ def _validate_direction_and_proto(direction, proto):
             'You must supply tcp, udp, tcp6, or udp6 for the proto keyword'
         )
     return
-
+    
 
 def build_directions(direction):
     direction = direction.upper()
@@ -546,7 +584,7 @@ def allow_port(port, proto='tcp', direction='both'):
     .. code-block:: bash
         salt '*' csf.allow_port 22 proto='tcp' direction='in'
     '''
-
+    
     ports = get_ports(proto=proto, direction=direction)
     direction = direction.upper()
     _validate_direction_and_proto(direction, proto)
@@ -557,4 +595,33 @@ def allow_port(port, proto='tcp', direction='both'):
         _ports.append(port)
         results += allow_ports(_ports, proto=proto, direction=direction)
     return results
+
+
+def get_testing_status():
+    testing = _csf_to_list('TESTING')[0]
+    return testing
+    
+
+def _toggle_testing(val):
+    if val == 'on':
+        val = '1'
+    elif val == 'off':
+        val = '0'
+    else:
+        raise SaltInvocationError(
+            "Only valid arg is 'on' or 'off' here."
+        )
+    
+    result = __salt__['file.replace']('/etc/csf/csf.conf',
+                                        pattern='^TESTING(\ +)?\=(\ +)?".*"',
+                                        repl='TESTING = "{0}"'.format(val))
+    return result
+
+
+def enable_testing_mode():
+    return _toggle_testing('on')
+    
+
+def disable_testing_mode():
+    return _toggle_testing('off')
 
