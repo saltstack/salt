@@ -39,6 +39,17 @@ the repo's URL. Configuration details can be found below.
           'dev-*':
             - bar
 
+    Additionally, while git_pillar allows for the branch/tag to be overridden
+    (see :ref:`here <git-pillar-env-remap>`, or :ref:`here
+    <git-pillar-env-remap-legacy>` for Salt releases before 2015.8.0), keep in
+    mind that the top file must reference the actual environment name. It is
+    common practice to make the environment in a git_pillar top file match the
+    branch/tag name, but when remapping, the environment of course no longer
+    matches the branch/tag, and the top file needs to be adjusted accordingly.
+    When expected Pillar values configured in git_pillar are missing, this is a
+    common misconfiguration that may be to blame, and is a good first step in
+    troubleshooting.
+
 .. _git-pillar-pre-2015-8-0:
 
 Configuring git_pillar for Salt releases before 2015.8.0
@@ -67,6 +78,8 @@ specified under :conf_master:`ext_pillar`:
     ext_pillar:
       - git: master https://gitserver/git-pillar.git
       - git: dev https://gitserver/git-pillar.git
+
+.. _git-pillar-env-remap-legacy:
 
 To remap a specific branch to a specific Pillar environment, use the format
 ``<branch>:<env>``:
@@ -178,6 +191,18 @@ Per-remote configuration parameters are supported (similar to :ref:`gitfs
 <gitfs-per-remote-config>`), and global versions of the git_pillar
 configuration parameters can also be set.
 
+.. _git-pillar-env-remap:
+
+To remap a specific branch to a specific Pillar environment, use the ``env``
+per-remote parameter:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - production https://gitserver/git-pillar.git:
+          - env: prod
+
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
 the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
@@ -186,10 +211,9 @@ instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
 .. note::
-
     The ``name`` parameter can be used to further differentiate between two
-    remotes with the same URL. If you're using two remotes with the same URL,
-    the ``name`` option is required.
+    remotes with the same URL and branch. When using two remotes with the same
+    URL, the ``name`` option is required.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
