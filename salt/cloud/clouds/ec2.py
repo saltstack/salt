@@ -1434,7 +1434,7 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
 
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
               'NetworkInterfaceId': eni_id}
-    for k, v in properties.iteritems():
+    for k, v in six.iteritems(properties):
         params[k] = v
 
     retries = 5
@@ -1702,7 +1702,7 @@ def request_instance(vm_=None, call=None):
         blacklist = __opts__['renderer_blacklist']
         whitelist = __opts__['renderer_whitelist']
         userdata = compile_template(
-            userdata, rend, renderer, blacklist, whitelist
+            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
         )
 
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
@@ -1908,7 +1908,8 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': params, 'location': location},
+        args={'kwargs': params, 'location': location},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1987,6 +1988,7 @@ def request_instance(vm_=None, call=None):
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2050,7 +2052,8 @@ def query_instance(vm_=None, call=None):
         'event',
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
-        {'instance_id': instance_id},
+        args={'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2122,9 +2125,9 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if 'ipAddress' in data[0]['instancesSet']['item']:
+        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
             log.error(
-                'Public IP not detected.  If private IP is meant for bootstrap you must specify "ssh_interface: private_ips" in your profile.'
+                'Public IP not detected.'
             )
             return data
         if ssh_interface(vm_) == 'private_ips' and \
@@ -2156,7 +2159,8 @@ def query_instance(vm_=None, call=None):
             'event',
             'instance queried',
             'salt/cloud/{0}/query_reactor'.format(vm_['name']),
-            {'data': data},
+            args={'data': data},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2194,7 +2198,8 @@ def wait_for_instance(
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
-        {'ip_address': ip_address},
+        args={'ip_address': ip_address},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2373,7 +2378,8 @@ def wait_for_instance(
             'event',
             'ssh is available',
             'salt/cloud/{0}/ssh_ready_reactor'.format(vm_['name']),
-            {'ip_address': ip_address},
+            args={'ip_address': ip_address},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2426,7 +2432,7 @@ def create(vm_=None, call=None):
 
         if not os.path.exists(key_filename):
             raise SaltCloudSystemExit(
-                'The EC2 key file {0!r} does not exist.\n'.format(
+                'The EC2 key file \'{0}\' does not exist.\n'.format(
                     key_filename
                 )
             )
@@ -2436,7 +2442,7 @@ def create(vm_=None, call=None):
         )
         if key_mode not in ('0400', '0600'):
             raise SaltCloudSystemExit(
-                'The EC2 key file {0!r} needs to be set to mode 0400 or 0600.\n'.format(
+                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
                     key_filename
                 )
             )
@@ -2445,11 +2451,12 @@ def create(vm_=None, call=None):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
@@ -2546,7 +2553,8 @@ def create(vm_=None, call=None):
         'event',
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
-        {'tags': tags},
+        args={'tags': tags},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2615,7 +2623,8 @@ def create(vm_=None, call=None):
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            {'volumes': volumes},
+            args={'volumes': volumes},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2675,7 +2684,8 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        event_data,
+        args=event_data,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -3097,7 +3107,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name, 'instance_id': instance_id},
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -3159,7 +3170,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name, 'instance_id': instance_id},
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

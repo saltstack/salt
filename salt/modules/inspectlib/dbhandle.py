@@ -16,8 +16,9 @@
 
 # Import Python LIbs
 from __future__ import absolute_import
-import sqlite3
-import os
+from salt.modules.inspectlib.fsdb import CsvDB
+from salt.modules.inspectlib.entities import (Package, PackageCfgFile,
+                                              PayloadFile, IgnoredDir, AllowedDir)
 
 
 class DBHandleBase(object):
@@ -32,63 +33,52 @@ class DBHandleBase(object):
         Constructor.
         '''
         self._path = path
-        self.connection = None
-        self.cursor = None
         self.init_queries = list()
+        self._db = CsvDB(self._path)
 
     def open(self, new=False):
         '''
         Init the database, if required.
         '''
-        if self.connection and self.cursor:
-            return
-
-        if new and os.path.exists(self._path):
-            os.unlink(self._path)  # As simple as that
-
-        self.connection = sqlite3.connect(self._path)
-        self.connection.text_factory = str
-        self.cursor = self.connection.cursor()
-
-        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        if self.cursor.fetchall():
-            return
-
+        self._db.new() if new else self._db.open()  # pylint: disable=W0106
         self._run_init_queries()
-        self.connection.commit()
 
     def _run_init_queries(self):
         '''
         Initialization queries
         '''
-        for query in self.init_queries:
-            self.cursor.execute(query)
+        for obj in (Package, PackageCfgFile, PayloadFile, IgnoredDir, AllowedDir):
+            self._db.create_table_from_object(obj())
 
     def purge(self):
         '''
         Purge whole database.
         '''
-        if self.connection and self.cursor:
-            self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            for table_name in self.cursor.fetchall():
-                self.cursor.execute("DROP TABLE {0}".format(table_name[0]))
-            self.connection.commit()
+        for table_name in self._db.list_tables():
+            self._db.flush(table_name)
+
         self._run_init_queries()
 
     def flush(self, table):
         '''
         Flush the table.
         '''
-        self.cursor.execute("DELETE FROM " + table)
-        self.connection.commit()
+        self._db.flush(table)
 
     def close(self):
         '''
         Close the database connection.
         '''
-        if self.cursor is not None and self.connection is not None:
-            self.connection.close()
-            self.cursor = self.connection = None
+        self._db.close()
+
+    def __getattr__(self, item):
+        '''
+        Proxy methods from the Database instance.
+
+        :param item:
+        :return:
+        '''
+        return getattr(self._db, item)
 
 
 class DBHandle(DBHandleBase):
@@ -99,7 +89,7 @@ class DBHandle(DBHandleBase):
         Keep singleton.
         '''
         if not cls.__instance:
-            cls.__instance = super(DBHandle, cls).__new__(cls, *args, **kwargs)
+            cls.__instance = super(DBHandle, cls).__new__(cls)
         return cls.__instance
 
     def __init__(self, path):
@@ -110,19 +100,3 @@ class DBHandle(DBHandleBase):
         :return:
         '''
         DBHandleBase.__init__(self, path)
-
-        self.init_queries.append("CREATE TABLE inspector_pkg "
-                                 "(id INTEGER PRIMARY KEY, name CHAR(255))")
-        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_files "
-                                 "(id INTEGER PRIMARY KEY, pkgid INTEGER, path CHAR(4096))")
-        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_diffs "
-                                 "(id INTEGER PRIMARY KEY, cfgid INTEGER, diff TEXT)")
-        self.init_queries.append("CREATE TABLE inspector_payload "
-                                 "(id INTEGER PRIMARY KEY, path CHAR(4096), "
-                                 "p_type char(1), mode INTEGER, uid INTEGER, gid INTEGER, p_size INTEGER, "
-                                 "atime FLOAT, mtime FLOAT, ctime FLOAT)")
-
-        # inspector_allowed overrides inspector_ignored.
-        # I.e. if allowed is not empty, then inspector_ignored is completely omitted.
-        self.init_queries.append("CREATE TABLE inspector_ignored (path CHAR(4096))")
-        self.init_queries.append("CREATE TABLE inspector_allowed (path CHAR(4096))")

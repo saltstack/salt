@@ -85,7 +85,7 @@ import os.path
 import json
 
 # Import Salt Libs
-from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +95,10 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_elasticsearch_domain' if 'boto_elasticsearch_domain.exists' in __salt__ else False
+
+
+def _compare_json(current, desired):
+    return __utils__['boto3.json_objs_equal'](current, desired)
 
 
 def present(name, DomainName,
@@ -212,7 +216,7 @@ def present(name, DomainName,
         }
     if Tags is None:
         Tags = {}
-    if AccessPolicies is not None and isinstance(AccessPolicies, string_types):
+    if AccessPolicies is not None and isinstance(AccessPolicies, six.string_types):
         try:
             AccessPolicies = json.loads(AccessPolicies)
         except ValueError as e:
@@ -267,14 +271,14 @@ def present(name, DomainName,
 
     comm_args = {}
     need_update = False
-    for k, v in {
-        'ElasticsearchClusterConfig': ElasticsearchClusterConfig,
-        'EBSOptions': EBSOptions,
-        'AccessPolicies': AccessPolicies,
-        'SnapshotOptions': SnapshotOptions,
-        'AdvancedOptions': AdvancedOptions
-    }.iteritems():
-        if v != _describe[k]:
+    es_opts = {'ElasticsearchClusterConfig': ElasticsearchClusterConfig,
+               'EBSOptions': EBSOptions,
+               'AccessPolicies': AccessPolicies,
+               'SnapshotOptions': SnapshotOptions,
+               'AdvancedOptions': AdvancedOptions}
+
+    for k, v in six.iteritems(es_opts):
+        if not _compare_json(v, _describe[k]):
             need_update = True
             comm_args[k] = v
             ret['changes'].setdefault('new', {})[k] = v

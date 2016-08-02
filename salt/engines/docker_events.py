@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Send events from Docker events
+:Depends:   Docker API >= 1.22
 '''
 
 # Import Python Libs

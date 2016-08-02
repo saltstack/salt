@@ -78,12 +78,12 @@ Connection module for Amazon APIGateway
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import string
 import json
 import datetime
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 
@@ -140,7 +140,7 @@ def _convert_datetime_str(response):
     modify any key-value pair where value is a datetime object to a string.
     '''
     if response:
-        return dict([(k, '{0}'.format(v)) if isinstance(v, datetime.date) else (k, v) for k, v in response.iteritems()])
+        return dict([(k, '{0}'.format(v)) if isinstance(v, datetime.date) else (k, v) for k, v in six.iteritems(response)])
     return None
 
 
@@ -349,7 +349,7 @@ def create_api_resources(restApiId, path,
         salt myminion boto_apigateway.create_api_resources myapi_id resource_path
 
     '''
-    path_parts = string.split(path, '/')
+    path_parts = str.split(path, '/')
     created = []
     current_path = ''
     try:
@@ -805,7 +805,7 @@ def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, 
                 patch_ops.append(dict(op='remove',
                                       path='/variables/{0}'.format(old_var),
                                       value=''))
-        for var, val in variables.iteritems():
+        for var, val in six.iteritems(variables):
             if var not in old_vars or old_vars[var] != val:
                 patch_ops.append(dict(op='replace',
                                       path='/variables/{0}'.format(var),

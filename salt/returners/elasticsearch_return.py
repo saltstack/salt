@@ -30,6 +30,22 @@ In order to have the returner apply to all minions:
 .. code-block:: yaml
 
     ext_job_cache: elasticsearch
+
+Minion configuration example:
+
+.. code-block:: yaml
+
+    elasticsearch:
+        hosts:
+          - "10.10.10.10:9200"
+          - "10.10.10.11:9200"
+          - "10.10.10.12:9200"
+        index_date: True
+        number_of_shards: 5
+        number_of_replicas: 1
+        functions_blacklist:
+          - "test.ping"
+
 '''
 
 # Import Python libs
@@ -82,7 +98,9 @@ def returner(ret):
     job_retcode = ret.get('retcode', 1)
 
     index = 'salt-{0}'.format(job_fun_escaped)
-    #index = 'salt-{0}-{1}'.format(job_fun_escaped, datetime.date.today().strftime('%Y.%m.%d')) #TODO prefer this? #TODO make it configurable!
+    if __salt__['config.option']('elasticsearch:index_date', False):
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
     functions_blacklist = __salt__['config.option'](
         'elasticsearch:functions_blacklist', [])
     doc_type_version = __salt__['config.option'](
@@ -142,6 +160,10 @@ def event_return(events):
         'elasticsearch:master_event_doc_type',
         'default'
     )
+
+    if __salt__['config.option']('elasticsearch:index_date', False):
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
 
     _ensure_index(index)
 

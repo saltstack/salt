@@ -23,6 +23,7 @@ import salt.utils.jid
 import salt.exceptions
 
 # Import 3rd-party libs
+import msgpack
 import salt.ext.six as six
 
 
@@ -232,7 +233,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
                          recurse_count=recurse_count+1)
 
     # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
+    if 'tgt' in clear_load and clear_load['tgt'] != '':
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
@@ -478,3 +479,47 @@ def get_endtime(jid):
     with salt.utils.fopen(etpath, 'r') as etfile:
         endtime = etfile.read().strip('\n')
     return endtime
+
+
+def _reg_dir():
+    '''
+    Return the reg_dir for the given job id
+    '''
+    return os.path.join(__opts__['cachedir'], 'thorium')
+
+
+def save_reg(data):
+    '''
+    Save the register to msgpack files
+    '''
+    reg_dir = _reg_dir()
+    regfile = os.path.join(reg_dir, 'register')
+    try:
+        if not os.path.exists():
+            os.makedirs(reg_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            pass
+        else:
+            raise
+    try:
+        with salt.utils.fopen(regfile, 'a') as fh_:
+            msgpack.dump(data, fh_)
+        fh_.close()
+    except:
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        raise
+
+
+def load_reg():
+    '''
+    Load the register from msgpack files
+    '''
+    reg_dir = _reg_dir()
+    regfile = os.path.join(reg_dir, 'register')
+    try:
+        with salt.utils.fopen(regfile, 'r') as fh_:
+            return msgpack.load(fh_)
+    except:
+        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        raise

@@ -4,9 +4,13 @@ Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 
 .. versionadded:: 2016.3.0
 
-This custom saltstack ``ext_pillar`` is inspired by
-`varstack <https://github.com/conversis/varstack>`_ but is heavily based on
-Jinja2 for maximum flexibility.
+`PillarStack <https://github.com/bbinet/pillarstack>`_ is a custom saltstack
+``ext_pillar`` which was inspired by `varstack
+<https://github.com/conversis/varstack>`_ but is heavily based on Jinja2 for
+maximum flexibility.
+
+Any issue should be reported to the upstream project at:
+https://github.com/bbinet/pillarstack/issues
 
 It supports the following features:
 
@@ -73,8 +77,8 @@ You can also provide a list of config files:
 Select config files through grains|pillar|opts matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can also opt for a much more flexible configuration: PillarStack allows to
-select the config files for the current minion based on matching values from
+You can also opt for a much more flexible configuration: PillarStack allows one
+to select the config files for the current minion based on matching values from
 either grains, or pillar, or opts objects.
 
 Here is an example of such a configuration, which should speak by itself:
@@ -362,13 +366,16 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 +----------------+-------------------------+-------------------------+
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 import os
 import logging
 from functools import partial
-
 import yaml
 from jinja2 import FileSystemLoader, Environment, TemplateNotFound
+
+# Import Salt libs
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -384,7 +391,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         'grains': partial(salt.utils.traverse_dict_and_list, __grains__),
         'opts': partial(salt.utils.traverse_dict_and_list, __opts__),
         }
-    for matcher, matchs in kwargs.iteritems():
+    for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)
         if t not in traverse:
             raise Exception('Unknown traverse option "{0}", '
@@ -439,7 +446,7 @@ def _cleanup(obj):
     if obj:
         if isinstance(obj, dict):
             obj.pop('__', None)
-            for k, v in obj.iteritems():
+            for k, v in six.iteritems(obj):
                 obj[k] = _cleanup(v)
         elif isinstance(obj, list) and isinstance(obj[0], dict) \
                 and '__' in obj[0]:
@@ -455,7 +462,7 @@ def _merge_dict(stack, obj):
     if strategy == 'overwrite':
         return _cleanup(obj)
     else:
-        for k, v in obj.iteritems():
+        for k, v in six.iteritems(obj):
             if strategy == 'remove':
                 stack.pop(k, None)
                 continue

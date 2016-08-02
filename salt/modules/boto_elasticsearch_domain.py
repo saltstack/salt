@@ -81,11 +81,11 @@ import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -252,7 +252,7 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                     'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
             if locals()[k] is not None:
                 val = locals()[k]
-                if isinstance(val, string_types):
+                if isinstance(val, six.string_types):
                     try:
                         val = json.loads(val)
                     except ValueError as e:
@@ -324,7 +324,7 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                 'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
         if locals()[k] is not None:
             val = locals()[k]
-            if isinstance(val, string_types):
+            if isinstance(val, six.string_types):
                 try:
                     val = json.loads(val)
                 except ValueError as e:
@@ -362,7 +362,7 @@ def add_tags(DomainName=None, ARN=None,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})

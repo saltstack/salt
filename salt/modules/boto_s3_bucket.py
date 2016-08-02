@@ -54,9 +54,10 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import json
 
 # Import Salt libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
 import salt.utils
-from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -221,7 +222,7 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
 
     '''
 
-    if isinstance(Delete, string_types):
+    if isinstance(Delete, six.string_types):
         Delete = json.loads(Delete)
     if not isinstance(Delete, dict):
         raise SaltInvocationError("Malformed Delete request.")
@@ -230,7 +231,7 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
 
     failed = []
     objs = Delete['Objects']
-    for i in xrange(0, len(objs), 1000):
+    for i in range(0, len(objs), 1000):
         chunk = objs[i:i+1000]
         subset = {'Objects': chunk, 'Quiet': True}
         try:
@@ -268,18 +269,19 @@ def describe(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         result = {}
-        for key, query in {
-                'ACL': conn.get_bucket_acl,
-                'CORS': conn.get_bucket_cors,
-                'LifecycleConfiguration': conn.get_bucket_lifecycle_configuration,
-                'Location': conn.get_bucket_location,
-                'Logging': conn.get_bucket_logging,
-                'NotificationConfiguration': conn.get_bucket_notification_configuration,
-                'Policy': conn.get_bucket_policy,
-                'Replication': conn.get_bucket_replication,
-                'RequestPayment': conn.get_bucket_request_payment,
-                'Versioning': conn.get_bucket_versioning,
-                'Website': conn.get_bucket_website}.iteritems():
+        conn_dict = {'ACL': conn.get_bucket_acl,
+                     'CORS': conn.get_bucket_cors,
+                     'LifecycleConfiguration': conn.get_bucket_lifecycle_configuration,
+                     'Location': conn.get_bucket_location,
+                     'Logging': conn.get_bucket_logging,
+                     'NotificationConfiguration': conn.get_bucket_notification_configuration,
+                     'Policy': conn.get_bucket_policy,
+                     'Replication': conn.get_bucket_replication,
+                     'RequestPayment': conn.get_bucket_request_payment,
+                     'Versioning': conn.get_bucket_versioning,
+                     'Website': conn.get_bucket_website}
+
+        for key, query in six.iteritems(conn_dict):
             try:
                 data = query(Bucket=Bucket)
             except ClientError as e:
@@ -339,7 +341,8 @@ def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
     if len(Delete['Objects']):
         ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
                              region=region, key=key, keyid=keyid, profile=profile)
-        if len(ret.get('failed', [])):
+        failed = ret.get('failed', [])
+        if len(failed):
             return {'deleted': False, 'failed': ret[failed]}
     return {'deleted': True}
 
@@ -475,7 +478,7 @@ def put_acl(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         if AccessControlPolicy is not None:
-            if isinstance(AccessControlPolicy, string_types):
+            if isinstance(AccessControlPolicy, six.string_types):
                 AccessControlPolicy = json.loads(AccessControlPolicy)
             kwargs['AccessControlPolicy'] = AccessControlPolicy
         for arg in ('ACL',
@@ -515,7 +518,7 @@ def put_cors(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if CORSRules is not None and isinstance(CORSRules, string_types):
+        if CORSRules is not None and isinstance(CORSRules, six.string_types):
             CORSRules = json.loads(CORSRules)
         conn.put_bucket_cors(Bucket=Bucket, CORSConfiguration={'CORSRules': CORSRules})
         return {'updated': True, 'name': Bucket}
@@ -550,7 +553,7 @@ def put_lifecycle_configuration(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if Rules is not None and isinstance(Rules, string_types):
+        if Rules is not None and isinstance(Rules, six.string_types):
             Rules = json.loads(Rules)
         conn.put_bucket_lifecycle_configuration(Bucket=Bucket, LifecycleConfiguration={'Rules': Rules})
         return {'updated': True, 'name': Bucket}
@@ -578,18 +581,17 @@ def put_logging(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         logstate = {}
-        for key, val in {
-                'TargetBucket': TargetBucket,
-                'TargetGrants': TargetGrants,
-                'TargetPrefix': TargetPrefix,
-        }.iteritems():
+        targets = {'TargetBucket': TargetBucket,
+                   'TargetGrants': TargetGrants,
+                   'TargetPrefix': TargetPrefix}
+        for key, val in six.iteritems(targets):
             if val is not None:
                 logstate[key] = val
         if logstate:
             logstatus = {'LoggingEnabled': logstate}
         else:
             logstatus = {}
-        if TargetGrants is not None and isinstance(TargetGrants, string_types):
+        if TargetGrants is not None and isinstance(TargetGrants, six.string_types):
             TargetGrants = json.loads(TargetGrants)
         conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {'updated': True, 'name': Bucket}
@@ -622,15 +624,15 @@ def put_notification_configuration(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if TopicConfigurations is None:
             TopicConfigurations = []
-        elif isinstance(TopicConfigurations, string_types):
+        elif isinstance(TopicConfigurations, six.string_types):
             TopicConfigurations = json.loads(TopicConfigurations)
         if QueueConfigurations is None:
             QueueConfigurations = []
-        elif isinstance(QueueConfigurations, string_types):
+        elif isinstance(QueueConfigurations, six.string_types):
             QueueConfigurations = json.loads(QueueConfigurations)
         if LambdaFunctionConfigurations is None:
             LambdaFunctionConfigurations = []
-        elif isinstance(LambdaFunctionConfigurations, string_types):
+        elif isinstance(LambdaFunctionConfigurations, six.string_types):
             LambdaFunctionConfigurations = json.loads(LambdaFunctionConfigurations)
         # TODO allow the user to use simple names & substitute ARNs for those names
         conn.put_bucket_notification_configuration(Bucket=Bucket, NotificationConfiguration={
@@ -663,7 +665,7 @@ def put_policy(Bucket, Policy,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Policy is None:
             Policy = '{}'
-        elif not isinstance(Policy, string_types):
+        elif not isinstance(Policy, six.string_types):
             Policy = json.dumps(Policy)
         conn.put_bucket_policy(Bucket=Bucket, Policy=Policy)
         return {'updated': True, 'name': Bucket}
@@ -707,7 +709,7 @@ def put_replication(Bucket, Role, Rules,
                              region=region, key=key, keyid=keyid, profile=profile)
         if Rules is None:
             Rules = []
-        elif isinstance(Rules, string_types):
+        elif isinstance(Rules, six.string_types):
             Rules = json.loads(Rules)
         conn.put_bucket_replication(Bucket=Bucket, ReplicationConfiguration={
                 'Role': Role,
@@ -763,7 +765,7 @@ def put_tagging(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
@@ -831,7 +833,7 @@ def put_website(Bucket, ErrorDocument=None, IndexDocument=None,
                     'RedirectAllRequestsTo', 'RoutingRules'):
             val = locals()[key]
             if val is not None:
-                if isinstance(val, string_types):
+                if isinstance(val, six.string_types):
                     WebsiteConfiguration[key] = json.loads(val)
                 else:
                     WebsiteConfiguration[key] = val

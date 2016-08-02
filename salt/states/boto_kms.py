@@ -179,14 +179,14 @@ def _key_present(
         rc = __salt__['boto_kms.create_key'](
             policy, description, key_usage, region, key, keyid, profile
         )
-        key_metadata = rc['key_metadata']
-        kms_key_id = key_metadata['KeyId']
         if 'error' in rc:
             ret['result'] = False
             ret['comment'] = 'Failed to create key: {0}'.format(
                 rc['error']['message']
             )
             return ret
+        key_metadata = rc['key_metadata']
+        kms_key_id = key_metadata['KeyId']
         rn = __salt__['boto_kms.create_alias'](
             alias, kms_key_id, region, key, keyid, profile
         )
@@ -207,13 +207,13 @@ def _key_present(
         rd = __salt__['boto_kms.describe_key'](
             alias, region, key, keyid, profile
         )
-        key_metadata = rd['key_metadata']
         if 'error' in rd:
             ret['result'] = False
             ret['comment'] = 'Failed to update key: {0}.'.format(
                 rd['error']['message']
             )
             return ret
+        key_metadata = rd['key_metadata']
         _ret = _key_description(
             key_metadata, description, region, key, keyid, profile
         )

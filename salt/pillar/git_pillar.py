@@ -125,7 +125,7 @@ Configuring git_pillar for Salt releases 2015.8.0 and later
     will also be logged.
 
 Beginning with Salt version 2015.8.0, pygit2_ is now supported in addition to
-GitPython_ (Dulwich_ will not be supported for the forseeable future). The
+GitPython_ (Dulwich_ will not be supported for the foreseeable future). The
 requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
 :ref:`here <gitfs-dependencies>`.
 
@@ -205,6 +205,7 @@ import hashlib
 import os
 
 # Import salt libs
+import salt.utils
 import salt.utils.gitfs
 import salt.utils.dictupdate
 from salt.exceptions import FileserverConfigError
@@ -332,7 +333,7 @@ class _LegacyGitPillar(object):
 
         hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
         hash_str = '{0} {1}'.format(self.branch, self.rp_location)
-        repo_hash = hash_type(hash_str).hexdigest()
+        repo_hash = hash_type(salt.utils.to_bytes(hash_str)).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
         if not os.path.isdir(rp_):

@@ -200,7 +200,7 @@ def save_load(jid, clear_load, minion=None):
     cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
     # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
+    if 'tgt' in clear_load and clear_load['tgt'] != '':
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
         minions = ckminions.check_minions(

@@ -78,6 +78,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.config as config
+import salt.ext.six as six
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -317,7 +318,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in images.iteritems():
+    for key, value in six.iteritems(images):
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -445,7 +446,7 @@ def get_node(conn, name):
             node = {'id': item['id']}
             node.update(item['properties'])
             salt.utils.cloud.cache_node(
-                salt.utils.cloud.simple_types_filter(node),
+                salt.utils.simple_types_filter(node),
                 __active_provider_name__,
                 __opts__
             )
@@ -494,7 +495,7 @@ def create_network_interfaces(conn, datacenter_id, server_id, vm_):
     if 'private_lan' in vm_:
         lans['private_lan'] = vm_['private_lan']
 
-    for lan, lan_id in lans.iteritems():
+    for lan, lan_id in six.iteritems(lans):
         response = None
         nic = NIC(lan=lan_id, name=lan.split('_')[0])
         try:
@@ -622,7 +623,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'name': vm_['name']},
+        args={'name': vm_['name']},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -706,9 +708,9 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -717,11 +719,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -760,7 +763,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -774,7 +778,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

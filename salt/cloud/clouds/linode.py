@@ -351,11 +351,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        {
+        args={
             'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -442,7 +443,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -529,11 +531,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        {
+        args={
             'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -740,7 +743,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -752,7 +756,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1615,7 +1620,7 @@ def _get_status_descr_by_id(status_id):
     status_id
         linode VM status ID
     '''
-    for status_name, status_data in LINODE_STATUS.iteritems():
+    for status_name, status_data in six.iteritems(LINODE_STATUS):
         if status_data['code'] == int(status_id):
             return status_data['descr']
     return LINODE_STATUS.get(status_id, None)

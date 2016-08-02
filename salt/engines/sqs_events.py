@@ -70,7 +70,7 @@ from salt.ext.six import string_types
 
 def __virtual__():
     if not HAS_BOTO:
-        return False
+        return (False, 'Cannot import engine sqs_events because the required boto module is missing')
     else:
         return True
 
@@ -78,7 +78,7 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def _get_sqs_conn(profile, region=None, key=None, keyid=None, message_format=None):
+def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     '''
     Get a boto connection to SQS.
     '''
@@ -91,8 +91,6 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None, message_format=Non
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
 
-    if not message_format:
-        message_format = __opts__.get('sqs.message_format', None)
     if not region:
         region = __opts__.get('sqs.region', 'us-east-1')
     if not key:
@@ -121,6 +119,8 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
     else:
         fire_master = None
 
+    message_format = __opts__.get('sqs.message_format', None)
+
     def fire(tag, msg):
         if fire_master:
             fire_master(msg, tag)
@@ -140,7 +140,7 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
                 continue
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
-            if sqs.message_format == "json":
+            if message_format == "json":
                 fire(tag, {'message': json.loads(msg.get_body())})
             else:
                 fire(tag, {'message': msg.get_body()})
