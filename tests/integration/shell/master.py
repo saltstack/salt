@@ -20,6 +20,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
 import salt.utils
 
@@ -99,7 +100,8 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_NOUSER',
             message='unknown user not on system',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # master.shutdown() should be unnecessary since the start-up should fail
 
@@ -123,7 +125,8 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_USAGE',
             message='unknown argument',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # master.shutdown() should be unnecessary since the start-up should fail
 
@@ -146,7 +149,8 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_OK',
             message='correct usage',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         master.shutdown()
 

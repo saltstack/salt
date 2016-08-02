@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
 
 log = logging.getLogger(__name__)
@@ -49,7 +50,8 @@ class ProxyTest(testprogram.TestProgramCase):
         self.assert_exit_status(
             status, 'EX_USAGE',
             message='no --proxyid specified',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -73,7 +75,8 @@ class ProxyTest(testprogram.TestProgramCase):
         self.assert_exit_status(
             status, 'EX_NOUSER',
             message='unknown user not on system',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -120,7 +123,8 @@ class ProxyTest(testprogram.TestProgramCase):
         self.assert_exit_status(
             status, 'EX_OK',
             message='correct usage',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         proxy.shutdown()
 

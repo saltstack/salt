@@ -25,9 +25,10 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
+import salt.ext.six as six
 import salt.utils
-
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +126,13 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             log.debug('script: salt-minion: stderr: {0}'.format(line))
         log.debug('exit status: {0}'.format(ret[2]))
 
+        if six.PY3:
+            std_out = b'\nSTDOUT:'.join(ret[0])
+            std_err = b'\nSTDERR:'.join(ret[1])
+        else:
+            std_out = '\nSTDOUT:'.join(ret[0])
+            std_err = '\nSTDERR:'.join(ret[1])
+
         # Check minion state
         for minion in minions:
             self.assertEqual(
@@ -134,8 +142,8 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
                     action,
                     minion.name,
                     ["stopped", "running"][minion_running],
-                    '\nSTDOUT:'.join(ret[0]),
-                    '\nSTDERR:'.join(ret[1]),
+                    std_out,
+                    std_err,
                 )
             )
 
@@ -148,8 +156,8 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
                     message,
                     ret[2],
                     exitstatus,
-                    '\nSTDOUT:'.join(ret[0]),
-                    '\nSTDERR:'.join(ret[1]),
+                    std_out,
+                    std_err,
                 )
             )
         return ret
@@ -242,7 +250,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             # Verify that PIDs match
             mpids = {}
             for line in ret[0]:
-                segs = line.split()
+                segs = line.decode(__salt_system_encoding__).split()
                 minfo = segs[0].split(':')
                 mpids[minfo[-1]] = int(segs[-1]) if segs[-1].isdigit() else None
             for minion in minions:
@@ -286,7 +294,8 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_NOUSER',
             message='unknown user not on system',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # minion.shutdown() should be unnecessary since the start-up should fail
 
@@ -310,7 +319,8 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_USAGE',
             message='unknown argument',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # minion.shutdown() should be unnecessary since the start-up should fail
 
