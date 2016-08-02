@@ -493,7 +493,7 @@ local job cache on the master.
 Default: ``''``
 
 Specify the returner(s) to use to log events. Each returner may have
-installation and configuration requirements. Read the returner's 
+installation and configuration requirements. Read the returner's
 documentation.
 
 .. note::
@@ -503,7 +503,7 @@ documentation.
 
 .. code-block:: yaml
 
-    event_return: 
+    event_return:
       - syslog
       - splunk
 
@@ -1265,6 +1265,20 @@ or just post what changes are going to be made.
 .. code-block:: yaml
 
     test: False
+
+.. conf_master:: runner_returns
+
+``runner_returns``
+------------------
+
+Default: ``False``
+
+If set to ``True``, runner jobs will be saved to job cache (defined by
+:conf_master:`master_job_cache`).
+
+.. code-block:: yaml
+
+    runner_returns: True
 
 Master File Server Settings
 ===========================
