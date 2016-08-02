@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
 import salt.ext.six as six
 import salt.utils
@@ -249,7 +250,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             # Verify that PIDs match
             mpids = {}
             for line in ret[0]:
-                segs = line.split()
+                segs = line.decode(__salt_system_encoding__).split()
                 minfo = segs[0].split(':')
                 mpids[minfo[-1]] = int(segs[-1]) if segs[-1].isdigit() else None
             for minion in minions:
@@ -294,7 +295,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_NOUSER',
             message='unknown user not on system',
             stdout=stdout,
-            stderr=stderr[0].decode(__salt_system_encoding__)
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # minion.shutdown() should be unnecessary since the start-up should fail
 
@@ -319,7 +320,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             status, 'EX_USAGE',
             message='unknown argument',
             stdout=stdout,
-            stderr=stderr[0].decode(__salt_system_encoding__)
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # minion.shutdown() should be unnecessary since the start-up should fail
 
