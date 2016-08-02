@@ -184,6 +184,19 @@ class Runner(RunnerClient):
 
                 # Allocate a jid
                 async_pub = self._gen_async_pub()
+
+                if self.opts.get('runner_returns', False):
+                    job_load = {
+                        'jid': async_pub['jid'],
+                        'tgt_type': 'runner',
+                        'tgt': '',
+                        'user': self.opts.get('user', ''),
+                        'fun': self.opts['fun'],
+                        'arg': salt.utils.args.condition_input(args, kwargs),
+                    }
+                else:
+                    job_load = {}
+
                 if low['fun'] == 'state.orchestrate':
                     low['kwarg']['__pub_orchestration_jid'] = async_pub['jid']
 
@@ -210,6 +223,14 @@ class Runner(RunnerClient):
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)
-                return ret
-            log.debug('Runner return: {0}'.format(ret))
+            else:
+                log.debug('Runner return: {0}'.format(ret))
+
+            if self.opts.get('runner_returns', False):
+                # Save the payload to the job cache
+                job_load['ret'] = ret
+                save_load_func = '{0}.save_load'.format(
+                    self.opts['master_job_cache'])
+                self.returners[save_load_func](job_load['jid'], job_load)
+
             return ret
