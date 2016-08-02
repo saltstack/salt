@@ -1670,6 +1670,9 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     Execute a module function
     '''
 
+    def runTest(self):
+        super(TestCase, self).runTest()
+
     def minion_run(self, _function, *args, **kw):
         '''
         Run a single salt function on the 'minion' target and condition
