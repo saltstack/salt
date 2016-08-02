@@ -1670,6 +1670,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     Execute a module function
     '''
 
+    def runTest(self):
+        '''
+        TODO remove after salt-testing PR #74 is merged and deployed
+        '''
+        super(ModuleCase, self).runTest()
+
     def minion_run(self, _function, *args, **kw):
         '''
         Run a single salt function on the 'minion' target and condition
