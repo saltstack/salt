@@ -13,6 +13,7 @@ engine modules
     docker_events
     logentries
     logstash
+    logstash_http
     reactor
     redis_sentinel
     slack
