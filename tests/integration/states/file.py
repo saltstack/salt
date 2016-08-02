@@ -148,6 +148,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     Validate the file state
     '''
 
+    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_symlink(self):
         '''
         file.symlink
@@ -329,6 +330,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         else:
             state_file = 'file-grainget'
             grain_path = '/tmp/file-grain-test'
+
         ret = self.run_function('state.sls', [state_file])
         self.assertTrue(os.path.exists(grain_path))
         file_contents = open(grain_path, 'r').readlines()
@@ -340,7 +342,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure pillar data in sls file
         is rendered properly and file is created.
         '''
-        state_name = 'file-pillarget'
+        if IS_WINDOWS:
+            state_name = 'file-pillarget-win'
+        else:
+            state_name = 'file-pillarget'
+
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
@@ -359,6 +365,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             state_name = 'file-pillardefaultget-win'
         else:
             state_name = 'file-pillardefaultget'
+
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
@@ -377,6 +384,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             state_name = 'file-pillargit-win'
         else:
             state_name = 'file-pillargit'
+
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
@@ -1733,6 +1741,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
 
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_issue_2726_mode_kwarg(self):
         testcase_temp_dir = os.path.join(integration.TMP, 'issue_2726')
         # Let's test for the wrong usage approach
