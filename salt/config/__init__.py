@@ -674,6 +674,9 @@ VALID_OPTS = {
     # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
     'engines': list,
 
+    # Whether or not to store runner returns in the job cache
+    'runner_returns': bool,
+
     'serial': str,
     'search': str,
 
@@ -1289,6 +1292,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_whitelist': [],
     'event_return_blacklist': [],
     'event_match_type': 'startswith',
+    'runner_returns': False,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
