@@ -26,10 +26,7 @@ class BatchTest(integration.ShellCase):
         '''
         ret = 'Executing run on [\'sub_minion\']'
         cmd = self.run_salt('\'*\' test.echo \'batch testing\' -b 50%')
-        if six.PY3:
-            self.assertIn(ret, cmd)
-        else:
-            self.assertIn(ret, cmd)
+        self.assertIn(ret, cmd)
 
     def test_batch_run_number(self):
         '''
