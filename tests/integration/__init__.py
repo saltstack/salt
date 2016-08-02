@@ -1671,7 +1671,10 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     '''
 
     def runTest(self):
-        super(TestCase, self).runTest()
+        '''
+        TODO remove after salt-testing PR #74 is merged and deployed
+        '''
+        super(ModuleCase, self).runTest()
 
     def minion_run(self, _function, *args, **kw):
         '''
