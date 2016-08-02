@@ -281,6 +281,13 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
+    if 'enabled' in kwargs:
+        salt.utils.warn_until(
+            'Carbon',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
+
     repo = name
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
@@ -308,13 +315,9 @@ def managed(name, ppa=None, **kwargs):
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    if kwargs.pop('enabled', None):
-        kwargs['disabled'] = False
-        salt.utils.warn_until(
-            'Carbon',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
+    # Replace 'enabled' from kwargs with 'disabled'
+    enabled = kwargs.pop('enabled', True)
+    kwargs['disabled'] = not salt.utils.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -428,7 +431,7 @@ def managed(name, ppa=None, **kwargs):
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -513,7 +516,7 @@ def absent(name, **kwargs):
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
         return ret
 
     if not repo:
@@ -522,7 +525,7 @@ def absent(name, **kwargs):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} will be removed. This may '
+        ret['comment'] = ('Package repo \'{0}\' will be removed. This may '
                           'cause pkg states to behave differently than stated '
                           'if this action is repeated without test=True, due '
                           'to the differences in the configured repositories.'

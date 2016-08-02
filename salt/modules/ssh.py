@@ -20,6 +20,7 @@ import re
 import subprocess
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.files
 import salt.utils.decorators as decorators
@@ -31,6 +32,9 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 DEFAULT_SSH_PORT = 22
+
+if six.PY3:
+    import base64
 
 
 def __virtual__():
@@ -234,7 +238,10 @@ def _fingerprint(public_key):
     If the key is invalid (incorrect base64 string), return None
     '''
     try:
-        raw_key = public_key.decode('base64')
+        if six.PY2:
+            raw_key = public_key.decode('base64')
+        else:
+            raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
@@ -809,7 +816,11 @@ def recv_known_host(hostname,
         cmd.append('-H')
     cmd.extend(['-T', str(timeout)])
     cmd.append(hostname)
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    lines = None
+    attempts = 5
+    while not lines and attempts > 0:
+        attempts = attempts - 1
+        lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 

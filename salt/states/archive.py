@@ -455,6 +455,9 @@ def extracted(name,
                         append_opt = append_opt.replace('x', '').replace('f', '')
                         tar_shortopts = tar_shortopts + append_opt
 
+            if __grains__['os'] == 'OpenBSD':
+                tar_shortopts = '-' + tar_shortopts
+
             tar_cmd.append(tar_shortopts)
             tar_cmd.extend(tar_longopts)
             tar_cmd.extend(['-f', filename])

@@ -320,7 +320,7 @@ def list_(name=None, **kwargs):
     depth : int
         limit recursion to depth
     properties : string
-        comma-seperated list of properties to list, the name property will always be added
+        comma-separated list of properties to list, the name property will always be added
     type : string
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
@@ -885,7 +885,7 @@ def hold(tag, *snapshot, **kwargs):
 
     .. note::
 
-        A comma-seperated list can be provided for the tag parameter to hold multiple tags.
+        A comma-separated list can be provided for the tag parameter to hold multiple tags.
 
     CLI Example:
 
@@ -963,7 +963,7 @@ def release(tag, *snapshot, **kwargs):
 
     .. note::
 
-        A comma-seperated list can be provided for the tag parameter to release multiple tags.
+        A comma-separated list can be provided for the tag parameter to release multiple tags.
 
     CLI Example:
 
@@ -1192,7 +1192,7 @@ def get(*dataset, **kwargs):
     depth : int
         recursively list children to depth
     fields : string
-        comma-seperated list of fields to include, the name and property field will always be added
+        comma-separated list of fields to include, the name and property field will always be added
     type : string
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.

@@ -127,16 +127,16 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     elif isinstance(nglookup, (list, tuple)):
         words = nglookup
     else:
-        log.error(
-            'Nodgroup is neither a string, list'
-            ' nor tuple: {0} = {1}'.format(nodegroup, nglookup)
-        )
+        log.error('Nodegroup \'%s\' (%s) is neither a string, list nor tuple',
+                  nodegroup, nglookup)
         return ''
 
     skip.add(nodegroup)
     ret = []
     opers = ['and', 'or', 'not', '(', ')']
     for word in words:
+        if not isinstance(word, six.string_types):
+            word = str(word)
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
@@ -157,10 +157,30 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     if expanded_nodegroup or not first_call:
         return ret
     else:
-        log.debug('No nested nodegroups detected. '
-                  'Using original nodegroup definition: {0}'
-                  .format(nodegroups[nodegroup]))
-        return nodegroups[nodegroup]
+        opers_set = set(opers)
+        ret = words
+        if (set(ret) - opers_set) == set(ret):
+            # No compound operators found in nodegroup definition. Check for
+            # group type specifiers
+            group_type_re = re.compile('^[A-Z]@')
+            if not [x for x in ret if '*' in x or group_type_re.match(x)]:
+                # No group type specifiers and no wildcards. Treat this as a
+                # list of nodenames.
+                joined = 'L@' + ','.join(ret)
+                log.debug(
+                    'Nodegroup \'%s\' (%s) detected as list of nodenames. '
+                    'Assuming compound matching syntax of \'%s\'',
+                    nodegroup, ret, joined
+                )
+                # Return data must be a list of compound matching components
+                # to be fed into compound matcher. Enclose return data in list.
+                return [joined]
+
+        log.debug(
+            'No nested nodegroups detected. Using original nodegroup '
+            'definition: %s', nodegroups[nodegroup]
+        )
+        return ret
 
 
 class CkMinions(object):
@@ -963,7 +983,7 @@ class CkMinions(object):
         for item in auth_list:
             if isinstance(item, six.string_types):
                 continue
-            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
         if ou_names:
             auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list

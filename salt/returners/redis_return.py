@@ -45,12 +45,13 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return redis --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.jid
 import salt.returners
@@ -160,7 +161,7 @@ def get_jid(jid):
     '''
     serv = _get_serv(ret=None)
     ret = {}
-    for minion, data in serv.hgetall('ret:{0}'.format(jid)).iteritems():
+    for minion, data in six.iteritems(serv.hgetall('ret:{0}'.format(jid))):
         if data:
             ret[minion] = json.loads(data)
     return ret

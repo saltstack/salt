@@ -631,6 +631,19 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             shutdown_multiprocessing_logging_listener()
             sys.exit(2)
     else:
+        # make sure, the logging directory exists and attempt to create it if necessary
+        log_dir = os.path.dirname(log_path)
+        if not os.path.exists(log_dir):
+            logging.getLogger(__name__).info(
+                'Log directory not found, trying to create it: {0}'.format(log_dir)
+            )
+            try:
+                os.makedirs(log_dir, mode=0o700)
+            except OSError as ose:
+                logging.getLogger(__name__).warning(
+                    'Failed to create directory for log file: {0} ({1})'.format(log_dir, ose)
+                )
+                return
         try:
             # Logfile logging is UTF-8 on purpose.
             # Since salt uses YAML and YAML uses either UTF-8 or UTF-16, if a
@@ -920,9 +933,20 @@ def __process_multiprocessing_logging_queue(opts, queue):
     salt.utils.appendproctitle('MultiprocessingLoggingQueue')
     if salt.utils.is_windows():
         # On Windows, creating a new process doesn't fork (copy the parent
-        # process image). Due to this, we need to setup extended logging
+        # process image). Due to this, we need to setup all of our logging
         # inside this process.
         setup_temp_logger()
+        setup_console_logger(
+            log_level=opts.get('log_level'),
+            log_format=opts.get('log_fmt_console'),
+            date_format=opts.get('log_datefmt_console')
+        )
+        setup_logfile_logger(
+            opts.get('log_file'),
+            log_level=opts.get('log_level_logfile'),
+            log_format=opts.get('log_fmt_logfile'),
+            date_format=opts.get('log_datefmt_logfile')
+        )
         setup_extended_logging(opts)
     while True:
         try:

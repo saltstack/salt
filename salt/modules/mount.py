@@ -202,7 +202,7 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
-    elif __grains__['os'] == 'Solaris':
+    elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
@@ -292,8 +292,83 @@ class _fstab_entry(object):
         return True
 
 
+class _vfstab_entry(object):
+    '''
+    Utility class for manipulating vfstab entries. Primarily we're parsing,
+    formatting, and comparing lines. Parsing emits dicts expected from
+    fstab() or raises a ValueError.
+
+    Note: We'll probably want to use os.normpath and os.normcase on 'name'
+    Note: This parses vfstab entries on Solaris like systems
+
+    #device     device      mount       FS  fsck    mount   mount
+    #to mount   to fsck     point       type    pass    at boot options
+    #
+    /devices    -   /devices            devfs    -   no     -
+    '''
+
+    class ParseError(ValueError):
+        '''Error raised when a line isn't parsible as an fstab entry'''
+
+    vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
+    ## NOTE: weird formatting to match default spacing on Solaris
+    vfstab_format = '{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n'
+
+    @classmethod
+    def dict_from_line(cls, line):
+        if line.startswith('#'):
+            raise cls.ParseError("Comment!")
+
+        comps = line.split()
+        if len(comps) != 7:
+            raise cls.ParseError("Invalid Entry!")
+
+        return dict(zip(cls.vfstab_keys, comps))
+
+    @classmethod
+    def from_line(cls, *args, **kwargs):
+        return cls(** cls.dict_from_line(*args, **kwargs))
+
+    @classmethod
+    def dict_to_line(cls, entry):
+        return cls.vfstab_format.format(**entry)
+
+    def __str__(self):
+        '''string value, only works for full repr'''
+        return self.dict_to_line(self.criteria)
+
+    def __repr__(self):
+        '''always works'''
+        return str(self.criteria)
+
+    def pick(self, keys):
+        '''returns an instance with just those keys'''
+        subset = dict([(key, self.criteria[key]) for key in keys])
+        return self.__class__(**subset)
+
+    def __init__(self, **criteria):
+        '''Store non-empty, non-null values to use as filter'''
+        items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
+        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
+        self.criteria = dict(items)
+
+    @staticmethod
+    def norm_path(path):
+        '''Resolve equivalent paths equivalently'''
+        return os.path.normcase(os.path.normpath(path))
+
+    def match(self, line):
+        '''compare potentially partial criteria against line'''
+        entry = self.dict_from_line(line)
+        for key, value in six.iteritems(self.criteria):
+            if entry[key] != value:
+                return False
+        return True
+
+
 def fstab(config='/etc/fstab'):
     '''
+    .. versionchanged:: 2016.3.2
     List the contents of the fstab
 
     CLI Example:
@@ -308,9 +383,16 @@ def fstab(config='/etc/fstab'):
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
             try:
-                entry = _fstab_entry.dict_from_line(
-                    line,
-                    _fstab_entry.compatibility_keys)
+                if __grains__['kernel'] == 'SunOS':
+                    ## Note: comments use in default vfstab file!
+                    if line[0] == '#':
+                        continue
+                    entry = _vfstab_entry.dict_from_line(
+                        line)
+                else:
+                    entry = _fstab_entry.dict_from_line(
+                        line,
+                        _fstab_entry.compatibility_keys)
 
                 entry['opts'] = entry['opts'].split(',')
                 while entry['name'] in ret:
@@ -319,12 +401,30 @@ def fstab(config='/etc/fstab'):
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
                 pass
+            except _vfstab_entry.ParseError:
+                pass
 
     return ret
 
 
+def vfstab(config='/etc/vfstab'):
+    '''
+    .. versionadded:: 2016.3.2
+    List the contents of the vfstab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.vfstab
+    '''
+    ## NOTE: vfstab is a wrapper for fstab
+    return fstab(config)
+
+
 def rm_fstab(name, device, config='/etc/fstab'):
     '''
+    .. versionchanged:: 2016.3.2
     Remove the mount point from the fstab
 
     CLI Example:
@@ -335,7 +435,10 @@ def rm_fstab(name, device, config='/etc/fstab'):
     '''
     modified = False
 
-    criteria = _fstab_entry(name=name, device=device)
+    if __grains__['kernel'] == 'SunOS':
+        criteria = _vfstab_entry(name=name, device=device)
+    else:
+        criteria = _fstab_entry(name=name, device=device)
 
     lines = []
     try:
@@ -348,6 +451,8 @@ def rm_fstab(name, device, config='/etc/fstab'):
                         lines.append(line)
 
                 except _fstab_entry.ParseError:
+                    lines.append(line)
+                except _vfstab_entry.ParseError:
                     lines.append(line)
 
     except (IOError, OSError) as exc:
@@ -365,6 +470,21 @@ def rm_fstab(name, device, config='/etc/fstab'):
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
     return True
+
+
+def rm_vfstab(name, device, config='/etc/vfstab'):
+    '''
+    .. versionadded:: 2016.3.2
+    Remove the mount point from the vfstab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.rm_vfstab /mnt/foo /device/c0t0d0p0
+    '''
+    ## NOTE: rm_vfstab is a wrapper for rm_fstab
+    return rm_fstab(name, device, config)
 
 
 def set_fstab(
@@ -467,6 +587,134 @@ def set_fstab(
                         lines.append(line)
 
                 except _fstab_entry.ParseError:
+                    lines.append(line)
+
+    except (IOError, OSError) as exc:
+        msg = 'Couldn\'t read from {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # add line if not present or changed
+    if ret is None:
+        lines.append(str(entry))
+        ret = 'new'
+
+    if ret != 'present':  # ret in ['new', 'change']:
+        if not salt.utils.test_mode(test=test, **kwargs):
+            try:
+                with salt.utils.fopen(config, 'w+') as ofile:
+                    # The line was changed, commit it!
+                    ofile.writelines(lines)
+            except (IOError, OSError):
+                msg = 'File not writable {0}'
+                raise CommandExecutionError(msg.format(config))
+
+    return ret
+
+
+def set_vfstab(
+        name,
+        device,
+        fstype,
+        opts='-',
+        device_fsck='-',
+        pass_fsck='-',
+        mount_at_boot='yes',
+        config='/etc/vfstab',
+        test=False,
+        match_on='auto',
+        **kwargs):
+    '''
+    ..verionadded:: 2016.3.2
+    Verify that this mount is represented in the fstab, change the mount
+    to match the data passed, or add the mount if it is not present.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.set_vfstab /mnt/foo /device/c0t0d0p0 ufs
+    '''
+
+    # Fix the opts type if it is a list
+    if isinstance(opts, list):
+        opts = ','.join(opts)
+
+    # Map unknown values for mount_at_boot to no
+    if mount_at_boot != 'yes':
+        mount_at_boot = 'no'
+
+    # preserve arguments for updating
+    entry_args = {
+        'name': name,
+        'device': device,
+        'fstype': fstype,
+        'opts': opts,
+        'device_fsck': device_fsck,
+        'pass_fsck': pass_fsck,
+        'mount_at_boot': mount_at_boot,
+    }
+
+    lines = []
+    ret = None
+
+    # Transform match_on into list--items will be checked later
+    if isinstance(match_on, list):
+        pass
+    elif not isinstance(match_on, six.string_types):
+        msg = 'match_on must be a string or list of strings'
+        raise CommandExecutionError(msg)
+    elif match_on == 'auto':
+        # Try to guess right criteria for auto....
+        # NOTE: missing some special fstypes here
+        specialFSes = frozenset([
+            'devfs',
+            'proc',
+            'ctfs',
+            'objfs',
+            'sharefs',
+            'fs',
+            'tmpfs'])
+
+        if fstype in specialFSes:
+            match_on = ['name']
+        else:
+            match_on = ['device']
+    else:
+        match_on = [match_on]
+
+    # generate entry and criteria objects, handle invalid keys in match_on
+    entry = _vfstab_entry(**entry_args)
+    try:
+        criteria = entry.pick(match_on)
+
+    except KeyError:
+        filterFn = lambda key: key not in _vfstab_entry.vfstab_keys
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        raise CommandExecutionError(msg)
+
+    # parse file, use ret to cache status
+    if not os.path.isfile(config):
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                try:
+                    if criteria.match(line):
+                        # Note: If ret isn't None here,
+                        # we've matched multiple lines
+                        ret = 'present'
+                        if entry.match(line):
+                            lines.append(line)
+                        else:
+                            ret = 'change'
+                            lines.append(str(entry))
+                    else:
+                        lines.append(line)
+
+                except _vfstab_entry.ParseError:
                     lines.append(line)
 
     except (IOError, OSError) as exc:
@@ -859,6 +1107,8 @@ def swaps():
     '''
     Return a dict containing information on active swap
 
+    .. versionchanged:: 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -866,7 +1116,16 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    if __grains__['os'] != 'OpenBSD':
+    if __grains__['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run_stdout']('swap -l').splitlines():
+            if line.startswith('swapfile'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = {'type': 'device' if comps[0].startswith(('/dev', 'swap')) else 'file',
+                             'size': int(comps[3]),
+                             'used': (int(comps[3]) - int(comps[4])),
+                             'priority': '-'}
+    elif __grains__['os'] != 'OpenBSD':
         with salt.utils.fopen('/proc/swaps') as fp_:
             for line in fp_:
                 if line.startswith('Filename'):
@@ -895,6 +1154,8 @@ def swapon(name, priority=None):
     '''
     Activate a swap disk
 
+    .. versionchanged:: 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -907,21 +1168,32 @@ def swapon(name, priority=None):
         ret['stats'] = on_[name]
         ret['new'] = False
         return ret
-    cmd = 'swapon {0}'.format(name)
-    if priority:
-        cmd += ' -p {0}'.format(priority)
-    __salt__['cmd.run'](cmd, python_shell=False)
+
+    if __grains__['kernel'] == 'SunOS':
+        if __grains__['virtual'] != 'zone':
+            __salt__['cmd.run']('swap -a {0}'.format(name), python_shell=False)
+        else:
+            return False
+    else:
+        cmd = 'swapon {0}'.format(name)
+        if priority:
+            cmd += ' -p {0}'.format(priority)
+        __salt__['cmd.run'](cmd, python_shell=False)
+
     on_ = swaps()
     if name in on_:
         ret['stats'] = on_[name]
         ret['new'] = True
         return ret
+
     return ret
 
 
 def swapoff(name):
     '''
     Deactivate a named swap mount
+
+    .. versionchanged:: 2016.3.2
 
     CLI Example:
 
@@ -931,7 +1203,12 @@ def swapoff(name):
     '''
     on_ = swaps()
     if name in on_:
-        if __grains__['os'] != 'OpenBSD':
+        if __grains__['kernel'] == 'SunOS':
+            if __grains__['virtual'] != 'zone':
+                __salt__['cmd.run']('swap -a {0}'.format(name), python_shell=False)
+            else:
+                return False
+        elif __grains__['os'] != 'OpenBSD':
             __salt__['cmd.run']('swapoff {0}'.format(name), python_shell=False)
         else:
             __salt__['cmd.run']('swapctl -d {0}'.format(name),

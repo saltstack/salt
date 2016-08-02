@@ -97,7 +97,7 @@ def delete_record(name,
         the infoblox user's password (can also use the infolblox:password pillar)
 
     infoblox_api_version
-        the infoblox api verison to use
+        the infoblox api version to use
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
@@ -175,7 +175,7 @@ def update_record(name,
         the infoblox user's password (can also use the infolblox:password pillar)
 
     infoblox_api_version
-        the infoblox api verison to use
+        the infoblox api version to use
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
@@ -270,7 +270,7 @@ def add_record(name,
         the infoblox user's password (can also use the infolblox:password pillar)
 
     infoblox_api_version
-        the infoblox api verison to use
+        the infoblox api version to use
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
@@ -353,7 +353,7 @@ def get_network(network_name,
         the infoblox user's password (can also use the infolblox:password pillar)
 
     infoblox_api_version
-        the infoblox api verison to use
+        the infoblox api version to use
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
@@ -426,7 +426,7 @@ def get_record(record_name,
         the infoblox DNS view to search, if not specified all views are searched
 
     infoblox_api_version
-        the infoblox api verison to use
+        the infoblox api version to use
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API

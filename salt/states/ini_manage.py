@@ -10,6 +10,11 @@ Manage ini files
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
+import salt.ext.six as six
 
 __virtualname__ = 'ini'
 
@@ -113,7 +118,7 @@ def options_absent(name, sections=None, separator='='):
             ret['comment'] = 'No changes detected.'
         return ret
     sections = sections or {}
-    for section, keys in sections.iteritems():
+    for section, keys in six.iteritems(sections):
         for key in keys:
             current_value = __salt__['ini.remove_option'](name, section, key, separator)
             if not current_value:

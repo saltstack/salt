@@ -65,10 +65,10 @@ import hashlib
 import json
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
 from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -177,11 +177,11 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
            }
 
     if Permissions is not None:
-        if isinstance(Permissions, string_types):
+        if isinstance(Permissions, six.string_types):
             Permissions = json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
         optional_keys = set(('SourceArn', 'SourceAccount'))
-        for sid, permission in Permissions.iteritems():
+        for sid, permission in six.iteritems(Permissions):
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
                 raise SaltInvocationError('{0} are required for each permission '
@@ -222,7 +222,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
             return ret
 
         if Permissions:
-            for sid, permission in Permissions.iteritems():
+            for sid, permission in six.iteritems(Permissions):
                 r = __salt__['boto_lambda.add_permission'](FunctionName=FunctionName,
                                                        StatementId=sid,
                                                        region=region, key=key,
@@ -291,13 +291,13 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
            region=region, key=key, keyid=keyid, profile=profile)['function']
     role_arn = _get_role_arn(Role, region, key, keyid, profile)
     need_update = False
-    for val, var in {
-        'Role': 'role_arn',
-        'Handler': 'Handler',
-        'Description': 'Description',
-        'Timeout': 'Timeout',
-        'MemorySize': 'MemorySize',
-    }.iteritems():
+    options = {'Role': 'role_arn',
+               'Handler': 'Handler',
+               'Description': 'Description',
+               'Timeout': 'Timeout',
+               'MemorySize': 'MemorySize'}
+
+    for val, var in six.iteritems(options):
         if func[val] != locals()[var]:
             need_update = True
             ret['changes'].setdefault('new', {})[var] = locals()[var]
@@ -400,7 +400,7 @@ def _function_permissions_present(FunctionName, Permissions,
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        for sid, diff in diffs.iteritems():
+        for sid, diff in six.iteritems(diffs):
             if diff.get('old', '') != '':
                 # There's a permssion that needs to be removed
                 _r = __salt__['boto_lambda.remove_permission'](FunctionName=FunctionName,
@@ -563,10 +563,10 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
                                                   profile=profile)['alias']
 
     need_update = False
-    for val, var in {
-        'FunctionVersion': 'FunctionVersion',
-        'Description': 'Description',
-    }.iteritems():
+    options = {'FunctionVersion': 'FunctionVersion',
+               'Description': 'Description'}
+
+    for val, var in six.iteritems(options):
         if _describe[val] != locals()[var]:
             need_update = True
             ret['changes'].setdefault('new', {})[var] = locals()[var]
@@ -762,9 +762,9 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
                                  region=region, key=key, keyid=keyid, profile=profile)['event_source_mapping']
 
     need_update = False
-    for val, var in {
-        'BatchSize': 'BatchSize',
-    }.iteritems():
+    options = {'BatchSize': 'BatchSize'}
+
+    for val, var in six.iteritems(options):
         if _describe[val] != locals()[var]:
             need_update = True
             ret['changes'].setdefault('new', {})[var] = locals()[var]

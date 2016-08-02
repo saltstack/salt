@@ -9,24 +9,29 @@ import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_lambda
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import salt.utils
 
 # Import 3rd-party libs
 from tempfile import NamedTemporaryFile
 import logging
 import os
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -131,7 +136,10 @@ class BotoLambdaTestCaseBase(TestCase):
 class TempZipFile(object):
     def __enter__(self):
         with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
-            tmp.write('###\n')
+            to_write = '###\n'
+            if six.PY3:
+                to_write = salt.utils.to_bytes(to_write)
+            tmp.write(to_write)
             self.zipfile = tmp.name
         return self.zipfile
 

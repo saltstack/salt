@@ -491,7 +491,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -528,7 +529,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         if __opts__.get('delete_sshkeys', False) is True:
@@ -642,9 +644,14 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs.get('image_id', 'Boot From Volume'),
-                    'size': kwargs['flavor_id']}},
+        args={
+            'kwargs': {
+                'name': kwargs['name'],
+                'image': kwargs.get('image_id', 'Boot From Volume'),
+                'size': kwargs['flavor_id'],
+            }
+        },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -669,7 +676,7 @@ def request_instance(vm_=None, call=None):
     if floating_ip_conf.get('auto_assign', False):
         pool = floating_ip_conf.get('pool', 'public')
         floating_ip = None
-        for fl_ip, opts in conn.floating_ip_list().iteritems():
+        for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
             if opts['fixed_ip'] is None and opts['pool'] == pool:
                 floating_ip = fl_ip
                 break
@@ -728,11 +735,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     conn = get_conn()
@@ -845,14 +853,6 @@ def create(vm_):
            'floating_ips' not in node and 'fixed_ips' not in node and \
            'access_ip' in node.get('extra', {}):
             result = [node['extra']['access_ip']]
-
-        if not result:
-            temp_dd = node.get('addresses', {})
-            for k, addr_ll in temp_dd.iteritems():
-                for addr_dd in addr_ll:
-                    addr = addr_dd.get('addr', None)
-                    if addr is not None:
-                        result.append(addr.strip())
 
         private = node.get('private_ips', [])
         public = node.get('public_ips', [])
@@ -997,7 +997,8 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        event_data,
+        args=event_data,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(

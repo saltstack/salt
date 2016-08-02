@@ -62,7 +62,8 @@ class Shell(object):
             sudo=False,
             tty=False,
             mods=None,
-            identities_only=False):
+            identities_only=False,
+            remote_port_forwards=None):
         self.opts = opts
         self.host = host
         self.user = user
@@ -74,6 +75,7 @@ class Shell(object):
         self.tty = tty
         self.mods = mods
         self.identities_only = identities_only
+        self.remote_port_forwards = remote_port_forwards
 
     def get_error(self, errstr):
         '''
@@ -215,20 +217,19 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
-        opts = ''
-        tty = self.tty
-        if ssh != 'ssh':
-            tty = False
-        if self.passwd:
-            opts = self._passwd_opts()
-        if self.priv:
-            opts = self._key_opts()
-        return "{0} {1} {2} {3} {4}".format(
-                ssh,
-                '' if ssh == 'scp' else self.host,
-                '-t -t' if tty else '',
-                opts,
-                cmd)
+        command = [ssh]
+        if ssh != 'scp':
+            command.append(self.host)
+        if self.tty and ssh == 'ssh':
+            command.append('-t -t')
+        if self.passwd or self.priv:
+            command.append(self.priv and self._key_opts() or self._passwd_opts())
+        if ssh != 'scp' and self.remote_port_forwards:
+            command.append(' '.join(['-R {0}'.format(item)
+                                     for item in self.remote_port_forwards.split(',')]))
+        command.append(cmd)
+
+        return ' '.join(command)
 
     def _old_run_cmd(self, cmd):
         '''

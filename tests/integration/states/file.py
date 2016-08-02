@@ -10,6 +10,7 @@ from distutils.version import LooseVersion
 import glob
 import grp
 import os
+import re
 import pwd
 import sys
 import shutil
@@ -53,6 +54,66 @@ STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 FILEPILLAR = '/tmp/filepillar-python'
 FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
 FILEPILLARGIT = '/tmp/filepillar-bar'
+
+
+def _test_managed_file_mode_keep_helper(testcase, local=False):
+    '''
+    DRY helper function to run the same test with a local or remote path
+    '''
+    rel_path = 'grail/scene33'
+    name = os.path.join(integration.TMP, os.path.basename(rel_path))
+    grail_fs_path = os.path.join(integration.FILES, 'file', 'base', rel_path)
+    grail = 'salt://' + rel_path if not local else grail_fs_path
+
+    # Get the current mode so that we can put the file back the way we
+    # found it when we're done.
+    grail_fs_mode = os.stat(grail_fs_path).st_mode
+    initial_mode = 504    # 0770 octal
+    new_mode_1 = 384      # 0600 octal
+    new_mode_2 = 420      # 0644 octal
+
+    # Set the initial mode, so we can be assured that when we set the mode
+    # to "keep", we're actually changing the permissions of the file to the
+    # new mode.
+    ret = testcase.run_state(
+        'file.managed',
+        name=name,
+        mode=oct(initial_mode),
+        source=grail,
+    )
+    testcase.assertSaltTrueReturn(ret)
+    try:
+        # Update the mode on the fileserver (pass 1)
+        os.chmod(grail_fs_path, new_mode_1)
+        ret = testcase.run_state(
+            'file.managed',
+            name=name,
+            mode='keep',
+            source=grail,
+        )
+        testcase.assertSaltTrueReturn(ret)
+        managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+        testcase.assertEqual(oct(managed_mode), oct(new_mode_1))
+        # Update the mode on the fileserver (pass 2)
+        # This assures us that if the file in file_roots was originally set
+        # to the same mode as new_mode_1, we definitely get an updated mode
+        # this time.
+        os.chmod(grail_fs_path, new_mode_2)
+        ret = testcase.run_state(
+            'file.managed',
+            name=name,
+            mode='keep',
+            source=grail,
+        )
+        testcase.assertSaltTrueReturn(ret)
+        managed_mode = stat.S_IMODE(os.stat(name).st_mode)
+        testcase.assertEqual(oct(managed_mode), oct(new_mode_2))
+    except Exception:
+        raise
+    finally:
+        # Set the mode of the file in the file_roots back to what it
+        # originally was.
+        os.chmod(grail_fs_path, grail_fs_mode)
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -164,6 +225,19 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode_keep(self):
+        '''
+        Test using "mode: keep" in a file.managed state
+        '''
+        _test_managed_file_mode_keep_helper(self, local=False)
+
+    def test_managed_file_mode_keep_local_source(self):
+        '''
+        Test using "mode: keep" in a file.managed state, with a local file path
+        as the source.
+        '''
+        _test_managed_file_mode_keep_helper(self, local=True)
+
     def test_managed_file_mode_file_exists_replace(self):
         '''
         file.managed, existing file with replace=True, change permissions
@@ -209,6 +283,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_managed_file_with_grains_data(self):
+        '''
+        Test to ensure we can render grains data into a managed
+        file.
+        '''
+        ret = self.run_function('state.sls', ['file-grainget'])
+        self.assertTrue(os.path.exists('/tmp/file-grain-test'))
+        file_contents = open('/tmp/file-grain-test', 'r').readlines()
+        self.assertTrue(re.match('^minion$', file_contents[0]))
 
     @destructiveTest
     def test_managed_file_with_pillar_sls(self):
@@ -417,7 +502,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '''
             Return a string octal representation of the permissions for name
             '''
-            return oct(os.stat(name).st_mode & 0777)
+            return oct(os.stat(name).st_mode & 0o777)
 
         top = os.path.join(integration.TMP, 'top_dir')
         sub = os.path.join(top, 'sub_dir')

@@ -5,9 +5,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
+from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     Mock,
     MagicMock,
@@ -16,15 +18,13 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salt.exceptions import CommandExecutionError
-
-import os
-from salt.ext.six.moves import configparser
-import StringIO
-
-from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import configparser
+import salt.ext.six as six
 
 
 class ZyppCallMock(object):
@@ -196,20 +196,22 @@ class ZypperTestCase(TestCase):
                          'sle-manager-tools-beta-broken-eol', 'sle-manager-tools-beta-no-eol'],
                 'vendor': 'SUSE LLC <https://www.suse.com/>',
                 'release': ['0', '0', '0', '0', '0', '0', '0'],
-                'productline': [False, False, False, False, False, False, 'sles'],
+                'productline': [None, None, None, None, None, None, 'sles'],
                 'eol_t': [None, 0, 1509408000, 1522454400, 1522454400, 1730332800, 1730332800],
                 'isbase': [False, False, False, False, False, False, True],
                 'installed': [False, False, False, False, False, False, True],
+                'registerrelease': [None, None, None, None, None, None, '123'],
             },
             'zypper-products-sle11sp3.xml': {
                 'name': ['SUSE-Manager-Server', 'SUSE-Manager-Server', 'SUSE-Manager-Server-Broken-EOL',
                          'SUSE_SLES', 'SUSE_SLES', 'SUSE_SLES', 'SUSE_SLES-SP4-migration'],
                 'vendor': 'SUSE LINUX Products GmbH, Nuernberg, Germany',
                 'release': ['1.138', '1.2', '1.2', '1.2', '1.201', '1.201', '1.4'],
-                'productline': [False, False, False, False, False, 'manager', 'manager'],
+                'productline': [None, None, None, None, None, 'manager', 'manager'],
                 'eol_t': [None, 0, 0, 0, 0, 0, 0],
                 'isbase': [False, False, False, False, False, True, True],
                 'installed': [False, False, False, False, False, True, True],
+                'registerrelease': [None, None, None, None, None, None, "42"],
             }}.items():
 
             ref_out = {
@@ -221,8 +223,11 @@ class ZypperTestCase(TestCase):
                 products = zypper.list_products()
                 self.assertEqual(len(products), 7)
                 self.assertIn(test_data['vendor'], [product['vendor'] for product in products])
-                for kwd in ['name', 'isbase', 'installed', 'release', 'productline', 'eol_t']:
-                    self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
+                for kwd in ['name', 'isbase', 'installed', 'release', 'productline', 'eol_t', 'registerrelease']:
+                    if six.PY3:
+                        self.assertCountEqual(test_data[kwd], [prod.get(kwd) for prod in products])
+                    else:
+                        self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
 
     def test_refresh_db(self):
         '''
@@ -443,7 +448,7 @@ class ZypperTestCase(TestCase):
         '''
         repos_cfg = configparser.ConfigParser()
         for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
-            repos_cfg.readfp(StringIO.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)

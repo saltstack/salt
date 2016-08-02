@@ -20,6 +20,7 @@ def provision_state(module, fixture):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(True, 'Skipped: This module has been deprecated.')
 class DockerStateTestCase(TestCase):
     def test_docker_run_success(self):
         from salt.states import dockerio

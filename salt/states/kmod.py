@@ -15,7 +15,7 @@ module:
       kmod.absent:
         - name: pcspkr
 
-Mutiple modules can be specified for both kmod.present and kmod.absent.
+Multiple modules can be specified for both kmod.present and kmod.absent.
 
 .. code-block:: yaml
 

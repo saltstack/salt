@@ -1,7 +1,7 @@
 {% if grains['os'] == 'CentOS' %}
 
 # START CentOS pkgrepo tests
-{% if grains['osmajorrelease'] == '7' %}
+{% if grains['osmajorrelease'] == 7 %}
 epel-salttest:
   pkgrepo.managed:
     - humanname: Extra Packages for Enterprise Linux 7 - $basearch (salttest)

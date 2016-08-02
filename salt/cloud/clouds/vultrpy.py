@@ -42,6 +42,7 @@ import urllib
 
 # Import salt cloud libs
 import salt.config as config
+import salt.ext.six as six
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -89,15 +90,15 @@ def _cache_provider_details(conn=None):
     images = avail_images(conn)
     sizes = avail_sizes(conn)
 
-    for key, location in locations.iteritems():
+    for key, location in six.iteritems(locations):
         DETAILS['avail_locations'][location['name']] = location
         DETAILS['avail_locations'][key] = location
 
-    for key, image in images.iteritems():
+    for key, image in six.iteritems(images):
         DETAILS['avail_images'][image['name']] = image
         DETAILS['avail_images'][key] = image
 
-    for key, vm_size in sizes.iteritems():
+    for key, vm_size in six.iteritems(sizes):
         DETAILS['avail_sizes'][vm_size['name']] = vm_size
         DETAILS['avail_sizes'][key] = vm_size
 
@@ -244,11 +245,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -282,7 +284,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport'],
     )
 
@@ -298,7 +301,8 @@ def create(vm_):
                 'event',
                 'instance request failed',
                 'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
-                {'kwargs': kwargs},
+                args={'kwargs': kwargs},
+                sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport'],
             )
             return False
@@ -316,7 +320,8 @@ def create(vm_):
             'event',
             'instance request failed',
             'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
-            {'kwargs': kwargs},
+            args={'kwargs': kwargs},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport'],
         )
         return False
@@ -358,7 +363,7 @@ def create(vm_):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default=15,
+        default=None,
     )
 
     # Bootstrap
@@ -377,11 +382,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

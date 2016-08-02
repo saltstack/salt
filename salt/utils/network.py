@@ -93,7 +93,7 @@ def _generate_minion_id():
                               '::1.*', 'ipv6-.*', 'fe00::.*', 'fe02::.*', '1.0.0.*.ip6.arpa']
 
         def append(self, p_object):
-            if p_object not in self and not self.filter(p_object):
+            if p_object and p_object not in self and not self.filter(p_object):
                 super(self.__class__, self).append(p_object)
             return self
 
@@ -111,7 +111,7 @@ def _generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(platform.node()).append(socket.gethostname()).append(socket.getfqdn())
+    hosts = DistinctList().append(socket.getfqdn()).append(platform.node()).append(socket.gethostname())
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first(), None, socket.AF_INET,
@@ -196,52 +196,31 @@ def ip_to_host(ip):
 # pylint: enable=C0103
 
 
-def _validate_ip(af, ip):
-    '''
-    Common logic for IPv4
-    '''
-    if af == socket.AF_INET6 and not socket.has_ipv6:
-        raise RuntimeError('IPv6 not supported')
-    try:
-        socket.inet_pton(af, ip)
-    except AttributeError:
-        if af == socket.AF_INET6:
-            raise RuntimeError('socket.inet_pton not available')
-        try:
-            socket.inet_aton(ip)
-        except socket.error:
-            return False
-    except (socket.error, TypeError):
-        return False
-    return True
-
-
 def is_ip(ip):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
-
-    Will raise a RuntimeError if IPv6 is not supported on the host.
     '''
-    for af in (socket.AF_INET, socket.AF_INET6):
-        if _validate_ip(af, ip):
-            return True
-    return False
+    return is_ipv4(ip) or is_ipv6(ip)
 
 
 def is_ipv4(ip):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address
     '''
-    return _validate_ip(socket.AF_INET, ip)
+    try:
+        return ipaddress.ip_address(ip).version == 4
+    except ValueError:
+        return False
 
 
 def is_ipv6(ip):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address
-
-    Will raise a RuntimeError if IPv6 is not supported on the host.
     '''
-    return _validate_ip(socket.AF_INET6, ip)
+    try:
+        return ipaddress.ip_address(ip).version == 6
+    except ValueError:
+        return False
 
 
 def cidr_to_ipv4_netmask(cidr_bits):
@@ -940,7 +919,7 @@ def _remotes_on(port, which_end):
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
             proc_available = True
-            with salt.utils.fopen(statf, 'rb') as fp_:
+            with salt.utils.fopen(statf, 'r') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue

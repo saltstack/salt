@@ -12,9 +12,11 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.pillar import mysql
+from salt.ext.six import PY3
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(PY3, 'MySQL-python is not compatible with python3')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 

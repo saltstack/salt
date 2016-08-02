@@ -110,8 +110,6 @@ class BotoElbTestCase(TestCase):
                         boto_elb.__salt__['boto_elb.get_health_check'].called
                     )
                     self.assertIn('ELB myelb created.', ret['comment'])
-                    import pprint
-                    pprint.pprint(ret)
                     self.assertTrue(ret['result'])
 
         mock = MagicMock(return_value={})

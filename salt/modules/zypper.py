@@ -359,7 +359,10 @@ def info_installed(*names, **kwargs):
         for key, value in pkg_nfo.items():
             if type(value) == str:
                 # Check, if string is encoded in a proper UTF-8
-                value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                if six.PY3:
+                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+                else:
+                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
                     value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
@@ -526,7 +529,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def version_cmp(ver1, ver2):
+def version_cmp(ver1, ver2, ignore_epoch=False):
     '''
     .. versionadded:: 2015.5.4
 
@@ -534,13 +537,18 @@ def version_cmp(ver1, ver2):
     ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
     making the comparison.
 
+    ignore_epoch : False
+        Set to ``True`` to ignore the epoch when comparing versions
+
+        .. versionadded:: 2015.8.10,2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    return __salt__['lowpkg.version_cmp'](str(ver1), str(ver2))
+    return __salt__['lowpkg.version_cmp'](ver1, ver2, ignore_epoch=ignore_epoch)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -961,7 +969,7 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
                     log.debug(targets)
                 else:
-                    msg = ('Invalid version string {0!r} for package {1!r}'.format(version_num, name))
+                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -1538,7 +1546,10 @@ def list_products(all=False, refresh=False):
     for prd in product_list[0].getElementsByTagName('product'):
         p_nfo = dict()
         for k_p_nfo, v_p_nfo in prd.attributes.items():
-            p_nfo[k_p_nfo] = k_p_nfo not in ['isbase', 'installed'] and v_p_nfo or v_p_nfo in ['true', '1']
+            if k_p_nfo in ['isbase', 'installed']:
+                p_nfo[k_p_nfo] = bool(v_p_nfo in ['true', '1'])
+            elif v_p_nfo:
+                p_nfo[k_p_nfo] = v_p_nfo
 
         eol = prd.getElementsByTagName('endoflife')
         if eol:

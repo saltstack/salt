@@ -84,10 +84,27 @@ Files outside the ``top_level_dir``, such as ``README.rst``, ``FORMULA``, and
 ``LICENSE`` will not be installed. The exceptions to this rule are files that
 are already treated specially, such as ``pillar.example`` and ``_modules/``.
 
+dependencies
+~~~~~~~~~~~~
+A comma-separated list of packages that must be installed along with this
+package. When this package is installed, SPM will attempt to discover and
+install these packages as well. If it is unable to, then it will refuse to
+install this package.
+
+This is useful for creating packages which tie together other packages. For
+instance, a package called wordpress-mariadb-apache would depend upon
+wordpress, mariadb, and apache.
+
+optional
+~~~~~~~~
+A comma-separated list of packages which are related to this package, but are
+neither required nor necessarily recommended. This list is displayed in an
+informational message when the package is installed to SPM.
+
 recommended
 ~~~~~~~~~~~
-A list of optional packages that are recommended to be installed with the
-package. This list is displayed in an informational message
+A comma-separated list of optional packages that are recommended to be
+installed with the package. This list is displayed in an informational message
 when the package is installed to SPM.
 
 Building a Package

@@ -46,7 +46,6 @@ from salt.utils import kinds
 try:
     from salt.utils import parsers, ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
-    from salt.utils.verify import verify_files
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
@@ -162,12 +161,6 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
-                    # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0o027)
-                    verify_files([logfile], self.config['user'])
-                    os.umask(current_umask)
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
@@ -288,12 +281,6 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
-                    # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0o027)
-                    verify_files([logfile], self.config['user'])
-                    os.umask(current_umask)
         except OSError as error:
             self.environment_failure(error)
 
@@ -464,14 +451,6 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-
-                logfile = self.config.get('proxy_log') or self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
-                    # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0o027)
-                    verify_files([logfile], self.config['user'])
-                    os.umask(current_umask)
-
         except OSError as error:
             self.environment_failure(error)
 
@@ -569,12 +548,6 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
-                    # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0o027)
-                    verify_files([logfile], self.config['user'])
-                    os.umask(current_umask)
         except OSError as error:
             self.environment_failure(error)
 
@@ -585,11 +558,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
-        # if its a multisyndic, do so
-        if isinstance(self.config.get('master'), list):
-            self.syndic = salt.minion.MultiSyndic(self.config)
-        else:
-            self.syndic = salt.minion.Syndic(self.config)
+        self.syndic = salt.minion.SyndicManager(self.config)
         self.set_pidfile()
 
     def start(self):

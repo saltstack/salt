@@ -24,6 +24,21 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       password: JHGhgsayu32jsa
       driver: opennebula
 
+This driver supports accessing new VM instances via DNS entry instead
+of IP address.  To enable this feature, in the provider or profile file
+add `fqdn_base` with a value matching the base of your fully-qualified
+domain name.  Example:
+
+.. code-block:: yaml
+
+    my-opennebula-config:
+      [...]
+      fqdn_base: <my.basedomain.com>
+      [...]
+
+The driver will prepend the hostname to the fqdn_base and do a DNS lookup
+to find the IP of the new VM.
+
 .. note:
 
     Whenever ``data`` is provided as a kwarg to a function and the
@@ -847,11 +862,27 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    CLI Example:
+    Optional vm_ dict options for overwriting template:
 
-    .. code-block:: bash
+    region_id
+        Optional - OpenNebula Zone ID
 
-        salt-cloud -p my-opennebula-profile vm_name
+    memory
+        Optional - In MB
+
+    cpu
+        Optional - Percent of host CPU to allocate
+
+    vcpu
+        Optional - Amount of vCPUs to allocate
+
+     CLI Example:
+
+     .. code-block:: bash
+
+         salt-cloud -p my-opennebula-profile vm_name
+
+        salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
 
     '''
     try:
@@ -872,11 +903,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -898,12 +930,21 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
     )
 
-    region = ''
-    if kwargs['region_id'] is not None:
-        region = 'SCHED_REQUIREMENTS="ID={0}"'.format(kwargs['region_id'])
+    template = []
+    if kwargs.get('region_id'):
+        template.append('SCHED_REQUIREMENTS="ID={0}"'.format(kwargs.get('region_id')))
+    if vm_.get('memory'):
+        template.append('MEMORY={0}'.format(vm_.get('memory')))
+    if vm_.get('cpu'):
+        template.append('CPU={0}'.format(vm_.get('cpu')))
+    if vm_.get('vcpu'):
+        template.append('VCPU={0}'.format(vm_.get('vcpu')))
+    template_args = "\n".join(template)
+
     try:
         server, user, password = _get_xml_rpc()
         auth = ':'.join([user, password])
@@ -911,7 +952,7 @@ def create(vm_):
                                         int(kwargs['template_id']),
                                         kwargs['name'],
                                         False,
-                                        region)
+                                        template_args)
         if not cret[0]:
             log.error(
                 'Error creating {0} on OpenNebula\n\n'
@@ -1017,11 +1058,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
     )
 
     return ret
@@ -1054,7 +1096,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
     )
 
     server, user, password = _get_xml_rpc()
@@ -1067,7 +1110,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
     )
 
     if __opts__.get('update_cachedir', False) is True:

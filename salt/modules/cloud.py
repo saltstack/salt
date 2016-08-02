@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import logging
 import copy
+import salt.utils
 
 # Import salt libs
 try:
@@ -173,7 +174,7 @@ def get_instance(name, provider=None):
 
     '''
     data = action(fun='show_instance', names=[name], provider=provider)
-    info = salt.utils.cloud.simple_types_filter(data)
+    info = salt.utils.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
         info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))

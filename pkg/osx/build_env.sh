@@ -197,13 +197,13 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: Python\007"
 
-PKGURL="https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tar.xz"
-PKGDIR="Python-2.7.11"
+PKGURL="https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tar.xz"
+PKGDIR="Python-2.7.12"
 
 download $PKGURL
 
 echo "################################################################################"
-echo "Building Python 2.7.11"
+echo "Building Python 2.7.12"
 echo "################################################################################"
 echo "Note there are some test failures"
 cd $PKGDIR

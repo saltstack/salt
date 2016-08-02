@@ -38,8 +38,16 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-import salt.utils.sdb
 from salt.utils.locales import sdecode
+import salt.defaults.exitcodes
+
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+    import platform
+    import salt.grains.core
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +67,31 @@ if salt.utils.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
+
+
+def _gather_buffer_space():
+    '''
+    Gather some system data and then calculate
+    buffer space.
+
+    Result is in bytes.
+    '''
+    if HAS_PSUTIL:
+        # Oh good, we have psutil. This will be quick.
+        total_mem = psutil.virtual_memory().total
+    else:
+        # We need to load up ``mem_total`` grain. Let's mimic required OS data.
+        os_data = {'kernel': platform.system()}
+        grains = salt.grains.core._memdata(os_data)
+        total_mem = grains['mem_total']
+    # Return the higher number between 5% of the system memory and 100MB
+    return max([total_mem * 0.05, 10 << 20])
+
+# For the time being this will be a fixed calculation
+# TODO: Allow user configuration
+_DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
+# TODO: Reserved for future use
+_DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -396,9 +429,9 @@ VALID_OPTS = {
     'return_retry_timer': int,
     'return_retry_timer_max': int,
 
-    # Specify a returner in which all events will be sent to. Requires that the returner in question
-    # have an event_return(event) function!
-    'event_return': str,
+    # Specify one or more returners in which all events will be sent to. Requires that the returners
+    # in question have an event_return(event) function!
+    'event_return': (list, string_types),
 
     # The number of events to queue up in memory before pushing them down the pipe to an event returner
     # specified by 'event_return'
@@ -450,6 +483,10 @@ VALID_OPTS = {
     'salt_event_pub_hwm': int,
     # ZMQ HWM for EventPublisher pub socket
     'event_publisher_pub_hwm': int,
+
+    # IPC buffer size
+    # Refs https://github.com/saltstack/salt/issues/34215
+    'ipc_write_buffer': int,
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
@@ -560,12 +597,13 @@ VALID_OPTS = {
     'preserve_minion_cache': bool,
     'syndic_master': (string_types, list),
 
-    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
-    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
-    # if 'ordered' the configured order will be used.
+    # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
+    # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
+    # order if 'ordered' the configured order will be used.
     'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
+    'client_acl_verify': bool,
     'client_acl_blacklist': dict,
     'publisher_acl': dict,
     'publisher_acl_blacklist': dict,
@@ -635,6 +673,9 @@ VALID_OPTS = {
 
     # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
     'engines': list,
+
+    # Whether or not to store runner returns in the job cache
+    'runner_returns': bool,
 
     'serial': str,
     'search': str,
@@ -737,9 +778,6 @@ VALID_OPTS = {
     # The number of seconds for a syndic to poll for new messages that need to be forwarded
     'syndic_event_forward_timeout': float,
 
-    # The number of seconds for the syndic to spend polling the event bus
-    'syndic_max_event_process_time': float,
-
     # The length that the syndic event queue must hit before events are popped off and forwarded
     'syndic_jid_forward_cache_hwm': int,
 
@@ -839,6 +877,13 @@ VALID_OPTS = {
     # Whether or not a minion should send the results of a command back to the master
     # Useful when a returner is the source of truth for a job result
     'pub_ret': bool,
+
+    # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
+    'proxy_host': str,
+    'proxy_username': str,
+    'proxy_password': str,
+    'proxy_port': int,
+
 }
 
 # default configurations
@@ -961,6 +1006,7 @@ DEFAULT_MINION_OPTS = {
     'mine_return_job': False,
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
@@ -1069,6 +1115,10 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
+    'proxy_host': '',
+    'proxy_username': '',
+    'proxy_password': '',
+    'proxy_port': 0,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1177,6 +1227,7 @@ DEFAULT_MASTER_OPTS = {
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},
+    'client_acl_verify': True,
     'client_acl_blacklist': {},
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1214,6 +1265,7 @@ DEFAULT_MASTER_OPTS = {
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
     'ipv6': False,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
@@ -1240,6 +1292,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_whitelist': [],
     'event_return_blacklist': [],
     'event_match_type': 'startswith',
+    'runner_returns': False,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -1285,7 +1338,6 @@ DEFAULT_MASTER_OPTS = {
     'transport': 'zeromq',
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
-    'syndic_max_event_process_time': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
     'ssh_passwd': '',
     'ssh_port': '22',
@@ -1381,12 +1433,12 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
+    'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': '/srv/spm/salt',
     'pillar_path': '/srv/spm/pillar',
     'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
-    'default_include': 'spm.d/*.conf',
+    'spm_default_include': 'spm.d/*.conf',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
@@ -1557,18 +1609,18 @@ def _read_conf_file(path):
         try:
             conf_opts = yaml.safe_load(conf_file.read()) or {}
         except yaml.YAMLError as err:
-            log.error(
-                'Error parsing configuration file: {0} - {1}'.format(path, err)
-            )
-            conf_opts = {}
+            message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
+            log.error(message)
+            raise salt.exceptions.SaltConfigurationError(message)
+
         # only interpret documents as a valid conf, not things like strings,
         # which might have been caused by invalid yaml syntax
         if not isinstance(conf_opts, dict):
-            log.error(
-                'Error parsing configuration file: {0} - conf should be a '
-                'document, not {1}.'.format(path, type(conf_opts))
-            )
-            conf_opts = {}
+            message = 'Error parsing configuration file: {0} - conf ' \
+                      'should be a document, not {1}.'.format(path, type(conf_opts))
+            log.error(message)
+            raise salt.exceptions.SaltConfigurationError(message)
+
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             if not isinstance(conf_opts['id'], six.string_types):
@@ -1651,15 +1703,19 @@ def load_config(path, env_var, default_path=None):
                     out.write(ifile.read())
 
     if salt.utils.validate.path.is_readable(path):
-        opts = _read_conf_file(path)
-        opts['conf_file'] = path
-        return opts
+        try:
+            opts = _read_conf_file(path)
+            opts['conf_file'] = path
+            return opts
+        except salt.exceptions.SaltConfigurationError as error:
+            log.error(error)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     log.debug('Missing configuration file: {0}'.format(path))
     return {}
 
 
-def include_config(include, orig_path, verbose):
+def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     '''
     Parses extra configuration file(s) specified in an include list in the
     main config file.
@@ -1694,8 +1750,13 @@ def include_config(include, orig_path, verbose):
                 )
 
         for fn_ in sorted(glob.glob(path)):
-            log.debug("Including configuration from '{0}'".format(fn_))
-            opts = _read_conf_file(fn_)
+            log.debug('Including configuration from \'{0}\''.format(fn_))
+            try:
+                opts = _read_conf_file(fn_)
+            except salt.exceptions.SaltConfigurationError as error:
+                log.error(error)
+                if exit_on_config_errors:
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
             include = opts.get('include', [])
             if include:
@@ -1738,7 +1799,8 @@ def insert_system_path(opts, paths):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  cache_minion_id=False):
+                  cache_minion_id=False,
+                  ignore_config_errors=True):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -1773,8 +1835,10 @@ def minion_config(path,
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False))
-    overrides.update(include_config(include, path, verbose=True))
+    overrides.update(include_config(default_include, path, verbose=False,
+                                    exit_on_config_errors=not ignore_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                                    exit_on_config_errors=not ignore_config_errors))
 
     opts = apply_minion_config(overrides, defaults, cache_minion_id=cache_minion_id)
     _validate_opts(opts)
@@ -1856,6 +1920,8 @@ def apply_sdb(opts, sdb_opts=None):
     '''
     Recurse for sdb:// links for opts
     '''
+    # Late load of SDB to keep CLI light
+    import salt.utils.sdb
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
@@ -2917,10 +2983,10 @@ def get_id(opts, cache_minion_id=False):
 
     newid = salt.utils.network.generate_minion_id()
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+        log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
-    is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
+    is_ipv4 = salt.utils.network.is_ipv4(newid)
     return newid, is_ipv4
 
 
@@ -2988,6 +3054,11 @@ def apply_minion_config(overrides=None,
     if 'beacons' not in opts:
         opts['beacons'] = {}
 
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+        opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
+    if 'ipc_write_buffer' not in overrides:
+        opts['ipc_write_buffer'] = 0
+
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}
@@ -2998,7 +3069,7 @@ def apply_minion_config(overrides=None,
     return opts
 
 
-def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
+def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_config_errors=False):
     '''
     Reads in the master configuration file and sets up default options
 
@@ -3025,8 +3096,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False))
-    overrides.update(include_config(include, path, verbose=True))
+    overrides.update(include_config(default_include, path, verbose=False), exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(include, path, verbose=True), exit_on_config_errors=exit_on_config_errors)
     opts = apply_master_config(overrides, defaults)
     _validate_opts(opts)
     # If 'nodegroups:' is uncommented in the master config file, and there are
@@ -3062,7 +3133,10 @@ def apply_master_config(overrides=None, defaults=None):
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
-
+    if overrides.get('ipc_write_buffer', '') == 'dynamic':
+        opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
+    if 'ipc_write_buffer' not in overrides:
+        opts['ipc_write_buffer'] = 0
     using_ip_for_id = False
     append_master = False
     if not opts.get('id'):
@@ -3254,9 +3328,9 @@ def spm_config(path):
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
-    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['conf_file'])
-    default_include = overrides.get('default_include',
-                                    defaults['default_include'])
+    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['spm_conf_file'])
+    default_include = overrides.get('spm_default_include',
+                                    defaults['spm_default_include'])
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False))

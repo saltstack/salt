@@ -984,7 +984,8 @@ def mod_hostname(hostname):
             if 'Static hostname' in line[0]:
                 o_hostname = line[1].strip()
     elif not salt.utils.is_sunos():
-        o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+        # don't run hostname -f because -f is not supported on all platforms
+        o_hostname = socket.getfqdn()
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
@@ -1025,7 +1026,7 @@ def mod_hostname(hostname):
                     fh_.write('HOSTNAME={0}\n'.format(hostname))
                 else:
                     fh_.write(net)
-    elif __grains__['os_family'] == 'Debian':
+    elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(hostname + '\n')
     elif __grains__['os_family'] == 'OpenBSD':
@@ -1471,7 +1472,7 @@ def ifacestartswith(cidr):
     intfnames = []
     pattern = str(cidr)
     size = len(pattern)
-    for ifname, ifval in net_list.iteritems():
+    for ifname, ifval in six.iteritems(net_list):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:

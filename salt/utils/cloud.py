@@ -511,7 +511,10 @@ def bootstrap(vm_, opts):
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        {'kwargs': event_kwargs},
+        args={'kwargs': event_kwargs},
+        sock_dir=opts.get(
+            'sock_dir',
+            os.path.join(syspaths.SOCK_DIR, 'master')),
         transport=opts.get('transport', 'zeromq')
     )
 
@@ -1152,7 +1155,10 @@ def deploy_windows(host,
             'event',
             '{0} has been deployed at {1}'.format(name, host),
             'salt/cloud/{0}/deploy_windows'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
@@ -1620,10 +1626,13 @@ def deploy_script(host,
                 'event',
                 '{0} has been deployed at {1}'.format(name, host),
                 'salt/cloud/{0}/deploy_script'.format(name),
-                {
+                args={
                     'name': name,
                     'host': host
                 },
+                sock_dir=opts.get(
+                    'sock_dir',
+                    os.path.join(syspaths.SOCK_DIR, 'master')),
                 transport=opts.get('transport', 'zeromq')
             )
             if file_map_fail or file_map_success:
@@ -1719,6 +1728,11 @@ def run_inline_script(host,
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
+        salt.utils.warn_until(
+            'Nitrogen',
+            '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
+            'parameter be passed in when calling the function.'
+        )
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
     event = salt.utils.event.get_event(
         'master',
@@ -2018,17 +2032,13 @@ def win_cmd(command, **kwargs):
 
         if logging_command is None:
             log.debug(
-                'Executing command(PID {0}): {1!r}'.format(
-                    proc.pid,
-                    command
-                )
+                'Executing command(PID %s): \'%s\'',
+                proc.pid, command
             )
         else:
             log.debug(
-                'Executing command(PID {0}): {1!r}'.format(
-                    proc.pid,
-                    logging_command
-                )
+                'Executing command(PID %s): \'%s\'',
+                proc.pid, logging_command
             )
 
         proc.poll_and_read_until_finish()
@@ -2036,7 +2046,7 @@ def win_cmd(command, **kwargs):
         return proc.returncode
     except Exception as err:
         log.error(
-            'Failed to execute command {0!r}: {1}\n'.format(
+            'Failed to execute command \'{0}\': {1}\n'.format(
                 logging_command,
                 err
             ),
@@ -2345,43 +2355,6 @@ def wait_for_ip(update_callback,
                 interval = timeout + 1
             log.info('Interval multiplier in effect; interval is '
                      'now {0}s.'.format(interval))
-
-
-def simple_types_filter(data):
-    '''
-    Convert the data list, dictionary into simple types, i.e., int, float, string,
-    bool, etc.
-    '''
-    if data is None:
-        return data
-
-    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
-    simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
-
-    if isinstance(data, (list, tuple)):
-        simplearray = []
-        for value in data:
-            if value is not None:
-                if isinstance(value, (dict, list)):
-                    value = simple_types_filter(value)
-                elif not isinstance(value, simpletypes_values):
-                    value = repr(value)
-            simplearray.append(value)
-        return simplearray
-
-    if isinstance(data, dict):
-        simpledict = {}
-        for key, value in six.iteritems(data):
-            if key is not None and not isinstance(key, simpletypes_keys):
-                key = repr(key)
-            if value is not None and isinstance(value, (dict, list, tuple)):
-                value = simple_types_filter(value)
-            elif value is not None and not isinstance(value, simpletypes_values):
-                value = repr(value)
-            simpledict[key] = value
-        return simpledict
-
-    return data
 
 
 def list_nodes_select(nodes, selection, call=None):
@@ -2905,7 +2878,10 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
                     'event',
                     'cached node missing from provider',
                     'salt/cloud/{0}/cache_node_missing'.format(node),
-                    {'missing node': node},
+                    args={'missing node': node},
+                    sock_dir=opts.get(
+                        'sock_dir',
+                        os.path.join(syspaths.SOCK_DIR, 'master')),
                     transport=opts.get('transport', 'zeromq')
                 )
 
@@ -2938,7 +2914,10 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             'event',
             'new node found',
             'salt/cloud/{0}/cache_node_new'.format(node),
-            {'new_data': event_data},
+            args={'new_data': event_data},
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
         return
@@ -2959,10 +2938,13 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             'event',
             'node data differs',
             'salt/cloud/{0}/cache_node_diff'.format(node),
-            {
+            args={
                 'new_data': _strip_cache_events(new_data, opts),
                 'cache_data': _strip_cache_events(cache_data, opts),
             },
+            sock_dir=opts.get(
+                'sock_dir',
+                os.path.join(syspaths.SOCK_DIR, 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 

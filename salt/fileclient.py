@@ -7,7 +7,6 @@ from __future__ import absolute_import
 # Import python libs
 import contextlib
 import logging
-import hashlib
 import os
 import shutil
 import ftplib
@@ -749,9 +748,27 @@ class LocalClient(Client):
         '''
         path = self._check_proto(path)
         fnd = self._find_file(path, saltenv)
-        if not fnd['path']:
+        fnd_path = fnd.get('path')
+        if not fnd_path:
             return ''
-        return fnd['path']
+
+        try:
+            fnd_mode = fnd.get('stat', [])[0]
+        except (IndexError, TypeError):
+            fnd_mode = None
+
+        if not salt.utils.is_windows():
+            if fnd_mode is not None:
+                try:
+                    if os.stat(dest).st_mode != fnd_mode:
+                        try:
+                            os.chmod(dest, fnd_mode)
+                        except OSError as exc:
+                            log.warning('Failed to chmod %s: %s', dest, exc)
+                except Exception:
+                    pass
+
+        return fnd_path
 
     def file_list(self, saltenv='base', prefix=''):
         '''
@@ -766,6 +783,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
                     ret.append(sdecode(relpath))
@@ -784,6 +803,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(sdecode(os.path.relpath(root, path)))
         return ret
@@ -804,6 +825,22 @@ class LocalClient(Client):
                 ret.append(sdecode(os.path.relpath(root, path)))
         return ret
 
+    def __get_file_path(self, path, saltenv='base'):
+        '''
+        Return either a file path or the result of a remote find_file call.
+        '''
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            # Local file path
+            if not os.path.isfile(path):
+                msg = 'specified file {0} is not present to generate hash: {1}'
+                log.warning(msg.format(path, err))
+                return None
+            else:
+                return path
+        return self._find_file(path, saltenv)
+
     def hash_file(self, path, saltenv='base'):
         '''
         Return the hash of a file, to get the hash of a file in the file_roots
@@ -811,26 +848,51 @@ class LocalClient(Client):
         file with / for a local file.
         '''
         ret = {}
+        fnd = self.__get_file_path(path, saltenv)
+        if fnd is None:
+            return ret
+
         try:
-            path = self._check_proto(path)
-        except MinionError as err:
-            if not os.path.isfile(path):
-                msg = 'specified file {0} is not present to generate hash: {1}'
-                log.warning(msg.format(path, err))
-                return ret
-            else:
-                opts_hash_type = self.opts.get('hash_type', 'md5')
-                hash_type = getattr(hashlib, opts_hash_type)
-                ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type)
-                ret['hash_type'] = opts_hash_type
-                return ret
-        path = self._find_file(path, saltenv)['path']
-        if not path:
-            return {}
+            # Remote file path (self._find_file() invoked)
+            fnd_path = fnd['path']
+        except TypeError:
+            # Local file path
+            fnd_path = fnd
+
+        hash_type = self.opts.get('hash_type', 'md5')
+        ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret['hash_type'] = hash_type
+        return ret
+
+    def hash_and_stat_file(self, path, saltenv='base'):
+        '''
+        Return the hash of a file, to get the hash of a file in the file_roots
+        prepend the path with salt://<file on server> otherwise, prepend the
+        file with / for a local file.
+
+        Additionally, return the stat result of the file, or None if no stat
+        results were found.
+        '''
         ret = {}
-        ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
-        ret['hash_type'] = self.opts['hash_type']
+        fnd = self.__get_file_path(path, saltenv)
+        if fnd is None:
+            return ret, None
+
+        try:
+            # Remote file path (self._find_file() invoked)
+            fnd_path = fnd['path']
+            fnd_stat = fnd.get('stat')
+        except TypeError:
+            # Local file path
+            fnd_path = fnd
+            try:
+                fnd_stat = list(os.stat(fnd_path))
+            except Exception:
+                fnd_stat = None
+
+        hash_type = self.opts.get('hash_type', 'md5')
+        ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret['hash_type'] = hash_type
         return ret
 
     def list_env(self, saltenv='base'):
@@ -906,14 +968,22 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
+        if not salt.utils.is_windows():
+            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
+            try:
+                mode_server = stat_server[0]
+            except (IndexError, TypeError):
+                mode_server = None
+        else:
+            hash_server = self.hash_file(path, saltenv)
+            mode_server = None
+
         # Check if file exists on server, before creating files and
         # directories
-        hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
-                    saltenv, path
-                )
+                'Could not find file \'%s\' in saltenv \'%s\'',
+                path, saltenv
             )
             return False
 
@@ -924,32 +994,76 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
-                '\'{2}\''.format(saltenv, rel_path, path)
+                'In saltenv \'%s\', looking at rel_path \'%s\' to resolve '
+                '\'%s\'', saltenv, rel_path, path
             )
             with self._cache_loc(
                     rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
-            '\'{2}\''.format(saltenv, dest2check, path)
+            'In saltenv \'%s\', ** considering ** path \'%s\' to resolve '
+            '\'%s\'', saltenv, dest2check, path
         )
 
         if dest2check and os.path.isfile(dest2check):
-            hash_local = self.hash_file(dest2check, saltenv)
+            if not salt.utils.is_windows():
+                hash_local, stat_local = \
+                    self.hash_and_stat_file(dest2check, saltenv)
+                try:
+                    mode_local = stat_local[0]
+                except IndexError:
+                    mode_local = None
+            else:
+                hash_local = self.hash_file(dest2check, saltenv)
+                mode_local = None
+
             if hash_local == hash_server:
-                log.info(
-                    'Fetching file from saltenv \'{0}\', ** skipped ** '
-                    'latest already in cache \'{1}\''.format(
-                        saltenv, path
+                if not salt.utils.is_windows():
+                    if mode_server is None:
+                        log.debug('No file mode available for \'%s\'', path)
+                    elif mode_local is None:
+                        log.debug(
+                            'No file mode available for \'%s\'',
+                            dest2check
+                        )
+                    else:
+                        if mode_server == mode_local:
+                            log.info(
+                                'Fetching file from saltenv \'%s\', '
+                                '** skipped ** latest already in cache '
+                                '\'%s\', mode up-to-date', saltenv, path
+                            )
+                        else:
+                            try:
+                                os.chmod(dest2check, mode_server)
+                                log.info(
+                                    'Fetching file from saltenv \'%s\', '
+                                    '** updated ** latest already in cache, '
+                                    '\'%s\', mode updated from %s to %s',
+                                    saltenv,
+                                    path,
+                                    salt.utils.st_mode_to_octal(mode_local),
+                                    salt.utils.st_mode_to_octal(mode_server)
+                                )
+                            except OSError as exc:
+                                log.warning(
+                                    'Failed to chmod %s: %s', dest2check, exc
+                                )
+                    # We may not have been able to check/set the mode, but we
+                    # don't want to re-download the file because of a failure
+                    # in mode checking. Return the cached path.
+                    return dest2check
+                else:
+                    log.info(
+                        'Fetching file from saltenv \'%s\', ** skipped ** '
+                        'latest already in cache \'%s\'', saltenv, path
                     )
-                )
-                return dest2check
+                    return dest2check
 
         log.debug(
-            'Fetching file from saltenv \'{0}\', ** attempting ** '
-            '\'{1}\''.format(saltenv, path)
+            'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
+            saltenv, path
         )
         d_tries = 0
         transport_tries = 0
@@ -971,7 +1085,7 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         else:
-            log.debug('No dest file found {0}'.format(dest))
+            log.debug('No dest file found')
 
         while True:
             if not fn_:
@@ -1003,8 +1117,10 @@ class RemoteClient(Client):
                         d_tries += 1
                         hsum = salt.utils.get_hash(dest, salt.utils.to_str(data.get('hash_type', b'md5')))
                         if hsum != data['hsum']:
-                            log.warning('Bad download of file {0}, attempt {1} '
-                                     'of 3'.format(path, d_tries))
+                            log.warning(
+                                'Bad download of file %s, attempt %d of 3',
+                                path, d_tries
+                            )
                             continue
                     break
                 if not fn_:
@@ -1023,33 +1139,56 @@ class RemoteClient(Client):
                 else:
                     data = data['data']
                 fn_.write(data)
-            except (TypeError, KeyError) as e:
+            except (TypeError, KeyError) as exc:
+                try:
+                    data_type = type(data).__name__
+                except AttributeError:
+                    # Shouldn't happen, but don't let this cause a traceback.
+                    data_type = str(type(data))
                 transport_tries += 1
-                log.warning('Data transport is broken, got: {0}, type: {1}, '
-                            'exception: {2}, attempt {3} of 3'.format(
-                                data, type(data), e, transport_tries)
-                            )
+                log.warning(
+                    'Data transport is broken, got: %s, type: %s, '
+                    'exception: %s, attempt %d of 3',
+                    data, data_type, exc, transport_tries
+                )
                 self._refresh_channel()
                 if transport_tries > 3:
-                    log.error('Data transport is broken, got: {0}, type: {1}, '
-                              'exception: {2}, '
-                              'Retry attempts exhausted'.format(
-                                data, type(data), e)
-                            )
+                    log.error(
+                        'Data transport is broken, got: %s, type: %s, '
+                        'exception: %s, retry attempts exhausted',
+                        data, data_type, exc
+                    )
                     break
 
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv \'{0}\', ** done ** '
-                '\'{1}\''.format(saltenv, path)
+                'Fetching file from saltenv \'%s\', ** done ** \'%s\'',
+                saltenv, path
             )
         else:
             log.debug(
-                'In saltenv \'{0}\', we are ** missing ** the file '
-                '\'{1}\''.format(saltenv, path)
+                'In saltenv \'%s\', we are ** missing ** the file \'%s\'',
+                saltenv, path
             )
 
+        if not salt.utils.is_windows():
+            if mode_server is not None:
+                try:
+                    if os.stat(dest).st_mode != mode_server:
+                        try:
+                            os.chmod(dest, mode_server)
+                            log.info(
+                                'Fetching file from saltenv \'%s\', '
+                                '** done ** \'%s\', mode set to %s',
+                                saltenv,
+                                path,
+                                salt.utils.st_mode_to_octal(mode_server)
+                            )
+                        except OSError:
+                            log.warning('Failed to chmod %s: %s', dest, exc)
+                except OSError:
+                    pass
         return dest
 
     def file_list(self, saltenv='base', prefix=''):
@@ -1089,11 +1228,9 @@ class RemoteClient(Client):
                 'cmd': '_symlink_list'}
         return self.channel.send(load)
 
-    def hash_file(self, path, saltenv='base'):
+    def __hash_and_stat_file(self, path, saltenv='base'):
         '''
-        Return the hash of a file, to get the hash of a file on the salt
-        master file server prepend the path with salt://<file on server>
-        otherwise, prepend the file with / for a local file.
+        Common code for hashing and stating files
         '''
         try:
             path = self._check_proto(path)
@@ -1105,14 +1242,44 @@ class RemoteClient(Client):
             else:
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')
-                ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type)
+                ret['hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
         return self.channel.send(load)
+
+    def hash_file(self, path, saltenv='base'):
+        '''
+        Return the hash of a file, to get the hash of a file on the salt
+        master file server prepend the path with salt://<file on server>
+        otherwise, prepend the file with / for a local file.
+        '''
+        return self.__hash_and_stat_file(path, saltenv)
+
+    def hash_and_stat_file(self, path, saltenv='base'):
+        '''
+        The same as hash_file, but also return the file's mode, or None if no
+        mode data is present.
+        '''
+        hash_result = self.hash_file(path, saltenv)
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            if not os.path.isfile(path):
+                return hash_result, None
+            else:
+                try:
+                    return hash_result, list(os.stat(path))
+                except Exception:
+                    return hash_result, None
+        load = {'path': path,
+                'saltenv': saltenv,
+                'cmd': '_file_find'}
+        fnd = self.channel.send(load)
+        stat_result = fnd.get('stat')
+        return hash_result, stat_result
 
     def list_env(self, saltenv='base'):
         '''

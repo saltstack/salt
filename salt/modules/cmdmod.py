@@ -169,7 +169,7 @@ def _check_loglevel(level='info', quiet=False):
             .format(
                 level,
                 ', '.join(
-                    sorted(LOG_LEVELS, key=LOG_LEVELS.get, reverse=True)
+                    sorted(LOG_LEVELS, reverse=True)
                 )
             )
         )
@@ -2309,10 +2309,21 @@ def exec_code_all(lang, code, cwd=None):
 
         salt '*' cmd.exec_code_all ruby 'puts "cheese"'
     '''
-    codefile = salt.utils.mkstemp()
-    with salt.utils.fopen(codefile, 'w+t') as fp_:
+    powershell = lang.lower().startswith("powershell")
+
+    if powershell:
+        codefile = salt.utils.mkstemp(suffix=".ps1")
+    else:
+        codefile = salt.utils.mkstemp()
+
+    with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
-    cmd = [lang, codefile]
+
+    if powershell:
+        cmd = [lang, "-File", codefile]
+    else:
+        cmd = [lang, codefile]
+
     ret = run_all(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
@@ -2624,7 +2635,7 @@ def powershell(cmd,
 
         This passes the cmd argument directly to PowerShell
         without any further processing! Be absolutely sure that you
-        have properly santized the command passed to this function
+        have properly sanitized the command passed to this function
         and do not use untrusted inputs.
 
     Note that ``env`` represents the environment variables for the command, and

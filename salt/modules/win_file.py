@@ -56,7 +56,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         check_managed, check_managed_changes, check_perms, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
-        get_hash, manage_file, file_exists, get_diff, list_backups,
+        get_hash, manage_file, file_exists, get_diff, line, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
@@ -1101,7 +1101,7 @@ def remove(path, force=False):
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(path, file_attributes)
         raise CommandExecutionError(
-            'Could not remove {0!r}: {1}'.format(path, exc)
+            'Could not remove \'{0}\': {1}'.format(path, exc)
         )
 
     return True

@@ -16,6 +16,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt libs
+import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 from salt.modules import pillar as pillarmod
 
@@ -52,7 +53,10 @@ class PillarModuleTestCase(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1))
     def test_ls(self):
-        self.assertEqual(pillarmod.ls(), ['a', 'b'])
+        if six.PY3:
+            self.assertCountEqual(pillarmod.ls(), ['a', 'b'])
+        else:
+            self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
 
 # gracinet: not sure this is really useful, but other test modules have this as well

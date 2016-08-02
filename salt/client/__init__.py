@@ -27,11 +27,9 @@ from datetime import datetime
 
 # Import salt libs
 import salt.config
-import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event
@@ -677,6 +675,8 @@ class LocalClient(object):
         if not pub_data:
             yield pub_data
         else:
+            if kwargs.get('yield_pub_data'):
+                yield pub_data
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
                                                 timeout=self._get_timeout(timeout),
@@ -933,6 +933,8 @@ class LocalClient(object):
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     if 'retcode' in raw['data']:
                         ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
+                    if 'jid' in raw['data']:
+                        ret[raw['data']['id']]['jid'] = raw['data']['jid']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
@@ -965,7 +967,7 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
@@ -1307,7 +1309,12 @@ class LocalClient(object):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    if connected_minions and id_ not in connected_minions:
+                    minion_cache = os.path.join(self.opts['cachedir'], 'minions', id_, 'data.p')
+                    if self.opts['minion_data_cache'] \
+                            and os.path.exists(minion_cache) \
+                            and connected_minions \
+                            and id_ not in connected_minions:
+
                         yield {id_: {'out': 'no_return',
                                      'ret': 'Minion did not return. [Not connected]'}}
                     else:
@@ -1714,6 +1721,8 @@ class Caller(object):
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
             mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
         if mopts:
             self.opts = mopts
         else:

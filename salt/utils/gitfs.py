@@ -507,7 +507,6 @@ class GitProvider(object):
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.
                         pid = 0
-                #if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
                 global_lock_key = self.role + '_global_lock'
                 lock_file = self._get_lock_file(lock_type=lock_type)
                 if self.opts[global_lock_key]:
@@ -531,7 +530,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise
+                        raise exc
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
@@ -941,7 +940,7 @@ class GitPython(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
         depth = 0
         while True:
@@ -969,7 +968,9 @@ class GitPython(GitProvider):
             except KeyError:
                 # File not found or repo_path points to a directory
                 break
-        return blob, blob.hexsha if blob is not None else blob
+        if isinstance(blob, git.Blob):
+            return blob, blob.hexsha, blob.mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
@@ -1481,29 +1482,33 @@ class Pygit2(GitProvider):
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found in repo
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
                 break
             try:
-                if stat.S_ISLNK(tree[path].filemode):
+                entry = tree[path]
+                mode = entry.filemode
+                if stat.S_ISLNK(mode):
                     # Path is a symlink. The blob data corresponding to this
                     # path's object ID will be the target of the symlink. Follow
                     # the symlink and set path to the location indicated
                     # in the blob data.
-                    link_tgt = self.repo[tree[path].oid].data
+                    link_tgt = self.repo[entry.oid].data
                     path = os.path.normpath(
                         os.path.join(os.path.dirname(path), link_tgt)
                     )
                 else:
-                    oid = tree[path].oid
-                    blob = self.repo[oid]
+                    blob = self.repo[entry.oid]
             except KeyError:
                 break
-        return blob, blob.hex if blob is not None else blob
+        if isinstance(blob, pygit2.Blob):
+            return blob, blob.hex, mode
+        return None, None, None
 
     def get_tree(self, tgt_env):
         '''
@@ -1524,7 +1529,7 @@ class Pygit2(GitProvider):
             return None
         try:
             commit = self.repo.revparse_single(tgt_ref)
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, ValueError):
             # Not a valid commit, likely not a commit SHA
             pass
         else:
@@ -1828,8 +1833,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found
-            return None, None
+            return None, None, None
         blob = None
+        mode = None
         depth = 0
         while True:
             depth += 1
@@ -1856,7 +1862,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     break
             except KeyError:
                 break
-        return blob, blob.sha().hexdigest() if blob is not None else blob
+        if isinstance(blob, dulwich.objects.Blob):
+            return blob, blob.sha().hexdigest(), mode
+        return None, None, None
 
     def get_conf(self):
         '''
@@ -1916,9 +1924,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         # SHA-1 hashes.
         if not self.env_is_exposed(tgt_env):
             return None
-        try:
-            int(tgt_ref, 16)
-        except ValueError:
+        elif not salt.utils.is_hex(tgt_ref):
             # Not hexidecimal, likely just a non-matching environment
             return None
 
@@ -2661,7 +2667,8 @@ class GitFS(GitBase):
         '''
         fnd = {'path': '',
                'rel': ''}
-        if os.path.isabs(path) or tgt_env not in self.envs():
+        if os.path.isabs(path) or \
+                (not salt.utils.is_hex(tgt_env) and tgt_env not in self.envs()):
             return fnd
 
         dest = os.path.join(self.cache_root, 'refs', tgt_env, path)
@@ -2699,9 +2706,23 @@ class GitFS(GitBase):
             if repo.root(tgt_env):
                 repo_path = os.path.join(repo.root(tgt_env), repo_path)
 
-            blob, blob_hexsha = repo.find_file(repo_path, tgt_env)
+            blob, blob_hexsha, blob_mode = repo.find_file(repo_path, tgt_env)
             if blob is None:
                 continue
+
+            def _add_file_stat(fnd, mode):
+                '''
+                Add a the mode to the return dict. In other fileserver backends
+                we stat the file to get its mode, and add the stat result
+                (passed through list() for better serialization) to the 'stat'
+                key in the return dict. However, since we aren't using the
+                stat result for anything but the mode at this time, we can
+                avoid unnecessary work by just manually creating the list and
+                not running an os.stat() on all files in the repo.
+                '''
+                if mode is not None:
+                    fnd['stat'] = [mode]
+                return fnd
 
             salt.fileserver.wait_lock(lk_fn, dest)
             if os.path.isfile(blobshadest) and os.path.isfile(dest):
@@ -2710,7 +2731,7 @@ class GitFS(GitBase):
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
-                        return fnd
+                        return _add_file_stat(fnd, blob_mode)
             with salt.utils.fopen(lk_fn, 'w+') as fp_:
                 fp_.write('')
             for filename in glob.glob(hashes_glob):
@@ -2728,7 +2749,7 @@ class GitFS(GitBase):
                 pass
             fnd['rel'] = path
             fnd['path'] = dest
-            return fnd
+            return _add_file_stat(fnd, blob_mode)
 
         # No matching file was found in tgt_env. Return a dict with empty paths
         # so the calling function knows the file could not be found.
@@ -2785,7 +2806,7 @@ class GitFS(GitBase):
             load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
-            return ''
+            return '', None
         ret = {'hash_type': self.opts['hash_type']}
         relpath = fnd['rel']
         path = fnd['path']
@@ -2844,7 +2865,8 @@ class GitFS(GitBase):
             return cache_match
         if refresh_cache:
             ret = {'files': set(), 'symlinks': {}, 'dirs': set()}
-            if load['saltenv'] in self.envs():
+            if salt.utils.is_hex(load['saltenv']) \
+                    or load['saltenv'] in self.envs():
                 for repo in self.remotes:
                     repo_files, repo_symlinks = repo.file_list(load['saltenv'])
                     ret['files'].update(repo_files)
@@ -2891,7 +2913,8 @@ class GitFS(GitBase):
                 )
             load.pop('env')
 
-        if load['saltenv'] not in self.envs():
+        if not salt.utils.is_hex(load['saltenv']) \
+                and load['saltenv'] not in self.envs():
             return {}
         if 'prefix' in load:
             prefix = load['prefix'].strip('/')
@@ -2910,7 +2933,7 @@ class GitPillar(GitBase):
     def __init__(self, opts):
         self.role = 'git_pillar'
         # Dulwich has no function to check out a branch/tag, so this will be
-        # limited to GitPython and Pygit2 for the forseeable future.
+        # limited to GitPython and Pygit2 for the foreseeable future.
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'))
@@ -2951,7 +2974,7 @@ class WinRepo(GitBase):
     def __init__(self, opts, winrepo_dir):
         self.role = 'winrepo'
         # Dulwich has no function to check out a branch/tag, so this will be
-        # limited to GitPython and Pygit2 for the forseeable future.
+        # limited to GitPython and Pygit2 for the foreseeable future.
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'),

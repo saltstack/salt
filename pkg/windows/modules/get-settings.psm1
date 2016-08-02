@@ -45,7 +45,7 @@ Function Get-Settings {
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
             "PyCrypto" = "pycrypto-2.6.1-cp27-none-win_amd64.whl"
-            "Python"   = "python-2.7.11.amd64.msi"
+            "Python"   = "python-2.7.12.amd64.msi"
             "PyYAML"   = "PyYAML-3.11.win-amd64-py2.7.exe"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
@@ -53,7 +53,7 @@ Function Get-Settings {
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
             "PyCrypto" = "pycrypto-2.6.1-cp27-none-win32.whl"
-            "Python"   = "python-2.7.11.msi"
+            "Python"   = "python-2.7.12.msi"
             "PyYAML"   = "PyYAML-3.11.win32-py2.7.exe"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)

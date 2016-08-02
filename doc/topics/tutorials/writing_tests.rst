@@ -431,6 +431,26 @@ in the following docs:
     in a poor and fragile unit test.
 
 
+Checking for Log Messages
+=========================
+
+To test to see if a given log message has been emitted, the following pattern
+can be used
+
+.. code-block:: python
+
+    # Import logging handler
+    from salttesting.helpers import TestsLoggingHandler
+
+    # .. inside test
+    with TestsLoggingHandler() as handler:
+        for message in handler.messages:
+            if message.startswith('ERROR: This is the error message we seek'):
+                break
+            else:
+                raise AssertionError('Did not find error message')
+
+
 Automated Test Runs
 ===================
 

@@ -395,9 +395,9 @@ class MinionBase(object):
         the pillar or grains changed
         '''
         if 'config.merge' in functions:
-            b_conf = functions['config.merge']('beacons')
+            b_conf = functions['config.merge']('beacons', self.opts['beacons'], omit_opts=True)
             if b_conf:
-                return self.beacons.process(b_conf)  # pylint: disable=no-member
+                return self.beacons.process(b_conf, self.opts['grains'])  # pylint: disable=no-member
         return []
 
     @tornado.gen.coroutine
@@ -405,7 +405,8 @@ class MinionBase(object):
                     opts,
                     timeout=60,
                     safe=True,
-                    failed=False):
+                    failed=False,
+                    failback=False):
         '''
         Evaluates and returns a tuple of the current master address and the pub_channel.
 
@@ -460,16 +461,20 @@ class MinionBase(object):
                 # because a master connection loss was detected. remove
                 # the possibly failed master from the list of masters.
                 elif failed:
-                    log.info('Moving possibly failed master {0} to the end of'
-                             ' the list of masters'.format(opts['master']))
-                    if opts['master'] in opts['master_list']:
-                        # create new list of master with the possibly failed
-                        # one moved to the end
-                        failed_master = opts['master']
-                        opts['master'] = [x for x in opts['master_list'] if opts['master'] != x]
-                        opts['master'].append(failed_master)
-                    else:
+                    if failback:
+                        # failback list of masters to original config
                         opts['master'] = opts['master_list']
+                    else:
+                        log.info('Moving possibly failed master {0} to the end of'
+                                 ' the list of masters'.format(opts['master']))
+                        if opts['master'] in opts['local_masters']:
+                            # create new list of master with the possibly failed
+                            # one moved to the end
+                            failed_master = opts['master']
+                            opts['master'] = [x for x in opts['local_masters'] if opts['master'] != x]
+                            opts['master'].append(failed_master)
+                        else:
+                            opts['master'] = opts['master_list']
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
                            'is not of type list but of type '
@@ -504,7 +509,7 @@ class MinionBase(object):
         if isinstance(opts['master'], list):
             conn = False
             # shuffle the masters and then loop through them
-            local_masters = copy.copy(opts['master'])
+            opts['local_masters'] = copy.copy(opts['master'])
             last_exc = None
 
             while True:
@@ -517,16 +522,17 @@ class MinionBase(object):
                     log.debug('Connecting to master. Attempt {0} '
                               '(infinite attempts)'.format(attempts)
                     )
-                for master in local_masters:
+                for master in opts['local_masters']:
                     opts['master'] = master
                     opts.update(prep_ip_port(opts))
                     opts.update(resolve_dns(opts))
-                    self.opts = opts
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
                     if 'master_list' not in opts:
-                        opts['master_list'] = local_masters
+                        opts['master_list'] = copy.copy(opts['local_masters'])
+
+                    self.opts = opts
 
                     try:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
@@ -597,9 +603,10 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if HAS_ZMQ:
-                zmq.eventloop.ioloop.install()
-            io_loop = LOOP_CLASS.current()
+            if self.opts['transport'] == 'zeromq' and HAS_ZMQ:
+                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+            else:
+                io_loop = LOOP_CLASS.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
@@ -669,8 +676,9 @@ class MasterMinion(object):
             states=True,
             rend=True,
             matcher=True,
-            whitelist=None):
-        self.opts = salt.config.minion_config(opts['conf_file'])
+            whitelist=None,
+            ignore_config_errors=True):
+        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
@@ -1268,15 +1276,6 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if sys.platform.startswith('win') and \
-                opts['multiprocessing'] and \
-                not salt.log.setup.is_logging_configured():
-            # We have to re-init the logging system for Windows
-            salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
-            if opts.get('log_file'):
-                salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
         if opts['multiprocessing'] and not salt.utils.is_windows():
@@ -1455,15 +1454,6 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
-        # this seems awkward at first, but it's a workaround for Windows
-        # multiprocessing communication.
-        if sys.platform.startswith('win') and \
-                opts['multiprocessing'] and \
-                not salt.log.is_logging_configured():
-            # We have to re-init the logging system for Windows
-            salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
-            if opts.get('log_file'):
-                salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         ret = {
             'return': {},
             'success': {},
@@ -1889,7 +1879,8 @@ class Minion(MinionBase):
                     try:
                         master, self.pub_channel = yield self.eval_master(
                                                             opts=self.opts,
-                                                            failed=True)
+                                                            failed=True,
+                                                            failback=package.startswith('__master_failback'))
                     except SaltClientError:
                         pass
 
@@ -2205,7 +2196,7 @@ class Syndic(Minion):
                                  callback=lambda _: None,
                                  **kwargs)
 
-    def _fire_master_syndic_start(self):
+    def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Syndic {0} started at {1}'.format(
@@ -2223,45 +2214,6 @@ class Syndic(Minion):
             tagify([self.opts['id'], 'start'], 'syndic'),
             sync=False,
         )
-
-    # Syndic Tune In
-    @tornado.gen.coroutine
-    def tune_in(self, start=True):
-        '''
-        Lock onto the publisher. This is the main event loop for the syndic
-        '''
-        log.debug('Syndic \'{0}\' trying to tune in'.format(self.opts['id']))
-
-        if start:
-            self.sync_connect_master()
-
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'], io_loop=self.io_loop)
-        self.local.event.subscribe('')
-        self.local.opts['interface'] = self._syndic_interface
-
-        # add handler to subscriber
-        self.pub_channel.on_recv(self._process_cmd_socket)
-
-        # register the event sub to the poller
-        self._reset_event_aggregation()
-        self.local.event.set_event_handler(self._process_event)
-
-        # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
-                                                              self.opts['syndic_event_forward_timeout'] * 1000,
-                                                              io_loop=self.io_loop)
-        self.forward_events.start()
-
-        # Send an event to the master that the minion is live
-        self._fire_master_syndic_start()
-
-        # Make sure to gracefully handle SIGUSR1
-        enable_sigusr1_handler()
-
-        if start:
-            self.io_loop.start()
 
     # TODO: clean up docs
     def tune_in_no_block(self):
@@ -2285,49 +2237,6 @@ class Syndic(Minion):
         # In the future, we could add support for some clearfuncs, but
         # the syndic currently has no need.
 
-    def _reset_event_aggregation(self):
-        self.jids = {}
-        self.raw_events = []
-
-    def _process_event(self, raw):
-        # TODO: cleanup: Move down into event class
-        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
-        tag_parts = event['tag'].split('/')
-        if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
-            salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-            'return' in event['data']:
-            if 'jid' not in event['data']:
-                # Not a job return
-                return
-            jdict = self.jids.setdefault(event['data']['jid'], {})
-            if not jdict:
-                jdict['__fun__'] = event['data'].get('fun')
-                jdict['__jid__'] = event['data']['jid']
-                jdict['__load__'] = {}
-                fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
-                # Only need to forward each load once. Don't hit the disk
-                # for every minion return!
-                if event['data']['jid'] not in self.jid_forward_cache:
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
-                    self.jid_forward_cache.add(event['data']['jid'])
-                    if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
-                        # Pop the oldest jid from the cache
-                        tmp = sorted(list(self.jid_forward_cache))
-                        tmp.pop(0)
-                        self.jid_forward_cache = set(tmp)
-            if 'master_id' in event['data']:
-                # __'s to make sure it doesn't print out on the master cli
-                jdict['__master_id__'] = event['data']['master_id']
-            jdict[event['data']['id']] = event['data']['return']
-        else:
-            # Add generic event aggregation here
-            if 'retcode' not in event['data']:
-                self.raw_events.append(event)
-
     @tornado.gen.coroutine
     def _return_pub_multi(self, values):
         for value in values:
@@ -2335,19 +2244,6 @@ class Syndic(Minion):
                                    '_syndic_return',
                                    timeout=self._return_retry_timer(),
                                    sync=False)
-
-    def _forward_events(self):
-        log.trace('Forwarding events')  # pylint: disable=no-member
-        if self.raw_events:
-            events = self.raw_events
-            self.raw_events = []
-            self._fire_master(events=events,
-                              pretag=tagify(self.opts['id'], base='syndic'),
-                              sync=False)
-        if self.jids and (self.pub_future is None or self.pub_future.done()):
-            values = self.jids.values()
-            self.jids = {}
-            self.pub_future = self._return_pub_multi(values)
 
     @tornado.gen.coroutine
     def reconnect(self):
@@ -2382,11 +2278,10 @@ class Syndic(Minion):
             self.forward_events.stop()
 
 
-# TODO: consolidate syndic classes together?
-# need a way of knowing if the syndic connection is busted
-class MultiSyndic(MinionBase):
+# TODO: need a way of knowing if the syndic connection is busted
+class SyndicManager(MinionBase):
     '''
-    Make a MultiSyndic minion, this minion will handle relaying jobs and returns from
+    Make a MultiMaster syndic minion, this minion will handle relaying jobs and returns from
     all minions connected to it to the list of masters it is connected to.
 
     Modes (controlled by `syndic_mode`:
@@ -2409,7 +2304,7 @@ class MultiSyndic(MinionBase):
 
     def __init__(self, opts, io_loop=None):
         opts['loop_interval'] = 1
-        super(MultiSyndic, self).__init__(opts)
+        super(SyndicManager, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
@@ -2443,7 +2338,10 @@ class MultiSyndic(MinionBase):
         Spawn all the coroutines which will sign in the syndics
         '''
         self._syndics = OrderedDict()  # mapping of opts['master'] -> syndic
-        for master in self.opts['master']:
+        masters = self.opts['master']
+        if not isinstance(masters, list):
+            masters = [masters]
+        for master in masters:
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
             self._syndics[master] = self._connect_syndic(s_opts)
@@ -2466,6 +2364,10 @@ class MultiSyndic(MinionBase):
                 yield syndic.connect_master()
                 # set up the syndic to handle publishes (specifically not event forwarding)
                 syndic.tune_in_no_block()
+
+                # Send an event to the master that the minion is live
+                syndic.fire_master_syndic_start()
+
                 log.info('Syndic successfully connected to {0}'.format(opts['master']))
                 break
             except SaltClientError as exc:
@@ -2563,10 +2465,6 @@ class MultiSyndic(MinionBase):
                 break
             master_id = masters.pop(0)
 
-    def _reset_event_aggregation(self):
-        self.job_rets = {}
-        self.raw_events = []
-
     # Syndic Tune In
     def tune_in(self):
         '''
@@ -2578,10 +2476,11 @@ class MultiSyndic(MinionBase):
             self.opts['_minion_conf_file'], io_loop=self.io_loop)
         self.local.event.subscribe('')
 
-        log.debug('MultiSyndic \'{0}\' trying to tune in'.format(self.opts['id']))
+        log.debug('SyndicManager \'{0}\' trying to tune in'.format(self.opts['id']))
 
         # register the event sub to the poller
-        self._reset_event_aggregation()
+        self.job_rets = {}
+        self.raw_events = []
         self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
@@ -2983,10 +2882,11 @@ class ProxyMinion(Minion):
         ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            log.error('No proxy key found in pillar or opts for id '+self.opts['id']+'.')
-            log.error('Check your pillar configuration and contents.  Salt-proxy aborted.')
+            errmsg = 'No proxy key found in pillar for id '+self.opts['id']+'. '+\
+                     'Check your pillar configuration and contents.  Salt-proxy aborted.'
+            log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1)
+            raise SaltSystemExit(code=-1, msg=errmsg)
 
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
@@ -3023,10 +2923,11 @@ class ProxyMinion(Minion):
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
                 or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
-            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
-            log.error('Check your proxymodule.  Salt-proxy aborted.')
+            errmsg = 'Proxymodule {0} is missing an init() or a shutdown() or both. '.format(fq_proxyname)+\
+                     'Check your proxymodule.  Salt-proxy aborted.'
+            log.error(errmsg)
             self._running = False
-            raise SaltSystemExit(code=-1)
+            raise SaltSystemExit(code=-1, msg=errmsg)
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)

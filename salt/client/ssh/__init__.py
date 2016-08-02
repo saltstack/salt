@@ -24,6 +24,7 @@ import binascii
 import sys
 
 # Import salt libs
+import salt.output
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
@@ -205,6 +206,8 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        if self.opts['regen_thin']:
+            self.opts['ssh_wipe'] = True
         if not salt.utils.which('ssh'):
             raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
@@ -279,6 +282,9 @@ class SSH(object):
                 'ssh_identities_only',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_identities_only']
             ),
+            'remote_port_forwards': self.opts.get(
+                'ssh_remote_port_forwards'
+            ),
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
@@ -289,6 +295,7 @@ class SSH(object):
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
+                                             overwrite=self.opts['regen_thin'],
                                              python2_bin=self.opts['python2_bin'],
                                              python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
@@ -665,6 +672,7 @@ class Single(object):
             mine=False,
             minion_opts=None,
             identities_only=False,
+            remote_port_forwards=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -719,7 +727,8 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods,
-                'identities_only': identities_only}
+                'identities_only': identities_only,
+                'remote_port_forwards': remote_port_forwards}
         # Pre apply changeable defaults
         self.minion_opts = {
                     'grains_cache': True,
@@ -732,7 +741,8 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
-                    'log_file': 'salt-call.log'
+                    'log_file': 'salt-call.log',
+                    'fileserver_list_cache_time': 3,
                 })
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
@@ -913,7 +923,7 @@ class Single(object):
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
-        # We're running in the mind, need to fetch the arguments from the
+        # We're running in the mine, need to fetch the arguments from the
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
@@ -1293,6 +1303,10 @@ def mod_data(fsclient):
                     ret[ref] = mods_data
     if not ret:
         return {}
+
+    if six.PY3:
+        ver_base = salt.utils.to_bytes(ver_base)
+
     ver = hashlib.sha1(ver_base).hexdigest()
     ext_tar_path = os.path.join(
             fsclient.opts['cachedir'],

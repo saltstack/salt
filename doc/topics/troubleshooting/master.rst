@@ -222,7 +222,7 @@ Salt Master Auth Flooding
 
 In large installations, care must be taken not to overwhealm the master with
 authentication requests. Several options can be set on the master which
-mitigate the chances of an authentication flood from causing an interuption in
+mitigate the chances of an authentication flood from causing an interruption in
 service.
 
 .. note::

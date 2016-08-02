@@ -9,6 +9,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import getpass
 import os
 import sys
 import re
@@ -20,14 +21,17 @@ import logging
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
-import salt.utils
 from salttesting.helpers import (
     destructiveTest
 )
+ensure_in_syspath('../../')
+
+import integration
+from integration.utils import testprogram
+
+# Import salt libs
+import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +42,10 @@ _PKG_TARGETS = {
     'FreeBSD': ['aalib', 'pth'],
     'SUSE': ['aalib', 'python-pssh']
 }
+_PKGS_INSTALLED = set()
 
 
-class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-call'
 
@@ -84,6 +89,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     @destructiveTest
     @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @skipIf(getpass.getuser() == 'root', 'Requires root to test pkg.install')
     def test_local_pkg_install(self):
         '''
         Test to ensure correct output when installing package
@@ -98,6 +104,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 self.assertIn('{0}:        ----------'.format(pkg), ''.join(out))
                 self.assertIn('new:', ''.join(out))
                 self.assertIn('old:', ''.join(out))
+                _PKGS_INSTALLED.add(pkg)
             else:
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
@@ -176,7 +183,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
+            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
         )
 
         minion_config = {
@@ -340,7 +347,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         output_file_append = os.path.join(integration.TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
-            ret = self.run_script(
+            _ = self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} test.versions'.format(
                     self.get_config_dir(),
@@ -429,14 +436,60 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Teardown method to remove installed packages
         '''
-        check_pkg = self.run_call('--local pkg.list_pkgs')
-        get_os_family = self.run_call('--local grains.get os_family')
-        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
-        check_pkg = self.run_call('--local pkg.list_pkgs')
-        for pkg in pkg_targets:
-            if pkg in str(check_pkg):
-                out = self.run_call('--local pkg.remove {0}'.format(pkg))
+        user = ''
+        user_info = self.run_call('--local grains.get username')
+        if user_info and isinstance(user_info, (list, tuple)) and isinstance(user_info[-1], six.string_types):
+            user = user_info[-1].strip()
+        if user == 'root':
+            for pkg in _PKGS_INSTALLED:
+                _ = self.run_call('--local pkg.remove {0}'.format(pkg))
+        super(CallTest, self).tearDown()
+
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-call.
+        '''
+
+        call = testprogram.TestProgramSaltCall(
+            name='unknown_argument',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        call.setup()
+        stdout, stderr, status = call.run(
+            args=['--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_USAGE',
+            message='unknown argument',
+            stdout=stdout, stderr=stderr
+        )
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-call starts correctly.
+        '''
+
+        call = testprogram.TestProgramSaltCall(
+            name='correct_usage',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        call.setup()
+        stdout, stderr, status = call.run(
+            args=['--local', 'test.true'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout, stderr=stderr
+        )
+
 
 if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CallTest)
+    integration.run_tests(CallTest)

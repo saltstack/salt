@@ -53,7 +53,7 @@ def __virtual__():
     return (False, "Module win_pkg: module only works on Windows systems")
 
 
-def latest_version(saltenv='base', *names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -77,6 +77,8 @@ def latest_version(saltenv='base', *names, **kwargs):
     ret = {}
     for name in names:
         ret[name] = ''
+
+    saltenv = kwargs.get('saltenv', 'base')
 
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
@@ -158,7 +160,7 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
     ret = {}
     for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
         if version(name):
-            latest = latest_version(name)
+            latest = latest_version(name, refresh=False)
             if latest:
                 ret[name] = latest
     return ret
@@ -242,6 +244,10 @@ def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
     if any([salt.utils.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
+
+    if kwargs.get('refresh', False):
+        # _get_name_map() needs a refresh_db if cache is not present
+        refresh_db()
 
     ret = {}
     name_map = _get_name_map(saltenv)
@@ -657,7 +663,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
-        if version_num == old.get(pkg_name) \
+        if version_num in old.get(pkg_name, '').split(',') \
                 or (pkg_name in old and old[pkg_name] == 'Not Found'):
             # Desired version number already installed
             ret[pkg_name] = {'current': version_num}
@@ -975,7 +981,7 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
             ret[target] = {'current': 'not installed'}
             continue
         else:
-            if not version_num == old.get(target) \
+            if version_num not in old.get(target, '').split(',') \
                     and not old.get(target) == "Not Found" \
                     and version_num != 'latest':
                 log.error('{0} {1} not installed'.format(target, version))

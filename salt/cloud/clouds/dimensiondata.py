@@ -154,11 +154,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -315,11 +316,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -397,7 +399,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -409,7 +412,8 @@ def create_lb(kwargs=None, call=None):
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_balancer(lb)

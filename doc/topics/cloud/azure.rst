@@ -14,7 +14,7 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.10.2 and < 1.0.0
+* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/1.0.2>`_ >= 1.0.2
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)

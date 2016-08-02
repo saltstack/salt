@@ -19,6 +19,7 @@ beacon modules
     load
     memusage
     network_info
+    network_settings
     pkg
     proxy_example
     ps

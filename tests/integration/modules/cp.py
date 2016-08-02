@@ -250,8 +250,11 @@ class CPModuleTest(integration.ModuleCase):
                 ])
         ret = self.run_function('cp.list_minion')
         found = False
+        search = 'grail/scene33'
+        if salt.utils.is_windows():
+            search = r'grail\scene33'
         for path in ret:
-            if 'grail/scene33' in path:
+            if search in path:
                 found = True
         self.assertTrue(found)
 

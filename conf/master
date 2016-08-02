@@ -84,6 +84,11 @@
 # Set the default outputter used by the salt command. The default is "nested".
 #output: nested
 
+# Set the default output file used by the salt command. Default is to output
+# to the CLI and not to a file. Functions the same way as the "--out-file"
+# CLI option, only sets this to a single file for all salt commands.
+#output_file: None
+
 # Return minions that timeout when running commands like test.ping
 #show_timeout: True
 
@@ -131,15 +136,15 @@
 # By default, events are not queued.
 #event_return_queue: 0
 
-# Only return events matching tags in a whitelist,
-# event_return_whitelist:
-#   - salt/master/a_tag
-#   - salt/master/another_tag
+# Only return events matching tags in a whitelist, supports glob matches.
+#event_return_whitelist:
+#  - salt/master/a_tag
+#  - salt/run/*/ret
 
-# Store all event returns _except_ the tags in a blacklist.
-# event_return_blacklist:
-#   - salt/master/not_this_tag
-#   - salt/master/or_this_one
+# Store all event returns **except** the tags in a blacklist, supports globs.
+#event_return_blacklist:
+#  - salt/master/not_this_tag
+#  - salt/wheel/*/ret
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
@@ -243,6 +248,14 @@
 # ZMQ high-water-mark for EventPublisher pub socket
 #event_publisher_pub_hwm: 10000
 
+# The master may allocate memory per-event and not
+# reclaim it.
+# To set a high-water mark for memory allocation, use
+# ipc_write_buffer to set a high-water mark for message
+# buffering.
+# Value: In bytes. Set to 'dynamic' to have Salt select
+# a value for you. Default is disabled.
+# ipc_write_buffer: 'dynamic'
 
 
 #####        Security settings       #####
@@ -295,6 +308,11 @@
 # This example would blacklist all non sudo users, including root from
 # running any commands. It would also blacklist any use of the "cmd"
 # module. This is completely disabled by default.
+#
+#
+# Check the list of configured users in client ACL against users on the
+# system and throw errors if they do not exist.
+#client_acl_verify: True
 #
 #publisher_acl_blacklist:
 #  users:
@@ -992,3 +1010,5 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+# Save runner returns to the job cache
+#runner_returns: False

@@ -7,6 +7,7 @@ of having a command execution get gated by a check state via a requisite.
 '''
 # import python libs
 from __future__ import absolute_import
+import salt.utils
 
 
 def gt(name, value):
@@ -19,7 +20,7 @@ def gt(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] > value:
@@ -37,7 +38,7 @@ def gte(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] >= value:
@@ -55,7 +56,7 @@ def lt(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] < value:
@@ -73,7 +74,7 @@ def lte(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] <= value:
@@ -91,7 +92,7 @@ def eq(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] == value:
@@ -109,7 +110,7 @@ def ne(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] != value:
@@ -127,7 +128,7 @@ def contains(name, value):
            'comment': '',
            'changes': {}}
     if name not in __reg__:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     try:
@@ -135,4 +136,35 @@ def contains(name, value):
             ret['result'] = True
     except TypeError:
         pass
+    return ret
+
+
+def event(name):
+    '''
+    Chekcs for a specific event match and returns result True if the match
+    happens
+
+    USAGE::
+
+    code-block:: yaml
+
+        salt/foo/*/bar:
+          check.event
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: salt/foo/*/bar
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    for event in __events__:
+        if salt.utils.expr_match(event['tag'], name):
+            ret['result'] = True
+
     return ret

@@ -589,22 +589,22 @@ def set_lcm_config(config_mode=None,
                     'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
             SaltInvocationError(error)
             return error
-        cmd += '            ConfigurationMode = "{0}"'.format(config_mode)
+        cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
     if config_mode_freq:
         if isinstance(config_mode_freq, int):
             SaltInvocationError('config_mode_freq must be an integer')
             return 'config_mode_freq must be an integer. Passed {0}'.\
                 format(config_mode_freq)
-        cmd += '            ConfigurationModeFrequencyMins = {0}'.format(config_mode_freq)
+        cmd += '            ConfigurationModeFrequencyMins = {0};'.format(config_mode_freq)
     if refresh_mode:
         if refresh_mode not in ('Disabled', 'Push', 'Pull'):
             SaltInvocationError('refresh_mode must be one of Disabled, Push, '
                                 'or Pull')
-        cmd += '            RefreshMode = "{0}"'.format(refresh_mode)
+        cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
     if refresh_freq:
         if isinstance(refresh_freq, int):
             SaltInvocationError('refresh_freq must be an integer')
-        cmd += '            RefreshFrequencyMins = {0}'.format(refresh_freq)
+        cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
         if not isinstance(reboot_if_needed, bool):
             SaltInvocationError('reboot_if_needed must be a boolean value')
@@ -612,7 +612,7 @@ def set_lcm_config(config_mode=None,
             reboot_if_needed = '$true'
         else:
             reboot_if_needed = '$false'
-        cmd += '            RebootNodeIfNeeded = {0}'.format(reboot_if_needed)
+        cmd += '            RebootNodeIfNeeded = {0};'.format(reboot_if_needed)
     if action_after_reboot:
         if action_after_reboot not in ('ContinueConfiguration', 'StopConfiguration'):
             SaltInvocationError('action_after_reboot must be one of '
@@ -621,11 +621,11 @@ def set_lcm_config(config_mode=None,
     if certificate_id is not None:
         if certificate_id == '':
             certificate_id = None
-        cmd += '            CertificateID = "{0}"'.format(certificate_id)
+        cmd += '            CertificateID = "{0}";'.format(certificate_id)
     if configuration_id is not None:
         if configuration_id == '':
             configuration_id = None
-        cmd += '            ConfigurationID = "{0}"'.format(configuration_id)
+        cmd += '            ConfigurationID = "{0}";'.format(configuration_id)
     if allow_module_overwrite is not None:
         if not isinstance(allow_module_overwrite, bool):
             SaltInvocationError('allow_module_overwrite must be a boolean value')
@@ -633,18 +633,18 @@ def set_lcm_config(config_mode=None,
             allow_module_overwrite = '$true'
         else:
             allow_module_overwrite = '$false'
-        cmd += '            AllowModuleOverwrite = {0}'.format(allow_module_overwrite)
+        cmd += '            AllowModuleOverwrite = {0};'.format(allow_module_overwrite)
     if debug_mode is not False:
         if debug_mode is None:
             debug_mode = 'None'
         if debug_mode not in ('None', 'ForceModuleImport', 'All'):
             SaltInvocationError('debug_mode must be one of None, ForceModuleImport, '
                                 'ResourceScriptBreakAll, or All')
-        cmd += '            DebugMode = "{0}"'.format(debug_mode)
+        cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
         if isinstance(status_retention_days, int):
             SaltInvocationError('status_retention_days must be an integer')
-        cmd += '            StatusRetentionTimeInDays = {0}'.format(status_retention_days)
+        cmd += '            StatusRetentionTimeInDays = {0};'.format(status_retention_days)
     cmd += '        }}};'
     cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
 

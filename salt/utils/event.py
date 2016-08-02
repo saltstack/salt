@@ -70,7 +70,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.loader
 import salt.utils
 import salt.utils.async
 import salt.utils.cache
@@ -147,6 +146,27 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None):
         return salt.utils.raetevent.MasterEvent(
             opts=opts, sock_dir=sock_dir, listen=listen
         )
+
+
+def fire_args(opts, jid, tag_data, prefix=''):
+    '''
+    Fire an event containing the arguments passed to an orchestration job
+    '''
+    try:
+        tag_suffix = [jid, 'args']
+    except NameError:
+        pass
+    else:
+        try:
+            _event = get_master_event(opts, opts['sock_dir'], listen=False)
+            tag = tagify(tag_suffix, prefix)
+            _event.fire_event(tag_data, tag=tag)
+        except Exception as exc:
+            # Don't let a problem here hold up the rest of the orchestration
+            log.warning(
+                'Failed to fire args event %s with data %s: %s',
+                tag, tag_data, exc
+            )
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -490,9 +510,9 @@ class SaltEvent(object):
                     break
                 mtag, data = self.unpack(raw, self.serial)
                 ret = {'data': data, 'tag': mtag}
-            except (KeyboardInterrupt, RuntimeError):
+            except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except tornado.iostream.StreamClosedError:
+            except (tornado.iostream.StreamClosedError, RuntimeError):
                 return None
 
             if not match_func(ret['tag'], tag):
@@ -883,6 +903,7 @@ class AsyncEventPublisher(object):
                         raise
 
         self.publisher = salt.transport.ipc.IPCMessagePublisher(
+            self.opts,
             epub_uri,
             io_loop=self.io_loop
         )
@@ -970,6 +991,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 )
 
             self.publisher = salt.transport.ipc.IPCMessagePublisher(
+                self.opts,
                 epub_uri,
                 io_loop=self.io_loop
             )
@@ -1076,24 +1098,37 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         super(EventReturn, self)._handle_signals(signum, sigframe)
 
     def flush_events(self):
-        event_return = '{0}.event_return'.format(
-            self.opts['event_return']
-        )
+        if isinstance(self.opts['event_return'], list):
+            # Multiple event returners
+            for r in self.opts['event_return']:
+                log.debug('Calling event returner {0}, one of many.'.format(r))
+                event_return = '{0}.event_return'.format(r)
+                self._flush_event_single(event_return)
+        else:
+            # Only a single event returner
+            log.debug('Calling event returner {0}, only one '
+                      'configured.'.format(self.opts['event_return']))
+            event_return = '{0}.event_return'.format(
+                self.opts['event_return']
+                )
+            self._flush_event_single(event_return)
+        del self.event_queue[:]
+
+    def _flush_event_single(self, event_return):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
                 log.error('Could not store events - returner \'{0}\' raised '
-                    'exception: {1}'.format(self.opts['event_return'], exc))
+                          'exception: {1}'.format(event_return, exc))
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
                     log.debug('Event data that caused an exception: {0}'.format(
                         self.event_queue))
-            del self.event_queue[:]
         else:
             log.error('Could not store return for event(s) - returner '
-                      '\'%s\' not found.', self.opts['event_return'])
+                      '\'%s\' not found.', event_return)
 
     def run(self):
         '''
@@ -1124,14 +1159,19 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Returns True if event should be stored, else False
         '''
         tag = event['tag']
-        if tag in self.opts['event_return_whitelist']:
-            if tag not in self.opts['event_return_blacklist']:
-                return True
-            else:
-                return False  # Event was whitelisted and blacklisted
-        elif tag in self.opts['event_return_blacklist']:
-            return False
-        return True
+        if self.opts['event_return_whitelist']:
+            ret = False
+        else:
+            ret = True
+        for whitelist_match in self.opts['event_return_whitelist']:
+            if fnmatch.fnmatch(tag, whitelist_match):
+                ret = True
+                break
+        for blacklist_match in self.opts['event_return_blacklist']:
+            if fnmatch.fnmatch(tag, blacklist_match):
+                ret = False
+                break
+        return ret
 
 
 class StateFire(object):

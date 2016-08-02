@@ -45,13 +45,19 @@ import salt.runner
 import salt.state
 import salt.transport
 import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
-import salt.utils.psutil_compat as psutil
+
+HAS_PSUTIL = True
+try:
+    import salt.utils.psutil_compat
+except ImportError:
+    HAS_PSUTIL = False
 
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
@@ -861,12 +867,20 @@ def signal_job(jid, sig):
 
         salt '*' saltutil.signal_job <job id> 15
     '''
+    if HAS_PSUTIL is False:
+        log.warning('saltutil.signal job called, but psutil is not installed. '
+                    'Install psutil to ensure more reliable and accurate PID '
+                    'management.')
     for data in running():
         if data['jid'] == jid:
             try:
-                for proc in psutil.Process(pid=data['pid']).children(recursive=True):
-                    proc.send_signal(sig)
+                if HAS_PSUTIL:
+                    for proc in salt.utils.psutil_compat.Process(pid=data['pid']).children(recursive=True):
+                        proc.send_signal(sig)
                 os.kill(int(data['pid']), sig)
+                if HAS_PSUTIL is False and 'child_pids' in data:
+                    for pid in data['child_pids']:
+                        os.kill(int(pid), sig)
                 return 'Signal {0} sent to job {1} at pid {2}'.format(
                         int(sig),
                         jid,
@@ -1108,7 +1122,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(_fun, **kwargs):
+def runner(name, **kwargs):
     '''
     Execute a runner function. This function must be run on the master,
     either by targeting a minion running on a master or by using
@@ -1116,7 +1130,7 @@ def runner(_fun, **kwargs):
 
     .. versionadded:: 2014.7.0
 
-    _fun
+    name
         The name of the function to run
 
     kwargs
@@ -1131,6 +1145,8 @@ def runner(_fun, **kwargs):
 
         salt master_minion saltutil.runner jobs.list_jobs
     '''
+    jid = kwargs.pop('__orchestration_jid__', None)
+    saltenv = kwargs.pop('__env__', 'base')
     kwargs = salt.utils.clean_kwargs(**kwargs)
 
     if 'master_job_cache' not in __opts__:
@@ -1141,12 +1157,26 @@ def runner(_fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(_fun, kwarg=kwargs)
+    if name in rclient.functions:
+        aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
+        if 'saltenv' in aspec.args:
+            kwargs['saltenv'] = saltenv
+
+    if jid:
+        salt.utils.event.fire_args(
+            __opts__,
+            jid,
+            {'type': 'runner', 'name': name, 'args': kwargs},
+            prefix='run'
+        )
+
+    return rclient.cmd(name, kwarg=kwargs, full_return=True)
 
 
-def wheel(_fun, *args, **kwargs):
+def wheel(name, *args, **kwargs):
     '''
-    Execute a wheel module (this function must be run on the master)
+    Execute a wheel module and function. This function must be run against a
+    minion that is local to the master.
 
     .. versionadded:: 2014.7.0
 
@@ -1166,8 +1196,21 @@ def wheel(_fun, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' saltutil.wheel key.accept jerry
+        salt my-local-minion saltutil.wheel key.accept jerry
+        salt my-local-minion saltutil.wheel minions.connected
+
+    .. note::
+
+        Since this function must be run against a minion that is running locally
+        on the master in order to get accurate returns, if this function is run
+        against minions that are not local to the master, "empty" returns are
+        expected. The remote minion does not have access to wheel functions and
+        their return data.
+
     '''
+    jid = kwargs.pop('__orchestration_jid__', None)
+    saltenv = kwargs.pop('__env__', 'base')
+
     if __opts__['__role'] == 'minion':
         master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
                                      'master')
@@ -1187,10 +1230,31 @@ def wheel(_fun, *args, **kwargs):
             valid_kwargs[key] = val
 
     try:
-        ret = wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+        if name in wheel_client.functions:
+            aspec = salt.utils.args.get_function_argspec(
+                wheel_client.functions[name]
+            )
+            if 'saltenv' in aspec.args:
+                valid_kwargs['saltenv'] = saltenv
+
+        if jid:
+            salt.utils.event.fire_args(
+                __opts__,
+                jid,
+                {'type': 'wheel', 'name': name, 'args': valid_kwargs},
+                prefix='run'
+            )
+
+        ret = wheel_client.cmd(name,
+                               arg=args,
+                               pub_data=pub_data,
+                               kwarg=valid_kwargs,
+                               full_return=True)
     except SaltInvocationError:
-        raise CommandExecutionError('This command can only be executed on a minion '
-                                    'that is located on the master.')
+        raise CommandExecutionError(
+            'This command can only be executed on a minion that is located on '
+            'the master.'
+        )
 
     return ret
 

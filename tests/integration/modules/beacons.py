@@ -11,6 +11,7 @@ import os
 from salt.modules import beacons
 from salt.exceptions import CommandExecutionError
 import integration
+import salt.utils
 
 # Salttesting libs
 from salttesting import skipIf
@@ -24,8 +25,19 @@ BEACON_CONF_DIR = os.path.join(integration.TMP, 'minion.d')
 if not os.path.exists(BEACON_CONF_DIR):
     os.makedirs(BEACON_CONF_DIR)
 
+IS_ADMIN = False
+if salt.utils.is_windows():
+    import salt.utils.win_functions
+    current_user = salt.utils.win_functions.get_current_user()
+    if current_user == 'SYSTEM':
+        IS_ADMIN = True
+    else:
+        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
+else:
+    IS_ADMIN = os.geteuid() == 0
 
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
+
+@skipIf(not IS_ADMIN, 'You must be root to run these tests')
 @destructiveTest
 class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
@@ -50,7 +62,7 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         self.run_function('beacons.save')
 
 
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
+@skipIf(not IS_ADMIN, 'You must be root to run these tests')
 @destructiveTest
 class BeaconsTest(integration.ModuleCase):
     '''

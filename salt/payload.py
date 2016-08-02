@@ -17,6 +17,7 @@ import salt.log
 import salt.crypt
 import salt.transport.frame
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils import immutabletypes
 
 # Import third party libs
 import salt.ext.six as six
@@ -193,7 +194,9 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):
+                # This is a spurious lint failure as we are gating this check
+                # behind a check for six.PY2.
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
                     return str(obj)
                 elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
                     return str(obj)
@@ -232,11 +235,25 @@ class Serial(object):
                 else:
                     return obj
 
+            def immutable_encoder(obj):
+                log.debug('IMMUTABLE OBJ: {0}'.format(obj))
+                if isinstance(obj, immutabletypes.ImmutableDict):
+                    return dict(obj)
+                if isinstance(obj, immutabletypes.ImmutableList):
+                    return list(obj)
+                if isinstance(obj, immutabletypes.ImmutableSet):
+                    return set(obj)
+
             if "datetime.datetime" in str(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
                 else:
                     return msgpack.dumps(datetime_encoder(msg))
+            elif "Immutable" in str(e):
+                if msgpack.version >= (0, 4, 0):
+                    return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
+                else:
+                    return msgpack.dumps(msg, default=immutable_encoder)
 
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's

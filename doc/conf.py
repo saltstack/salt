@@ -144,6 +144,8 @@ MOCK_MODULES = [
     'netaddr.IPAddress',
     'netaddr.core',
     'netaddr.core.AddrFormatError',
+    'pyroute2',
+    'pyroute2.ipdb',
 ]
 
 for mod_name in MOCK_MODULES:

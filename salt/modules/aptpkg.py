@@ -21,6 +21,7 @@ import copy
 import os
 import re
 import logging
+import time
 import json
 
 # Import third party libs
@@ -33,6 +34,8 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
 
 # Import salt libs
+import salt.config
+import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 from salt.exceptions import (
@@ -40,6 +43,25 @@ from salt.exceptions import (
 )
 
 log = logging.getLogger(__name__)
+
+config = salt.config.minion_config(
+        os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
+)
+
+# Set HTTP_PROXY_URL for use in various internet facing actions...eg apt-key adv
+if config['proxy_host'] and config['proxy_port']:
+    if config['proxy_username'] and config['proxy_password']:
+        HTTP_PROXY_URL = 'http://{0}:{1}@{2}:{3}'.format(
+            config['proxy_username'],
+            config['proxy_password'],
+            config['proxy_host'],
+            config['proxy_port'])
+    else:
+        HTTP_PROXY_URL = 'http://{0}:{1}'.format(
+            config['proxy_host'],
+            config['proxy_port'])
+else:
+    HTTP_PROXY_URL = None
 
 # pylint: disable=import-error
 try:
@@ -214,6 +236,13 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
+    cache_valid_time
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
@@ -236,6 +265,7 @@ def latest_version(*names, **kwargs):
     fromrepo = _get_repo(**kwargs)
     kwargs.pop('fromrepo', None)
     kwargs.pop('repo', None)
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
         return ''
@@ -249,7 +279,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     virtpkgs = _get_virtual()
     all_virt = set()
@@ -322,7 +352,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(cache_valid_time=0):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -333,13 +363,33 @@ def refresh_db():
     - ``False``: Problem updating database
     - ``None``: Database already up-to-date
 
+    cache_valid_time
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
+    APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
+    if cache_valid_time:
+        try:
+            latest_update = os.stat(APT_LISTS_PATH).st_mtime
+            now = time.time()
+            log.debug("now: %s, last update time: %s, expire after: %s seconds", now, latest_update, cache_valid_time)
+            if latest_update + cache_valid_time > now:
+                return ret
+        except TypeError as exp:
+            log.warning("expected integer for cache_valid_time parameter, failed with: %s", exp)
+        except IOError as exp:
+            log.warning("could not stat cache directory due to: %s", exp)
+
     cmd = ['apt-get', '-q', 'update']
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
@@ -402,6 +452,13 @@ def install(name=None,
 
     refresh
         Whether or not to refresh the package database before installing.
+
+    cache_valid_time
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
 
     fromrepo
         Specify a package repository to install from
@@ -669,8 +726,9 @@ def install(name=None,
     if not cmds:
         return {}
 
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if _refresh_db:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
@@ -898,6 +956,13 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         .. versionadded:: 2014.7.0
 
+    cache_valid_time
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -914,8 +979,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
            'comment': '',
            }
 
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     old = list_pkgs()
     if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
@@ -1283,6 +1349,13 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         Whether to refresh the package database before listing upgrades.
         Default: True.
 
+    cache_valid_time
+
+        .. versionadded:: Carbon
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     dist_upgrade
         Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
         to use dist-upgrade.
@@ -1293,8 +1366,9 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
     return _get_upgradable(dist_upgrade, **kwargs)
 
 
@@ -1311,11 +1385,16 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def version_cmp(pkg1, pkg2):
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
+
+    ignore_epoch : False
+        Set to ``True`` to ignore the epoch when comparing versions
+
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 
@@ -1323,6 +1402,13 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
+    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    # both apt_pkg.version_compare and _cmd_quote need string arguments.
+    pkg1 = normalize(pkg1)
+    pkg2 = normalize(pkg2)
+
+    # if we have apt_pkg, this will be quickier this way
+    # and also do not rely on shell.
     if HAS_APTPKG:
         try:
             # the apt_pkg module needs to be manually initialized
@@ -1865,8 +1951,12 @@ def mod_repo(repo, saltenv='base', **kwargs):
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
-                cmd = ['apt-key', 'adv', '--keyserver', keyserver,
-                       '--logger-fd', '1', '--recv-keys', keyid]
+                if HTTP_PROXY_URL:
+                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(HTTP_PROXY_URL),
+                           '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
+                else:
+                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                           '--logger-fd', '1', '--recv-keys', keyid]
                 ret = __salt__['cmd.run_all'](cmd,
                                               python_shell=False,
                                               **kwargs)

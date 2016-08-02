@@ -15,6 +15,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError
 import salt.utils
 

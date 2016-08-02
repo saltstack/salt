@@ -15,18 +15,16 @@ import collections
 import salt.exceptions
 import salt.minion
 import salt.utils
+import salt.utils.doc
+import salt.utils.error
 import salt.utils.event
 import salt.utils.jid
 import salt.utils.job
+import salt.utils.lazy
+import salt.utils.process
 import salt.transport
 import salt.log.setup
 import salt.ext.six as six
-from salt.utils.error import raise_error
-from salt.utils.event import tagify
-from salt.utils.doc import strip_rst as _strip_rst
-from salt.utils.lazy import verify_fun
-from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
-from salt.utils import warn_until
 
 # Import 3rd-party libs
 import tornado.stack_context
@@ -136,7 +134,7 @@ class SyncClientMixin(object):
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
-                raise_error(**ret['error'])
+                salt.utils.error.raise_error(**ret['error'])
         return ret
 
     def cmd_sync(self, low, timeout=None):
@@ -169,7 +167,7 @@ class SyncClientMixin(object):
 
         return ret['data']['return']
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, full_return=False):
         '''
         Execute a function
 
@@ -229,7 +227,7 @@ class SyncClientMixin(object):
         low = {'fun': fun,
                'arg': args,
                'kwarg': kwargs}
-        return self.low(fun, low)
+        return self.low(fun, low, full_return=full_return)
 
     @property
     def mminion(self):
@@ -237,7 +235,7 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low):
+    def low(self, fun, low, full_return=False):
         '''
         Check for deprecated usage and allow until Salt Oxygen.
         '''
@@ -250,11 +248,11 @@ class SyncClientMixin(object):
             low['kwarg'] = low.pop('kwargs')
 
         if msg:
-            warn_until('Oxygen', ' '.join(msg))
+            salt.utils.warn_until('Oxygen', ' '.join(msg))
 
-        return self._low(fun, low)
+        return self._low(fun, low, full_return=full_return)
 
-    def _low(self, fun, low):
+    def _low(self, fun, low, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -272,12 +270,16 @@ class SyncClientMixin(object):
         # if we have a high debug level.
         self.mminion  # pylint: disable=W0104
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
-        tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
+        tag = low.get('__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
+        # This avoids including kwargs dict as args list in low data.
+        # We only need to update event data.
+        fun_args = low.get('args', [])
         data = {'fun': '{0}.{1}'.format(self.client, fun),
+                'fun_args': fun_args + ([low['kwargs']] if low.get('kwargs', False) else []),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
-                }
+               }
 
         event = salt.utils.event.get_event(
                 'master',
@@ -306,7 +308,7 @@ class SyncClientMixin(object):
         func_globals['__jid_event__'].fire_event(data, 'new')
 
         try:
-            verify_fun(self.functions, fun)
+            salt.utils.lazy.verify_fun(self.functions, fun)
 
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
@@ -393,7 +395,7 @@ class SyncClientMixin(object):
         log.info('Runner completed: {0}'.format(data['jid']))
         del event
         del namespaced_event
-        return data['return']
+        return data if full_return else data['return']
 
     def get_docs(self, arg=None):
         '''
@@ -408,7 +410,7 @@ class SyncClientMixin(object):
             docs = [(fun, self.functions[fun].__doc__)
                     for fun in sorted(self.functions)]
         docs = dict(docs)
-        return _strip_rst(docs)
+        return salt.utils.doc.strip_rst(docs)
 
 
 class AsyncClientMixin(object):
@@ -437,7 +439,7 @@ class AsyncClientMixin(object):
         low['__user__'] = user
         low['__tag__'] = tag
 
-        return self.low(fun, low)
+        return self.low(fun, low, full_return=False)
 
     def cmd_async(self, low):
         '''
@@ -462,20 +464,20 @@ class AsyncClientMixin(object):
     def _gen_async_pub(self, jid=None):
         if jid is None:
             jid = salt.utils.jid.gen_jid()
-        tag = tagify(jid, prefix=self.tag_prefix)
+        tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN'):
+    def async(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        async_pub = self._gen_async_pub()
+        async_pub = pub if pub is not None else self._gen_async_pub()
 
-        proc = SignalHandlingMultiprocessingProcess(
+        proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
-        with default_signals(signal.SIGINT, signal.SIGTERM):
+        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in
             # order not to inherit the current signal handlers
             proc.start()

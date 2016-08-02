@@ -171,7 +171,7 @@ def check_env_cache(opts, env_cache):
     return None
 
 
-def generate_mtime_map(path_map):
+def generate_mtime_map(opts, path_map):
     '''
     Generate a dict of filename -> mtime
     '''
@@ -179,6 +179,8 @@ def generate_mtime_map(path_map):
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
@@ -198,11 +200,15 @@ def diff_mtime_map(map1, map2):
     '''
     # check if the mtimes are the same
     if sorted(map1) != sorted(map2):
-        #log.debug('diff_mtime_map: the maps are different')
         return True
 
+    # map1 and map2 are guaranteed to have same keys,
+    # so compare mtimes
+    for filename, mtime in six.iteritems(map1):
+        if map2[filename] != mtime:
+            return True
+
     # we made it, that means we have no changes
-    #log.debug('diff_mtime_map: the maps are the same')
     return False
 
 
@@ -480,6 +486,28 @@ class Fileserver(object):
             if fstr in self.servers:
                 self.servers[fstr]()
 
+    def _find_file(self, load):
+        '''
+        Convenience function for calls made using the RemoteClient
+        '''
+        path = load.get('path')
+        if not path:
+            return {'path': '',
+                    'rel': ''}
+        tgt_env = load.get('saltenv', 'base')
+        return self.find_file(path, tgt_env)
+
+    def file_find(self, load):
+        '''
+        Convenience function for calls made using the LocalClient
+        '''
+        path = load.get('path')
+        if not path:
+            return {'path': '',
+                    'rel': ''}
+        tgt_env = load.get('saltenv', 'base')
+        return self.find_file(path, tgt_env)
+
     def find_file(self, path, saltenv, back=None):
         '''
         Find the path and return the fnd structure, this structure is passed
@@ -560,32 +588,52 @@ class Fileserver(object):
             return self.servers[fstr](load, fnd)
         return ret
 
-    def file_hash(self, load):
+    def __file_hash_and_stat(self, load):
         '''
-        Return the hash of a given file
+        Common code for hashing and stating files
         '''
         if 'env' in load:
             salt.utils.warn_until(
                 'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
-                )
+                'Parameter \'env\' has been detected in the argument list. '
+                'This parameter is no longer used and has been replaced by '
+                '\'saltenv\' as of Salt Carbon. This warning will be removed '
+                'in Salt Oxygen.'
+            )
             load.pop('env')
 
         if 'path' not in load or 'saltenv' not in load:
-            return ''
+            return '', None
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
         fnd = self.find_file(salt.utils.locales.sdecode(load['path']),
                 load['saltenv'])
         if not fnd.get('back'):
-            return ''
+            return '', None
+        stat_result = fnd.get('stat', None)
         fstr = '{0}.file_hash'.format(fnd['back'])
         if fstr in self.servers:
-            return self.servers[fstr](load, fnd)
-        return ''
+            return self.servers[fstr](load, fnd), stat_result
+        return '', None
+
+    def file_hash(self, load):
+        '''
+        Return the hash of a given file
+        '''
+        try:
+            return self.__file_hash_and_stat(load)[0]
+        except (IndexError, TypeError):
+            return ''
+
+    def file_hash_and_stat(self, load):
+        '''
+        Return the hash and stat result of a given file
+        '''
+        try:
+            return self.__file_hash_and_stat(load)
+        except (IndexError, TypeError):
+            return '', None
 
     def file_list(self, load):
         '''

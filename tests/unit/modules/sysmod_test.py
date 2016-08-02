@@ -21,8 +21,23 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import sysmod
 
+modules = set()
+functions = [
+    'sys.doc', 'sys.list_functions', 'sys.list_modules',
+    'sysctl.get', 'sysctl.show',
+    'system.halt', 'system.reboot',
+
+    'udev.name', 'udev.path',
+    'user.add', 'user.info', 'user.rename',
+]
+
 sysmod.__salt__ = {}
 sysmod.__opts__ = {}
+
+for func in functions:
+    sysmod.__salt__[func] = None
+    modules.add(func.split('.')[0])
+modules = sorted(list(modules))
 
 
 class Mockstate(object):
@@ -97,7 +112,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it return the docstrings for all modules.
         '''
-        self.assertDictEqual(sysmod.doc(), {})
+        self.assertDictEqual(sysmod.doc(), sysmod.__salt__)
 
     # 'state_doc' function tests: 1
 
@@ -145,9 +160,19 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the functions for all modules.
         '''
-        self.assertListEqual(sysmod.list_functions(), [])
+        self.assertListEqual(sysmod.list_functions(), functions)
 
-        self.assertListEqual(sysmod.list_functions('sys'), [])
+        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        self.assertListEqual(sysmod.list_functions('sys.l'), [])
+
+        self.assertListEqual(sysmod.list_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
 
     # 'list_modules' function tests: 1
 
@@ -155,9 +180,13 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the modules loaded on the minion
         '''
-        self.assertListEqual(sysmod.list_modules(), [])
+        self.assertListEqual(sysmod.list_modules(), modules)
 
-        self.assertListEqual(sysmod.list_modules('s*'), [])
+        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_modules('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_modules('s*'), ['sys', 'sysctl', 'system'])
 
     # 'reload_modules' function tests: 1
 

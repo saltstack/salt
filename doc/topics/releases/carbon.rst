@@ -16,15 +16,39 @@ Features
         salt-run salt.cmd test.ping
         # call functions with arguments and keyword arguments
         salt-run salt.cmd test.arg 1 2 3 a=1
+- Added SSL support to Cassandra CQL returner.
+  SSL can be enabled by setting ``ssl_options`` for the returner.
+  Also added support for specifying ``protocol_version`` when establishing
+  cluster connection.
+- The ``mode`` parameter in the :py:mod:`file.managed
+  <salt.states.file.managed>` state, and the ``file_mode`` parameter in the
+  :py:mod:`file.recurse <salt.states.file.recurse>` state, can both now be set
+  to ``keep`` and the minion will keep the mode of the file from the Salt
+  fileserver. This works only with files coming from sources prefixed with
+  ``salt://``, or files local to the minion (i.e. those which are absolute
+  paths, or are prefixed with ``file://``). For example:
+
+  .. code-block:: yaml
+
+      /etc/myapp/myapp.conf:
+        file.managed:
+          - source: salt://conf/myapp/myapp.conf
+          - mode: keep
+
+      /var/www/myapp:
+        file.recurse:
+          - source: salt://path/to/myapp
+          - dir_mode: 755
+          - file_mode: keep
 
 Config Changes
 ==============
 
 The following default config values were changed:
 
-- gitfs_ssl_verify: Changed from ``False`` to ``True``
-- git_pillar_ssl_verify: Changed from ``False`` to ``True``
-- winrepo_ssl_verify: Changed from ``False`` to ``True``
+- ``gitfs_ssl_verify``: Changed from ``False`` to ``True``
+- ``git_pillar_ssl_verify``: Changed from ``False`` to ``True``
+- ``winrepo_ssl_verify``: Changed from ``False`` to ``True``
 
 Grains Changes
 ==============
@@ -40,11 +64,57 @@ Grains Changes
 
       {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
 
+
+- On Windows the ``cpu_model`` grain has been changed to provide the actual cpu
+  model name and not the cpu family.
+
+  Old behavior:
+
+  .. code-block:: bash
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel64 Family 6 Model 58 Stepping 9, GenuineIntel
+
+  New behavior:
+
+  .. code-block:: bash
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel(R) Core(TM) i7-3520M CPU @ 2.90GHz
+
+
 Beacons Changes
 ===============
 
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
+
+Runner Changes
+==============
+
+- Runners can now call out to :ref:`utility modules <writing-utility-modules>`
+  via ``__utils__``.
+- ref:`Utility modules <writing-utility-modules>` (placed in
+  ``salt://_utils/``) are now able to be synced to the master, making it easier
+  to use them in custom runners. A :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` function has been added to the
+  :py:mod:`saltutil runner <salt.runners.saltutil>` to faciliate the syncing of
+  utility modules to the master.
+
+Pillar Changes
+==============
+
+- Thanks to the new :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` runner, it is now easier to get
+  ref:`utility modules <writing-utility-modules>` synced to the correct
+  location on the Master so that they are available in execution modules called
+  from Pillar SLS files.
 
 Returner Changes
 ================
@@ -63,20 +133,38 @@ for more information.
 Functionality Changes
 =====================
 
-- The ``onfail`` requisite now uses OR logic instead of AND logic. :issue:`22370`
-- The consul external pillar now strips leading and trailing whitespace. :issue:`31165`
+- The ``onfail`` requisite now uses OR logic instead of AND logic.
+  :issue:`22370`
+- The consul external pillar now strips leading and trailing whitespace.
+  :issue:`31165`
 - The win_system.py state is now case sensitive for computer names. Previously
   computer names set with a state were converted to all caps. If you have a
   state setting computer names with lower case letters in the name that has
   been applied, the computer name will be changed again to apply the case
   sensitive name.
-- The ``mac_user.list_groups`` function in the ``mac_user`` execution module now
-  lists all groups for the specified user, including groups beginning with an
-  underscore. In previous releases, groups beginning with an underscore were
+- The ``mac_user.list_groups`` function in the ``mac_user`` execution module
+  now lists all groups for the specified user, including groups beginning with
+  an underscore. In previous releases, groups beginning with an underscore were
   excluded from the list of groups.
-- A new option for minions called ``master_tries`` has been added. This specifies
-  the number of times a minion should attempt to contact a master to attempt a connection.
-  This allows better handling of occasional master downtime in a multi-master topology.
+- A new option for minions called ``master_tries`` has been added. This
+  specifies the number of times a minion should attempt to contact a master to
+  attempt a connection.  This allows better handling of occasional master
+  downtime in a multi-master topology.
+- Nodegroups consisting of a simple list of minion IDs can now also be declared
+  as a yaml list. The below two examples are equivalent:
+
+  .. code-block:: yaml
+
+      # Traditional way
+      nodegroups:
+        - group1: L@host1,host2,host3
+
+      # New way (optional)
+      nodegroups:
+        - group1:
+          - host1
+          - host2
+          - host3
 
 Deprecations
 ============

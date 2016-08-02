@@ -144,9 +144,8 @@ def returner(ret):
                 )
             except KeyError as missing_key:
                 logger.error(
-                    'Sentry returner need config {0!r} in pillar'.format(
-                        missing_key
-                    )
+                    'Sentry returner needs key \'%s\' in pillar',
+                    missing_key
                 )
                 return
 

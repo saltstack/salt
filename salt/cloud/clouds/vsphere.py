@@ -105,6 +105,7 @@ import logging
 import time
 
 # Import salt libs
+import salt.utils
 import salt.utils.cloud
 import salt.utils.xmlutil
 from salt.exceptions import SaltCloudSystemExit
@@ -260,11 +261,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -275,7 +277,8 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': vm_},
+        args={'kwargs': vm_},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -345,11 +348,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return ret
@@ -478,7 +482,8 @@ def _deploy(vm_):
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        {'kwargs': deploy_kwargs},
+        args={'kwargs': deploy_kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -526,7 +531,7 @@ def _get_instance_properties(instance, from_cache=True):
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
 
-    ret = salt.utils.cloud.simple_types_filter(ret)
+    ret = salt.utils.simple_types_filter(ret)
     return ret
 
 
@@ -646,7 +651,8 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -663,7 +669,8 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:

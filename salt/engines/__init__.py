@@ -21,11 +21,11 @@ def start_engines(opts, proc_mgr, proxy=None):
     '''
     Fire up the configured engines!
     '''
+    utils = salt.loader.utils(opts)
     if opts['__role'] == 'master':
-        runners = salt.loader.runner(opts)
+        runners = salt.loader.runner(opts, utils=utils)
     else:
         runners = []
-    utils = salt.loader.utils(opts)
     funcs = salt.loader.minion_mods(opts, utils=utils)
     engines = salt.loader.engines(opts, funcs, runners, proxy=proxy)
 
@@ -111,11 +111,11 @@ class Engine(SignalHandlingMultiprocessingProcess):
         '''
         if salt.utils.is_windows():
             # Calculate function references since they can't be pickled.
+            self.utils = salt.loader.utils(self.opts)
             if self.opts['__role'] == 'master':
-                self.runners = salt.loader.runner(self.opts)
+                self.runners = salt.loader.runner(self.opts, utils=self.utils)
             else:
                 self.runners = []
-            self.utils = salt.loader.utils(self.opts)
             self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils)
 
         self.engine = salt.loader.engines(self.opts,

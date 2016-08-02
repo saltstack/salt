@@ -63,8 +63,6 @@ def __virtual__():
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
-    if HAS_LIBCLOUD:
-        __utils__['libcloud.assign_funcs'](__name__, 'dns', pack=__salt__)
 
 
 def _get_driver(profile):
@@ -73,7 +71,7 @@ def _get_driver(profile):
     key = config.get('key')
     secret = config.get('secret', None)
     secure = config.get('secure', True)
-    host = config.get('jost', None)
+    host = config.get('host', None)
     port = config.get('port', None)
     return cls(key, secret, secure, host, port)
 

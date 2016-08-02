@@ -8,8 +8,8 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ == 2.0rc2
-    * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc5
+    * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
 :configuration:
     Required provider parameters:
 
@@ -41,9 +41,15 @@ import base64
 import yaml
 import salt.cache
 import salt.config as config
+import salt.utils
 import salt.utils.cloud
 import salt.ext.six as six
-from salt.exceptions import SaltCloudSystemExit
+import salt.version
+from salt.exceptions import (
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout,
+)
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -52,10 +58,7 @@ try:
     from salt.utils.msazure import object_to_dict
     import azure.storage
     from azure.common.credentials import UserPassCredentials
-    from azure.mgmt.compute import (
-        ComputeManagementClient,
-        ComputeManagementClientConfiguration,
-    )
+    from azure.mgmt.compute import ComputeManagementClient
     from azure.mgmt.compute.models import (
         CachingTypes,
         DataDisk,
@@ -71,31 +74,18 @@ try:
         VirtualMachine,
         VirtualMachineSizeTypes,
     )
-    from azure.mgmt.network import (
-        NetworkManagementClient,
-        NetworkManagementClientConfiguration,
-    )
+    from azure.mgmt.network import NetworkManagementClient
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
-        Resource,
         SecurityRule,
     )
-    from azure.mgmt.resource.resources import (
-        ResourceManagementClient,
-        ResourceManagementClientConfiguration,
-    )
-    from azure.mgmt.storage import (
-        StorageManagementClient,
-        StorageManagementClientConfiguration,
-    )
-    from azure.mgmt.web import (
-        WebSiteManagementClient,
-        WebSiteManagementClientConfiguration,
-    )
+    from azure.mgmt.resource.resources import ResourceManagementClient
+    from azure.mgmt.storage import StorageManagementClient
+    from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
     HAS_LIBS = True
 except ImportError:
@@ -155,14 +145,12 @@ def get_dependencies():
     )
 
 
-def get_conn(Client=None, ClientConfig=None):
+def get_conn(Client=None):
     '''
     Return a conn object for the passed VM data
     '''
     if Client is None:
         Client = ComputeManagementClient
-    if ClientConfig is None:
-        ClientConfig = ComputeManagementClientConfiguration
 
     subscription_id = config.get_cloud_config_value(
         'subscription_id',
@@ -181,11 +169,10 @@ def get_conn(Client=None, ClientConfig=None):
 
     credentials = UserPassCredentials(username, password)
     client = Client(
-        ClientConfig(
-            credentials,
-            subscription_id=subscription_id,
-        )
+        credentials=credentials,
+        subscription_id=subscription_id,
     )
+    client.config.add_user_agent('SaltCloud/{0}'.format(salt.version.__version__))
     return client
 
 
@@ -211,9 +198,7 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     global webconn  # pylint: disable=global-statement,invalid-name
     if not webconn:
-        webconn = get_conn(
-            WebSiteManagementClient, WebSiteManagementClientConfiguration
-        )
+        webconn = get_conn(WebSiteManagementClient)
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
@@ -313,36 +298,6 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def _pages_to_list(items):
-    '''
-    Convert a set of links from a group of pages to a list
-    '''
-    objs = []
-    while True:
-        try:
-            page = items.next()
-            for item in page:
-                objs.append(item)
-        except GeneratorExit:
-            break
-    return objs
-
-
-def _pages_to_list_old(items):
-    '''
-    Convert a set of links from a group of pages to a list
-    '''
-    objs = []
-    while True:
-        try:
-            page = items.next()
-            for item in page:
-                objs.append(item)
-        except GeneratorExit:
-            break
-    return objs
-
-
 def avail_sizes(call=None):  # pylint: disable=unused-argument
     '''
     Return a list of sizes from Azure
@@ -360,8 +315,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
     ret = {}
     location = get_location()
     sizes = compconn.virtual_machine_sizes.list(location)
-    sizeobjs = _pages_to_list(sizes)
-    for size in sizeobjs:
+    for size in sizes:
         ret[size.name] = object_to_dict(size)
     return ret
 
@@ -404,8 +358,7 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     ret = {}
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
-        nodeobjs = _pages_to_list(nodes)
-        for node in nodeobjs:
+        for node in nodes:
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
@@ -424,7 +377,10 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                     ret[node.name]['storage_profile']['image_reference']['version'],
                 ))
             except TypeError:
-                ret[node.name]['image'] = ret[node.name]['storage_profile']['os_disk']['image']['uri']
+                try:
+                    ret[node.name]['image'] = ret[node.name]['storage_profile']['os_disk']['image']['uri']
+                except TypeError:
+                    ret[node.name]['image'] = None
     return ret
 
 
@@ -440,9 +396,7 @@ def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argume
 
     global resconn  # pylint: disable=global-statement,invalid-name
     if not resconn:
-        resconn = get_conn(
-            ResourceManagementClient, ResourceManagementClientConfiguration
-        )
+        resconn = get_conn(ResourceManagementClient)
 
     ret = {}
 
@@ -520,7 +474,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     data['resource_group'] = resource_group
 
     salt.utils.cloud.cache_node(
-        salt.utils.cloud.simple_types_filter(data),
+        salt.utils.simple_types_filter(data),
         __active_provider_name__,
         __opts__
     )
@@ -539,8 +493,7 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}/virtual_networks'.format(region)
@@ -590,42 +543,35 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
-    if 'group' not in kwargs:
+    if 'group' in kwargs and 'resource_group' not in kwargs:
+        kwargs['resource_group'] = kwargs['group']
+
+    if 'resource_group' not in kwargs:
         raise SaltCloudSystemExit(
-            'A resource_group must be specified as "group"'
+            'A resource_group must be specified as "group" or "resource_group"'
         )
 
     if 'network' not in kwargs:
         raise SaltCloudSystemExit(
-            'A "network" must be specified using'
+            'A "network" must be specified'
         )
 
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}/{1}'.format(region, kwargs['network'])
 
     ret = {}
-    try:
-        subnets = cache.cache(
-            bank,
-            'subnets',
-            netconn.subnets.list,
-            loop_fun=make_safe,
-            expire=config.get_cloud_config_value(
-                'expire_subnet_cache', get_configured_provider(),
-                __opts__, search_global=False, default=86400,
-            ),
-            resource_group_name=kwargs['group'],
-            virtual_network_name=kwargs['network'],
-        )
-    except CloudError:
-        return ret
+    subnets = netconn.subnets.list(kwargs['resource_group'], kwargs['network'])
     for subnet in subnets:
-        ret[subnet['name']] = subnet
-        subnet['resource_group'] = kwargs['group']
-        #subnet['ip_configurations'] = list_ip_configurations(kwargs=subnet)
+        ret[subnet.name] = make_safe(subnet)
+        ret[subnet.name]['ip_configurations'] = {}
+        for ip_ in subnet.ip_configurations:
+            comps = ip_.id.split('/')
+            name = comps[-1]
+            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 
 
@@ -635,17 +581,51 @@ def delete_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs.get('resource_group') is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
             'resource_group', {}, __opts__, search_global=True
         )
 
-    return netconn.network_interfaces.delete(
+    ips = []
+    iface = netconn.network_interfaces.get(
         kwargs['resource_group'],
         kwargs['iface_name'],
+    )
+    iface_name = iface.name
+    for ip_ in iface.ip_configurations:
+        ips.append(ip_.name)
+
+    poller = netconn.network_interfaces.delete(
+        kwargs['resource_group'],
+        kwargs['iface_name'],
+    )
+    poller.wait()
+
+    for ip_ in ips:
+        poller = netconn.public_ip_addresses.delete(kwargs['resource_group'], ip_)
+        poller.wait()
+
+    return {iface_name: ips}
+
+
+def delete_ip(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    Create a network interface
+    '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    if kwargs.get('resource_group') is None:
+        kwargs['resource_group'] = config.get_cloud_config_value(
+            'resource_group', {}, __opts__, search_global=True
+        )
+
+    return netconn.public_ip_addresses.delete(
+        kwargs['resource_group'],
+        kwargs['ip_name'],
     )
 
 
@@ -655,24 +635,34 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
+
+    if kwargs.get('group'):
+        kwargs['resource_group'] = kwargs['group']
 
     if kwargs.get('resource_group') is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
             'resource_group', {}, __opts__, search_global=True
         )
 
+    iface_name = kwargs.get('iface_name', kwargs.get('name'))
     iface = netconn.network_interfaces.get(
         kwargs['resource_group'],
-        kwargs.get('iface_name', kwargs.get('name'))
+        iface_name,
     )
     data = object_to_dict(iface)
     data['resource_group'] = kwargs['resource_group']
-    data['ip_configurations'] = list_ip_configurations(kwargs=data)
+    data['ip_configurations'] = {}
+    for ip_ in iface.ip_configurations:
+        data['ip_configurations'][ip_.name] = make_safe(ip_)
+        pubip = netconn.public_ip_addresses.get(
+            kwargs['resource_group'],
+            ip_.name,
+        )
+        data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
     return data
 
 
@@ -680,6 +670,13 @@ def list_ip_configurations(call=None, kwargs=None):  # pylint: disable=unused-ar
     '''
     List IP configurations
     '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    if kwargs is None:
+        kwargs = {}
+
     if 'group' not in kwargs:
         if 'resource_group' in kwargs:
             kwargs['group'] = kwargs['resource_group']
@@ -709,15 +706,17 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
 
     if kwargs.get('resource_group') is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
-            'resource_group', {}, __opts__, search_global=True
+            'resource_group', {}, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'group', {}, __opts__, search_global=True
+            )
         )
 
     region = get_location()
@@ -733,7 +732,10 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         ),
         resource_group_name=kwargs['resource_group']
     )
-    return interfaces
+    ret = {}
+    for interface in interfaces:
+        ret[interface['name']] = interface
+    return ret
 
 
 def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
@@ -742,8 +744,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -751,11 +752,6 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if kwargs.get('location') is None:
         kwargs['location'] = get_location()
-
-    if kwargs.get('resource_group') is None:
-        kwargs['resource_group'] = config.get_cloud_config_value(
-            'resource_group', vm_, __opts__, search_global=True
-        )
 
     if kwargs.get('network') is None:
         kwargs['network'] = config.get_cloud_config_value(
@@ -770,19 +766,15 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
-    if 'network_resource_group' in kwargs:
-        group = kwargs['network_resource_group']
-    else:
-        group = kwargs['resource_group']
-
     subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['resource_group'],
+        resource_group_name=kwargs['network_resource_group'],
         virtual_network_name=kwargs['network'],
         subnet_name=kwargs['subnet'],
     )
 
     ip_kwargs = {}
-    if bool(kwargs.get('public_ip', False)) is True:
+    ip_configurations = None
+    if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
             resource_group_name=kwargs['resource_group'],
@@ -801,33 +793,43 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     pub_ip_name,
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
-                    ip_kwargs['public_ip_address'] = Resource(
+                    ip_kwargs['public_ip_address'] = PublicIPAddress(
                         str(pub_ip_data.id),  # pylint: disable=no-member
                     )
+                    ip_configurations = [
+                        NetworkInterfaceIPConfiguration(
+                            name='{0}-ip'.format(kwargs['iface_name']),
+                            private_ip_allocation_method='Dynamic',
+                            subnet=subnet_obj,
+                            **ip_kwargs
+                        )
+                    ]
                     break
-            except CloudError:
-                pass
+            except CloudError as exc:
+                log.error('There was a cloud error: {0}'.format(exc))
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
             time.sleep(5)
-
-    iface_params = NetworkInterface(
-        name=kwargs['iface_name'],
-        location=kwargs['location'],
-        ip_configurations=[
+    else:
+        priv_ip_name = '{0}-ip'.format(kwargs['iface_name'])
+        ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
                 private_ip_allocation_method='Dynamic',
                 subnet=subnet_obj,
-                **ip_kwargs
             )
         ]
+
+    iface_params = NetworkInterface(
+        location=kwargs['location'],
+        ip_configurations=ip_configurations,
     )
 
-    netconn.network_interfaces.create_or_update(
+    poller = netconn.network_interfaces.create_or_update(
         kwargs['resource_group'], kwargs['iface_name'], iface_params
     )
+    poller.wait()
     count = 0
     while True:
         try:
@@ -979,7 +981,6 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
 
     params = VirtualMachine(
-        name=vm_['name'],
         location=vm_['location'],
         plan=None,
         hardware_profile=HardwareProfile(
@@ -1020,7 +1021,11 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     poller = compconn.virtual_machines.create_or_update(
         vm_['resource_group'], vm_['name'], params
     )
-    poller.wait()
+    try:
+        poller.wait()
+    except CloudError as exc:
+        log.warn('There was a cloud error: {0}'.format(exc))
+        log.warn('This may or may not indicate an actual problem')
 
     try:
         return show_instance(vm_['name'], call='action')
@@ -1051,11 +1056,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -1064,19 +1070,43 @@ def create(vm_):
     if not compconn:
         compconn = get_conn()
 
-    data = request_instance(kwargs=vm_)
-    #resource_group = data.get('resource_group')
+    def _query_ip_address():
+        data = request_instance(kwargs=vm_)
+        ifaces = data['network_profile']['network_interfaces']
+        iface = ifaces.keys()[0]
+        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
 
-    ifaces = data['network_profile']['network_interfaces']
-    iface = ifaces.keys()[0]
-    ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        if vm_.get('public_ip') is True:
+            hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
+        else:
+            hostname = ifaces[iface]['ip_configurations'][ip_name]['private_ip_address']
 
-    if vm_.get('public_ip') is True:
-        hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
-    else:
-        hostname = ifaces[iface]['ip_configurations'][ip_name]['private_ip_address']
+        if isinstance(hostname, dict):
+            hostname = hostname.get('ip_address')
 
-    if not hostname:
+        if not isinstance(hostname, six.string_types):
+            return None
+        return hostname
+
+    try:
+        data = salt.utils.cloud.wait_for_ip(
+            _query_ip_address,
+            timeout=config.get_cloud_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+            interval=config.get_cloud_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure, SaltCloudSystemExit) as exc:
+        try:
+            log.warn(exc)
+        finally:
+            raise SaltCloudSystemExit(str(exc))
+
+    hostname = _query_ip_address()
+
+    if not hostname or not isinstance(hostname, six.string_types):
         log.error('Failed to get a value for the hostname.')
         return False
 
@@ -1091,9 +1121,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -1104,11 +1134,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1202,6 +1233,29 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                     call='function'
                 )
 
+    cleanup_interfaces = config.get_cloud_config_value(
+        'cleanup_interfaces',
+        get_configured_provider(), __opts__, search_global=False, default=False,
+    )
+    if cleanup_interfaces:
+        ret[name]['cleanup_network'] = {
+            'cleanup_interfaces': cleanup_interfaces,
+            'resource_group': cleanup_interfaces,
+            'iface_name': cleanup_interfaces,
+            'data': [],
+        }
+        ifaces = node_data['network_profile']['network_interfaces']
+        for iface in ifaces:
+            ret[name]['cleanup_network']['data'].append(
+                delete_interface(
+                    kwargs={
+                        'resource_group': ifaces[iface]['resource_group'],
+                        'iface_name': iface,
+                    },
+                    call='function',
+                )
+            )
+
     return ret
 
 
@@ -1209,7 +1263,7 @@ def make_safe(data):
     '''
     Turn object data into something serializable
     '''
-    return salt.utils.cloud.simple_types_filter(object_to_dict(data))
+    return salt.utils.simple_types_filter(object_to_dict(data))
 
 
 def create_security_group(call=None, kwargs=None):  # pylint: disable=unused-argument
@@ -1218,8 +1272,7 @@ def create_security_group(call=None, kwargs=None):  # pylint: disable=unused-arg
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1263,8 +1316,7 @@ def show_security_group(call=None, kwargs=None):  # pylint: disable=unused-argum
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1296,8 +1348,7 @@ def list_security_groups(call=None, kwargs=None):  # pylint: disable=unused-argu
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1332,8 +1383,7 @@ def create_security_rule(call=None, kwargs=None):  # pylint: disable=unused-argu
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1387,8 +1437,7 @@ def show_security_rule(call=None, kwargs=None):  # pylint: disable=unused-argume
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1412,8 +1461,7 @@ def list_security_rules(call=None, kwargs=None):  # pylint: disable=unused-argum
     '''
     global netconn  # pylint: disable=global-statement,invalid-name
     if not netconn:
-        netconn = get_conn(NetworkManagementClient,
-                           NetworkManagementClientConfiguration)
+        netconn = get_conn(NetworkManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1455,7 +1503,7 @@ def pages_to_list(items):
     objs = []
     while True:
         try:
-            page = items.next()
+            page = items.next()  # pylint: disable=incompatible-py3-code
             for item in page:
                 objs.append(item)
         except GeneratorExit:
@@ -1469,8 +1517,7 @@ def list_storage_accounts(call=None, kwargs=None):  # pylint: disable=unused-arg
     '''
     global storconn  # pylint: disable=global-statement,invalid-name
     if not storconn:
-        storconn = get_conn(StorageManagementClient,
-                            StorageManagementClientConfiguration)
+        storconn = get_conn(StorageManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1488,8 +1535,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global storconn  # pylint: disable=global-statement,invalid-name
     if not storconn:
-        storconn = get_conn(StorageManagementClient,
-                            StorageManagementClientConfiguration)
+        storconn = get_conn(StorageManagementClient)
 
     storageaccount = azure.storage.CloudStorageAccount(
         config.get_cloud_config_value(
@@ -1522,8 +1568,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global storconn  # pylint: disable=global-statement,invalid-name
     if not storconn:
-        storconn = get_conn(StorageManagementClient,
-                            StorageManagementClientConfiguration)
+        storconn = get_conn(StorageManagementClient)
 
     if kwargs is None:
         kwargs = {}
@@ -1558,8 +1603,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     global storconn  # pylint: disable=global-statement,invalid-name
     if not storconn:
-        storconn = get_conn(StorageManagementClient,
-                            StorageManagementClientConfiguration)
+        storconn = get_conn(StorageManagementClient)
 
     if kwargs is None:
         kwargs = {}

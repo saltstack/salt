@@ -774,9 +774,6 @@ def flush(name, table='filter', family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if 'table' not in kwargs:
-        table = 'filter'
-
     if 'chain' not in kwargs:
         kwargs['chain'] = ''
     if __opts__['test']:

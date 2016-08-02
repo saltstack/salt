@@ -146,7 +146,7 @@ def _format_opts(opts):
 
 def _git_run(command, cwd=None, runas=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
-             **kwargs):
+             saltenv='base', **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -171,7 +171,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         for id_file in identity:
             if 'salt://' in id_file:
                 _id_file = id_file
-                id_file = __salt__['cp.cache_file'](id_file)
+                id_file = __salt__['cp.cache_file'](id_file, saltenv)
                 if not id_file:
                     log.error('identity {0} does not exist.'.format(_id_file))
                     continue
@@ -684,7 +684,8 @@ def clone(cwd,
           https_user=None,
           https_pass=None,
           ignore_retcode=False,
-          repository=None):
+          repository=None,
+          saltenv='base'):
     '''
     Interface to `git-clone(1)`_
 
@@ -755,6 +756,11 @@ def clone(cwd,
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-clone(1)`: http://git-scm.com/docs/git-clone
 
     CLI Example:
@@ -806,7 +812,8 @@ def clone(cwd,
              cwd=clone_cwd,
              runas=user,
              identity=identity,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             saltenv=saltenv)
     return True
 
 
@@ -1365,11 +1372,153 @@ def describe(cwd, rev='HEAD', user=None, ignore_retcode=False):
     cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command = ['git', 'describe', rev]
+    command = ['git', 'describe']
+    if _LooseVersion(version(versioninfo=False)) >= _LooseVersion('1.5.6'):
+        command.append('--always')
+    command.append(rev)
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
                     ignore_retcode=ignore_retcode)['stdout']
+
+
+def diff(cwd,
+         item1=None,
+         item2=None,
+         opts='',
+         user=None,
+         no_index=False,
+         cached=False,
+         paths=None):
+    '''
+    .. versionadded:: 2015.8.12,2016.3.3
+
+    Interface to `git-diff(1)`_
+
+    cwd
+        The path to the git checkout
+
+    item1 and item2
+        Revision(s) to pass to the ``git diff`` command. One or both of these
+        arguments may be ignored if some of the options below are set to
+        ``True``. When ``cached`` is ``False``, and no revisions are passed
+        to this function, then the current working tree will be compared
+        against the index (i.e. unstaged changes). When two revisions are
+        passed, they will be compared to each other.
+
+    opts
+        Any additional options to add to the command line, in a single string
+
+        .. note::
+            On the Salt CLI, if the opts are preceded with a dash, it is
+            necessary to precede them with ``opts=`` (as in the CLI examples
+            below) to avoid causing errors with Salt's own argument parsing.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    no_index : False
+        When it is necessary to diff two files in the same repo against each
+        other, and not diff two different revisions, set this option to
+        ``True``. If this is left ``False`` in these instances, then a normal
+        ``git diff`` will be performed against the index (i.e. unstaged
+        changes), and files in the ``paths`` option will be used to narrow down
+        the diff output.
+
+        .. note::
+            Requires Git 1.5.1 or newer. Additionally, when set to ``True``,
+            ``item1`` and ``item2`` will be ignored.
+
+    cached : False
+        If ``True``, compare staged changes to ``item1`` (if specified),
+        otherwise compare them to the most recent commit.
+
+        .. note::
+            ``item2`` is ignored if this option is is set to ``True``.
+
+    paths
+        File paths to pass to the ``git diff`` command. Can be passed as a
+        comma-separated list or a Python list.
+
+    .. _`git-diff(1)`: http://git-scm.com/docs/git-diff
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Perform diff against the index (staging area for next commit)
+        salt myminion git.diff /path/to/repo
+        # Compare staged changes to the most recent commit
+        salt myminion git.diff /path/to/repo cached=True
+        # Compare staged changes to a specific revision
+        salt myminion git.diff /path/to/repo mybranch cached=True
+        # Perform diff against the most recent commit (includes staged changes)
+        salt myminion git.diff /path/to/repo HEAD
+        # Diff two commits
+        salt myminion git.diff /path/to/repo abcdef1 aabbccd
+        # Diff two commits, only showing differences in the specified paths
+        salt myminion git.diff /path/to/repo abcdef1 aabbccd paths=path/to/file1,path/to/file2
+        # Diff two files with one being outside the working tree
+        salt myminion git.diff /path/to/repo no_index=True paths=path/to/file1,/absolute/path/to/file2
+    '''
+    if no_index and cached:
+        raise CommandExecutionError(
+            'The \'no_index\' and \'cached\' options cannot be used together'
+        )
+
+    command = ['git', 'diff']
+    command.extend(_format_opts(opts))
+
+    if paths is not None and not isinstance(paths, (list, tuple)):
+        try:
+            paths = paths.split(',')
+        except AttributeError:
+            paths = str(paths).split(',')
+
+    ignore_retcode = False
+    failhard = True
+
+    if no_index:
+        if _LooseVersion(version(versioninfo=False)) < _LooseVersion('1.5.1'):
+            raise CommandExecutionError(
+                'The \'no_index\' option is only supported in Git 1.5.1 and '
+                'newer'
+            )
+        ignore_retcode = True
+        failhard = False
+        command.append('--no-index')
+        for value in [x for x in (item1, item2) if x]:
+            log.warning(
+                'Revision \'%s\' ignored in git diff, as revisions cannot be '
+                'used when no_index=True', value
+            )
+
+    elif cached:
+        command.append('--cached')
+        if item1:
+            command.append(item1)
+        if item2:
+            log.warning(
+                'Second revision \'%s\' ignored in git diff, at most one '
+                'revision is considered when cached=True', item2
+            )
+
+    else:
+        for value in [x for x in (item1, item2) if x]:
+            command.append(value)
+
+    if paths:
+        command.append('--')
+        command.extend(paths)
+
+    return _git_run(command,
+                    cwd=cwd,
+                    runas=user,
+                    ignore_retcode=ignore_retcode,
+                    failhard=failhard,
+                    redirect_stderr=True)['stdout']
 
 
 def fetch(cwd,
@@ -1379,7 +1528,8 @@ def fetch(cwd,
           opts='',
           user=None,
           identity=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          saltenv='base'):
     '''
     .. versionchanged:: 2015.8.2
         Return data is now a dictionary containing information on branches and
@@ -1448,6 +1598,11 @@ def fetch(cwd,
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
 
@@ -1487,7 +1642,8 @@ def fetch(cwd,
                       runas=user,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      redirect_stderr=True)['stdout']
+                      redirect_stderr=True,
+                      saltenv=saltenv)['stdout']
 
     update_re = re.compile(
         r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
@@ -2020,7 +2176,8 @@ def ls_remote(cwd=None,
               identity=None,
               https_user=None,
               https_pass=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              saltenv='base'):
     '''
     Interface to `git-ls-remote(1)`_. Returns the upstream hash for a remote
     reference.
@@ -2097,6 +2254,11 @@ def ls_remote(cwd=None,
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
 
 
@@ -2129,7 +2291,8 @@ def ls_remote(cwd=None,
                       cwd=cwd,
                       runas=user,
                       identity=identity,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      saltenv=saltenv)['stdout']
     ret = {}
     for line in output.splitlines():
         try:
@@ -2468,7 +2631,7 @@ def merge_tree(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
+def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False, saltenv='base'):
     '''
     Interface to `git-pull(1)`_
 
@@ -2516,6 +2679,11 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-pull(1)`: http://git-scm.com/docs/git-pull
 
     CLI Example:
@@ -2531,7 +2699,8 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def push(cwd,
@@ -2541,6 +2710,7 @@ def push(cwd,
          user=None,
          identity=None,
          ignore_retcode=False,
+         saltenv='base',
          **kwargs):
     '''
     Interface to `git-push(1)`_
@@ -2607,6 +2777,11 @@ def push(cwd,
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-push(1)`: http://git-scm.com/docs/git-push
     .. _refspec: http://git-scm.com/book/en/v2/Git-Internals-The-Refspec
 
@@ -2645,7 +2820,8 @@ def push(cwd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
@@ -2766,7 +2942,8 @@ def remote_refs(url,
                 identity=None,
                 https_user=None,
                 https_pass=None,
-                ignore_retcode=False):
+                ignore_retcode=False,
+                saltenv='base'):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2818,6 +2995,11 @@ def remote_refs(url,
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -2839,7 +3021,8 @@ def remote_refs(url,
     output = _git_run(command,
                       runas=user,
                       identity=identity,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      saltenv=saltenv)['stdout']
     ret = {}
     for line in salt.utils.itertools.split(output, '\n'):
         try:
@@ -3328,6 +3511,7 @@ def submodule(cwd,
               user=None,
               identity=None,
               ignore_retcode=False,
+              saltenv='base',
               **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -3397,6 +3581,11 @@ def submodule(cwd,
 
         .. versionadded:: 2015.8.0
 
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
+
     .. _`git-submodule(1)`: http://git-scm.com/docs/git-submodule
 
     CLI Example:
@@ -3437,7 +3626,8 @@ def submodule(cwd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def symbolic_ref(cwd,

@@ -804,14 +804,17 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts):
+def runner(opts, utils=None):
     '''
     Directly call a function inside a loader directory
     '''
+    if utils is None:
+        utils = {}
     ret = LazyLoader(
         _module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
         opts,
         tag='runners',
+        pack={'__utils__': utils},
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack['__salt__'] = ret
@@ -1186,9 +1189,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         curr_ext = self.file_mapping[f_noext][1]
                         #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
                         if '' in (curr_ext, ext) and curr_ext != ext:
-                            log.error('Module/package collision: {0!r} and {1!r}'.format(
-                                fpath, self.file_mapping[f_noext][0]
-                            ))
+                            log.error(
+                                'Module/package collision: \'%s\' and \'%s\'',
+                                fpath,
+                                self.file_mapping[f_noext][0]
+                            )
                         if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
                             continue  # Next filename
 
@@ -1380,7 +1385,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_name,
             )
             if virtual_err is not None:
-                log.debug('Error loading {0}.{1}: {2}'.format(self.tag,
+                log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
                                                               module_name,
                                                               virtual_err,
                                                               ))

@@ -3,25 +3,26 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import logging
 import random
 import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.config
+import salt.ext.six as six
 import salt.loader
-
-# Import 3rd-party libs
-import logging
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from unit.modules.boto_elasticsearch_domain_test import BotoElasticsearchDomainTestCaseMixin
@@ -137,7 +138,7 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
     def test_present_when_domain_exists(self):
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
         cfg = {}
-        for k, v in domain_ret.iteritems():
+        for k, v in six.iteritems(domain_ret):
             cfg[k] = {'Options': v}
         cfg['AccessPolicies'] = {'Options': '{"a": "b"}'}
         self.conn.describe_elasticsearch_domain_config.return_value = {'DomainConfig': cfg}

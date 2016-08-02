@@ -14,8 +14,6 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt import cloud
-
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
@@ -425,6 +423,8 @@ def salt_cloud():
     The main function for salt-cloud
     '''
     try:
+        # Late-imports for CLI performance
+        import salt.cloud
         import salt.cloud.cli
         has_saltcloud = True
     except ImportError as e:
@@ -440,7 +440,7 @@ def salt_cloud():
 
     client = None
     try:
-        client = cloud.cli.SaltCloud()
+        client = salt.cloud.cli.SaltCloud()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -496,3 +496,17 @@ def salt_spm():
     import salt.cli.spm
     spm = salt.cli.spm.SPM()  # pylint: disable=E1120
     spm.run()
+
+
+def salt_extend(extension, name, description, salt_dir, merge):
+    '''
+    Quickstart for developing on the saltstack installation
+
+    .. versionadded:: Carbon
+    '''
+    import salt.utils.extend
+    salt.utils.extend.run(extension=extension,
+                          name=name,
+                          description=description,
+                          salt_dir=salt_dir,
+                          merge=merge)

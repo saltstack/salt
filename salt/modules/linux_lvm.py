@@ -219,7 +219,7 @@ def pvcreate(devices, override=True, **kwargs):
     if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
-    cmd = ['pvcreate']
+    cmd = ['pvcreate', '-y']
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))

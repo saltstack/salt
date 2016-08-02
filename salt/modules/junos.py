@@ -2,16 +2,22 @@
 '''
 Module for interfacing to Junos devices.
 '''
-from __future__ import absolute_import
 
 # Import python libraries
+from __future__ import absolute_import
 import logging
 import json
-from lxml import etree
+
+# Import Salt libs
+import salt.ext.six as six
+
+try:
+    from lxml import etree
+except ImportError:
+    from salt._compat import ElementTree as etree
+
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
-
-
 try:
     # pylint: disable=W0611
     from jnpr.junos import Device
@@ -121,7 +127,7 @@ def call_rpc(cmd=None, *args, **kwargs):
     else:
         op.update(kwargs)
 
-    for k, v in op.iteritems():
+    for k, v in six.iteritems(op):
         op[k] = str(v)
     op['format'] = 'json'
 

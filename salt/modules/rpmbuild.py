@@ -7,7 +7,7 @@ RPM Package builder system
 This system allows for all of the components to build rpms safely in chrooted
 environments. This also provides a function to generate yum repositories
 
-This module impliments the pkgbuild interface
+This module implements the pkgbuild interface
 '''
 
 # Import python libs
@@ -23,9 +23,9 @@ import traceback
 import functools
 
 # Import salt libs
-import salt.utils
-from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+from salt.exceptions import SaltInvocationError
+import salt.utils
 
 HAS_LIBS = False
 
@@ -43,21 +43,23 @@ __virtualname__ = 'pkgbuild'
 
 def __virtual__():
     '''
-    Confirm this module is on a Redhat/CentOS based system, and has required utilities
+    Confirm this module is on a RPM based system, and has required utilities
     '''
-    if __grains__.get('os_family', False) == 'RedHat':
-        missing_util = False
-        utils_reqd = ['gpg', 'rpm', 'rpmbuild', 'mock', 'createrepo']
-        for named_util in utils_reqd:
-            if not salt.utils.which(named_util):
-                missing_util = True
-                break
-        if HAS_LIBS and not missing_util:
+    missing_util = False
+    utils_reqd = ['gpg', 'rpm', 'rpmbuild', 'mock', 'createrepo']
+    for named_util in utils_reqd:
+        if not salt.utils.which(named_util):
+            missing_util = True
+            break
+
+    if HAS_LIBS and not missing_util:
+        if __grains__.get('os_family', False) in ('RedHat', 'Suse'):
             return __virtualname__
         else:
-            return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
+            # The module will be exposed as `rpmbuild` on non-RPM based systems
+            return 'rpmbuild'
     else:
-        return (False, 'The rpmbuild execution module cannot be loaded: this module is only available on Redhat/CentOS based distributions.')
+        return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
 
 
 def _create_rpmmacros():
@@ -163,6 +165,8 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkgbuild.make_src_pkg /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl SOURCE package and place it in
@@ -206,6 +210,8 @@ def build(runas,
     sources, use mock to safely build the rpm defined in the spec file
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
@@ -296,6 +302,8 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
     your package building states
 
     CLI Example::
+
+    .. code-block:: bash
 
         salt '*' pkgbuild.make_repo /var/www/html/
 

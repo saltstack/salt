@@ -575,8 +575,8 @@ def _check_dir_meta(name,
             and group != stats.get('gid')):
         changes['group'] = group
     # Normalize the dir mode
-    smode = __salt__['config.manage_mode'](stats['mode'])
-    mode = __salt__['config.manage_mode'](mode)
+    smode = salt.utils.normalize_mode(stats['mode'])
+    mode = salt.utils.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -839,7 +839,7 @@ def symlink(
     name = os.path.expanduser(name)
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    mode = salt.utils.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -922,7 +922,7 @@ def symlink(
             )
     if __salt__['file.is_link'](name):
         # The link exists, verify that it matches the target
-        if __salt__['file.readlink'](name) != target:
+        if os.path.normpath(__salt__['file.readlink'](name)) != os.path.normpath(target):
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -1117,6 +1117,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
             contents_newline=True,
@@ -1135,7 +1136,10 @@ def managed(name,
 
     source
         The source file to download to the minion, this source file can be
-        hosted on either the salt master server, or on an HTTP or FTP server.
+        hosted on either the salt master server (``salt://``), the salt minion
+        local file system (``/``), or on an HTTP or FTP server (``http(s)://``,
+        ``ftp://``).
+
         Both HTTPS and HTTP are supported as well as downloading directly
         from Amazon S3 compatible URLs with both pre-configured and automatic
         IAM credentials. (see s3.get state documentation)
@@ -1251,8 +1255,18 @@ def managed(name,
         is running as on the minion On Windows, this is ignored
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        The mode to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionchanged:: Carbon
+            This option can be set to ``keep``, and Salt will keep the mode
+            from the Salt fileserver. This is only supported when the
+            ``source`` URL begins with ``salt://``, or for files local to the
+            minion. Because the ``source`` option cannot be used with any of
+            the ``contents`` options, setting the ``mode`` to ``keep`` is also
+            incompatible with the ``contents`` options.
 
     template
         If this setting is applied then the named templating engine will be
@@ -1267,7 +1281,8 @@ def managed(name,
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
-        will be assigned permissions from the 'mode' argument.
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
 
     replace : True
         If set to ``False`` and the file already exists, the file will not be
@@ -1451,6 +1466,27 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_ext
+        provide extention for temp file created by check_cmd
+        useful for checkers dependant on config file extention
+        for example it should be useful for init-checkconf upstart config checker
+        by default it is empty
+        .. code-block:: yaml
+
+            /etc/init/test.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - tmp_ext: '.conf'
+                - contents:
+                  - 'description "Salt Minion"''
+                  - 'start on started mountall'
+                  - 'stop on shutdown'
+                  - 'respawn'
+                  - 'exec salt-minion'
+                - check_cmd: init-checkconf -f
+
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
@@ -1475,15 +1511,35 @@ def managed(name,
            'name': name,
            'result': True}
 
-    content_sources = (contents, contents_pillar, contents_grains)
+    if mode is not None and salt.utils.is_windows():
+        return _error(ret, 'The \'mode\' option is not supported on Windows')
+
+    try:
+        keep_mode = mode.lower() == 'keep'
+        if keep_mode:
+            # We're not hard-coding the mode, so set it to None
+            mode = None
+    except AttributeError:
+        keep_mode = False
+
+    # Make sure that any leading zeros stripped by YAML loader are added back
+    mode = salt.utils.normalize_mode(mode)
+
     contents_count = len(
-        [x for x in content_sources if x is not None]
+        [x for x in (contents, contents_pillar, contents_grains)
+         if x is not None]
     )
 
     if source and contents_count > 0:
         return _error(
             ret,
             '\'source\' cannot be used in combination with \'contents\', '
+            '\'contents_pillar\', or \'contents_grains\''
+        )
+    elif (mode or keep_mode) and contents_count > 0:
+        return _error(
+            ret,
+            'Mode management cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
     elif contents_count > 1:
@@ -1605,9 +1661,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
-
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
@@ -1676,6 +1729,7 @@ def managed(name,
             __env__,
             contents,
             skip_verify,
+            keep_mode,
             **kwargs
         )
     else:
@@ -1683,7 +1737,9 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            if ret['pchanges']:
+            if isinstance(ret['pchanges'], tuple):
+                ret['result'], ret['comment'] = ret['pchanges']
+            elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
                 if show_changes and 'diff' in ret['pchanges']:
@@ -1731,7 +1787,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()
+        tmp_filename = salt.utils.mkstemp()+tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -1763,7 +1819,8 @@ def managed(name,
                 contents,
                 dir_mode,
                 follow_symlinks,
-                skip_verify)
+                skip_verify,
+                keep_mode)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1820,7 +1877,8 @@ def managed(name,
                 contents,
                 dir_mode,
                 follow_symlinks,
-                skip_verify)
+                skip_verify,
+                keep_mode)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -2041,8 +2099,8 @@ def directory(name,
         file_mode = dir_mode
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = __salt__['config.manage_mode'](dir_mode)
-    file_mode = __salt__['config.manage_mode'](file_mode)
+    dir_mode = salt.utils.normalize_mode(dir_mode)
+    file_mode = salt.utils.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -2288,16 +2346,31 @@ def recurse(name,
         salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The permissions mode to set on any directories created. Not supported on
-        Windows
+        The mode to set on any directories created.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     file_mode
-        The permissions mode to set on any files created. Not supported on
+        The mode to set on any files created.
         Windows
 
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionchanged:: Carbon
+            This option can be set to ``keep``, and Salt will keep the mode
+            from the Salt fileserver. This is only supported when the
+            ``source`` URL begins with ``salt://``, or for files local to the
+            minion. Because the ``source`` option cannot be used with any of
+            the ``contents`` options, setting the ``mode`` to ``keep`` is also
+            incompatible with the ``contents`` options.
+
     sym_mode
-        The permissions mode to set on any symlink created. Not supported on
-        Windows
+        The mode to set on any symlink created.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     template
         If this setting is applied then the named templating engine will be
@@ -2405,9 +2478,22 @@ def recurse(name,
         )
         return ret
 
+    if any([x is not None for x in (dir_mode, file_mode, sym_mode)]) \
+            and salt.utils.is_windows():
+        return _error(ret, 'mode management is not supported on Windows')
+
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = __salt__['config.manage_mode'](dir_mode)
-    file_mode = __salt__['config.manage_mode'](file_mode)
+    dir_mode = salt.utils.normalize_mode(dir_mode)
+
+    try:
+        keep_mode = file_mode.lower() == 'keep'
+        if keep_mode:
+            # We're not hard-coding the mode, so set it to None
+            file_mode = None
+    except AttributeError:
+        keep_mode = False
+
+    file_mode = salt.utils.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -2425,7 +2511,7 @@ def recurse(name,
 
     for precheck in source_list:
         if not precheck.startswith('salt://'):
-            return _error(ret, ('Invalid source {0!r} '
+            return _error(ret, ('Invalid source \'{0}\' '
                                 '(must be a salt:// URI)'.format(precheck)))
 
     # Select the first source in source_list that exists
@@ -2445,8 +2531,8 @@ def recurse(name,
                          if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The directory {0!r} does not exist on the salt fileserver '
-            'in saltenv {1!r}'.format(source, __env__)
+            'The directory \'{0}\' does not exist on the salt fileserver '
+            'in saltenv \'{1}\''.format(source, __env__)
         )
         return ret
 
@@ -2480,7 +2566,6 @@ def recurse(name,
             ret['changes'][path] = _ret['changes']
 
     def manage_file(path, source):
-        source = salt.utils.url.escape(source)
         if clean and os.path.exists(path) and os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
@@ -2507,7 +2592,7 @@ def recurse(name,
             source=source,
             user=user,
             group=group,
-            mode=file_mode,
+            mode='keep' if keep_mode else file_mode,
             template=template,
             makedirs=True,
             context=context,
@@ -3827,16 +3912,16 @@ def append(name,
 
     .. versionadded:: 0.9.5
     '''
-    name = os.path.expanduser(name)
-
-    ret = {
-            'name': name,
+    ret = {'name': name,
             'changes': {},
             'pchanges': {},
             'result': False,
             'comment': ''}
+
     if not name:
         return _error(ret, 'Must provide name to file.append')
+
+    name = os.path.expanduser(name)
 
     if sources is None:
         sources = []
@@ -3886,17 +3971,16 @@ def append(name,
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
+        slines = [item.rstrip() for item in slines]
 
-    count = 0
-    test_lines = []
-
+    append_lines = []
     try:
         for chunk in text:
             if ignore_whitespace:
                 if __salt__['file.search'](
-                    name,
-                    salt.utils.build_whitespace_split_regex(chunk),
-                    multiline=True):
+                        name,
+                        salt.utils.build_whitespace_split_regex(chunk),
+                        multiline=True):
                     continue
             elif __salt__['file.search'](
                     name,
@@ -3904,37 +3988,39 @@ def append(name,
                     multiline=True):
                 continue
 
-            lines = chunk.splitlines()
+            for line_item in chunk.splitlines():
+                append_lines.append('{0}'.format(line_item))
 
-            for line in lines:
-                if __opts__['test']:
-                    ret['comment'] = 'File {0} is set to be updated'.format(name)
-                    ret['result'] = None
-                    test_lines.append('{0}\n'.format(line))
-                else:
-                    __salt__['file.append'](name, line)
-                count += 1
     except TypeError:
         return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
-        nlines = slines + test_lines
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
+        nlines = list(slines)
+        nlines.extend(append_lines)
         if slines != nlines:
             if not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
                 ret['changes']['diff'] = (
-                    ''.join(difflib.unified_diff(slines, nlines))
+                    '\n'.join(difflib.unified_diff(slines, nlines))
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
             ret['result'] = True
         return ret
 
+    if append_lines:
+        __salt__['file.append'](name, args=append_lines)
+        ret['comment'] = 'Appended {0} lines'.format(len(append_lines))
+    else:
+        ret['comment'] = 'File {0} is in correct state'.format(name)
+
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
+        nlines = [item.rstrip(os.linesep) for item in nlines]
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -3942,14 +4028,10 @@ def append(name,
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
-            )
+                '\n'.join(difflib.unified_diff(slines, nlines)))
 
-    if count:
-        ret['comment'] = 'Appended {0} lines'.format(count)
-    else:
-        ret['comment'] = 'File {0} is in correct state'.format(name)
     ret['result'] = True
+
     return ret
 
 
@@ -4237,7 +4319,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv {1!r}'
+        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
                           .format(source, __env__))
         return ret
 
@@ -4406,6 +4488,14 @@ def copy(
 
         If the name is a directory then place the file inside the named
         directory
+
+    .. note::
+        The copy function accepts paths that are local to the Salt minion.
+        This function does not support salt://, http://, or the other
+        additional file paths that are supported by :mod:`states.file.managed
+        <salt.states.file.managed>` and :mod:`states.file.recurse
+        <salt.states.file.recurse>`.
+
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -4511,7 +4601,10 @@ def copy(
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        shutil.copy(source, name)
+        if os.path.isdir(source):
+            shutil.copytree(source, name, symlinks=True)
+        else:
+            shutil.copy(source, name)
         ret['changes'] = {name: source}
         # Preserve really means just keep the behavior of the cp command. If
         # the filesystem we're copying to is squashed or doesn't support chown
@@ -4719,44 +4812,6 @@ def accumulated(name, filename, text, **kwargs):
     return ret
 
 
-def _merge_dict(obj, k, v):
-    changes = {}
-    if k in obj:
-        if isinstance(obj[k], list):
-            if isinstance(v, list):
-                for a in v:
-                    if a not in obj[k]:
-                        changes[k] = a
-                        obj[k].append(a)
-            else:
-                if obj[k] != v:
-                    changes[k] = v
-                    obj[k] = v
-        elif isinstance(obj[k], dict):
-            if isinstance(v, dict):
-                for a, b in six.iteritems(v):
-                    if isinstance(b, dict) or isinstance(b, list):
-                        updates = _merge_dict(obj[k], a, b)
-                        for x, y in six.iteritems(updates):
-                            changes[k + "." + x] = y
-                    else:
-                        if a not in obj[k] or obj[k][a] != b:
-                            changes[k + "." + a] = b
-                            obj[k][a] = b
-            else:
-                if obj[k] != v:
-                    changes[k] = v
-                    obj[k] = v
-        else:
-            if obj[k] != v:
-                changes[k] = v
-                obj[k] = v
-    else:
-        changes[k] = v
-        obj[k] = v
-    return changes
-
-
 def serialize(name,
               dataset=None,
               dataset_pillar=None,
@@ -4805,7 +4860,11 @@ def serialize(name,
         salt is running as on the minion
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     backup
         Overrides the default backup mode for this specific file.
@@ -4907,31 +4966,9 @@ def serialize(name,
         group = user
 
     serializer_name = '{0}.serialize'.format(formatter)
-    if serializer_name in __serializers__:
-        serializer = __serializers__[serializer_name]
-        if merge_if_exists:
-            if os.path.isfile(name):
-                if '{0}.deserialize'.format(formatter) in __serializers__:
-                    with salt.utils.fopen(name, 'r') as fhr:
-                        existing_data = serializer.deserialize(fhr)
-                else:
-                    return {'changes': {},
-                            'comment': ('{0} format is not supported for merging'
-                                        .format(formatter.capitalize())),
-                            'name': name,
-                            'result': False}
+    deserializer_name = '{0}.deserialize'.format(formatter)
 
-                if existing_data is not None:
-                    for k, v in six.iteritems(dataset):
-                        if k in existing_data:
-                            ret['changes'].update(_merge_dict(existing_data, k, v))
-                        else:
-                            ret['changes'][k] = v
-                            existing_data[k] = v
-                    dataset = existing_data
-
-        contents = __serializers__[serializer_name](dataset)
-    else:
+    if serializer_name not in __serializers__:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
                     formatter.capitalize()),
@@ -4939,7 +4976,33 @@ def serialize(name,
                 'result': False
                 }
 
+    if merge_if_exists:
+        if os.path.isfile(name):
+            if '{0}.deserialize'.format(formatter) not in __serializers__:
+                return {'changes': {},
+                        'comment': ('{0} format is not supported for merging'
+                                    .format(formatter.capitalize())),
+                        'name': name,
+                        'result': False}
+
+            with salt.utils.fopen(name, 'r') as fhr:
+                existing_data = __serializers__[deserializer_name](fhr)
+
+            if existing_data is not None:
+                merged_data = existing_data.copy()
+                merged_data.update(dataset)
+                if existing_data == merged_data:
+                    ret['result'] = True
+                    ret['comment'] = 'The file {0} is in the correct state'.format(name)
+                    return ret
+                dataset = merged_data
+
+    contents = __serializers__[serializer_name](dataset)
+
     contents += '\n'
+
+    # Make sure that any leading zeros stripped by YAML loader are added back
+    mode = salt.utils.normalize_mode(mode)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
@@ -5194,7 +5257,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     else:
         ret['comment'] = (
-            'Node type unavailable: {0!r}. Available node types are '
+            'Node type unavailable: \'{0}\'. Available node types are '
             'character (\'c\'), block (\'b\'), and pipe (\'p\')'.format(ntype)
         )
 

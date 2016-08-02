@@ -9,21 +9,24 @@ import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_s3_bucket
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 import logging
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
@@ -307,7 +310,7 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
         '''
         Tests describing parameters if bucket exists
         '''
-        for key, value in config_ret.iteritems():
+        for key, value in six.iteritems(config_ret):
             getattr(self.conn, key).return_value = deepcopy(value)
 
         result = boto_s3_bucket.describe(Bucket='mybucket', **conn_parameters)

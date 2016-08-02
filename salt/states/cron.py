@@ -290,6 +290,8 @@ def present(name,
 
     special
         A special keyword to specify periodicity (eg. @reboot, @hourly...)
+
+        .. versionadded:: 2016.3.0
     '''
     name = ' '.join(name.strip().split())
     if identifier is False:
@@ -467,7 +469,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = __salt__['config.manage_mode']('0600')
+    mode = salt.utils.normalize_mode('0600')
     owner, group, crontab_dir = _get_cron_info()
 
     cron_path = salt.utils.mkstemp()

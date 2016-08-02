@@ -890,9 +890,9 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
-            self.opts,
-            self.key,
-            )
+           self.opts,
+           self.key,
+           )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.reinit_crypto()
         self.__bind()
@@ -924,7 +924,9 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         self.__setup_fileserver()
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
 
@@ -934,6 +936,7 @@ class AESFuncs(object):
         '''
         self.fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = self.fs_.serve_file
+        self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
@@ -958,7 +961,13 @@ class AESFuncs(object):
 
         try:
             with salt.utils.fopen(pub_path, 'r') as fp_:
-                pub = RSA.importKey(fp_.read())
+                minion_pub = fp_.read()
+                pub = RSA.importKey(minion_pub)
+        except (IOError, OSError):
+            log.warning('Salt minion claiming to be {0} attempted to communicate '
+                    'with master but key could not be read and verification was '
+                    'denied.'.format(id_))
+            return False
         except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load public key "{0}": {1}'
                       .format(pub_path, err))
@@ -1600,7 +1609,9 @@ class ClearFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False)
+            rend=False,
+            ignore_config_errors=True
+        )
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
@@ -1678,7 +1689,7 @@ class ClearFuncs(object):
             log.warning(msg)
             return dict(error=dict(name='EauthAuthenticationError',
                                    message=msg))
-        if not self.loadauth.time_auth(clear_load):
+        if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
@@ -1718,44 +1729,58 @@ class ClearFuncs(object):
                 return auth_error
             else:
                 token = self.loadauth.get_tok(clear_load.pop('token'))
+                username = token['name']
+        elif 'eauth' in clear_load:
             try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(
-                    fun,
-                    clear_load.get('kwarg', {}),
-                    token['name'])
+                eauth_error = self.process_eauth(clear_load, 'runner')
+                if eauth_error:
+                    return eauth_error
+                # No error occurred, consume the password from the clear_load if
+                # passed
+                username = clear_load.pop('username', 'UNKNOWN')
+                clear_load.pop('password', None)
+
             except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
+                log.error(
+                    'Exception occurred in the runner system: {0}'.format(exc)
+                )
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
                                        message=str(exc)))
+        else:
+            if 'key' not in clear_load:
+                msg = 'Authentication failure of type "user" occurred'
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+            key = clear_load.pop('key')
 
+            if 'user' in clear_load:
+                username = clear_load['user']
+                auth_user = salt.auth.AuthUser(username)
+                if auth_user.is_sudo:
+                    username = self.opts.get('user', 'root')
+            else:
+                username = salt.utils.get_user()
+
+            if username not in self.key and \
+                    key != self.key[username] and \
+                    key != self.key['root']:
+                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+
+        # Authorized. Do the job!
         try:
-            eauth_error = self.process_eauth(clear_load, 'runner')
-            if eauth_error:
-                return eauth_error
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            clear_load.pop('password', None)
-            try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun,
-                                           clear_load.get('kwarg', {}),
-                                           clear_load.pop('username', 'UNKNOWN'))
-            except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=str(exc)))
-
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+            return runner_client.async(fun,
+                                       clear_load.get('kwarg', {}),
+                                       username)
         except Exception as exc:
-            log.error(
-                'Exception occurred in the runner system: {0}'.format(exc)
-            )
+            log.error('Exception occurred while '
+                      'introspecting {0}: {1}'.format(fun, exc))
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
                                    message=str(exc)))
@@ -1765,6 +1790,7 @@ class ClearFuncs(object):
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
+        username = None
         if 'token' in clear_load:
             auth_error = self.process_token(clear_load['token'],
                                             clear_load['fun'],
@@ -1773,77 +1799,77 @@ class ClearFuncs(object):
                 return auth_error
             else:
                 token = self.loadauth.get_tok(clear_load.pop('token'))
-
-            jid = salt.utils.jid.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': token['name']}
+            username = token['name']
+        elif 'eauth' in clear_load:
             try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error(exc)
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                    fun,
-                    exc.__class__.__name__,
-                    exc,
-                    )
-                data['success'] = False
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-        try:
-            eauth_error = self.process_eauth(clear_load, 'wheel')
-            if eauth_error:
-                return eauth_error
+                eauth_error = self.process_eauth(clear_load, 'wheel')
+                if eauth_error:
+                    return eauth_error
 
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            clear_load.pop('password', None)
-            jid = salt.utils.jid.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': clear_load.pop('username', 'UNKNOWN')}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+                # No error occurred, consume the password from the clear_load if
+                # passed
+                clear_load.pop('password', None)
+                username = clear_load.pop('username', 'UNKNOWN')
             except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                                 fun,
-                                 exc.__class__.__name__,
-                                 exc,
+                log.error(
+                    'Exception occurred in the wheel system: {0}'.format(exc)
                 )
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+                return dict(error=dict(name=exc.__class__.__name__,
+                                       args=exc.args,
+                                       message=str(exc)))
+        else:
+            if 'key' not in clear_load:
+                msg = 'Authentication failure of type "user" occurred'
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+            key = clear_load.pop('key')
 
+            if 'user' in clear_load:
+                username = clear_load['user']
+                auth_user = salt.auth.AuthUser(username)
+                if auth_user.is_sudo:
+                    username = self.opts.get('user', 'root')
+            else:
+                username = salt.utils.get_user()
+
+            if username not in self.key and \
+                    key != self.key[username] and \
+                    key != self.key['root']:
+                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+
+        # Authorized. Do the job!
+        try:
+            jid = salt.utils.jid.gen_jid()
+            fun = clear_load.pop('fun')
+            tag = tagify(jid, prefix='wheel')
+            data = {'fun': "wheel.{0}".format(fun),
+                    'jid': jid,
+                    'tag': tag,
+                    'user': username}
+
+            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            ret = self.wheel_.call_func(fun, **clear_load)
+            data['return'] = ret
+            data['success'] = True
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
         except Exception as exc:
-            log.error(
-                'Exception occurred in the wheel system: {0}'.format(exc)
+            log.error('Exception occurred while '
+                      'introspecting {0}: {1}'.format(fun, exc))
+            data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
+                             fun,
+                             exc.__class__.__name__,
+                             exc,
             )
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+            data['success'] = False
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
 
     def mk_token(self, clear_load):
         '''
@@ -1968,14 +1994,16 @@ class ClearFuncs(object):
                 return ''
 
             # Compile list of authorized actions for the user
-            auth_list = []
-            # Add permissions for '*' or user-specific to the auth list
-            for user_key in ('*', token['name']):
-                auth_list.extend(eauth_config.get(user_key, []))
-            # Add any add'l permissions allowed by group membership
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            auth_list = token.get('auth_list')
+            if auth_list is None:
+                auth_list = []
+                # Add permissions for '*' or user-specific to the auth list
+                for user_key in ('*', token['name']):
+                    auth_list.extend(eauth_config.get(user_key, []))
+                # Add any add'l permissions allowed by group membership
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2000,10 +2028,11 @@ class ClearFuncs(object):
                     'Authentication failure of type "eauth" occurred.'
                 )
                 return ''
+            auth_list = None
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                if groups is None:
+                if groups is None or groups is False:
                     groups = []
                 group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
@@ -2041,7 +2070,10 @@ class ClearFuncs(object):
 
                 # Perform the actual authentication. If we fail here, do not
                 # continue.
-                if not self.loadauth.time_auth(extra):
+                auth_ret = self.loadauth.time_auth(extra)
+                if isinstance(auth_ret, list):
+                    auth_list = auth_ret
+                elif not auth_ret:
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2056,23 +2088,21 @@ class ClearFuncs(object):
                     type_, value_, traceback_))
                 return ''
 
-#            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
-
             # We now have an authenticated session and it is time to determine
             # what the user has access to.
-
-            auth_list = []
-            if '*' in self.opts['external_auth'][extra['eauth']]:
-                auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
-            if name in self.opts['external_auth'][extra['eauth']]:
-                auth_list = self.opts['external_auth'][extra['eauth']][name]
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(
-                        self.opts['external_auth'][extra['eauth']],
-                        groups,
-                        auth_list)
-            if extra['eauth'] == 'ldap':
-                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if auth_list is None:
+                auth_list = []
+                if '*' in self.opts['external_auth'][extra['eauth']]:
+                    auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
+                if name in self.opts['external_auth'][extra['eauth']]:
+                    auth_list = self.opts['external_auth'][extra['eauth']][name]
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(
+                            self.opts['external_auth'][extra['eauth']],
+                            groups,
+                            auth_list)
+                if extra['eauth'] == 'ldap':
+                    auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
@@ -2102,8 +2132,11 @@ class ClearFuncs(object):
                     return ''
                 publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
+                    publisher_acl = salt.utils.get_values_of_matching_keys(
+                            publisher_acl,
+                            clear_load['user'].split('_', 1)[-1])
                     good = self.ckminions.auth_check(
-                                publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
+                                publisher_acl,
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
@@ -2138,14 +2171,17 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
-                    if clear_load['user'] not in acl:
+                    # Build ACL matching the user name
+                    acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            clear_load['user'])
+                    if not acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                        acl[clear_load['user']],
+                        acl,
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],
@@ -2303,7 +2339,7 @@ class ClearFuncs(object):
         # always write out to the master job caches
         try:
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
-            self.mminion.returners[fstr](clear_load['jid'], clear_load)
+            self.mminion.returners[fstr](clear_load['jid'], clear_load, minions)
         except KeyError:
             log.critical(
                 'The specified returner used for the master job cache '

@@ -5,12 +5,14 @@ Execute salt convenience routines
 
 # Import python libs
 from __future__ import absolute_import, print_function
+import os
 import logging
 
 # Import salt libs
 import salt.exceptions
 import salt.loader
 import salt.minion
+import salt.utils
 import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
@@ -44,7 +46,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     @property
     def functions(self):
         if not hasattr(self, '_functions'):
-            self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
+            if not hasattr(self, 'utils'):
+                self.utils = salt.loader.utils(self.opts)
+            # Must be self.functions for mixin to work correctly :-/
+            try:
+                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+            except AttributeError:
+                # Just in case self.utils is still not present (perhaps due to
+                # problems with the loader), load the runner funcs without them
+                self._functions = salt.loader.runner(self.opts)
+
         return self._functions
 
     def _reformat_low(self, low):
@@ -57,7 +68,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         to be called.
         '''
         auth_creds = dict([(i, low.pop(i)) for i in [
-                'username', 'password', 'eauth', 'token', 'client',
+                'username', 'password', 'eauth', 'token', 'client', 'user', 'key'
             ] if i in low])
         fun = low.pop('fun')
         reformatted_low = {'fun': fun}
@@ -121,6 +132,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         reformatted_low = self._reformat_low(low)
         return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
 
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, full_return=False):
+        '''
+        Execute a function
+        '''
+        return super(RunnerClient, self).cmd(fun,
+                                             arg,
+                                             pub_data,
+                                             kwarg,
+                                             full_return)
+
 
 class Runner(RunnerClient):
     '''
@@ -146,7 +167,8 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
-        ret, async_pub = {}, {}
+        import salt.minion
+        ret = {}
         if self.opts.get('doc', False):
             self.print_docs()
         else:
@@ -161,11 +183,60 @@ class Runner(RunnerClient):
                 low['arg'] = args
                 low['kwarg'] = kwargs
 
-                user = salt.utils.get_specific_user()
+                skip_perm_errors = self.opts.get('eauth', '') != ''
+
+                if self.opts.get('eauth'):
+                    if 'token' in self.opts:
+                        try:
+                            with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                                low['key'] = fp_.readline()
+                        except IOError:
+                            low['token'] = self.opts['token']
+
+                    # If using eauth and a token hasn't already been loaded into
+                    # low, prompt the user to enter auth credentials
+                    if 'token' not in low and 'key' not in low and self.opts['eauth']:
+                        # This is expensive. Don't do it unless we need to.
+                        import salt.auth
+                        resolver = salt.auth.Resolver(self.opts)
+                        res = resolver.cli(self.opts['eauth'])
+                        if self.opts['mktoken'] and res:
+                            tok = resolver.token_cli(
+                                    self.opts['eauth'],
+                                    res
+                                    )
+                            if tok:
+                                low['token'] = tok.get('token', '')
+                        if not res:
+                            log.error('Authentication failed')
+                            return ret
+                        low.update(res)
+                        low['eauth'] = self.opts['eauth']
+                else:
+                    low['user'] = salt.utils.get_specific_user()
+                    low['key'] = salt.utils.get_master_key(low['user'], self.opts, skip_perm_errors)
+
+                # Allocate a jid
+                async_pub = self._gen_async_pub()
+
+                if self.opts.get('runner_returns', False):
+                    job_load = {
+                        'jid': async_pub['jid'],
+                        'tgt_type': 'runner',
+                        'tgt': '',
+                        'user': self.opts.get('user', ''),
+                        'fun': self.opts['fun'],
+                        'arg': salt.utils.args.condition_input(args, kwargs),
+                    }
+                else:
+                    job_load = {}
+
+                if low['fun'] == 'state.orchestrate':
+                    low['kwarg']['__pub_orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
                 if self.opts.get('async', False):
-                    async_pub = self.async(self.opts['fun'], low, user=user)
+                    async_pub = self.cmd_async(low)
                     # by default: info will be not enougth to be printed out !
                     log.warning('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
@@ -174,17 +245,25 @@ class Runner(RunnerClient):
                     return async_pub['jid']  # return the jid
 
                 # otherwise run it in the main process
-                async_pub = self._gen_async_pub()
-                ret = self._proc_function(self.opts['fun'],
-                                          low,
-                                          user,
-                                          async_pub['tag'],
-                                          async_pub['jid'],
-                                          False)  # Don't daemonize
+                ret = self.cmd_sync(low)
+                if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                    outputter = ret['outputter']
+                    ret = ret['data']
+                else:
+                    outputter = None
+                display_output(ret, outputter, self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)
-                return ret
-            log.debug('Runner return: {0}'.format(ret))
+            else:
+                log.debug('Runner return: {0}'.format(ret))
+
+            if self.opts.get('runner_returns', False):
+                # Save the payload to the job cache
+                job_load['ret'] = ret
+                save_load_func = '{0}.save_load'.format(
+                    self.opts['master_job_cache'])
+                self.returners[save_load_func](job_load['jid'], job_load)
+
             return ret

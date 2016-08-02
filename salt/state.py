@@ -96,6 +96,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__env__',
     '__sls__',
     '__id__',
+    '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
     '__pub_jid',
@@ -185,7 +186,7 @@ def find_name(name, state, high):
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == 'sls':
-        for nid, item in high.iteritems():
+        for nid, item in six.iteritems(high):
             if item['__sls__'] == name:
                 ext_id.append((nid, next(iter(item))))
     # otherwise we are requiring a single state, lets find it
@@ -523,6 +524,8 @@ class Compiler(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
@@ -788,6 +791,9 @@ class State(object):
             else:
                 low_data_onlyif = low_data['onlyif']
             for entry in low_data_onlyif:
+                if not isinstance(entry, six.string_types):
+                    ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
+                    return ret
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
@@ -806,6 +812,9 @@ class State(object):
             else:
                 low_data_unless = low_data['unless']
             for entry in low_data_unless:
+                if not isinstance(entry, six.string_types):
+                    ret.update({'comment': 'unless execution failed, bad type passed', 'result': False})
+                    return ret
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
@@ -1240,6 +1249,8 @@ class State(object):
             if not isinstance(chunk['order'], (int, float)):
                 if chunk['order'] == 'last':
                     chunk['order'] = cap + 1000000
+                elif chunk['order'] == 'first':
+                    chunk['order'] = 0
                 else:
                     chunk['order'] = cap
             if 'name_order' in chunk:
@@ -1249,7 +1260,7 @@ class State(object):
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
-    def compile_high_data(self, high):
+    def compile_high_data(self, high, orchestration_jid=None):
         '''
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
@@ -1265,6 +1276,8 @@ class State(object):
                     continue
                 chunk = {'state': state,
                          'name': name}
+                if orchestration_jid is not None:
+                    chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
                     chunk['__sls__'] = body['__sls__']
                 if '__env__' in body:
@@ -1718,6 +1731,10 @@ class State(object):
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
 
+            if '__orchestration_jid__' in low:
+                inject_globals['__orchestration_jid__'] = \
+                    low['__orchestration_jid__']
+
             if 'result' not in ret or ret['result'] is False:
                 self.states.inject_globals = inject_globals
                 if self.mocked:
@@ -1936,7 +1953,13 @@ class State(object):
         chunk is evaluated an event will be set up to the master with the
         results.
         '''
-        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event) and self.opts.get('master_uri'):
+        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event):
+            if not self.opts.get('master_uri'):
+                ev_func = lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+                    self.opts, self.opts['sock_dir'], listen=False).fire_event(ret, tag)
+            else:
+                ev_func = self.functions['event.fire_master']
+
             ret = {'ret': chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
@@ -1952,7 +1975,7 @@ class State(object):
                         )
                 ret['len'] = length
             preload = {'jid': self.jid}
-            self.functions['event.fire_master'](ret, tag, preload=preload)
+            ev_func(ret, tag, preload=preload)
 
     def call_chunk(self, low, running, chunks):
         '''
@@ -2213,7 +2236,7 @@ class State(object):
         running.update(errors)
         return running
 
-    def call_high(self, high):
+    def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
@@ -2231,7 +2254,7 @@ class State(object):
         if errors:
             return errors
         # Compile and verify the raw chunks
-        chunks = self.compile_high_data(high)
+        chunks = self.compile_high_data(high, orchestration_jid)
 
         # Check for any disabled states
         disabled = {}
@@ -2570,9 +2593,14 @@ class BaseHighState(object):
                         tops[saltenv].append({})
                         log.debug('No contents loaded for env: {0}'.format(saltenv))
             if found > 1:
-                log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
-                            'Top file merging order is undefined; '
-                            'for better results use \'same\' option')
+                log.warning(
+                    'top_file_merging_strategy is set to \'merge\' and '
+                    'multiple top files were found. Merging order is not '
+                    'deterministic, it may be desirable to either set '
+                    'top_file_merging_strategy to \'same\' or use the '
+                    '\'env_order\' configuration parameter to specify the '
+                    'merging order.'
+                )
 
         if found == 0:
             log.error('No contents found in top file')
@@ -3202,7 +3230,7 @@ class BaseHighState(object):
         return ret_matches
 
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False, whitelist=None):
+                       force=False, whitelist=None, orchestration_jid=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -3224,7 +3252,7 @@ class BaseHighState(object):
             if os.path.isfile(cfn):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
-                    return self.state.call_high(high)
+                    return self.state.call_high(high, orchestration_jid)
         # File exists so continue
         err = []
         try:
@@ -3278,7 +3306,7 @@ class BaseHighState(object):
             log.error(msg.format(cfn))
 
         os.umask(cumask)
-        return self.state.call_high(high)
+        return self.state.call_high(high, orchestration_jid)
 
     def compile_highstate(self):
         '''

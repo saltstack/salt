@@ -288,9 +288,9 @@ def _get_pkg_info(*packages):
     if call['retcode']:
         raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
 
-    for pkg_info in [elm for elm in re.split(r"----*", call['stdout']) if elm.strip()]:
+    for pkg_info in [elm for elm in re.split(r"------", call['stdout']) if elm.strip()]:
         pkg_data = {}
-        pkg_info, pkg_descr = re.split(r"====*", pkg_info)
+        pkg_info, pkg_descr = re.split(r"======", pkg_info)
         for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
             key, value = pkg_info_line.split(":", 1)
             if value:

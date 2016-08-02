@@ -251,7 +251,7 @@ class NetworkTestCase(TestCase):
         :return:
         '''
         self.assertEqual(network._generate_minion_id(),
-                         ['nodename', 'hostname', 'hostname.domainname.blank', '1.2.3.4', '5.6.7.8'])
+                         ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
 
     @patch('platform.node', MagicMock(return_value='hostname'))
     @patch('socket.gethostname', MagicMock(return_value='hostname'))
@@ -270,7 +270,7 @@ class NetworkTestCase(TestCase):
 
     @patch('platform.node', MagicMock(return_value='very.long.and.complex.domain.name'))
     @patch('socket.gethostname', MagicMock(return_value='hostname'))
-    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
+    @patch('socket.getfqdn', MagicMock(return_value=''))
     @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
     @patch('salt.utils.fopen', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=False))
@@ -286,7 +286,7 @@ class NetworkTestCase(TestCase):
 
     @patch('platform.node', MagicMock(return_value='localhost'))
     @patch('socket.gethostname', MagicMock(return_value='pick.me'))
-    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
+    @patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank'))
     @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
     @patch('salt.utils.fopen', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=False))
@@ -297,7 +297,7 @@ class NetworkTestCase(TestCase):
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'pick.me')
+        self.assertEqual(network.generate_minion_id(), 'hostname.domainname.blank')
 
     @patch('platform.node', MagicMock(return_value='localhost'))
     @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))

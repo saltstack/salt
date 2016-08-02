@@ -1,43 +1,58 @@
 # -*- coding: utf-8 -*-
 '''
-This state uses the manager webapp to manage Apache tomcat webapps
-This state requires the manager webapp to be enabled
+Manage Apache Tomcat web applications
+=====================================
 
-The following grains/pillar should be set::
+.. note::
+    This state requires the Tomcat Manager webapp to be installed and running.
 
-    tomcat-manager:user: admin user name
-    tomcat-manager:passwd: password
+The following grains/pillars must be set for communication with Tomcat Manager
+to work:
 
-and also configure a user in the conf/tomcat-users.xml file::
+.. code-block:: yaml
+
+    tomcat-manager:
+        user: 'tomcat-manager'
+        passwd: 'Passw0rd'
+
+
+Configuring Tomcat Manager
+--------------------------
+To manage webapps via the Tomcat Manager, you'll need to configure
+a valid user in the file ``conf/tomcat-users.xml``.
+
+.. code-block:: xml
+   :caption: conf/tomcat-users.xml
 
     <?xml version='1.0' encoding='utf-8'?>
     <tomcat-users>
         <role rolename="manager-script"/>
-        <user username="tomcat" password="tomcat" roles="manager-script"/>
+        <user username="tomcat-manager" password="Passw0rd" roles="manager-script"/>
     </tomcat-users>
 
-Notes:
+Notes
+-----
 
-- Not supported multiple version on the same context path
-- More information about tomcat manager:
-    http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html
-- if you use only this module for deployments you might want to restrict
-    access to the manager so its only accessible via localhost
-    for more info: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
-- Tested on:
-
-  JVM Vendor:
-      Sun Microsystems Inc.
-  JVM Version:
-      1.6.0_43-b01
-  OS Architecture:
+- Using multiple versions (aka. parallel deployments) on the same context
+  path is not supported.
+- More information about the Tomcat Manager:
+  http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html
+- If you use only this module for deployments you might want to restrict
+  access to the manager so it's only accessible via localhost.
+  For more info: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
+- Last tested on:
+    Tomcat Version:
+      Apache Tomcat/7.0.54
+    JVM Vendor:
+      Oracle Corporation
+    JVM Version:
+      1.8.0_101-b13
+    OS Architecture:
       amd64
-  OS Name:
+    OS Name:
       Linux
-  OS Version:
-      2.6.32-358.el6.x86_64
-  Tomcat Version:
-      Apache Tomcat/7.0.37
+    OS Version:
+      3.10.0-327.22.2.el7.x86_64
 '''
 
 from __future__ import absolute_import
@@ -64,31 +79,38 @@ def war_deployed(name,
                  temp_war_location=None,
                  version=''):
     '''
-    Enforce that the WAR will be deployed and started in the context path
-    it will make use of WAR versions
+    Enforce that the WAR will be deployed and started in the context path,
+    while making use of WAR versions in the filename.
 
-    for more info:
+    .. note::
+
+        For more info about Tomcats file paths and context naming, please see
         http://tomcat.apache.org/tomcat-7.0-doc/config/context.html#Naming
 
     name
-        the context path to deploy
+        The context path to deploy (incl. forward slash) the WAR to.
     war
-        absolute path to WAR file (should be accessible by the user running
-        tomcat) or a path supported by the salt.modules.cp.get_url function
-    force
-        force deploy even if version strings are the same, False by default.
+        Absolute path to WAR file (should be accessible by the user running
+        Tomcat) or a path supported by the ``salt.modules.cp.get_url`` function.
+    force : False
+        Force deployment even if the version strings are the same.
+        Disabled by default.
     url : http://localhost:8080/manager
-        the URL of the server manager webapp
+        The URL of the Tomcat Web Application Manager.
     timeout : 180
-        timeout for HTTP request to the tomcat manager
+        Timeout for HTTP requests to the Tomcat Manager.
     temp_war_location : None
-        use another location to temporarily copy to war file
-        by default the system's temp directory is used
+        Use another location to temporarily copy the WAR file to.
+        By default the system's temp directory is used.
     version : ''
-        Specify the war version.  If this argument is provided, it overrides
-        the version encoded in the war file name, if one is present.
+        Specify the WAR version.  If this argument is provided, it overrides
+        the version encoded in the WAR file name, if one is present.
 
         .. versionadded:: 2015.8.6
+
+        Use ``False`` to prevent guessing the version and keeping it blank.
+
+        .. versionadded:: 2016.PLEASE_LET_ME_KNOW
 
     Example:
 
@@ -100,34 +122,55 @@ def war_deployed(name,
             - war: salt://jenkins-1.2.4.war
             - require:
               - service: application-service
+
+    .. note::
+
+        Be aware that in the above example the WAR ``jenkins-1.2.4.war`` will
+        be deployed to the context path ``jenkins##1.2.4``. To avoid this
+        either specify a version yourself, or set version to ``False``.
+
     '''
     # Prepare
     ret = {'name': name,
-       'result': True,
-       'changes': {},
-       'comment': ''}
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
-    if not version:
-        version = _extract_war_version(war)
+    # if version is defined or False, we don't want to overwrite
+    if version == '':
+        version = _extract_war_version(war) or ""
+    elif not version:
+        version = ''
+    else:
+        version = str(version)
 
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
     status = True
 
+    # Gathered/specified new WAR version string
+    specified_ver = 'version ' + version if version else 'no version'
+
     # Determine what to do
     try:
-        if not webapps[name]['version'].endswith(version) or force:
+        # Printed version strings, here to throw exception if no webapps[name]
+        current_ver = 'version ' + webapps[name]['version'] \
+            if webapps[name]['version'] else 'no version'
+        # `endswith` on the supposed string will cause Exception if empty
+        if (not webapps[name]['version'].endswith(version)
+            or (version == '' and webapps[name]['version'] != version)
+            or force):
             deploy = True
             undeploy = True
-            ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
-                    format(name, webapps[name]['version']))
-            ret['changes']['deploy'] = ('will deploy {0} in version {1}'.
-                    format(name, version))
+            ret['changes']['undeploy'] = ('undeployed {0} with {1}'.
+                                          format(name, current_ver))
+            ret['changes']['deploy'] = ('will deploy {0} with {1}'.
+                                        format(name, specified_ver))
         else:
             deploy = False
-            ret['comment'] = ('{0} in version {1} is already deployed'.
-                    format(name, version))
+            ret['comment'] = ('{0} with {1} is already deployed'.
+                              format(name, specified_ver))
             if webapps[name]['mode'] != 'running':
                 ret['changes']['start'] = 'starting {0}'.format(name)
                 status = False
@@ -135,8 +178,8 @@ def war_deployed(name,
                 return ret
     except Exception:
         deploy = True
-        ret['changes']['deploy'] = ('deployed {0} in version {1}'.format(name,
-            version))
+        ret['changes']['deploy'] = ('deployed {0} with {1}'.
+                                    format(name, specified_ver))
 
     # Test
     if __opts__['test']:
@@ -147,7 +190,7 @@ def war_deployed(name,
     if deploy is False:
         if status is False:
             ret['comment'] = __salt__['tomcat.start'](name, url,
-                    timeout=timeout)
+                                                      timeout=timeout)
             ret['result'] = ret['comment'].startswith('OK')
         return ret
 
@@ -166,14 +209,15 @@ def war_deployed(name,
                                                url,
                                                __env__,
                                                timeout,
-                                               temp_war_location=temp_war_location)
+                                               temp_war_location=temp_war_location,
+                                               version=version)
 
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
         ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
-        ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name,
-                version)
+        ret['changes']['deploy'] = ('deployed {0} with {1}'.
+                                    format(name, specified_ver))
     else:
         ret['result'] = False
         ret['comment'] = deploy_res
@@ -183,17 +227,17 @@ def war_deployed(name,
 
 def wait(name, url='http://localhost:8080/manager', timeout=180):
     '''
-    Wait for the tomcat manager to load
+    Wait for the Tomcat Manager to load.
 
     Notice that if tomcat is not running we won't wait for it start and the
     state will fail. This state can be required in the tomcat.war_deployed
     state to make sure tomcat is running and that the manager is running as
-    well and ready for deployment
+    well and ready for deployment.
 
     url : http://localhost:8080/manager
-        the URL of the server manager webapp
+        The URL of the server with the Tomcat Manager webapp.
     timeout : 180
-        timeout for HTTP request to the tomcat manager
+        Timeout for HTTP request to the Tomcat Manager.
 
     Example:
 
@@ -220,11 +264,11 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
 
     result = __salt__['tomcat.status'](url, timeout)
     ret = {'name': name,
-       'result': result,
-       'changes': {},
-       'comment': ('tomcat manager is ready' if result
-               else 'tomcat manager is not ready')
-       }
+           'result': result,
+           'changes': {},
+           'comment': ('tomcat manager is ready' if result
+                       else 'tomcat manager is not ready')
+           }
 
     return ret
 
@@ -239,26 +283,26 @@ def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
     result = msg.startswith('OK')
 
     ret = {'name': name,
-       'result': result,
-       'changes': {name: result},
-       'comment': msg
-       }
+           'result': result,
+           'changes': {name: result},
+           'comment': msg
+           }
 
     return ret
 
 
 def undeployed(name,
-                 url='http://localhost:8080/manager',
-                 timeout=180):
+               url='http://localhost:8080/manager',
+               timeout=180):
     '''
-    Enforce that the WAR will be un-deployed from the server
+    Enforce that the WAR will be undeployed from the server
 
     name
-        the context path to deploy
+        The context path to undeploy.
     url : http://localhost:8080/manager
-        the URL of the server manager webapp
+        The URL of the server with the Tomcat Manager webapp.
     timeout : 180
-        timeout for HTTP request to the tomcat manager
+        Timeout for HTTP request to the Tomcat Manager.
 
     Example:
 
@@ -273,12 +317,12 @@ def undeployed(name,
 
     # Prepare
     ret = {'name': name,
-       'result': True,
-       'changes': {},
-       'comment': ''}
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
     if not __salt__['tomcat.status'](url, timeout):
-        ret['comment'] = 'Tomcat Manager does not response'
+        ret['comment'] = 'Tomcat Manager does not respond'
         ret['result'] = False
         return ret
 
