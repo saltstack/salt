@@ -8,17 +8,14 @@ Tests for the file state
 from __future__ import absolute_import
 from distutils.version import LooseVersion
 import glob
-import grp
 import os
 import re
-import pwd
 import sys
 import shutil
 import stat
 import tempfile
 import textwrap
 import filecmp
-import textwrap
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -36,6 +33,29 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+HAS_PWD = True
+try:
+    import pwd
+except ImportError:
+    HAS_PWD = False
+
+HAS_GRP = True
+try:
+    import grp
+except ImportError:
+    HAS_GRP = False
+
+IS_ADMIN = False
+if salt.utils.is_windows():
+    import salt.utils.win_functions
+    current_user = salt.utils.win_functions.get_current_user()
+    if current_user == 'SYSTEM':
+        IS_ADMIN = True
+    else:
+        IS_ADMIN = salt.utils.win_functions.is_admin(current_user)
+else:
+    IS_ADMIN = os.geteuid() == 0
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -339,7 +359,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
         self.assertTrue(check_file)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -2021,7 +2042,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(template_path)
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
     def test_issue_12209_follow_symlinks(self, user, group):
@@ -2067,7 +2090,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(tmp_dir)
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skipIf(not IS_ADMIN, 'you must be root to run this test')
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
     def test_issue_12209_no_follow_symlinks(self, user, group):
