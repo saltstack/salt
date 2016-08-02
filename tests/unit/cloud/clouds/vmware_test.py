@@ -803,8 +803,7 @@ class VMwareTestCase(ExtendedTestCase):
 
     def test_no_clonefrom_just_image(self):
         '''
-        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
-        specified in the cloud provider configuration when calling add_host.
+        Tests that the profile is configured correctly when deploying using an image
         '''
 
         profile_additions = {
@@ -826,8 +825,7 @@ class VMwareTestCase(ExtendedTestCase):
 
     def test_just_clonefrom(self):
         '''
-        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
-        specified in the cloud provider configuration when calling add_host.
+        Tests that the profile is configured correctly when deploying by cloning from a template
         '''
 
         profile_additions = {
@@ -849,8 +847,7 @@ class VMwareTestCase(ExtendedTestCase):
 
     def test_no_clonefrom_expect_fail(self):
         '''
-        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
-        specified in the cloud provider configuration when calling add_host.
+        Tests that not including the clonefrom property will result in an invalid profile
         '''
 
         profile_additions = {}
@@ -870,6 +867,10 @@ class VMwareTestCase(ExtendedTestCase):
 
     @patch('salt.cloud.clouds.vmware.randint', return_value=101)
     def test_add_new_ide_controller_helper(self, randint_mock):
+        '''
+        Tests that creating a new controller, ensuring that it will generate a controller key
+        if one is not provided
+        '''
         controller_label = 'Some label'
         bus_number = 1
         spec = vmware._add_new_ide_controller_helper(controller_label, None, bus_number)
@@ -884,6 +885,10 @@ class VMwareTestCase(ExtendedTestCase):
 
 
     def test_manage_devices_just_cd(self):
+        '''
+        Tests that when adding IDE/CD drives, controller keys will be in the apparent
+        safe-range on ESX 5.5 but randomly generated on other versions (i.e. 6)
+        '''
         device_map = {
             'ide': {
                 'IDE 0': {},
