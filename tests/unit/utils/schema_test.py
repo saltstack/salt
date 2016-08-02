@@ -2215,7 +2215,7 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
 
             jsonschema.validate(
-                {'complex_complex_item': {'complex_item': {'thirsty': 'Bar'}}},
+                {'complex_complex_item': {'complex_item': {'thirsty': True}}},
                 serialized)
         self.assertIn('\'hungry\' is a required property',
                       excinfo.exception.message)
