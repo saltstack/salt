@@ -205,15 +205,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via globs
         '''
-        pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
-        try:
-            files = []
-            for fn_ in salt.utils.isorted(os.listdir(pki_dir)):
-                if not fn_.startswith('.') and os.path.isfile(os.path.join(pki_dir, fn_)):
-                    files.append(fn_)
-            return fnmatch.filter(files, expr)
-        except OSError:
-            return []
+        return fnmatch.filter(self._pki_minions(), expr)
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -221,25 +213,35 @@ class CkMinions(object):
         '''
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
-        ret = []
-        for minion in expr:
-            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, minion)):
-                ret.append(minion)
-        return ret
+        return [x for x in expr if x in self._pki_minions()]
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via regular expressions
         '''
+        reg = re.compile(expr)
+        return [m for m in self._pki_minions() if reg.match(m)]
+
+    def _pki_minions(self):
+        '''
+        Retreive complete minion list from PKI dir.
+        Respects cache if configured
+        '''
+        minions = []
+        pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
         try:
-            minions = []
-            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
-                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
-                    minions.append(fn_)
-            reg = re.compile(expr)
-            return [m for m in minions if reg.match(m)]
-        except OSError:
-            return []
+            if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
+                log.debug('Returning cached minion list')
+                with salt.utils.fopen(pki_cache_fn) as fn_:
+                    return self.serial.load(fn_)
+            else:
+                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                    if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                        minions.append(fn_)
+            return minions
+        except OSError as exc:
+            log.error('Encountered OSError while evaluating  minions in PKI dir: {0}'.format(exc))
+            return minions
 
     def _check_cache_minions(self,
                              expr,
@@ -335,11 +337,7 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            mlist = []
-            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
-                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
-                    mlist.append(fn_)
-            minions = set(mlist)
+            minions = set(self._pki_minions())
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -441,11 +439,7 @@ class CkMinions(object):
         if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
             log.error('Compound target that is neither string, list nor tuple')
             return []
-        mlist = []
-        for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
-            if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
-                mlist.append(fn_)
-        minions = set(mlist)
+        minions = set(self._pki_minions())
         log.debug('minions: {0}'.format(minions))
 
         if self.opts.get('minion_data_cache', False):
