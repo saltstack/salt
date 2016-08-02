@@ -2268,6 +2268,7 @@ def create(vm_):
     win_user_fullname = config.get_cloud_config_value(
         'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
     )
+
     container_ref = None
     if 'clonefrom' in vm_:
         # If datacenter is specified, set the container reference to start search from it instead
@@ -2553,7 +2554,7 @@ def create(vm_):
                 out = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
-    # out is only assigned when  it has an ip, deploy and power but not template
+
     if deploy and out is not None:
         data['deploy_kwargs'] = out['deploy_kwargs']
 
