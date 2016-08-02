@@ -52,6 +52,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.parse import splitquery
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -879,7 +880,7 @@ def sanitize_url(url, hide_fields):
     Make sure no secret fields show up in logs
     '''
     if isinstance(hide_fields, list):
-        url_comps = urllib.splitquery(url)
+        url_comps = splitquery(url)
         log_url = url_comps[0]
         if len(url_comps) > 1:
             log_url += '?'
