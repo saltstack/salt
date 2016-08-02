@@ -5,6 +5,12 @@ Salt 2015.8.10 Release Notes
 Version 2015.8.10 is a bugfix release for :doc:`2015.8.0
 </topics/releases/2015.8.0>`.
 
+**Final Release of Debian 7 Packages**
+
+Regular security support for Debian 7 ended on April 25th 2016. As a result,
+2016.3.1 and 2015.8.10 will be the last Salt releases for which Debian
+7 packages are created.
+
 .. admonition:: Mint Linux: Important Post-Upgrade Instructions
 
     As a result of some upstream changes, the ``os`` grain on Mint Linux is now
