@@ -207,9 +207,9 @@ def __virtual__():
         return False
 
     salt.utils.warn_until(
-        'Carbon',
+        'Nitrogen',
         'This driver has been deprecated and will be removed in the '
-        'Carbon release of Salt. Please use the nova driver instead.'
+        'Nitrogen release of Salt. Please use the nova driver instead.'
     )
 
     return __virtualname__
