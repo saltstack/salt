@@ -183,7 +183,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
+            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
         )
 
         minion_config = {
