@@ -328,6 +328,8 @@ class ProcessManager(object):
         '''
         Create new process (assuming this one is dead), then remove the old one
         '''
+        if self._restart_processes is False:
+            return
         log.info('Process {0} ({1}) died with exit status {2},'
                  ' restarting...'.format(self._process_map[pid]['tgt'],
                                          pid,
@@ -383,7 +385,8 @@ class ProcessManager(object):
                         log.debug('Process of pid {0} died, not a known'
                                   ' process, will not restart'.format(pid))
                         continue
-                    self.restart_process(pid)
+                    if self._restart_processes is True:
+                        self.restart_process(pid)
                 elif async is True:
                     yield gen.sleep(10)
                 elif async is False:
