@@ -72,6 +72,8 @@ from __future__ import absolute_import
 import logging
 import os
 import os.path
+import datetime
+import time
 import json
 
 # Import Salt Libs
@@ -86,6 +88,206 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_iot' if 'boto_iot.policy_exists' in __salt__ else False
+
+
+def thing_type_present(name, thingTypeName, thingTypeDescription,
+    searchableAttributesList,
+    region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure thing type exists.
+
+    name
+        The name of the state definition
+
+    thingTypeName
+        Name of the thing type
+
+    thingTypeDescription
+        Description of the thing type
+
+    searchableAttributesList
+        List of string attributes that are searchable for
+        the thing type
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used
+
+    profile
+        A dict with region, key, keyid, or a pillar key (string) that
+        contains a dict with region, key, and keyid
+
+    .. versionadded:: Carbon
+
+    '''
+    ret = {
+        'name': thingTypeName,
+        'result': True,
+        'comment': '',
+        'changes': {}
+    }
+
+    r = __salt__['boto_iot.thing_type_exists'](
+            thingTypeName=thingTypeName,
+            region=region, key=key, keyid=keyid, profile=profile
+    )
+
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create thing type: {0}.'.format(r['error']['message'])
+        return ret
+
+    if r.get('exists'):
+        ret['result'] = True
+        ret['comment'] = 'Thing type with given name {0} already exists'.format(thingTypeName)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Thing type {0} is set to be created.'.format(thingTypeName)
+        ret['result'] = None
+        return ret
+
+    r = __salt__['boto_iot.create_thing_type'](
+            thingTypeName=thingTypeName,
+            thingTypeDescription=thingTypeDescription,
+            searchableAttributesList=searchableAttributesList,
+            region=region, key=key, keyid=keyid, profile=profile
+    )
+
+    if not r.get('created'):
+        ret['result'] = False
+        ret['comment'] = 'Failed to create thing type: {0}.'.format(r['error']['message'])
+        return ret
+
+    _describe = __salt__['boto_iot.describe_thing_type'](
+        thingTypeName=thingTypeName,
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    ret['changes']['old'] = {'thing_type': None}
+    ret['changes']['new'] = _describe
+    ret['comment'] = 'Thing Type {0} created.'.format(thingTypeName)
+    return ret
+
+
+def thing_type_absent(name, thingTypeName,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure thing type with passed properties is absent.
+
+    name
+        The name of the state definition.
+
+    thingTypeName
+        Name of the thing type.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+
+    '''
+
+    ret = {'name': thingTypeName,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    _describe = __salt__['boto_iot.describe_thing_type'](
+        thingTypeName=thingTypeName,
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    if 'error' in _describe:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete thing type: {0}.'.format(_describe['error']['message'])
+        return ret
+
+    if _describe and not _describe['thing_type']:
+        ret['comment'] = 'Thing Type {0} does not exist.'.format(thingTypeName)
+        return ret
+
+    _existing_thing_type = _describe['thing_type']
+    _thing_type_metadata = _existing_thing_type.get('thingTypeMetadata')
+    _deprecated = _thing_type_metadata.get('deprecated', False)
+
+    if __opts__['test']:
+        if _deprecated:
+            _change_desc = 'removed'
+        else:
+            _change_desc = 'deprecated and removed'
+        ret['comment'] = 'Thing Type {0} is set to be {1}.'.format(thingTypeName, _change_desc)
+        ret['result'] = None
+        return ret
+
+    # initialize a delete_wait_timer to be 5 minutes
+    # AWS does not allow delete thing type until 5 minutes
+    # after a thing type is marked deprecated.
+    _delete_wait_timer = 300
+
+    if _deprecated is False:
+        _deprecate = __salt__['boto_iot.deprecate_thing_type'](
+            thingTypeName=thingTypeName,
+            undoDeprecate=False,
+            region=region, key=key, keyid=keyid, profile=profile
+        )
+        if 'error' in _deprecate:
+            ret['result'] = False
+            ret['comment'] = 'Failed to deprecate thing type: {0}.'.format(_deprecate['error']['message'])
+            return ret
+    else:
+        # grab the deprecation date string from _thing_type_metadata
+        _deprecation_date_str = _thing_type_metadata.get('deprecationDate')
+        if _deprecation_date_str:
+            # see if we can wait less than 5 minutes
+            _tz_index = _deprecation_date_str.find('+')
+            if _tz_index != -1:
+                _deprecation_date_str = _deprecation_date_str[:_tz_index]
+
+            _deprecation_date = datetime.datetime.strptime(
+                _deprecation_date_str,
+                "%Y-%m-%d %H:%M:%S.%f"
+            )
+
+            _elapsed_time_delta = datetime.datetime.utcnow() - _deprecation_date
+            if _elapsed_time_delta.seconds >= 300:
+                _delete_wait_timer = 0
+            else:
+                _delete_wait_timer = 300 - _elapsed_time_delta.seconds
+
+    # wait required 5 minutes since deprecation time
+    if _delete_wait_timer:
+        log.warning('wait for {0} seconds per AWS (5 minutes after deprecation time) '
+                 'before we can delete iot thing type'.format(_delete_wait_timer))
+        time.sleep(_delete_wait_timer)
+
+    # delete thing type
+    r = __salt__['boto_iot.delete_thing_type'](
+            thingTypeName=thingTypeName,
+            region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r['deleted']:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete thing type: {0}.'.format(r['error']['message'])
+        return ret
+    ret['changes']['old'] = _describe
+    ret['changes']['new'] = {'thing_type': None}
+    ret['comment'] = 'Thing Type {0} deleted.'.format(thingTypeName)
+    return ret
 
 
 def policy_present(name, policyName, policyDocument,
