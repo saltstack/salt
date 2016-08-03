@@ -6,3 +6,5 @@ base:
     - generic
     - blackout
     - sub
+  'proxytest':
+    - proxytest
