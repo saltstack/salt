@@ -15,6 +15,17 @@ This state is used to ensure presence of users in the Organization.
             - username: 'gitexample'
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+import datetime
+import logging
+
+# Import Salt Libs
+import salt.ext.six as six
+
+
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -143,4 +154,317 @@ def absent(name, profile="github", **kwargs):
 
         ret['result'] = True
 
+    return ret
+
+
+def team_present(
+        name,
+        description='',
+        repo_names=None,
+        privacy='secret',
+        permission='pull',
+        members=None,
+        enforce_mfa=False,
+        no_mfa_grace_seconds=0,
+        profile="github",
+        **kwargs):
+    '''
+    Ensure a team is present
+
+    name
+        This is the name of the team in the organization.
+
+    description
+        The description of the team.
+
+    repo_names
+        The names of repositories to add the team to.
+
+    privacy
+        The level of privacy for the team, can be 'secret' or 'closed'. Defaults
+        to secret.
+
+    permission
+        The default permission for new repositories added to the team, can be
+        'pull', 'push' or 'admin'. Defaults to pull.
+
+    members
+        The members belonging to the team, specified as a dict of member name to
+        optional configuration. Options include 'enforce_mfa_from' and 'mfa_exempt'.
+
+    enforce_mfa
+        Whether to enforce MFA requirements on members of the team. If True then
+        all members without `mfa_exempt: True` configured will be removed from
+        the team. Note that `no_mfa_grace_seconds` may be set to allow members
+        a grace period.
+
+    no_mfa_grace_seconds
+        The number of seconds of grace time that a member will have to enable MFA
+        before being removed from the team. The grace period will begin from
+        `enforce_mfa_from` on the member configuration, which defaults to
+        1970/01/01.
+
+    Example:
+
+    .. code-block:: yaml
+
+        Ensure team test is present in github:
+            github.team_present:
+                - name: 'test'
+                - members:
+                    user1: {}
+                    user2: {}
+
+        Ensure team test_mfa is present in github:
+            github.team_present:
+                - name: 'test_mfa'
+                - members:
+                    user1:
+                        enforce_mfa_from: 2016/06/15
+                - enforce_mfa: True
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+
+    target = __salt__['github.get_team'](name, profile=profile, **kwargs)
+    test_comments = []
+
+    if target:  # Team already exists
+        parameters = {}
+        if description is not None and target['description'] != description:
+            parameters['description'] = description
+        if permission is not None and target['permission'] != permission:
+            parameters['permission'] = permission
+        if privacy is not None and target['privacy'] != privacy:
+            parameters['privacy'] = privacy
+
+        if len(parameters) > 0:
+            if __opts__['test']:
+                test_comments.append('Team properties are set to be edited.')
+                ret['result'] = None
+            else:
+                result = __salt__['github.edit_team'](name, profile=profile,
+                                                      **parameters)
+                if result:
+                    ret['changes']['team'] = {
+                        'old': 'Team properties were {0}'.format(target),
+                        'new': 'Team properties (that changed) are {0}'.format(parameters)
+                    }
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to update team properties.'
+                    return ret
+
+        current_repos = set(__salt__['github.list_team_repos'](name, profile=profile))
+        repo_names = set(repo_names or [])
+
+        repos_to_add = repo_names - current_repos
+        repos_to_remove = current_repos - repo_names
+
+        if repos_to_add:
+            if __opts__['test']:
+                test_comments.append('Team {0} will have the following repos '
+                                     'added: {1}.'.format(name, list(repos_to_add)))
+                ret['result'] = None
+            else:
+                for repo_name in repos_to_add:
+                    result = (__salt__['github.add_team_repo']
+                              (repo_name, name, profile=profile, **kwargs))
+                    if result:
+                        ret['changes'][repo_name] = {
+                            'old': 'Repo {0} is not in team {1}'.format(repo_name, name),
+                            'new': 'Repo {0} is in team {1}'.format(repo_name, name)
+                        }
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = ('Failed to add repo {0} to team {1}.'
+                                          .format(repo_name, name))
+                        return ret
+
+        if repos_to_remove:
+            if __opts__['test']:
+                test_comments.append('Team {0} will have the following repos '
+                                     'removed: {1}.'.format(name, list(repos_to_remove)))
+                ret['result'] = None
+            else:
+                for repo_name in repos_to_remove:
+                    result = (__salt__['github.remove_team_repo']
+                              (repo_name, name, profile=profile, **kwargs))
+                    if result:
+                        ret['changes'][repo_name] = {
+                            'old': 'Repo {0} is in team {1}'.format(repo_name, name),
+                            'new': 'Repo {0} is not in team {1}'.format(repo_name, name)
+                        }
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = ('Failed to remove repo {0} from team {1}.'
+                                          .format(repo_name, name))
+                        return ret
+
+    else:  # Team does not exist - it will be created.
+        if __opts__['test']:
+            ret['comment'] = 'Team {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+
+        result = __salt__['github.add_team'](
+            name,
+            description=description,
+            repo_names=repo_names,
+            permission=permission,
+            privacy=privacy,
+            profile=profile,
+            **kwargs
+        )
+        if result:
+            ret['changes']['team'] = {}
+            ret['changes']['team']['old'] = None
+            ret['changes']['team']['new'] = 'Team {0} has been created'.format(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create team {0}.'.format(name)
+            return ret
+
+    mfa_deadline = datetime.datetime.utcnow() - datetime.timedelta(seconds=no_mfa_grace_seconds)
+    members_no_mfa = __salt__['github.list_members_without_mfa'](profile=profile)
+
+    members_lower = {}
+    for name, info in six.iteritems(members):
+        members_lower[name.lower()] = info
+
+    member_change = False
+    current_members = __salt__['github.list_team_members'](name, profile=profile)
+
+    for member, member_info in six.iteritems(members or {}):
+        log.info('Checking member {0} in team {1}'.format(member, name))
+
+        if member.lower() not in current_members:
+            if (enforce_mfa and _member_violates_mfa(member, member_info,
+                                                     mfa_deadline, members_no_mfa)):
+                if __opts__['test']:
+                    test_comments.append('User {0} will not be added to the '
+                                         'team because they do not have MFA.'
+                                         ''.format(member))
+            else:  # Add to team
+                member_change = True
+                if __opts__['test']:
+                    test_comments.append('User {0} set to be added to the '
+                                         'team.'.format(member))
+                    ret['result'] = None
+                else:
+                    result = (__salt__['github.add_team_member']
+                              (member, name, profile=profile, **kwargs))
+                    if result:
+                        ret['changes'][member] = {}
+                        ret['changes'][member]['old'] = (
+                            'User {0} is not in team {1}'.format(member, name))
+                        ret['changes'][member]['new'] = (
+                            'User {0} is in team {1}'.format(member, name))
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = ('Failed to add user {0} to team '
+                                          '{1}.'.format(member, name))
+                        return ret
+
+    for member in current_members:
+        mfa_violation = False
+        if member in members_lower:
+            mfa_violation = _member_violates_mfa(member, members_lower[member],
+                                                 mfa_deadline, members_no_mfa)
+        if member not in members_lower or (enforce_mfa and mfa_violation):
+            # Remove from team
+            member_change = True
+            if __opts__['test']:
+                if mfa_violation:
+                    test_comments.append('User {0} set to be removed from the '
+                                         'team because they do not have MFA.'
+                                         .format(member))
+                else:
+                    test_comments.append('User {0} set to be removed from '
+                                         'the team.'.format(member))
+                ret['result'] = None
+            else:
+                result = (__salt__['github.remove_team_member']
+                          (member, name, profile=profile, **kwargs))
+                if result:
+                    extra_changes = ' due to MFA violation' if mfa_violation else ''
+                    ret['changes'][member] = {
+                        'old': 'User {0} is in team {1}'.format(member, name),
+                        'new': 'User {0} is not in team {1}{2}'.format(member, name, extra_changes)
+                    }
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ('Failed to remove user {0} from team {1}.'
+                                      .format(member, name))
+                    return ret
+
+    if member_change:  # Refresh team cache
+        __salt__['github.list_team_members'](name, profile=profile,
+                                             ignore_cache=False, **kwargs)
+
+    if len(test_comments) > 0:
+        ret['comment'] = '\n'.join(test_comments)
+    return ret
+
+
+def _member_violates_mfa(member, member_info, mfa_deadline, members_without_mfa):
+    if member_info.get('mfa_exempt', False):
+        return False
+    enforce_mfa_from = datetime.datetime.strptime(
+        member_info.get('enforce_mfa_from', '1970/01/01'), '%Y/%m/%d')
+    return member.lower() in members_without_mfa and (mfa_deadline > enforce_mfa_from)
+
+
+def team_absent(name, profile="github", **kwargs):
+    '''
+    Ensure a team is absent.
+
+    Example:
+
+    .. code-block:: yaml
+
+        ensure team test is present in github:
+            github.team_absent:
+                - name: 'test'
+
+
+    The following parameters are required:
+
+    name
+        This is the name of the team in the organization.
+
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': None,
+        'comment': ''
+    }
+
+    target = __salt__['github.get_team'](name, profile=profile, **kwargs)
+
+    if not target:
+        ret['comment'] = 'Team {0} does not exist'.format(name)
+        ret['result'] = True
+        return ret
+    else:
+        if __opts__['test']:
+            ret['comment'] = "Team {0} will be deleted".format(name)
+            ret['result'] = None
+            return ret
+
+        result = __salt__['github.remove_team'](name, profile=profile, **kwargs)
+
+        if result:
+            ret['comment'] = 'Deleted team {0}'.format(name)
+            ret['changes'].setdefault('old', 'Team {0} exists'.format(name))
+            ret['changes'].setdefault('new', 'Team {0} deleted'.format(name))
+            ret['result'] = True
+        else:
+            ret['comment'] = 'Failed to delete {0}'.format(name)
+            ret['result'] = False
     return ret
