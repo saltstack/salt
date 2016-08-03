@@ -4,8 +4,40 @@
 Salt Release Notes - Codename Carbon
 ====================================
 
-Features
-========
+New Features
+============
+
+Docker Introspection and Configuration
+--------------------------------------
+
+Major additions have been made to the Docker support in Carbon. The new
+addition allows Salt to be executed within a Docker container without a
+minion running or installed in the container. This allows states to
+be run inside a container, but also all of Salt's remote execution
+commands to be run inside docker containers as well. This makes
+container introspection simple and powerful. See the tutorial on using
+this new feature here:
+
+#TODO: Add link to docker sls tutorial
+
+Advanced Ceph Control
+---------------------
+
+Our friends over at SUSE have delivered a powerful new tool to make the
+deployment of Ceph storage systems using Salt very easy. These new Ceph
+tools allow for a storage system to be easily defined using the new
+`ceph.quorum` state.
+
+Thorium Additions and Improvements
+----------------------------------
+
+The Thorium advanced reactor has undergone extensive testing and updates.
+These updates include many more Thorium states, a system for automating
+key management, the ability to use Thorium to easily replace old
+reactors and a great deal of stability and bug fixes.
+
+Additional Features
+-------------------
 
 - Minions can run in stand-alone mode to use beacons and engines without
   having to connect to a master. (Thanks @adelcast!)
