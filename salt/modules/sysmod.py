@@ -354,18 +354,13 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        _use_fnmatch = False
         if '*' in module:
-            target_mod = module
-            _use_fnmatch = True
-        elif module:
+            for func in fnmatch.filter(__salt__, module):
+                names.add(func)
+        else:
             # allow both "sys" and "sys." to match sys, without also matching
             # sysctl
             module = module + '.' if not module.endswith('.') else module
-        if _use_fnmatch:
-            for func in fnmatch.filter(__salt__, target_mod):
-                names.add(func)
-        else:
             for func in __salt__:
                 if func.startswith(module):
                     names.add(func)
