@@ -1213,6 +1213,12 @@ def create_certificate(
         Example:
             /etc/pki/issued_certs/www.example.com-DE:CA:FB:AD:00:00:00:00.crt
 
+    prepend_cn:
+        If set to True, the CN and a dash will be prepended to the copypath's filename.
+
+        Example:
+            /etc/pki/issued_certs/www.example.com-DE:CA:FB:AD:00:00:00:00.crt
+
     signing_policy:
         A signing policy that should be used to create this certificate.
         Signing policies should be defined in the minion configuration, or in
