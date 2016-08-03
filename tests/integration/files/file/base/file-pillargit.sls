@@ -1,5 +1,5 @@
 {% if grains['kernel'] == 'Windows' %}
-  {% set TMP = "C:\Windows\Temp\" %}
+  {% set TMP = "C:\\Windows\\Temp\\" %}
 {% else %}
   {% set TMP = "/tmp/" %}
 {% endif %}
