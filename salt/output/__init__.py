@@ -99,7 +99,7 @@ def display_output(data, out=None, opts=None):
                         # try to let the stream write
                         # even if we didn't encode it
                         pass
-                ofh.write(fdata)
+                ofh.write(fdata.decode())
                 ofh.write('\n')
             return
         if display_data:
