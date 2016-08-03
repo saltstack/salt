@@ -33,6 +33,7 @@ beacons
     interval: 30
     min: 1
     max: 70
+    percpu:
 '''
 
 def validate(config):
@@ -55,11 +56,10 @@ def beacon(config):
         config['max'] = 101
     if 'min' not in config:
         config['min'] = -1
-
-    ret = []
     cpu_percent = psutil.cpu_percent(interval=1)
     log.trace(cpu_percent)
     send_beacon = False
+    ret = []
 
     if config['onchangeonly']:
         if not LAST_STATUS:
@@ -88,6 +88,8 @@ def beacon(config):
     if config['onchangeonly']:
         LAST_STATUS = cpu_percent
 
+    if 'percpu' in config:
+        cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
     if send_beacon:
         ret.append({'min': config['min'], 'max': config['max'], 'actual': cpu_percent})
 
