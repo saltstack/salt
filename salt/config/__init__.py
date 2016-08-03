@@ -890,6 +890,8 @@ VALID_OPTS = {
     'proxy_password': str,
     'proxy_port': int,
 
+    # Minion de-dup jid cache max size
+    'minion_jid_queue_hwm': int,
 }
 
 # default configurations
@@ -1125,6 +1127,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_username': '',
     'proxy_password': '',
     'proxy_port': 0,
+    'minion_jid_queue_hwm': 100,
 }
 
 DEFAULT_MASTER_OPTS = {
