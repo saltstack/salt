@@ -24,6 +24,16 @@ LAST_STATUS = -1
 def __virtual__():
     return __virtualname__
 
+'''
+Units in seconds [interval] and percent [min, max]
+Reports below min or above max. Set both to 0 for reports every interval
+
+beacons
+  load:
+    interval: 30
+    min: 1
+    max: 70
+'''
 
 def validate(config):
     # Configuration for load beacon should be a list of dicts
