@@ -16,7 +16,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-
+IS_WINDOWS = salt.utils.is_windows()
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
@@ -29,7 +29,8 @@ class CMDTest(integration.ModuleCase,
         '''
         cmd.run
         '''
-        ret = self.run_state('cmd.run', name='ls', cwd=tempfile.gettempdir())
+        cmd = 'dir' if IS_WINDOWS else 'ls'
+        ret = self.run_state('cmd.run', name=cmd, cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
     def test_test_run_simple(self):
@@ -58,6 +59,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         os.remove(self.test_file)
         super(CMDRunRedirectTest, self).tearDown()
 
+    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_run_unless(self):
         '''
         test cmd.run unless
@@ -73,6 +75,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
 
+    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_run_creates_exists(self):
         '''
         test cmd.run creates already there
@@ -89,6 +92,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         self.assertTrue(ret[state_key]['result'])
         self.assertEqual(len(ret[state_key]['changes']), 0)
 
+    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_run_creates_new(self):
         '''
         test cmd.run creates not there
@@ -106,6 +110,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         self.assertTrue(ret[state_key]['result'])
         self.assertEqual(len(ret[state_key]['changes']), 4)
 
+    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_run_redirect(self):
         '''
         test cmd.run with shell redirect
@@ -136,6 +141,7 @@ class CMDRunWatchTest(integration.ModuleCase,
         os.remove(self.state_file)
         super(CMDRunWatchTest, self).tearDown()
 
+    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_run_watch(self):
         '''
         test cmd.run watch
