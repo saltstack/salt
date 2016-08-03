@@ -351,17 +351,24 @@ def eval_master_func(opts):
     '''
     if '__master_func_evaluated' not in opts:
         # split module and function and try loading the module
-        mod, fun = opts['master'].split('.')
+        mod_fun = opts['master']
+        mod, fun = mod_fun.split('.')
         try:
             master_mod = salt.loader.raw_mod(opts, mod, fun)
+            if not master_mod:
+                raise KeyError
             # we take whatever the module returns as master address
-            opts['master'] = master_mod[mod + '.' + fun]()
+            opts['master'] = master_mod[mod_fun]()
+            if not isinstance(opts['master'], str):
+                raise TypeError
             opts['__master_func_evaluated'] = True
-        except TypeError:
-            log.error("Failed to evaluate master address from module '{0}'".format(
-                      opts['master']))
+        except KeyError:
+            log.error('Failed to load module {0}'.format(mod_fun))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        log.info('Evaluated master from module: {0}'.format(master_mod))
+        except TypeError:
+            log.error('{0} returned from {1} is not a string'.format(opts['master'], mod_fun))
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        log.info('Evaluated master from module: {0}'.format(mod_fun))
 
 
 class MinionBase(object):
