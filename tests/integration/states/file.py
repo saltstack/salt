@@ -325,11 +325,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         file.
         '''
         if IS_WINDOWS:
-            state_file = 'file-grainget-win'
             grain_path = 'C:\\Windows\\Temp\\file-grain-test'
         else:
-            state_file = 'file-grainget'
             grain_path = '/tmp/file-grain-test'
+
+        state_file = 'file-grainget'
 
         ret = self.run_function('state.sls', [state_file])
         self.assertTrue(os.path.exists(grain_path))
@@ -342,10 +342,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure pillar data in sls file
         is rendered properly and file is created.
         '''
-        if IS_WINDOWS:
-            state_name = 'file-pillarget-win'
-        else:
-            state_name = 'file-pillarget'
+        state_name = 'file-pillarget'
 
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
@@ -361,10 +358,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         in sls file with pillar.get it uses the default
         value.
         '''
-        if IS_WINDOWS:
-            state_name = 'file-pillardefaultget-win'
-        else:
-            state_name = 'file-pillardefaultget'
+        state_name = 'file-pillardefaultget'
 
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
@@ -380,10 +374,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure git pillar data in sls
         file is rendered properly and is created.
         '''
-        if IS_WINDOWS:
-            state_name = 'file-pillargit-win'
-        else:
-            state_name = 'file-pillargit'
+        state_name = 'file-pillargit'
 
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
@@ -2253,10 +2244,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         This tests for any regressions for this issue:
         https://github.com/saltstack/salt/issues/30934
         '''
-        if IS_WINDOWS:
-            state_file = 'file_contents_pillar_win'
-        else:
-            state_file = 'file_contents_pillar'
+        state_file = 'file_contents_pillar'
 
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
