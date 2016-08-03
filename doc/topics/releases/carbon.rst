@@ -36,6 +36,20 @@ These updates include many more Thorium states, a system for automating
 key management, the ability to use Thorium to easily replace old
 reactors and a great deal of stability and bug fixes.
 
+Preserve File Perms in File States
+----------------------------------
+
+This feature has been requested for years, the ability to set a flag
+and use the same file permissions for files deployed to a minion as
+the permissions set to the file on the master. Just set the `keep_mode`
+option on any file management state to `True`.
+
+Ponies!
+-------
+
+We all agreed that cowsay was just not good enough, install the `ponysay`
+command and the new `pony` outputter will work. For for the whole family!
+
 Additional Features
 -------------------
 
