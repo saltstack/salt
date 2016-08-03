@@ -2,17 +2,24 @@
 '''
 Support for ipset
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
-# Import 3rd-party libs
+# Import Salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import map, range
+import salt.utils
+
+# Import third-party libs
 if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
+
+# Set up logging
+log = logging.getLogger(__name__)
 
 
 # Fix included in py2-ipaddress for 32bit architectures
@@ -21,12 +28,6 @@ def long_range(start, end):
     while start < end:
         yield start
         start += 1
-
-# Import salt libs
-import salt.utils
-
-# Set up logging
-log = logging.getLogger(__name__)
 
 _IPSET_FAMILIES = {
         'ipv4': 'inet',
@@ -445,6 +446,7 @@ def check(set=None, entry=None, family='ipv4'):
 
     return False
 
+
 def test(set=None, entry=None, family='ipv4', **kwargs):
     '''
     Test if an entry is in the specified set.
@@ -502,10 +504,10 @@ def flush(set=None, family='ipv4'):
 
     ipset_family = _IPSET_FAMILIES[family]
     if set:
-        #cmd = '{0} flush {1} family {2}'.format(_ipset_cmd(), set, ipset_family)
+        # cmd = '{0} flush {1} family {2}'.format(_ipset_cmd(), set, ipset_family)
         cmd = '{0} flush {1}'.format(_ipset_cmd(), set)
     else:
-        #cmd = '{0} flush family {1}'.format(_ipset_cmd(), ipset_family)
+        # cmd = '{0} flush family {1}'.format(_ipset_cmd(), ipset_family)
         cmd = '{0} flush'.format(_ipset_cmd())
     out = __salt__['cmd.run'](cmd, python_shell=False)
 
@@ -536,6 +538,7 @@ def _find_set_members(set):
         if 'Members:' in i:
             startMembers = True
     return members
+
 
 def _find_set_info(set):
     '''
@@ -570,12 +573,14 @@ def _find_set_type(set):
     else:
         return False
 
+
 def _parse_members(settype, members):
     if isinstance(members, six.string_types):
 
         return [_parse_member(settype, members)]
 
     return [_parse_member(settype, member) for member in members]
+
 
 def _parse_member(settype, member, strict=False):
     subtypes = settype.split(':')[1].split(',')
@@ -592,7 +597,7 @@ def _parse_member(settype, member, strict=False):
                 if '/' in part:
                     part = ipaddress.ip_network(part, strict=strict)
                 elif '-' in part:
-                    start,end = map(ipaddress.ip_address, part.split('-'))
+                    start, end = list(map(ipaddress.ip_address, part.split('-')))
 
                     part = list(ipaddress.summarize_address_range(start, end))
                 else:
@@ -610,8 +615,10 @@ def _parse_member(settype, member, strict=False):
 
     return parsed_member
 
+
 def _members_contain(members, entry):
     pass
+
 
 def _member_contains(member, entry):
     if len(member) < len(entry):
@@ -622,6 +629,7 @@ def _member_contains(member, entry):
             return False
 
     return True
+
 
 def _compare_member_parts(member_part, entry_part):
     if member_part == entry_part:
@@ -656,9 +664,11 @@ def _compare_member_parts(member_part, entry_part):
 
     return False
 
+
 def _is_network(o):
     return isinstance(o, ipaddress.IPv4Network) \
         or isinstance(o, ipaddress.IPv6Network)
+
 
 def _is_address(o):
     return isinstance(o, ipaddress.IPv4Address) \
