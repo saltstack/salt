@@ -323,6 +323,12 @@ def list_tasks(location='\\'):
 
     :return: Returns a list of tasks.
     :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_tasks
     '''
     # Create the task service object
     pythoncom.CoInitialize()
@@ -350,6 +356,12 @@ def list_folders(location='\\'):
 
     :return: Returns a list of folders.
     :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_folders
     '''
     # Create the task service object
     pythoncom.CoInitialize()
@@ -379,6 +391,12 @@ def list_triggers(name, location='\\'):
 
     :return: Returns a list of triggers.
     :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_triggers <task_name>
     '''
     # Create the task service object
     pythoncom.CoInitialize()
@@ -409,6 +427,12 @@ def list_actions(name, location='\\'):
 
     :return: Returns a list of actions.
     :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_actions <task_name>
     '''
     # Create the task service object
     pythoncom.CoInitialize()
@@ -459,6 +483,12 @@ def create_task(name,
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time=01:00
     '''
     # Check for existing task
     if name in list_tasks(location) and not force:
@@ -534,6 +564,12 @@ def create_task_from_xml(name,
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.create_task_from_xml <task_name> xml_path=C:\task.xml
     '''
     # Check for existing task
     if name in list_tasks(location):
@@ -611,6 +647,12 @@ def create_folder(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.create_folder <folder_name>
     '''
     # Check for existing folder
     if name in list_folders(location):
@@ -801,6 +843,12 @@ def edit_task(name=None,
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.edit_task <task_name> description='This task is awesome'
     '''
     # TODO: Add more detailed return for items changed
 
@@ -974,6 +1022,12 @@ def delete_task(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.delete_task <task_name>
     '''
     # Check for existing task
     if name not in list_tasks(location):
@@ -1008,6 +1062,12 @@ def delete_folder(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.delete_folder <folder_name>
     '''
     # Check for existing folder
     if name not in list_folders(location):
@@ -1043,6 +1103,12 @@ def run(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_run <task_name>
     '''
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1076,6 +1142,12 @@ def run_wait(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_run_wait <task_name>
     '''
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1127,6 +1199,12 @@ def stop(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_stop <task_name>
     '''
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1165,6 +1243,12 @@ def status(name, location='\\'):
     - Ready
     - Running
     :rtype: string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.list_status <task_name>
     '''
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1194,6 +1278,12 @@ def info(name, location='\\'):
 
     :return:
     :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.info <task_name>
     '''
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1372,6 +1462,12 @@ def add_action(name=None,
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.add_action <task_name> cmd='del /Q /S C:\\Temp'
     '''
     save_definition = False
     if kwargs.get('task_definition', False):
@@ -1723,6 +1819,12 @@ def add_trigger(name=None,
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.add_trigger <task_name> trigger_type=Once trigger_enabled=True start_date=2016/12/1 start_time=12:01
     '''
     if not trigger_type:
         return 'Required parameter "trigger_type" not specified'
@@ -2017,6 +2119,12 @@ def clear_triggers(name, location='\\'):
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' task.clear_trigger <task_name>
     '''
     # Check for existing task
     if name not in list_tasks(location):

@@ -302,6 +302,12 @@ def shutdown_abort():
 
     :return: True if successful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.shutdown_abort
     '''
     try:
         win32api.AbortSystemShutdown('127.0.0.1')
@@ -321,6 +327,12 @@ def lock():
 
     :return: True if successful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.lock
     '''
     return windll.user32.LockWorkStation()
 
@@ -450,6 +462,12 @@ def get_system_info():
         Returns a Dictionary containing information about the system to include
         name, description, version, etc...
     :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_info
     '''
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
@@ -783,6 +801,12 @@ def get_domain_workgroup():
     :return: The name of the domain or workgroup
     :rtype: str
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_domain_workgroup
+
     '''
     pythoncom.CoInitialize()
     conn = wmi.WMI()
@@ -819,6 +843,12 @@ def get_system_time():
 
     :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_system_time
     '''
     now = win32api.GetLocalTime()
     meridian = 'AM'
@@ -846,6 +876,12 @@ def set_system_time(newtime):
 
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_system_time 12:01
     '''
     # Get date/time object from newtime
     fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']

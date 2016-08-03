@@ -617,6 +617,14 @@ def modify(name,
         run_interactive (bool): If this setting is True, the service will be
         allowed to interact with the user. Not recommended for services that run
         with elevated privileges.
+
+    Returns (dict): A dictionary of changes made
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.modify spooler start_type=disabled
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx

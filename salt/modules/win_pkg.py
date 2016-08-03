@@ -1182,6 +1182,21 @@ def get_repo_data(saltenv='base'):
 
 
 def get_name_map(saltenv='base'):
+    '''
+    Return a reverse map of full pkg names to the names recognized by winrepo.
+
+    Args:
+        saltenv: The environment to pull use
+
+    Returns: A dictionary of the name map
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_name_map
+
+    '''
     return _get_name_map(saltenv)
 
 
@@ -1224,5 +1239,18 @@ def _get_latest_pkg_version(pkginfo):
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
     Compare software package versions
+
+    Args:
+        ver1 (str): A software version to compare
+        oper (str): The operand to use to compare
+        ver2 (str): A software version to compare
+
+    Returns (bool): True if the comparison is valid, otherwise False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
     return salt.utils.compare_versions(ver1, oper, ver2)

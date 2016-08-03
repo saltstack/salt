@@ -237,7 +237,7 @@ def run_config(path, source=None, config=None, salt_env='base'):
     :return: True if successfully compiled and applied, False if not
     :rtype: bool
 
-    CLI Example
+    CLI Example:
 
     To compile a config from a script that already exists on the system:
 
@@ -577,8 +577,13 @@ def set_lcm_config(config_mode=None,
     :param int status_retention_days: Number of days to keep status of the
     current config.
 
-    Returns:
+    Returns (bool): True if successful, otherwise False
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.set_lcm_config ApplyOnly
     '''
     cmd = 'Configuration SaltConfig {'
     cmd += '    Node localhost {'
