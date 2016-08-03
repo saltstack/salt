@@ -25,8 +25,13 @@ def __virtual__():
     return __virtualname__
 
 '''
-Units in seconds [interval] and percent [min, max]
-Reports below min or above max. Set both to 0 for reports every interval
+Emits load levels based on the parameters below.
+
+Units in seconds [interval] and percent [min, max].
+Reports below min or above max. Set both to 0 for reports every interval.
+Set percpu for percpu percentages, instead of the overall number.
+Failing to provide min/max data will result in defaults that cause the response
+to be sent every time (so to always send, just leave those out).
 
 beacons
   load:
@@ -53,9 +58,9 @@ def beacon(config):
     if 'onchangeonly' not in config:
         config['onchangeonly'] = False
     if 'max' not in config:
-        config['max'] = 101
+        config['max'] = -1
     if 'min' not in config:
-        config['min'] = -1
+        config['min'] = 101
     cpu_percent = psutil.cpu_percent(interval=1)
     log.trace(cpu_percent)
     send_beacon = False
