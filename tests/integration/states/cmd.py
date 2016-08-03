@@ -9,6 +9,7 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
