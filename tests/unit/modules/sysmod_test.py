@@ -164,15 +164,15 @@ class SysmodTestCase(TestCase):
 
         self.assertListEqual(sysmod.list_modules('nonexist'), [])
 
+        # these all really do the same thing (*the '.' at the end is an internal implementation trick)
         self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
-
         self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
 
-        self.assertListEqual(sysmod.list_functions('sys.l'), [])
-
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
         self.assertListEqual(sysmod.list_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
 
-        self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_functions('sys.list'), [])
 
     # 'list_modules' function tests: 1
 
