@@ -650,9 +650,30 @@ class SaltMinion(SaltDaemonScriptBase):
             return set([self.config['id']])
 
 
+class SaltProxy(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-proxy daemon
+    '''
+
+    cli_script_name = 'salt-proxy'
+
+    def get_script_args(self):
+        script_args = ['-l', 'quiet', '--proxyid', 'testproxy']
+        if salt.utils.is_windows() is False:
+            script_args.append('--disable-keepalive')
+        return script_args
+
+    def get_check_ports(self):
+        if salt.utils.is_windows():
+            return set([self.config['tcp_pub_port'],
+                        self.config['tcp_pull_port']])
+        else:
+            return set([self.config['id']])
+
+
 class SaltMaster(SaltDaemonScriptBase):
     '''
-    Class which runs the salt-minion daemon
+    Class which runs the salt-master daemon
     '''
 
     cli_script_name = 'salt-master'
