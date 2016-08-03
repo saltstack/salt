@@ -23,6 +23,7 @@ ensure_in_syspath('../../')
 import integration  # pylint: disable=import-error
 
 # Import Salt libs
+import salt.utils
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -61,7 +62,7 @@ class LazyLoaderTest(TestCase):
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with open(self.module_file, 'w') as fh:
-            fh.write(loader_template)
+            fh.write(loader_template.decode())
             fh.flush()
             os.fsync(fh.fileno())
 
@@ -265,7 +266,11 @@ class LazyLoaderReloadingTest(TestCase):
     def update_module(self):
         self.count += 1
         with open(self.module_path, 'wb') as fh:
-            fh.write(module_template.format(count=self.count))
+            fh.write(
+                salt.utils.to_bytes(
+                    module_template.format(count=self.count)
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
@@ -394,12 +399,17 @@ class LazyLoaderSubmodReloadingTest(TestCase):
                                  )
 
     def tearDown(self):
-        shutil.rmtree(self.tmp_dir)
+        #shutil.rmtree(self.tmp_dir)
+        pass
 
     def update_module(self):
         self.count += 1
         with open(self.module_path, 'wb') as fh:
-            fh.write(submodule_template.format(count=self.count))
+            fh.write(
+                salt.utils.to_bytes(
+                    submodule_template.format(count=self.count)
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
@@ -419,7 +429,11 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     def update_lib(self):
         self.lib_count += 1
         with open(self.lib_path, 'wb') as fh:
-            fh.write(submodule_lib_template.format(count=self.lib_count))
+            fh.write(
+                salt.utils.to_bytes(
+                    submodule_lib_template.format(count=self.lib_count)
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
@@ -534,7 +548,7 @@ class LazyLoaderModulePackageTest(TestCase):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(pyfile, 'wb') as fh:
-            fh.write(contents)
+            fh.write(salt.utils.to_bytes(contents))
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
@@ -619,6 +633,8 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
         # bootstrap libs
         with open(os.path.join(self.module_dir, '__init__.py'), 'w') as fh:
+            # No .decode() needed here as deep_init_base is defined as str and
+            # not bytes.
             fh.write(deep_init_base)
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
@@ -652,7 +668,11 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         path = os.path.join(self.lib_paths[lib_name], '__init__.py')
         self.lib_count[lib_name] += 1
         with open(path, 'wb') as fh:
-            fh.write(submodule_lib_template.format(count=self.lib_count[lib_name]))
+            fh.write(
+                salt.utils.to_bytes(
+                    submodule_lib_template.format(count=self.lib_count[lib_name])
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
