@@ -1693,13 +1693,13 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
                                                  OptionParser,
+                                                 ProxyIdMixIn,
                                                  ConfigDirMixIn,
                                                  MergeConfigMixIn,
                                                  LogLevelMixIn,
                                                  RunUserMixin,
                                                  DaemonMixIn,
-                                                 SaltfileMixIn,
-                                                 ProxyIdMixIn)):  # pylint: disable=no-init
+                                                 SaltfileMixIn)):  # pylint: disable=no-init
 
     description = (
         'The Salt proxy minion, connects to and controls devices not able to run a minion.  '
@@ -1712,8 +1712,13 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
 
     def setup_config(self):
+        try:
+            minion_id = self.values.proxyid
+        except AttributeError:
+            minion_id = None
+
         return config.minion_config(self.get_config_file_path(),
-                                   cache_minion_id=False)
+                                   cache_minion_id=False, minion_id=minion_id)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
