@@ -136,12 +136,15 @@ def _get_repos(profile, params=None):
     )
 
 
-def list_users(profile="github"):
+def list_users(profile="github", ignore_cache=False):
     '''
     List all users within the organization.
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
+
+    ignore_cache
+        Bypasses the use of cached users.
 
     CLI Example:
 
@@ -154,14 +157,10 @@ def list_users(profile="github"):
     key = "github.{0}:users".format(
         org_name
     )
-
-    if key not in __context__:
+    if key not in __context__ or ignore_cache:
         client = _get_client(profile)
         organization = client.get_organization(org_name)
-
-        users = [member.login for member in _get_members(organization, None)]
-        __context__[key] = users
-
+        __context__[key] = [member.login for member in _get_members(organization, None)]
     return __context__[key]
 
 
@@ -840,6 +839,537 @@ def list_public_repos(profile='github'):
         if repo.private is False:
             repos.append(repo.name)
     return repos
+
+
+def get_team(name, profile="github"):
+    '''
+    Returns the team details if a team with the given name exists, or None
+    otherwise.
+
+    name
+        The team name for which to obtain information.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.get_team 'team_name'
+    '''
+    return list_teams(profile).get(name)
+
+
+def add_team(name,
+             description=None,
+             repo_names=None,
+             privacy=None,
+             permission=None,
+             profile="github"):
+    '''
+    Create a new github team.
+
+    name
+        The name of the team to be created.
+
+    description
+        The description of the team.
+
+    repo_names
+        The names of repositories to add the team to.
+
+    privacy
+        The level of privacy for the team, can be 'secret' or 'closed'.
+
+    permission
+        The default permission for new repositories added to the team, can be
+        'pull', 'push' or 'admin'.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.add_team 'team_name'
+    '''
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        parameters = {}
+        parameters['name'] = name
+
+        if description is not None:
+            parameters['description'] = description
+        if repo_names is not None:
+            parameters['repo_names'] = repo_names
+        if permission is not None:
+            parameters['permission'] = permission
+        if privacy is not None:
+            parameters['privacy'] = privacy
+
+        organization._requester.requestJsonAndCheck(
+            'POST',
+            organization.url + '/teams',
+            input=parameters
+        )
+        list_teams(ignore_cache=True)  # Refresh cache
+        return True
+    except github.GithubException as e:
+        logging.exception('Error creating a team: {0}'.format(str(e)))
+        return False
+
+
+def edit_team(name,
+              description=None,
+              privacy=None,
+              permission=None,
+              profile="github"):
+    '''
+    Updates the team properties.
+
+    name
+        The name of the team to be edited.
+
+    description
+        The description of the team.
+
+    privacy
+        The level of privacy for the team, can be 'secret' or 'closed'.
+
+    permission
+        The default permission for new repositories added to the team, can be
+        'pull', 'push' or 'admin'.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.edit_team 'team_name' description='Team description'
+    '''
+    team = get_team(name, profile=profile)
+    if not team:
+        logging.error('Team {0} does not exist'.format(name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team['id'])
+
+        parameters = {}
+        if name is not None:
+            parameters['name'] = name
+        if 'description' is not None:
+            parameters['description'] = description
+        if 'privacy' is not None:
+            parameters['privacy'] = privacy
+        if permission is not None:
+            parameters['permission'] = permission
+
+        team._requester.requestJsonAndCheck(
+            "PATCH",
+            team.url,
+            input=parameters
+        )
+        return True
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(team['id']))
+        return False
+
+
+def remove_team(name, profile="github"):
+    '''
+    Remove a github team.
+
+    name
+        The name of the team to be removed.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.remove_team 'team_name'
+    '''
+    team_info = get_team(name, profile=profile)
+    if not team_info:
+        logging.error('Team {0} to be removed does not exist.'.format(name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team_info['id'])
+        team.delete()
+        return list_teams(ignore_cache=True, profile=profile).get(name) is None
+    except github.GithubException as e:
+        logging.exception('Error deleting a team: {0}'.format(str(e)))
+        return False
+
+
+def list_team_repos(team_name, profile="github", ignore_cache=False):
+    '''
+    Gets the names of team repos in lower case.
+
+    team_name
+        The name of the team from which to list repos.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    ignore_cache
+        Bypasses the use of cached team repos.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.list_team_repos 'team_name'
+    '''
+    cached_team = get_team(team_name, profile=profile)
+    if not cached_team:
+        logging.error('Team {0} does not exist.'.format(team_name))
+        return False
+
+    # Return from cache if available
+    if cached_team.get('repos') and not ignore_cache:
+        return cached_team.get('repos')
+
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(cached_team['id'])
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+    try:
+        cached_team['repos'] = [repo.name.lower() for repo in team.get_repos()]
+        return cached_team['repos']
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        return []
+
+
+def add_team_repo(repo_name, team_name, profile="github"):
+    '''
+    Adds a repository to a team with team_name.
+
+    repo_name
+        The name of the repository to add.
+
+    team_name
+        The name of the team of which to add the repository.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.add_team_repo 'my_repo' 'team_name'
+    '''
+    team = get_team(team_name, profile=profile)
+    if not team:
+        logging.error('Team {0} does not exist'.format(team_name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team['id'])
+        repo = organization.get_repo(repo_name)
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(team['id']))
+        return False
+    team.add_to_repos(repo)
+    return repo_name in list_team_repos(team_name, profile=profile, ignore_cache=True)
+
+
+def remove_team_repo(repo_name, team_name, profile="github"):
+    '''
+    Removes a repository from a team with team_name.
+
+    repo_name
+        The name of the repository to remove.
+
+    team_name
+        The name of the team of which to remove the repository.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.remove_team_repo 'my_repo' 'team_name'
+    '''
+    team = get_team(team_name, profile=profile)
+    if not team:
+        logging.error('Team {0} does not exist'.format(team_name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team['id'])
+        repo = organization.get_repo(repo_name)
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(team['id']))
+        return False
+    team.remove_from_repos(repo)
+    return repo_name not in list_team_repos(team_name, profile=profile, ignore_cache=True)
+
+
+def list_team_members(team_name, profile="github", ignore_cache=False):
+    '''
+    Gets the names of team members in lower case.
+
+    team_name
+        The name of the team from which to list members.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    ignore_cache
+        Bypasses the use of cached team members.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.list_team_members 'team_name'
+    '''
+    cached_team = get_team(team_name, profile=profile)
+    if not cached_team:
+        logging.error('Team {0} does not exist.'.format(team_name))
+        return False
+    # Return from cache if available
+    if cached_team.get('members') and not ignore_cache:
+        return cached_team.get('members')
+
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(cached_team['id'])
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+    try:
+        cached_team['members'] = [member.login.lower()
+                                  for member in team.get_members()]
+        return cached_team['members']
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        return []
+
+
+def list_members_without_mfa(profile="github", ignore_cache=False):
+    '''
+    List all members (in lower case) without MFA turned on.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    ignore_cache
+        Bypasses the use of cached team repos.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.list_members_without_mfa
+    '''
+    key = "github.{0}:non_mfa_users".format(
+        _get_config_value(profile, 'org_name')
+    )
+
+    if key not in __context__ or ignore_cache:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        __context__[key] = [m.login.lower() for m in
+                            _get_members(organization, {'filter': '2fa_disabled'})]
+    return __context__[key]
+
+
+def is_team_member(name, team_name, profile="github"):
+    '''
+    Returns True if the github user is in the team with team_name, or False
+    otherwise.
+
+    name
+        The name of the user whose membership to check.
+
+    team_name
+        The name of the team to check membership in.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.is_team_member 'user_name' 'team_name'
+    '''
+    return name.lower() in list_team_members(team_name, profile=profile)
+
+
+def add_team_member(name, team_name, profile="github"):
+    '''
+    Adds a team member to a team with team_name.
+
+    name
+        The name of the team member to add.
+
+    team_name
+        The name of the team of which to add the user.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.add_team_member 'user_name' 'team_name'
+    '''
+    team = get_team(team_name, profile=profile)
+    if not team:
+        logging.error('Team {0} does not exist'.format(team_name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team['id'])
+        member = client.get_user(name)
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(team['id']))
+        return False
+
+    if not hasattr(team, 'add_membership'):
+        return (False, 'PyGithub 1.26.0 or greater is required for team '
+                       'management, please upgrade.')
+    try:
+        # Can't use team.add_membership due to this bug that hasn't made it into
+        # a PyGithub release yet https://github.com/PyGithub/PyGithub/issues/363
+        headers, data = team._requester.requestJsonAndCheck(
+            "PUT",
+            team.url + "/memberships/" + member._identity,
+            input={'role': 'member'},
+            parameters={'role': 'member'}
+        )
+    except github.GithubException as e:
+        logging.exception('Error in adding a member to a team: {0}'.format(str(e)))
+        return False
+    return team.has_in_members(member)
+
+
+def remove_team_member(name, team_name, profile="github"):
+    '''
+    Removes a team member from a team with team_name.
+
+    name
+        The name of the team member to remove.
+
+    team_name
+        The name of the team from which to remove the user.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.remove_team_member 'user_name' 'team_name'
+    '''
+    team = get_team(team_name, profile=profile)
+    if not team:
+        logging.error('Team {0} does not exist'.format(team_name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        team = organization.get_team(team['id'])
+        member = client.get_user(name)
+
+    except UnknownObjectException as e:
+        logging.exception('Resource not found: {0}'.format(team['id']))
+        return False
+
+    if not hasattr(team, 'remove_from_members'):
+        return (False, 'PyGithub 1.26.0 or greater is required for team '
+                       'management, please upgrade.')
+
+    team.remove_from_members(member)
+    return not team.has_in_members(member)
+
+
+def list_teams(profile="github", ignore_cache=False):
+    '''
+    Lists all teams with the organization.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    ignore_cache
+        Bypasses the use of cached teams.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.list_teams
+    '''
+    key = 'github.{0}:teams'.format(
+        _get_config_value(profile, 'org_name')
+    )
+
+    if key not in __context__ or ignore_cache:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        headers, teams_data = organization._requester.requestJsonAndCheck(
+            'GET',
+            organization.url + '/teams'
+        )
+        teams = {}
+        for team in teams_data:
+            teams[team['name']] = {
+                'id': team['id'],
+                'slug': team['slug'],
+                'description': team['description'],
+                'permission': team['permission'],
+                'privacy': team['privacy']
+            }
+        __context__[key] = teams
+
+    return __context__[key]
 
 
 def _format_issue(issue):
