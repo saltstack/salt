@@ -407,19 +407,23 @@ class MinionBase(object):
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
-                mod, fun = opts['master'].split('.')
+                mod_fun = opts['master']
+                mod, fun = mod_fun.split('.')
                 try:
                     master_mod = salt.loader.raw_mod(opts, mod, fun)
                     if not master_mod:
-                        raise TypeError
+                        raise KeyError
                     # we take whatever the module returns as master address
-                    opts['master'] = master_mod[mod + '.' + fun]()
-                except TypeError:
-                    msg = ('Failed to evaluate master address from '
-                           'module \'{0}\''.format(opts['master']))
-                    log.error(msg)
+                    opts['master'] = master_mod[mod_fun]()
+                    if not isinstance(opts['master'], str):
+                        raise TypeError
+                except KeyError:
+                    log.error('Failed to load module {0}'.format(mod_fun))
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-                log.info('Evaluated master from module: {0}'.format(master_mod))
+                except TypeError:
+                    log.error('{0} returned from {1} is not a string'.format(opts['master'], mod_fun))
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                log.info('Evaluated master from module: {0}'.format(mod_fun))
 
             # if failover is set, master has to be of type list
             elif opts['master_type'] == 'failover':
