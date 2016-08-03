@@ -829,7 +829,8 @@ class VMwareTestCase(ExtendedTestCase):
         '''
 
         profile_additions = {
-            'clonefrom': 'test-template'
+            'clonefrom': 'test-template',
+            'image': 'should ignore image'
         }
 
         provider_config = deepcopy(PROVIDER_CONFIG)
@@ -845,7 +846,8 @@ class VMwareTestCase(ExtendedTestCase):
             self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
                                                           'base-gold', vm_=vm_), True)
 
-    def test_no_clonefrom_expect_fail(self):
+    @patch('salt.config.log')
+    def test_no_clonefrom_or_image_expect_fail(self, log_mock):
         '''
         Tests that not including the clonefrom property will result in an invalid profile
         '''
@@ -861,9 +863,14 @@ class VMwareTestCase(ExtendedTestCase):
         }
         provider_config['vcenter01']['vmware'].update(provider_config_additions)
         vm_ = {'profile': profile}
+
         with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
             self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
                                                           'base-gold', vm_=vm_), False)
+            self.assertEqual(log_mock.error.call_args[0][0],
+                              "The required '{0}' configuration setting is missing from "
+                              "the '{1}' profile, which is configured under the '{2}' "
+                              'alias.'.format('clonefrom', 'base-gold', 'vcenter01'))
 
     @patch('salt.cloud.clouds.vmware.randint', return_value=101)
     def test_add_new_ide_controller_helper(self, randint_mock):
