@@ -61,12 +61,13 @@ def beacon(config):
     send_beacon = False
     ret = []
 
-    if config['onchangeonly']:
-        if not LAST_STATUS:
-            LAST_STATUS = cpu_percent
-            if not config['emitatstartup']:
-                log.debug('Dont emit because emitatstartup is False')
-                return ret
+    global LAST_STATUS
+    if LAST_STATUS < 0:
+        send_beacon = True
+        LAST_STATUS = cpu_percent
+        if not config['emitatstartup']:
+            log.debug('Dont emit because emitatstartup is False')
+            return ret
 
     # Check each entry for threshold
     if config['onchangeonly']:
