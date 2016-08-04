@@ -2202,3 +2202,114 @@ def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
         msg = 'Failed to list role {0} attached policies.'
         log.error(msg.format(role_name))
         return []
+
+
+def create_saml_provider(name, saml_metadata_document, update=False, region=None, key=None, keyid=None, profile=None):
+    '''
+    Create SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.create_saml_provider my_saml_provider_name saml_metadata_document
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        # Try to find the ARN of an existing SAML provider with the same name.
+        saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
+        if not saml_provider_arn:
+            # If the SAML provider is missing, we create it.
+            response = conn.create_saml_provider(saml_metadata_document, name)
+            log.info('Created SAML provider {0}.'.format(name))
+            return response
+        elif update:
+            # If the SAML provider is already present and update parameter is True, we update it.
+            log.info('SAML provider {0} already exists, updating SAML Metadata Document.'.format(name))
+            response = conn.update_saml_provider(saml_provider_arn, saml_metadata_document)
+            log.info('Updated SAML provider {0} ({1}).'.format(name, saml_provider_arn))
+            return response
+        # If the SAML provider is already present and update parameter is False, there is nothing to do.
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create SAML provider {0}.'
+        log.error(msg.format(name))
+        return False
+
+
+def get_saml_provider_arn(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_saml_provider_arn my_saml_provider_name
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        # Get the list of all SAML providers.
+        response = conn.list_saml_providers()
+        # Search for ARN of the SAML provider.
+        for saml_provider in response.list_saml_providers_response.list_saml_providers_result.saml_provider_list:
+            if saml_provider['arn'].endswith(':saml-provider/' + name):
+                # We found the SAML provider, return the ARN.
+                return saml_provider['arn']
+        # We did not find the SAML provider.
+        return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to failed to get ARN of SAML provider {0}.'
+        log.error(msg.format(name))
+        return False
+
+def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_saml_provider my_saml_provider_name
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
+        # The work is done if we the SAML provider is not present anymore.
+        if not saml_provider_arn:
+            msg = 'SAML provider {0} not found.'
+            log.info(msg.format(name))
+            return True
+        # Delete the SAML provider found before.
+        conn.delete_saml_provider(saml_provider_arn)
+        msg = 'Successfully deleted {0} SAML provider.'
+        log.info(msg.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete {0} SAML provider.'
+        log.error(msg.format(name))
+        return False
+
+
+def list_saml_providers(region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_saml_providers
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.list_saml_providers()
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get list of SAML providers.'
+        log.error(msg)
+        return False
