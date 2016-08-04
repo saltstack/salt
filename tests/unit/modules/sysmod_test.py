@@ -162,7 +162,7 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_functions(), functions)
 
-        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+        self.assertListEqual(sysmod.list_functions('nonexist'), [])
 
         # these all really do the same thing (*the '.' at the end is an internal implementation trick)
         self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
