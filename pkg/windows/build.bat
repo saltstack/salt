@@ -19,6 +19,7 @@ Set "PyDir=C:\Python27"
 Set "CurDir=%~dp0"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
+:: Get the version from git if not passed
 if [%1]==[] (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 ) else (

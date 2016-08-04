@@ -9,7 +9,13 @@ Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PyDir=C:\Python27"
-Set "Version=%1"
+
+:: Get the version from git if not passed
+if [%1]==[] (
+    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+) else (
+    set "Version=%~1"
+)
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
