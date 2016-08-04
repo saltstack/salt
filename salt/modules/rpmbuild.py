@@ -466,4 +466,4 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
                     proc.close(terminate=True, kill=True)
 
     cmd = 'createrepo --update {0}'.format(repodir)
-    __salt__['cmd.run'](cmd, runas=runas)
+    return __salt__['cmd.run_all'](cmd, runas=runas)
