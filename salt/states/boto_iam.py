@@ -1483,6 +1483,88 @@ def policy_absent(name,
     return ret
 
 
+def saml_provider_present(name, saml_metadata_document, update=False):
+    '''
+
+    .. versionadded:: 2015.8.0
+
+    Ensure the SAML provider with the specified name is present.
+
+    name (string)
+        The name of the SAML provider.
+
+    saml_metadata_document (string)
+        The xml document of the SAML provider.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if __opts__['test']:
+        ret['comment'] = 'SAML provider {0} is set to be create.'.format(name)
+        ret['result'] = None
+        return ret
+    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document, update)
+    if created is not False:
+        ret['comment'] = 'SAML provider {0} was created.'.format(name)
+        ret['changes'] = created
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'SAML provider {0} failed to be created.'.format(name)
+    return ret
+
+
+def saml_provider_absent(name):
+    '''
+
+    .. versionadded:: 2015.8.0
+
+    Ensure the SAML provider with the specified name is absent.
+
+    name (string)
+        The name of the SAML provider.
+
+    saml_metadata_document (string)
+        The xml document of the SAML provider.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if __opts__['test']:
+        ret['comment'] = 'SAML provider {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_iam.delete_saml_provider'](name)
+    if deleted is not False:
+        ret['comment'] = 'SAML provider {0} was deleted.'.format(name)
+        ret['changes'] = created
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'SAML provider {0} failed to be deleted.'.format(name)
+    return ret
+
+
 def _get_error(error):
     # Converts boto exception to string that can be used to output error.
     error = '\n'.join(error.split('\n')[1:])
