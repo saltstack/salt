@@ -1558,7 +1558,7 @@ def saml_provider_absent(name):
     deleted = __salt__['boto_iam.delete_saml_provider'](name)
     if deleted is not False:
         ret['comment'] = 'SAML provider {0} was deleted.'.format(name)
-        ret['changes'] = created
+        ret['changes'] = deleted
         return ret
     ret['result'] = False
     ret['comment'] = 'SAML provider {0} failed to be deleted.'.format(name)
