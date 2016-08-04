@@ -2265,6 +2265,7 @@ def get_saml_provider_arn(name, region=None, key=None, keyid=None, profile=None)
         log.error(msg.format(name))
         return False
 
+
 def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete SAML provider
@@ -2297,7 +2298,7 @@ def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
 
 def list_saml_providers(region=None, key=None, keyid=None, profile=None):
     '''
-    Delete SAML provider
+    List SAML provider
 
     CLI Example:
 
