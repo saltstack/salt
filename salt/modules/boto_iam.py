@@ -2313,3 +2313,23 @@ def list_saml_providers(region=None, key=None, keyid=None, profile=None):
         msg = 'Failed to get list of SAML providers.'
         log.error(msg)
         return False
+
+
+def get_saml_provider(arn, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get SAML provider document.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_saml_provider arn
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_saml_provider()
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get SAML provider document.'
+        log.error(msg)
+        return False
