@@ -1333,7 +1333,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.pkg /tmp/state_pkg.tgz
+        salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
     '''
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
