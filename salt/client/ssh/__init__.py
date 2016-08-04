@@ -126,6 +126,9 @@ SUDO=""
 if [ -n "{{SUDO}}" ]
 then SUDO="sudo "
 fi
+if [ "$SUDO" ]
+then SUDO="sudo -u {{SUDO_USER}}"
+fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
@@ -228,6 +231,10 @@ class SSH(object):
             'sudo': self.opts.get(
                 'ssh_sudo',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
+            ),
+            'sudo_user': self.opts.get(
+                'ssh_sudo_user',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_sudo_user']
             ),
             'identities_only': self.opts.get(
                 'ssh_identities_only',
@@ -609,6 +616,7 @@ class Single(object):
             mine=False,
             minion_opts=None,
             identities_only=False,
+            sudo_user=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -656,7 +664,8 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods,
-                'identities_only': identities_only}
+                'identities_only': identities_only,
+                'sudo_user': sudo_user}
         self.minion_opts = opts.get('ssh_minion_opts', {})
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
@@ -889,6 +898,7 @@ class Single(object):
         Prepare the command string
         '''
         sudo = 'sudo' if self.target['sudo'] else ''
+        sudo_user = self.target['sudo_user']
         if '_caller_cachedir' in self.opts:
             cachedir = self.opts['_caller_cachedir']
         else:
@@ -927,10 +937,10 @@ ARGS = {10}\n'''.format(self.minion_config,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64')
-
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
+            SUDO_USER=sudo_user,
             SSH_PY_CODE=py_code_enc,
             HOST_PY_MAJOR=sys.version_info[0],
         )
