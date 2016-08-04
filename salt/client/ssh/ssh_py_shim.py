@@ -65,9 +65,14 @@ def need_deployment():
     # If SUDOing then also give the super user group write permissions
     sudo_gid = os.environ.get('SUDO_GID')
     if sudo_gid:
-        os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
-        stt = os.stat(OPTIONS.saltdir)
-        os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+        try:
+            os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
+            stt = os.stat(OPTIONS.saltdir)
+            os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+        except OSError:
+            sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
+                    'and is not root, be certain the user is in the same group\nas the login user')
+            sys.exit(1)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
