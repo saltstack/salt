@@ -1,4 +1,4 @@
-!define PRODUCT_NAME "Salt Minion"
+!define PRODUCT_NAME "Salt"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -50,7 +50,7 @@ Var StartService
 !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
 ; Directory page
 #!insertmacro MUI_PAGE_DIRECTORY
-Page custom nsDialogsPage nsDialogsPageLeave
+Page custom pageMinionConfig pageMinionConfig_Leave
 ; Instfiles page
 !insertmacro MUI_PAGE_INSTFILES
 
@@ -77,8 +77,11 @@ Page custom nsDialogsPage nsDialogsPageLeave
 ; MUI end ------
 
 
-Function nsDialogsPage
+LangString PAGE_TITLE ${LANG_ENGLISH} "Minion Settings"
+LangString PAGE_SUBTITLE ${LANG_ENGLISH} "Set the Minion Master and ID"
+Function pageMinionConfig
 
+  !insertmacro MUI_HEADER_TEXT $(PAGE_TITLE) $(PAGE_SUBTITLE)
   nsDialogs::Create 1018
   Pop $Dialog
 
@@ -103,7 +106,7 @@ Function nsDialogsPage
 FunctionEnd
 
 
-Function nsDialogsPageLeave
+Function pageMinionConfig_Leave
 
   ${NSD_GetText} $MasterHost $MasterHost_State
   #MessageBox MB_OK "Master Hostname is:$\n$\n$MasterHost_State"
@@ -216,7 +219,7 @@ FunctionEnd
 
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+OutFile "Salt-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
