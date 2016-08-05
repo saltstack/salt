@@ -7,6 +7,7 @@ Beacon to emit system load averages
 from __future__ import absolute_import
 import logging
 import psutil
+import os
 
 # Import Salt libs
 import salt.utils
@@ -26,6 +27,8 @@ def __virtual__():
 
 '''
 Emits load levels based on the parameters below.
+Works in:
+-Windows
 
 Units in seconds [interval] and percent [min, max].
 Reports below min or above max. Set both to 0 for reports every interval.
@@ -94,9 +97,30 @@ def beacon(config):
     if config['onchangeonly']:
         LAST_STATUS = cpu_percent
 
-    if 'percpu' in config:
-        cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
     if send_beacon:
-        ret.append({'min': config['min'], 'max': config['max'], 'actual': cpu_percent})
+        ret.append({'min': config['min'], 'max': config['max']})
+        if 'percpu' in config:
+            cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
+        ret.append({'load': cpu_percent})
+        if 'queue' in config:
+            ret.append({'processorqueue': getProcessorQueueLength()})
 
     return ret
+
+def getProcessorQueueLength():
+
+    if salt.utils.is_windows():
+        return getWindowsProcessorQueueLength()
+    else:
+        return getUnixProcessorQueueLength()
+
+def getWindowsProcessorQueueLength():
+    return os.system('wmic path Win32_PerfFormattedData_PerfOS_System get ProcessorQueueLength')
+
+def getUnixProcessorQueueLength():
+    processIterator = psutil.process_iter
+    count = 0
+    for p in processIterator():
+        if p.status() == 'running':
+            count += 1
+    return count
