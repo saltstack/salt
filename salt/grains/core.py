@@ -1511,16 +1511,27 @@ def os_data():
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
 
-    if grains.get('osrelease', ''):
-        osrelease_info = grains['osrelease'].split('.')
+    osrelease_grain = grains.get('osrelease', '')
+    os_grain = grains.get('os', '')
+    osfullname_grain = grains.get('osfullname', '')
+
+    os_name = os_grain if os_grain in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else osfullname_grain
+
+    if os_grain in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') or osfullname_grain == 'Ubuntu':
+        os_ver = osrelease_grain
+    else:
+        os_ver = osrelease_grain.partition('.')[0]
+
+    grains['osmajorrelease'] = osrelease_grain.split('.', 1)[0]
+    grains['osfinger'] = '{0}-{1}'.format(os_name, os_ver)
+
+    if osrelease:
+        osrelease_info = osrelease.split('.')
         for idx, value in enumerate(osrelease_info):
             if not value.isdigit():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
-        grains['osmajorrelease'] = grains['osrelease_info'][0]
-        os_name = 'os' if grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname'
-        grains['osfinger'] = '{0}-{1}'.format(grains[os_name], grains['osrelease_info'][0])
 
     return grains
 
