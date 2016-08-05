@@ -7,13 +7,12 @@ Connection library for Amazon IAM
 from __future__ import absolute_import
 
 # Import Python libs
-import json
 import logging
 import time
 import pprint
 from salt.ext.six.moves import range
 import salt.ext.six as six
-import salt.utils
+
 try:
     import requests
     HAS_REQUESTS = True  # pylint: disable=W0612
