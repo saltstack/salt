@@ -222,6 +222,8 @@ def team_present(
                     user1:
                         enforce_mfa_from: 2016/06/15
                 - enforce_mfa: True
+
+    .. versionadded:: Carbon
     '''
     ret = {
         'name': name,
@@ -437,6 +439,7 @@ def team_absent(name, profile="github", **kwargs):
     name
         This is the name of the team in the organization.
 
+    .. versionadded:: Carbon
     '''
     ret = {
         'name': name,

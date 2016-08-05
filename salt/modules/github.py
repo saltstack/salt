@@ -146,6 +146,8 @@ def list_users(profile="github", ignore_cache=False):
     ignore_cache
         Bypasses the use of cached users.
 
+        .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
@@ -894,6 +896,8 @@ def add_team(name,
     .. code-block:: bash
 
         salt myminion github.add_team 'team_name'
+
+    .. versionadded:: Carbon
     '''
     try:
         client = _get_client(profile)
@@ -953,6 +957,8 @@ def edit_team(name,
     .. code-block:: bash
 
         salt myminion github.edit_team 'team_name' description='Team description'
+
+    .. versionadded:: Carbon
     '''
     team = get_team(name, profile=profile)
     if not team:
@@ -1001,6 +1007,8 @@ def remove_team(name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.remove_team 'team_name'
+
+    .. versionadded:: Carbon
     '''
     team_info = get_team(name, profile=profile)
     if not team_info:
@@ -1037,6 +1045,8 @@ def list_team_repos(team_name, profile="github", ignore_cache=False):
     .. code-block:: bash
 
         salt myminion github.list_team_repos 'team_name'
+
+    .. versionadded:: Carbon
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
@@ -1081,6 +1091,8 @@ def add_team_repo(repo_name, team_name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.add_team_repo 'my_repo' 'team_name'
+
+    .. versionadded:: Carbon
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1118,6 +1130,8 @@ def remove_team_repo(repo_name, team_name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.remove_team_repo 'my_repo' 'team_name'
+
+    .. versionadded:: Carbon
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1155,6 +1169,8 @@ def list_team_members(team_name, profile="github", ignore_cache=False):
     .. code-block:: bash
 
         salt myminion github.list_team_members 'team_name'
+
+    .. versionadded:: Carbon
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
@@ -1196,6 +1212,8 @@ def list_members_without_mfa(profile="github", ignore_cache=False):
     .. code-block:: bash
 
         salt myminion github.list_members_without_mfa
+
+    .. versionadded:: Carbon
     '''
     key = "github.{0}:non_mfa_users".format(
         _get_config_value(profile, 'org_name')
@@ -1230,6 +1248,8 @@ def is_team_member(name, team_name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.is_team_member 'user_name' 'team_name'
+
+    .. versionadded:: Carbon
     '''
     return name.lower() in list_team_members(team_name, profile=profile)
 
@@ -1252,6 +1272,8 @@ def add_team_member(name, team_name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.add_team_member 'user_name' 'team_name'
+
+    .. versionadded:: Carbon
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1304,6 +1326,8 @@ def remove_team_member(name, team_name, profile="github"):
     .. code-block:: bash
 
         salt myminion github.remove_team_member 'user_name' 'team_name'
+
+    .. versionadded:: Carbon
     '''
     team = get_team(team_name, profile=profile)
     if not team:
@@ -1344,6 +1368,8 @@ def list_teams(profile="github", ignore_cache=False):
     .. code-block:: bash
 
         salt myminion github.list_teams
+
+    .. versionadded:: Carbon
     '''
     key = 'github.{0}:teams'.format(
         _get_config_value(profile, 'org_name')
