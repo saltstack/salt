@@ -1417,6 +1417,7 @@ class Pygit2(GitProvider):
                 else:
                     oid = tree[path].oid
                     blob = self.repo[oid]
+                    break
             except KeyError:
                 blob = None
                 break
