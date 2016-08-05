@@ -758,22 +758,6 @@ def in_subnet(cidr, addr=None):
     return False
 
 
-def ip_in_subnet(addr, cidr):
-    '''
-    Returns True if given IP is within specified subnet, otherwise False
-
-    .. deprecated:: Carbon
-       Use :py:func:`~salt.utils.network.in_subnet` instead
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Carbon. Please use \'in_subnet\' instead.'
-    )
-
-    return in_subnet(cidr, addr)
-
-
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
     '''
     Return the full list of IP adresses matching the criteria
