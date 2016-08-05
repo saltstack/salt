@@ -422,6 +422,17 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+        elif item == 'log_config':
+            # https://github.com/saltstack/salt/issues/30577#issuecomment-238322721
+            if not data.get('Config', None) and actual_data.get('Config', None):
+                data['Config'] = {}
+                actual_data['Config'] = {}
+            if not data.get('Type', None) and actual_data.get('Type', None):
+                data['Type'] = None
+                actual_data['Type'] = None
+            if data != actual_data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+            continue
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):

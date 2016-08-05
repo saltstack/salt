@@ -546,6 +546,14 @@ VALID_CREATE_OPTS = {
         'min_docker': (1, 5, 0),
         'default': '',
     },
+    'log_config': {
+        'path': 'HostConfig:LogConfig',
+        'min_docker': (1, 4, 0),
+        'default': {
+            'Type': None,
+            'Config': {},
+        }
+    },
 }
 
 
@@ -1811,6 +1819,31 @@ def _validate_input(kwargs,
                 'pid_mode can only be \'host\', if set'
             )
 
+    def _valid_log_config(): # pylint: disable=unused-variable
+        '''
+        Needs to be a dictionary that might contain keys (type|Type) and (config|Config)
+        '''
+        try:
+            _valid_dict('log_config')
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'log_config must be of type \'dict\', if set'
+            )
+
+        log_config = kwargs.get('log_config')
+        log_config_type = log_config.get('Type', None)
+        if log_config_type and not isinstance(log_config_type,
+                                              six.string_types):
+            raise SaltInvocationError(
+                'log_config[\'type\'] must be of type \'str\''
+            )
+
+        log_config_config = log_config.get('Config', {})
+        if log_config_config and not isinstance(log_config_config, dict):
+            raise SaltInvocationError(
+                'log_config[\'config\'] must be of type \'dict\''
+            )
+
     def _valid_labels():  # pylint: disable=unused-variable
         '''
         Must be a dict or a list of strings
@@ -3013,6 +3046,14 @@ def create(image,
         container. Requires Docker 1.5.0 or newer.
 
         Example: ``pid_mode=host``
+
+    log_config
+        Set container's log driver and options
+
+        Example: ``log_conf:
+                     Type: json-file
+                     Config:
+                       max-file: '10'``
 
     **RETURN DATA**
 
