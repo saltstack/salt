@@ -369,6 +369,14 @@ Deprecations
   For additional information see the documentation for the ``reg`` execution and
   state modules.
 
+- ``lxc`` state module The following functions were removed from the ``lxc`` state
+  module. Each function was replaced with ``present`` state:
+
+  - created: replaced by the ``present`` state.
+  - started: replaced by the ``running`` state.
+  - cloned: replaced by the ``present`` state, with the ``clone_from`` argument set
+    to the name of the clone source.
+
 - ``ip_in_subnet`` function in salt.utils.network.py has been removed. Use the
   ``in_subnet`` function instead.
 
