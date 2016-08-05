@@ -36,7 +36,6 @@ def present(
         port=None,
         enc=None,
         config=None,
-        hash_hostname=True,
         hash_known_hosts=True,
         timeout=5):
     '''
@@ -74,13 +73,6 @@ def present(
         defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
         absolute path when a user is not specified.
 
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
-
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
 
@@ -106,14 +98,6 @@ def present(
         comment = 'If not specifying a "user", specify an absolute "config".'
         ret['result'] = False
         return dict(ret, comment=comment)
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
 
     if __opts__['test']:
         if key and fingerprint:
