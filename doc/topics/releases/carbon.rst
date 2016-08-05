@@ -399,3 +399,6 @@ Deprecations
   The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
 
   The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
+
+- The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
+  instead.
