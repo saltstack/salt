@@ -368,3 +368,14 @@ Deprecations
 
   For additional information see the documentation for the ``reg`` execution and
   state modules.
+
+- ``ip_in_subnet`` function in salt.utils.network.py has been removed. Use the
+  ``in_subnet`` function instead.
+
+- The ``iam`` utils module had two functions removed: ``salt.utils.iam.get_iam_region``
+  and ``salt.utils.iam.get_iam_metadata`` in favor of aws utils functions
+  ``salt.utils.aws.get_region_from_metadata`` and ``salt.utils.aws.creds``, respectively.
+
+- The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
+  module and the ``salt.states.ssh_known_hosts`` state. The ``hash_known_hosts``
+  option should be used instead.
