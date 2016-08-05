@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import json
+import re
 import logging
 import random
 import string
@@ -307,7 +308,9 @@ def check_password(name, password, runas=None):
     '''
     # try to get the rabbitmq-version - adapted from _get_rabbitmq_plugin
     try:
-        version = [int(i) for i in __salt__['pkg.version']('rabbitmq-server').split('-')[0].split('.')]
+	res = __salt__['cmd.run'](['rabbitmqctl', 'status'], runas=runas, python_shell=False)
+	server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}',res).group(1)
+        version = [int(i) for i in server_version.split('.')]
     except ValueError:
         version = (0, 0, 0)
     if len(version) < 3:
