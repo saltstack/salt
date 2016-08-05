@@ -12,7 +12,11 @@ of a configuration profile.
 
 from __future__ import absolute_import
 from datetime import datetime
-import pwd
+
+try:
+    import pwd
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils
