@@ -4,6 +4,8 @@ Manage X509 certificates
 
 .. versionadded:: 2015.8.0
 
+:depends: M2Crypto
+
 '''
 
 # Import python libs
