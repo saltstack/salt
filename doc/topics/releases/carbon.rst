@@ -369,7 +369,7 @@ Deprecations
   For additional information see the documentation for the ``reg`` execution and
   state modules.
 
-- ``lxc`` state module The following functions were removed from the ``lxc`` state
+- ``lxc`` state module: The following functions were removed from the ``lxc`` state
   module. Each function was replaced with ``present`` state:
 
   - created: replaced by the ``present`` state.
@@ -390,3 +390,12 @@ Deprecations
 
 - The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
   was removed. Use ``force`` instead.
+
+- ``virt`` runner module:
+
+  The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
+  Use the ``host`` option instead.
+
+  The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
+
+  The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
