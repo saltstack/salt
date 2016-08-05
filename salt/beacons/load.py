@@ -96,6 +96,10 @@ def beacon(config):
             send_beacon = True
 
     if config['onchangeonly']:
+        if LAST_STATUS == cpu_percent:
+            send_beacon = True
+        else:
+            send_beacon = False
         LAST_STATUS = cpu_percent
 
     if send_beacon:
