@@ -1278,8 +1278,13 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_find'}
         fnd = self.channel.send(load)
-        stat_result = fnd.get('stat')
-        return hash_result, stat_result
+
+        try:
+            fnd_mode = fnd.get('stat', [])[0]
+        except (IndexError, TypeError, AttributeError):
+            fnd_mode = None
+
+        return hash_result, fnd_mode
 
     def list_env(self, saltenv='base'):
         '''
