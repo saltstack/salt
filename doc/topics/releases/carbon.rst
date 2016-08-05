@@ -387,3 +387,6 @@ Deprecations
 - The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
   module and the ``salt.states.ssh_known_hosts`` state. The ``hash_known_hosts``
   option should be used instead.
+
+- The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
+  was removed. Use ``force`` instead.
