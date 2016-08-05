@@ -204,7 +204,7 @@ def get_user(name, profile='github', user_details=False):
     try:
         user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found {0}: ".format(str(e)))
+        log.exception("Resource not found {0}: ".format(str(e)))
         return False
 
     response['company'] = user.company
@@ -258,7 +258,7 @@ def add_user(name, profile='github'):
     try:
         github_named_user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found {0}: ".format(str(e)))
+        log.exception("Resource not found {0}: ".format(str(e)))
         return False
 
     org_team = organization.get_team(
@@ -273,7 +273,7 @@ def add_user(name, profile='github'):
             parameters={'role': 'member'}
         )
     except github.GithubException as e:
-        logging.error(str(e))
+        log.error("Unable to add user", exc_info=True)
         return True
 
     headers, data = organization._requester.requestJsonAndCheck(
@@ -309,7 +309,7 @@ def remove_user(name, profile='github'):
     try:
         git_user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found: {0}".format(str(e)))
+        log.exception("Resource not found: {0}".format(str(e)))
         return False
 
     if organization.has_in_members(git_user):
@@ -924,7 +924,7 @@ def add_team(name,
         list_teams(ignore_cache=True)  # Refresh cache
         return True
     except github.GithubException as e:
-        logging.exception('Error creating a team: {0}'.format(str(e)))
+        log.exception('Error creating a team: {0}'.format(str(e)))
         return False
 
 
@@ -962,7 +962,7 @@ def edit_team(name,
     '''
     team = get_team(name, profile=profile)
     if not team:
-        logging.error('Team {0} does not exist'.format(name))
+        log.error('Team {0} does not exist'.format(name))
         return False
     try:
         client = _get_client(profile)
@@ -988,7 +988,7 @@ def edit_team(name,
         )
         return True
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(team['id']))
+        log.exception('Resource not found: {0}'.format(team['id']))
         return False
 
 
@@ -1012,7 +1012,7 @@ def remove_team(name, profile="github"):
     '''
     team_info = get_team(name, profile=profile)
     if not team_info:
-        logging.error('Team {0} to be removed does not exist.'.format(name))
+        log.error('Team {0} to be removed does not exist.'.format(name))
         return False
     try:
         client = _get_client(profile)
@@ -1023,7 +1023,7 @@ def remove_team(name, profile="github"):
         team.delete()
         return list_teams(ignore_cache=True, profile=profile).get(name) is None
     except github.GithubException as e:
-        logging.exception('Error deleting a team: {0}'.format(str(e)))
+        log.exception('Error deleting a team: {0}'.format(str(e)))
         return False
 
 
@@ -1050,7 +1050,7 @@ def list_team_repos(team_name, profile="github", ignore_cache=False):
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
-        logging.error('Team {0} does not exist.'.format(team_name))
+        log.error('Team {0} does not exist.'.format(team_name))
         return False
 
     # Return from cache if available
@@ -1064,12 +1064,12 @@ def list_team_repos(team_name, profile="github", ignore_cache=False):
         )
         team = organization.get_team(cached_team['id'])
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        log.exception('Resource not found: {0}'.format(cached_team['id']))
     try:
         cached_team['repos'] = [repo.name.lower() for repo in team.get_repos()]
         return cached_team['repos']
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        log.exception('Resource not found: {0}'.format(cached_team['id']))
         return []
 
 
@@ -1096,7 +1096,7 @@ def add_team_repo(repo_name, team_name, profile="github"):
     '''
     team = get_team(team_name, profile=profile)
     if not team:
-        logging.error('Team {0} does not exist'.format(team_name))
+        log.error('Team {0} does not exist'.format(team_name))
         return False
     try:
         client = _get_client(profile)
@@ -1106,7 +1106,7 @@ def add_team_repo(repo_name, team_name, profile="github"):
         team = organization.get_team(team['id'])
         repo = organization.get_repo(repo_name)
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(team['id']))
+        log.exception('Resource not found: {0}'.format(team['id']))
         return False
     team.add_to_repos(repo)
     return repo_name in list_team_repos(team_name, profile=profile, ignore_cache=True)
@@ -1135,7 +1135,7 @@ def remove_team_repo(repo_name, team_name, profile="github"):
     '''
     team = get_team(team_name, profile=profile)
     if not team:
-        logging.error('Team {0} does not exist'.format(team_name))
+        log.error('Team {0} does not exist'.format(team_name))
         return False
     try:
         client = _get_client(profile)
@@ -1145,7 +1145,7 @@ def remove_team_repo(repo_name, team_name, profile="github"):
         team = organization.get_team(team['id'])
         repo = organization.get_repo(repo_name)
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(team['id']))
+        log.exception('Resource not found: {0}'.format(team['id']))
         return False
     team.remove_from_repos(repo)
     return repo_name not in list_team_repos(team_name, profile=profile, ignore_cache=True)
@@ -1174,7 +1174,7 @@ def list_team_members(team_name, profile="github", ignore_cache=False):
     '''
     cached_team = get_team(team_name, profile=profile)
     if not cached_team:
-        logging.error('Team {0} does not exist.'.format(team_name))
+        log.error('Team {0} does not exist.'.format(team_name))
         return False
     # Return from cache if available
     if cached_team.get('members') and not ignore_cache:
@@ -1187,13 +1187,13 @@ def list_team_members(team_name, profile="github", ignore_cache=False):
         )
         team = organization.get_team(cached_team['id'])
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        log.exception('Resource not found: {0}'.format(cached_team['id']))
     try:
         cached_team['members'] = [member.login.lower()
                                   for member in team.get_members()]
         return cached_team['members']
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(cached_team['id']))
+        log.exception('Resource not found: {0}'.format(cached_team['id']))
         return []
 
 
@@ -1277,7 +1277,7 @@ def add_team_member(name, team_name, profile="github"):
     '''
     team = get_team(team_name, profile=profile)
     if not team:
-        logging.error('Team {0} does not exist'.format(team_name))
+        log.error('Team {0} does not exist'.format(team_name))
         return False
     try:
         client = _get_client(profile)
@@ -1287,7 +1287,7 @@ def add_team_member(name, team_name, profile="github"):
         team = organization.get_team(team['id'])
         member = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(team['id']))
+        log.exception('Resource not found: {0}'.format(team['id']))
         return False
 
     if not hasattr(team, 'add_membership'):
@@ -1303,7 +1303,7 @@ def add_team_member(name, team_name, profile="github"):
             parameters={'role': 'member'}
         )
     except github.GithubException as e:
-        logging.exception('Error in adding a member to a team: {0}'.format(str(e)))
+        log.exception('Error in adding a member to a team: {0}'.format(str(e)))
         return False
     return team.has_in_members(member)
 
@@ -1331,7 +1331,7 @@ def remove_team_member(name, team_name, profile="github"):
     '''
     team = get_team(team_name, profile=profile)
     if not team:
-        logging.error('Team {0} does not exist'.format(team_name))
+        log.error('Team {0} does not exist'.format(team_name))
         return False
     try:
         client = _get_client(profile)
@@ -1342,7 +1342,7 @@ def remove_team_member(name, team_name, profile="github"):
         member = client.get_user(name)
 
     except UnknownObjectException as e:
-        logging.exception('Resource not found: {0}'.format(team['id']))
+        log.exception('Resource not found: {0}'.format(team['id']))
         return False
 
     if not hasattr(team, 'remove_from_members'):
