@@ -634,59 +634,6 @@ def stopped(name, kill=False, path=None):
     return ret
 
 
-# Deprecated states
-def created(name, **kwargs):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.present <salt.states.lxc.present>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.created state has been renamed to lxc.present, please use '
-        'lxc.present'
-    )
-    return present(name, **kwargs)
-
-
-def started(name, path=None, restart=False):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.running <salt.states.lxc.running>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.started state has been renamed to lxc.running, please use '
-        'lxc.running'
-    )
-    return running(name, restart=restart, path=path)
-
-
-def cloned(name,
-           orig,
-           snapshot=True,
-           size=None,
-           vgname=None,
-           path=None,
-           profile=None):
-    '''
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.present <salt.states.lxc.present>`
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The lxc.cloned state has been merged into the lxc.present state. '
-        'Please update your states to use lxc.present, with the '
-        '\'clone_from\' argument set to the name of the clone source.'
-    )
-    return present(name,
-                   clone_from=orig,
-                   snapshot=snapshot,
-                   size=size,
-                   vgname=vgname,
-                   path=path,
-                   profile=profile)
-
-
 def set_pass(name, **kwargs):  # pylint: disable=W0613
     '''
     .. deprecated:: 2015.5.0
