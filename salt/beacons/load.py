@@ -67,7 +67,7 @@ def beacon(config):
     cpu_percent = psutil.cpu_percent(interval=1)
     log.trace(cpu_percent)
     send_beacon = False
-    ret = []
+    ret = dict()
 
     global LAST_STATUS
     if LAST_STATUS < 0:
@@ -98,14 +98,16 @@ def beacon(config):
         LAST_STATUS = cpu_percent
 
     if send_beacon:
-        ret.append({'min': config['min'], 'max': config['max']})
+        ret['min'] = config['min']
+        ret['max'] = config['max']
         if 'percpu' in config:
             cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
-        ret.append({'load': cpu_percent})
+        ret['load'] = cpu_percent
         if 'queue' in config:
-            ret.append({'processorqueue': getProcessorQueueLength()})
+            ret['processorqueue'] = getProcessorQueueLength()
+    log.trace(ret)
 
-    return ret
+    return [ret]
 
 def getProcessorQueueLength():
 
