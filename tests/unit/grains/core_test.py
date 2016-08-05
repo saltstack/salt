@@ -375,7 +375,6 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_ubuntu(self):
         '''
@@ -397,7 +396,6 @@ PATCHLEVEL = 3
             'osfinger': 'Ubuntu-16.04',
         }
         self._run_ubuntu_os_grains_tests(_os_release_map)
-
 
     def _run_ubuntu_os_grains_tests(self, os_release_map):
         path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/os-release'])
