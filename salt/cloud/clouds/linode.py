@@ -1031,16 +1031,6 @@ def get_private_ip(vm_):
     '''
     Return True if a private ip address is requested
     '''
-    if 'private_ip' in vm_:
-        warn_until(
-            'Carbon',
-            'The \'private_ip\' option is being deprecated in favor of the '
-            '\'assign_private_ip\' option. Please convert your Linode configuration '
-            'files to use \'assign_private_ip\'.'
-        )
-        vm_['assign_private_ip'] = vm_['private_ip']
-        vm_.pop('private_ip')
-
     return config.get_cloud_config_value(
         'assign_private_ip', vm_, __opts__, default=False
     )
