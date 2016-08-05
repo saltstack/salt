@@ -28,8 +28,8 @@ def __virtual__():
 '''
 Emits load levels based on the parameters below.
 Tested and working in:
--Windows
--CentOS
+-Windows Server 2012r2
+-CentOS 6
 
 Units in seconds [interval] and percent [min, max].
 Reports below min or above max. Set both to 0 for reports every interval.
