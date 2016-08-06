@@ -1,0 +1,9 @@
+===========================
+Salt 2016.3.4 Release Notes
+===========================
+
+Version 2016.3.4 is a bugfix release for :doc:`2016.3.0
+</topics/releases/2016.3.0>`.
+
+- The `disk.wipe` execution module function has been modified
+  so that it correctly wipes a disk.
