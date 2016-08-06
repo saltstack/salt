@@ -136,7 +136,7 @@ def managed(name,
                 requirements, __env__
             )
         # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements, __env__) != \
+        if cached_requirements and __salt__['cp.hash_file'](requirements, __env__) != \
                 __salt__['cp.hash_file'](cached_requirements, __env__):
             cached_requirements = __salt__['cp.cache_file'](
                 requirements, __env__
