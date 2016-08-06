@@ -1389,7 +1389,7 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
             except Exception:
                 msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
