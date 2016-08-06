@@ -69,6 +69,7 @@ class ExtendedTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_LIBS, 'Install pyVmomi to be able to run this test.')
 @patch('salt.cloud.clouds.vmware.__virtual__', MagicMock(return_value='vmware'))
 class VMwareTestCase(ExtendedTestCase):
     '''
@@ -890,7 +891,6 @@ class VMwareTestCase(ExtendedTestCase):
         self.assertEqual(spec.device.deviceInfo.label, controller_label)
         self.assertEqual(spec.device.deviceInfo.summary, controller_label)
 
-
     def test_manage_devices_just_cd(self):
         '''
         Tests that when adding IDE/CD drives, controller keys will be in the apparent
@@ -912,12 +912,12 @@ class VMwareTestCase(ExtendedTestCase):
             self.assertEqual(specs[1].device.key, vmware.SAFE_ESX_5_5_CONTROLLER_KEY_INDEX+1)
             self.assertEqual(specs[2].device.controllerKey, vmware.SAFE_ESX_5_5_CONTROLLER_KEY_INDEX)
 
-        with patch('salt.cloud.clouds.vmware.get_vcenter_version', return_value='VMware ESXi 6'),\
-             patch('salt.cloud.clouds.vmware.randint', return_value=100) as first_key:
-            specs = vmware._manage_devices(device_map, vm=None)['device_specs']
+        with patch('salt.cloud.clouds.vmware.get_vcenter_version', return_value='VMware ESXi 6'):
+            with patch('salt.cloud.clouds.vmware.randint', return_value=100) as first_key:
+                specs = vmware._manage_devices(device_map, vm=None)['device_specs']
 
-            self.assertEqual(specs[0].device.key, first_key.return_value)
-            self.assertEqual(specs[2].device.controllerKey, first_key.return_value)
+                self.assertEqual(specs[0].device.key, first_key.return_value)
+                self.assertEqual(specs[2].device.controllerKey, first_key.return_value)
 
     def test_add_host_no_host_in_kwargs(self):
         '''
