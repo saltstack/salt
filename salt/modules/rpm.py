@@ -651,13 +651,21 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     'more accurate version comparisons'
                 )
         else:
-            cmp_result = cmp_func(salt.utils.str_version_to_evr(ver1),
-                                  salt.utils.str_version_to_evr(ver2))
+            # If one EVR is missing a release but not the other and they
+            # otherwise would be equal, ignore the release. This can happen if
+            # e.g. you are checking if a package version 3.2 is satisfied by
+            # 3.2-1.
+            (ver1_e, ver1_v, ver1_r) = salt.utils.str_version_to_evr(ver1)
+            (ver2_e, ver2_v, ver2_r) = salt.utils.str_version_to_evr(ver2)
+            if not ver1_r or not ver2_r:
+                ver1_r = ver2_r = ''
+
+            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r),
+                                  (ver2_e, ver2_v, ver2_r))
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
                     'Comparison result \'{0}\' is invalid'.format(cmp_result)
                 )
-
             return cmp_result
 
     except Exception as exc:
