@@ -372,10 +372,8 @@ class AsyncAuth(object):
         self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
-        if 'syndic_master' in self.opts:
+        if self.opts['__role'] == 'syndic':
             self.mpub = 'syndic_master.pub'
-        elif 'alert_master' in self.opts:
-            self.mpub = 'monitor_master.pub'
         else:
             self.mpub = 'minion_master.pub'
         if not os.path.isfile(self.pub_path):
