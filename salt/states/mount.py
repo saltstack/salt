@@ -51,6 +51,7 @@ def mounted(name,
             mount=True,
             user=None,
             match_on='auto',
+            device_name_regex=[],
             extra_mount_invisible_options=None,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
@@ -101,6 +102,31 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    device_name_regex
+        A list of device exact names or regilar expressions which should
+        not force a remount. For example, glusterfs may be mounted with
+        comma-separated list of servers in fstab, but the /proc/self/mountinfo
+        will show only the first available server.
+
+        .. code-block:: jinja
+
+            {% set glusterfs_ip_list = ['10.0.0.1', '10.0.0.2', '10.0.0.3'] %}
+
+            mount glusterfs volume:
+              mount.mounted:
+                - name: /mnt/glusterfs_mount_point
+                - device: {{ glusterfs_ip_list|join(',') }}:/volume_name
+                - fstype: glusterfs
+                - opts: _netdev,rw,defaults,direct-io-mode=disable
+                - mkmnt: True
+                - persist: True
+                - dump: 0
+                - pass_num: 0
+                - device_name_regex:
+                  - ({{ glusterfs_ip_list|join('|') }}):/volume_name
+
+        .. versionadded:: 2016.3.4
 
     extra_mount_invisible_options
         A list of extra options that are not visible through the /proc/self/mountinfo
@@ -373,11 +399,21 @@ def mounted(name,
                                     opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
+                _device_mismatch_is_ignored = False
+                for regex in list(device_name_regex):
+                    for _device in device_list:
+                        if re.match(regex, _device):
+                            _device_mismatch_is_ignored = _device
                 if __opts__['test']:
                     ret['result'] = None
                     ret['comment'] = "An umount would have been forced " \
                                      + "because devices do not match.  Watched: " \
                                      + device
+                elif _device_mismatch_is_ignored != False:
+                    ret['result'] = None
+                    ret['comment'] = "An umount will not be forced " \
+                                     + "because device matched device_name_regex: " \
+                                     + _device_mismatch_is_ignored
                 else:
                     ret['changes']['umount'] = "Forced unmount because devices " \
                                                + "don't match. Wanted: " + device
