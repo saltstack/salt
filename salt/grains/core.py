@@ -397,7 +397,8 @@ def _memdata(osdata):
                     if not len(comps) > 1:
                         continue
                     if comps[0].strip() == 'MemTotal':
-                        grains['mem_total'] = int(comps[1].split()[0]) / 1024
+                        # Use floor division to force output to be an integer
+                        grains['mem_total'] = int(comps[1].split()[0]) // 1024
     elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:

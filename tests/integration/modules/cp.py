@@ -10,6 +10,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.ext.six as six
 import integration
 import salt.utils
 
@@ -59,7 +60,10 @@ class CPModuleTest(integration.ModuleCase):
         tgt = os.path.join(integration.TMP, 'file.big')
         src = os.path.join(integration.FILES, 'file/base/file.big')
         with salt.utils.fopen(src, 'r') as fp_:
-            hash = hashlib.md5(fp_.read()).hexdigest()
+            data = fp_.read()
+            if six.PY3:
+                data = salt.utils.to_bytes(data)
+            hash_str = hashlib.md5(data).hexdigest()
 
         self.run_function(
             'cp.get_file',
@@ -73,7 +77,7 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
-            self.assertEqual(hash, hashlib.md5(data).hexdigest())
+            self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
 
     def test_get_file_makedirs(self):
         '''
@@ -295,9 +299,12 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                 ])
         with salt.utils.fopen(path, 'r') as fn_:
+            data = fn_.read()
+            if six.PY3:
+                data = salt.utils.to_bytes(data)
             self.assertEqual(
                     md5_hash['hsum'],
-                    hashlib.md5(fn_.read()).hexdigest()
+                    hashlib.md5(data).hexdigest()
                     )
 
     def test_get_file_from_env_predefined(self):
