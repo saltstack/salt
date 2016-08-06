@@ -1536,10 +1536,10 @@ def managed(name,
             '\'source\' cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
-    elif (mode or keep_mode) and contents_count > 0:
+    elif keep_mode and contents_count > 0:
         return _error(
             ret,
-            'Mode management cannot be used in combination with \'contents\', '
+            'Mode preservation cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
     elif contents_count > 1:
