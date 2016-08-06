@@ -893,7 +893,7 @@ class LocalClient(Client):
         hash_type = self.opts.get('hash_type', 'md5')
         ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
         ret['hash_type'] = hash_type
-        return ret
+        return ret, fnd_stat
 
     def list_env(self, saltenv='base'):
         '''
@@ -1012,7 +1012,7 @@ class RemoteClient(Client):
                     self.hash_and_stat_file(dest2check, saltenv)
                 try:
                     mode_local = stat_local[0]
-                except IndexError:
+                except (IndexError, TypeError):
                     mode_local = None
             else:
                 hash_local = self.hash_file(dest2check, saltenv)
@@ -1278,7 +1278,10 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_find'}
         fnd = self.channel.send(load)
-        stat_result = fnd.get('stat')
+        try:
+            stat_result = fnd.get('stat')
+        except AttributeError:
+            stat_result = None
         return hash_result, stat_result
 
     def list_env(self, saltenv='base'):
