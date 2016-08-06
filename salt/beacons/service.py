@@ -87,11 +87,11 @@ def beacon(config):
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those
         # key:values are then added to the service dictionary.
-        if not 'oncleanshutdown' in config[service]:
+        if 'oncleanshutdown' not in config[service]:
             config[service]['oncleanshutdown'] = False
-        if not 'emitatstartup' in config[service]:
+        if 'emitatstartup' not in config[service]:
             config[service]['emitatstartup'] = True
-        if not 'onchangeonly' in config[service]:
+        if 'onchangeonly' not in config[service]:
             config[service]['onchangeonly'] = False
 
         # We only want to report the nature of the shutdown
