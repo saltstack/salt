@@ -689,6 +689,9 @@ def installed(
                   - dos2unix
                   - salt-minion: 2015.8.5-1.el6
 
+        If the version given is the string ``latest``, the latest available
+        package version will be installed à la ``pkg.latest``.
+
     :param bool refresh:
         This parameter controls whether or not the packge repo database is
         updated prior to installing the requested package(s).
