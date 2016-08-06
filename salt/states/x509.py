@@ -4,6 +4,8 @@ Manage X509 Certificates
 
 .. versionadded:: 2015.8.0
 
+:depends: M2Crypto
+
 This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
