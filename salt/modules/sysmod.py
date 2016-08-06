@@ -603,17 +603,18 @@ def list_state_modules(*args):
         for func in st_.states:
             log.debug('func {0}'.format(func))
             comps = func.split('.')
-            if len(comps) < 2:
-                continue
             modules.add(comps[0])
         return sorted(modules)
 
     for module in args:
-        for func in fnmatch.filter(st_.states, module):
-            comps = func.split('.')
-            if len(comps) < 2:
-                continue
-            modules.add(comps[0])
+        if '*' not in module:
+            for func in st_.states:
+                comps = func.split('.')
+                if comps[0] == module:
+                    modules.add(comps[0])
+        else:
+            for func in fnmatch.filter(st_.states, module):
+                modules.add(func.split('.')[0])
     return sorted(modules)
 
 

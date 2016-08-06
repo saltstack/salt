@@ -23,6 +23,8 @@ from salt.modules import sysmod
 
 modules = set()
 functions = [
+    'exist.exist',
+
     'sys.doc', 'sys.list_functions', 'sys.list_modules',
     'sysctl.get', 'sysctl.show',
     'system.halt', 'system.reboot',
@@ -48,7 +50,9 @@ class Mockstate(object):
         """
         Mock of State
         """
-        states = []
+        states = {}
+        for func in functions:
+            states[func] = None
 
         def __init__(self, opts):
             pass
@@ -120,9 +124,9 @@ class SysmodTestCase(TestCase):
         '''
         Test if it return the docstrings for all states.
         '''
-        self.assertDictEqual(sysmod.state_doc(), {})
+        self.assertDictEqual(sysmod.state_doc(), sysmod.__salt__)
 
-        self.assertDictEqual(sysmod.state_doc('sys.doc'), {})
+        self.assertDictEqual(sysmod.state_doc('sys.doc'), {'sys.doc': None})
 
     # 'runner_doc' function tests: 1
 
@@ -162,7 +166,7 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_functions(), functions)
 
-        self.assertListEqual(sysmod.list_modules('nonexist'), [])
+        self.assertListEqual(sysmod.list_functions('nonexist'), [])
 
         # these all really do the same thing (*the '.' at the end is an internal implementation trick)
         self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
@@ -238,7 +242,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the functions for all state modules.
         '''
-        self.assertListEqual(sysmod.list_state_functions(), [])
+        self.assertListEqual(sysmod.list_state_functions(), functions)
 
         self.assertListEqual(sysmod.list_state_functions('file.s*'), [])
 
@@ -248,9 +252,13 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the modules loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_state_modules(), [])
+        self.assertListEqual(sysmod.list_state_modules(), modules)
 
-        self.assertListEqual(sysmod.list_state_modules('mysql_*'), [])
+        self.assertListEqual(sysmod.list_state_modules('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_state_modules('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_state_modules('s*'), ['sys', 'sysctl', 'system'])
 
     # 'list_runners' function tests: 1
 
