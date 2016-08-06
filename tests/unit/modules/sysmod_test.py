@@ -168,15 +168,16 @@ class SysmodTestCase(TestCase):
 
         self.assertListEqual(sysmod.list_functions('nonexist'), [])
 
-        # these all really do the same thing (*the '.' at the end is an internal implementation trick)
+        # list all functions in/given a specific module
         self.assertListEqual(sysmod.list_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
-        self.assertListEqual(sysmod.list_functions('sys.'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
 
         # globs can be used for both module names and function names:
         self.assertListEqual(sysmod.list_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
         self.assertListEqual(sysmod.list_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
 
+        # "list", or check for a specific function:
         self.assertListEqual(sysmod.list_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_functions('exist.exist'), ['exist.exist'])
 
     # 'list_modules' function tests: 1
 
@@ -244,7 +245,18 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_state_functions(), functions)
 
-        self.assertListEqual(sysmod.list_state_functions('file.s*'), [])
+        self.assertListEqual(sysmod.list_state_functions('nonexist'), [])
+
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_state_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_state_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_state_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_state_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_state_functions('exist.exist'), ['exist.exist'])
 
     # 'list_state_modules' function tests: 1
 
