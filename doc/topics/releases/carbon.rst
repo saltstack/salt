@@ -272,6 +272,9 @@ Deprecations
       # will result in refresh evaluating to True and saltenv likely not being a string at all
       fcn('add more salt', 'prod', False)
 
+- The ``vsphere`` cloud driver has been removed. Please use the ``vmware`` cloud driver
+  instead.
+
 - The ``boto_vpc`` execution module had two functions removed,
   ``boto_vpc.associate_new_dhcp_options_to_vpc`` and
   ``boto_vpc.associate_new_network_acl_to_subnet`` in favor of more concise function
