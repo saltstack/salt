@@ -176,6 +176,11 @@ VALID_OPTS = {
     # The directory to store all cache files.
     'cachedir': str,
 
+    # Append minion_id to these directories.  Helps with
+    # multiple proxies and minions running on the same machine.
+    # Allowed elements in the list: pki_dir, cachedir, extension_modules
+    'append_minionid_config_dirs': list,
+
     # Flag to cache jobs locally.
     'cache_jobs': bool,
 
@@ -876,6 +881,7 @@ DEFAULT_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
+    'append_minionid_config_dirs': [],
     'cache_jobs': False,
     'grains_cache': False,
     'grains_cache_expiration': 300,
@@ -1344,6 +1350,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
+    'append_minionid_config_dirs': ['cachedir'],
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1749,7 +1756,8 @@ def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
                   cache_minion_id=False,
-                  ignore_config_errors=True):
+                  ignore_config_errors=True,
+                  minion_id=None):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -1789,7 +1797,9 @@ def minion_config(path,
     overrides.update(include_config(include, path, verbose=True,
                                     exit_on_config_errors=not ignore_config_errors))
 
-    opts = apply_minion_config(overrides, defaults, cache_minion_id=cache_minion_id)
+    opts = apply_minion_config(overrides, defaults,
+                               cache_minion_id=cache_minion_id,
+                               minion_id=minion_id)
     _validate_opts(opts)
     return opts
 
@@ -2934,7 +2944,8 @@ def get_id(opts, cache_minion_id=False):
 
 def apply_minion_config(overrides=None,
                         defaults=None,
-                        cache_minion_id=False):
+                        cache_minion_id=False,
+                        minion_id=None):
     '''
     Returns minion configurations dict.
     '''
@@ -2948,19 +2959,27 @@ def apply_minion_config(overrides=None,
 
     opts['__cli'] = os.path.basename(sys.argv[0])
 
-    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
-        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
-
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
     if not opts.get('id'):
-        opts['id'], using_ip_for_id = get_id(
-                opts,
-                cache_minion_id=cache_minion_id)
+        if minion_id:
+            opts['id'] = minion_id
+        else:
+            opts['id'], using_ip_for_id = get_id(
+                    opts,
+                    cache_minion_id=cache_minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
+
+    for directory in opts.get('append_minionid_config_dirs', []):
+        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+            newdirectory = os.path.join(opts[directory], opts['id'])
+            opts[directory] = newdirectory
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
