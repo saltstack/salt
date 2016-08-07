@@ -2504,10 +2504,10 @@ def argspec_report(functions, module=''):
     else:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
-        moduledot_or_empty = module + '.' if module and not module.endswith('.') else module
+        moduledot = module + '.' if module and not module.endswith('.') else module
 
         for fun in functions:
-            if fun == module or fun.startswith(moduledot_or_empty):
+            if fun == module or fun.startswith(moduledot):
                 try:
                     aspec = salt.utils.args.get_function_argspec(functions[fun])
                 except TypeError:
