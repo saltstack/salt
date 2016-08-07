@@ -572,7 +572,7 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
             for func in fnmatch.filter(st_.states, module):
                 names.add(func)
         else:
-            # "sys" should just match sys, without also matching sysctl
+            # "sys" should just match sys without also matching sysctl
             module = module + '.'
             for func in st_.states:
                 if func.startswith(module):
