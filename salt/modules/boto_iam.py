@@ -2297,7 +2297,7 @@ def list_saml_providers(region=None, key=None, keyid=None, profile=None):
         providers = []
         info = conn.list_saml_providers()
         for arn in info['list_saml_providers_response']['list_saml_providers_result']['saml_provider_list']:
-          providers.append(arn['arn'].rsplit('/', 1)[1])
+            providers.append(arn['arn'].rsplit('/', 1)[1])
         return providers
     except boto.exception.BotoServerError as e:
         aws = salt.utils.boto.get_error(e)
@@ -2347,7 +2347,7 @@ def update_saml_provider(name, saml_metadata_document, region=None, key=None, ke
             log.info(msg.format(name))
             return False
         if conn.update_saml_provider(name, saml_metadata_document):
-          return True
+            return True
         return False
     except boto.exception.BotoServerError as e:
         aws = salt.utils.boto.get_error(e)
