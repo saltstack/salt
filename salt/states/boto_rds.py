@@ -364,7 +364,7 @@ def replica_present(name, source, db_instance_class=None,
                     auto_minor_version_upgrade=None, iops=None,
                     option_group_name=None, publicly_accessible=None,
                     tags=None, region=None, key=None, keyid=None,
-                    profile=None):
+                    profile=None, db_parameter_group_name=None):
     '''
     Ensure RDS replica exists.
 
@@ -406,6 +406,16 @@ def replica_present(name, source, db_instance_class=None,
             ret['result'] = False
             ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
     else:
+        _describe = __salt__['boto_rds.describe'](name, tags, region, key,
+                                                  keyid, profile)
+        if db_parameter_group_name is not None and _describe['db_parameter_groups'][0]['DBParameterGroupName'] != db_parameter_group_name:
+            modified = __salt__['boto_rds.modify_db_instance'](name, db_parameter_group_name=db_parameter_group_name, region=region,
+                                                               key=key, keyid=keyid, profile=profile)
+            if not modified:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update parameter group of {0} RDS instance.'.format(name)
+            ret['changes']['old'] = _describe['db_parameter_groups'][0]['DBParameterGroupName']
+            ret['changes']['new'] = db_parameter_group_name
         ret['result'] = True
         ret['comment'] = 'RDS replica {0} exists.'.format(name)
     return ret
