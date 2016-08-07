@@ -120,6 +120,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+.. code-block:: yaml
+
+    add-saml-provider:
+      boto_iam.saml_provider_present:
+        - name: my_saml_provider
+        - saml_metadata_document: salt://base/files/provider.xml
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
 '''
 
 # Import Python Libs
@@ -1483,10 +1492,10 @@ def policy_absent(name,
     return ret
 
 
-def saml_provider_present(name, saml_metadata_document, update=False):
+def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8.0
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is present.
 
@@ -1510,24 +1519,41 @@ def saml_provider_present(name, saml_metadata_document, update=False):
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if 'salt://' in saml_metadata_document:
+        try:
+            saml_metadata_document = __salt__['cp.get_file_str'](saml_metadata_document)
+            ET.fromstring(saml_metadata_document)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'SAML document file {0} not found or could not be loaded'.format(name)
+            ret['result'] = False
+            return ret
+    for provider in __salt__['boto_iam.list_saml_providers'](region=region,
+                                                             key=key, keyid=keyid,
+                                                             profile=profile):
+        if provider == name:
+            ret['comment'] = 'SAML provider {0} is present.'.format(name)
+            return ret
     if __opts__['test']:
         ret['comment'] = 'SAML provider {0} is set to be create.'.format(name)
         ret['result'] = None
         return ret
-    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document, update)
-    if created is not False:
+    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document,
+                                                        region=region, key=key, keyid=keyid,
+                                                        profile=profile)
+    if created:
         ret['comment'] = 'SAML provider {0} was created.'.format(name)
-        ret['changes'] = created
+        ret['changes']['new'] = name
         return ret
     ret['result'] = False
     ret['comment'] = 'SAML provider {0} failed to be created.'.format(name)
     return ret
 
 
-def saml_provider_absent(name):
+def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8.0
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is absent.
 
@@ -1551,14 +1577,22 @@ def saml_provider_absent(name):
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    provider = __salt__['boto_iam.list_saml_providers'](region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
+    if len(provider) == 0:
+        ret['comment'] = 'SAML provider {0} is absent.'.format(name)
+        return ret
     if __opts__['test']:
         ret['comment'] = 'SAML provider {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_iam.delete_saml_provider'](name)
+    deleted = __salt__['boto_iam.delete_saml_provider'](name, region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
     if deleted is not False:
         ret['comment'] = 'SAML provider {0} was deleted.'.format(name)
-        ret['changes'] = deleted
+        ret['changes']['old'] = name
         return ret
     ret['result'] = False
     ret['comment'] = 'SAML provider {0} failed to be deleted.'.format(name)
