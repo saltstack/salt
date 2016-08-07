@@ -274,7 +274,8 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
     return ret
 
 
-def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
+def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None,
+                 save_format="{2}\n{0}\n{3}\n{1}\n"):
     '''
 
     .. versionadded:: 2015.8.0
@@ -303,6 +304,11 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    save_format (dict)
+        Save format is repeated for each key. Default format is "{2}\n{0}\n{3}\n{1}\n",
+        where {0} and {1} are placeholders for new key_id and key respectively,
+        whereas {2} and {3} are "key_id-{number}" and 'key-{number}' strings kept for compatibility.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -346,12 +352,15 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         log.debug('Created is : {0}'.format(created))
         response = 'create_access_key_response'
         result = 'create_access_key_result'
-        new_keys['key-{0}'.format(i)] = created[response][result]['access_key']['access_key_id']
-        new_keys['key_id-{0}'.format(i)] = created[response][result]['access_key']['secret_access_key']
+        new_keys[str(i)] = {}
+        new_keys[str(i)]['key_id'] = created[response][result]['access_key']['access_key_id']
+        new_keys[str(i)]['secret_key'] = created[response][result]['access_key']['secret_access_key']
     try:
         with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
-            for key_id, access_key in new_keys.items():
-                _wrf.write('{0}\n{1}\n'.format(key_id, access_key))
+            for key_num, key in new_keys.items():
+                key_id = key['key_id']
+                secret_key = key['secret_key']
+                _wrf.write(save_format.format(key_id, secret_key, 'key_id-{0}'.format(key_num), 'key-{0}'.format(key_num)))
         ret['comment'] = 'Keys have been written to file {0}/{1}.'.format(save_dir, name)
         ret['result'] = True
         ret['changes'] = new_keys
@@ -1495,7 +1504,7 @@ def policy_absent(name,
 def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded::
+    .. versionadded:: 
 
     Ensure the SAML provider with the specified name is present.
 
@@ -1553,7 +1562,7 @@ def saml_provider_present(name, saml_metadata_document, region=None, key=None, k
 def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded::
+    .. versionadded:: 
 
     Ensure the SAML provider with the specified name is absent.
 
