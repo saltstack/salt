@@ -1504,7 +1504,7 @@ def policy_absent(name,
 def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is present.
 
@@ -1562,7 +1562,7 @@ def saml_provider_present(name, saml_metadata_document, region=None, key=None, k
 def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is absent.
 
