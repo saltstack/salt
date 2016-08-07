@@ -2216,8 +2216,9 @@ def create_saml_provider(name, saml_metadata_document, region=None, key=None, ke
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.create_saml_provider(saml_metadata_document, name)
+        conn.create_saml_provider(saml_metadata_document, name)
+        msg = 'Successfully created {0} SAML provider.'
+        log.info(msg.format(name))
         return True
     except boto.exception.BotoServerError as e:
         aws = salt.utils.boto.get_error(e)
@@ -2265,12 +2266,10 @@ def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
-        # The work is done if we the SAML provider is not present anymore.
         if not saml_provider_arn:
             msg = 'SAML provider {0} not found.'
             log.info(msg.format(name))
             return True
-        # Delete the SAML provider found before.
         conn.delete_saml_provider(saml_provider_arn)
         msg = 'Successfully deleted {0} SAML provider.'
         log.info(msg.format(name))
