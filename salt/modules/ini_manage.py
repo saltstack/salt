@@ -77,9 +77,6 @@ def set_option(file_name, sections=None, separator='='):
     sections = sections or {}
     changes = {}
     inifile = _Ini.get_ini_file(file_name, separator=separator)
-    if not inifile:
-        changes.update({'error': 'ini file not found'})
-        return changes
     changes = inifile.update(sections)
     inifile.flush()
     return changes
