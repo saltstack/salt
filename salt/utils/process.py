@@ -16,7 +16,6 @@ import signal
 import logging
 import threading
 import contextlib
-import Queue
 import subprocess
 import multiprocessing
 import multiprocessing.util
@@ -27,6 +26,7 @@ import salt.utils
 import salt.log.setup
 import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
+from salt.ext.six.moves import queue
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -461,7 +461,7 @@ class ProcessManager(object):
             while waiting:
                 try:
                     pid, msg = self._pm_queue.get(block=False)
-                except Queue.Empty:
+                except queue.Empty:
                     break
                 log.debug('{0}:{1} MSG {2}:{3}'.format(self.name, os.getpid(), pid, msg))
                 if pid not in self._process_map:
