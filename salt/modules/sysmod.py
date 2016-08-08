@@ -365,9 +365,9 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
                 names.add(func)
         else:
             # "sys" should just match sys without also matching sysctl
-            module = module + '.'
+            moduledot = module + '.'
             for func in __salt__:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -573,9 +573,9 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
                 names.add(func)
         else:
             # "sys" should just match sys without also matching sysctl
-            module = module + '.'
+            moduledot = module + '.'
             for func in st_.states:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -702,9 +702,9 @@ def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
                 names.add(func)
         else:
             # "sys" should just match sys without also matching sysctl
-            module = module + '.'
+            moduledot = module + '.'
             for func in run_.functions:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -789,9 +789,9 @@ def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
                 names.add(func)
         else:
             # "sys" should just match sys without also matching sysctl
-            module = module + '.'
+            moduledot = module + '.'
             for func in returners_:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
