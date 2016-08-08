@@ -482,7 +482,7 @@ def container_setting(name, container, settings=None):
         AppPools, Sites, SslBindings
     :param str settings: A dictionary of the setting names and their values.
 
-    Example of usage for the AppPools container:
+    Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
 
@@ -496,7 +496,7 @@ def container_setting(name, container, settings=None):
                     processModel.userName: TestUser
                     processModel.password: TestPassword
 
-    Example of usage for the Sites container:
+    Example of usage for the ``Sites`` container:
 
     .. code-block:: yaml
 
