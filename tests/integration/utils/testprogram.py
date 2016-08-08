@@ -84,6 +84,21 @@ class _TestDir(object):
 TEST_DIR = _TestDir()
 
 
+def wait_for_path(path, timeout=10, exception=False):
+    '''Wait for a path to exist'''
+
+    endtime = time.time() + timeout
+    while True:
+        if os.path.exists(path):
+            return True
+        if endtime < time.time():
+            if exception:
+                raise TimeoutError('Timeout waiting for path "{0}"'.format(path))
+            else:
+                return False
+        time.sleep(0.2)
+
+
 class TestProgramMeta(type):
     '''
     Stack all inherited config_attrs and dirtree dirs from the base classes.
@@ -760,6 +775,7 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self.pid_dir = kwargs.pop('pid_dir', self.pid_dir)
+        self._up = False
         self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
@@ -780,26 +796,17 @@ class TestDaemon(TestProgram):
             daemon_pid = salt.utils.process.get_pidfile(pid_path)
         return daemon_pid
 
-    def wait_for_daemon_pid(self, timeout=10):
+    def wait_for_daemon(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
-        endtime = time.time() + timeout
-        while True:
-            pid = self.daemon_pid
-            if pid:
-                return pid
-            if endtime < time.time():
-                raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(
-                    self.name, self.abs_path(self.pid_path)
-                ))
-            time.sleep(0.2)
+        wait_for_path(self.abs_path(self.pid_path), timeout=timeout, exception=True)
 
     def is_running(self):
         '''Is the daemon running?'''
         ret = False
         if not self._shutdown:
             try:
-                pid = self.wait_for_daemon_pid()
-                ret = psutils.pid_exists(pid)
+                self.wait_for_daemon()
+                ret = psutils.pid_exists(self.daemon_pid)
             except TimeoutError:
                 pass
         return ret
@@ -808,7 +815,8 @@ class TestDaemon(TestProgram):
         '''Shutdown a running daemon'''
         if not self._shutdown:
             try:
-                pid = self.wait_for_daemon_pid(timeout)
+                self.wait_for_daemon(timeout)
+                pid = self.daemon_pid
                 integration.terminate_process_pid(pid)
             except TimeoutError:
                 pass
