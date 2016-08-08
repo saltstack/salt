@@ -22,6 +22,7 @@ import logging
 
 # Import Salt Libs
 import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 
 
 log = logging.getLogger(__name__)
@@ -469,5 +470,197 @@ def team_absent(name, profile="github", **kwargs):
             ret['result'] = True
         else:
             ret['comment'] = 'Failed to delete {0}'.format(name)
+            ret['result'] = False
+    return ret
+
+
+def repo_present(
+        name,
+        description='',
+        homepage=None,
+        private=False,
+        has_issues=True,
+        has_wiki=True,
+        has_downloads=True,
+        auto_init=False,
+        gitignore_template=None,
+        license_template=None,
+        profile="github",
+        **kwargs):
+    '''
+    Ensure a repository is present
+
+    name
+        This is the name of the repository.
+
+    description
+        The description of the repository.
+
+    homepage
+        The URL with more information about the repository.
+
+    private
+        The visiblity of the repository. Note that private repositories require
+        a paid GitHub account.
+
+    has_issues
+        Whether to enable issues for this repository.
+
+    has_wiki
+        Whether to enable the wiki for this repository.
+
+    has_downloads
+        Whether to enable downloads for this repository.
+
+    auto_init
+        Whether to create an initial commit with an empty README.
+
+    gitignore_template
+        The desired language or platform for a .gitignore, e.g "Haskell".
+
+    license_template
+        The desired LICENSE template to apply, e.g "mit" or "mozilla".
+
+    Example:
+
+    .. code-block:: yaml
+
+        Ensure repo my-repo is present in github:
+            github.repo_present:
+                - name: 'my-repo'
+                - description: 'My very important repository'
+
+    .. versionadded:: Carbon
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+
+    try:
+        target = __salt__['github.get_repo_info'](name, profile=profile, **kwargs)
+    except CommandExecutionError:
+        target = None
+
+    given_params = {
+        'description': description,
+        'homepage': homepage,
+        'private': private,
+        'has_issues': has_issues,
+        'has_wiki': has_wiki,
+        'has_downloads': has_downloads,
+        'auto_init': auto_init,
+        'gitignore_template': gitignore_template,
+        'license_template': license_template
+    }
+
+    if target:  # Repo already exists
+        # Some params are only valid on repo creation
+        ignore_params = ['auto_init', 'gitignore_template', 'license_template']
+        parameters = {}
+        old_parameters = {}
+        for param_name, param_value in six.iteritems(given_params):
+            if (param_name not in ignore_params and
+                    target[param_name] is not param_value and
+                    target[param_name] != param_value):
+                parameters[param_name] = param_value
+                old_parameters[param_name] = target[param_name]
+
+        if len(parameters) > 0:
+            if __opts__['test']:
+                ret['comment'] = 'Repo properties are set to be edited.'
+                ret['result'] = None
+                return ret
+            else:
+                result = __salt__['github.edit_repo'](name, profile=profile,
+                                                      **parameters)
+                if result:
+                    ret['changes']['repo'] = {
+                        'old': 'Repo properties were {0}'.format(old_parameters),
+                        'new': 'Repo properties (that changed) are {0}'.format(parameters)
+                    }
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to update repo properties.'
+                    return ret
+
+    else:  # Repo does not exist - it will be created.
+        if __opts__['test']:
+            ret['comment'] = 'Repo {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+
+        add_params = dict(given_params)
+        add_params.update(kwargs)
+        result = __salt__['github.add_repo'](
+            name,
+            **add_params
+        )
+        if result:
+            ret['changes']['repo'] = {
+                'old': None,
+                'new': 'Repo {0} has been created'.format(name)
+            }
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create repo {0}.'.format(name)
+            return ret
+
+    return ret
+
+
+def repo_absent(name, profile="github", **kwargs):
+    '''
+    Ensure a repo is absent.
+
+    Example:
+
+    .. code-block:: yaml
+
+        ensure repo test is absent in github:
+            github.repo_absent:
+                - name: 'test'
+
+    The following parameters are required:
+
+    name
+        This is the name of the repository in the organization.
+
+    .. versionadded:: Carbon
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': None,
+        'comment': ''
+    }
+
+    try:
+        target = __salt__['github.get_repo_info'](name, profile=profile, **kwargs)
+    except CommandExecutionError:
+        target = None
+
+    if not target:
+        ret['comment'] = 'Repo {0} does not exist'.format(name)
+        ret['result'] = True
+        return ret
+    else:
+        if __opts__['test']:
+            ret['comment'] = "Repo {0} will be deleted".format(name)
+            ret['result'] = None
+            return ret
+
+        result = __salt__['github.remove_repo'](name, profile=profile, **kwargs)
+
+        if result:
+            ret['comment'] = 'Deleted repo {0}'.format(name)
+            ret['changes'].setdefault('old', 'Repo {0} exists'.format(name))
+            ret['changes'].setdefault('new', 'Repo {0} deleted'.format(name))
+            ret['result'] = True
+        else:
+            ret['comment'] = ('Failed to delete repo {0}. Ensure the delete_repo '
+                              'scope is enabled if using OAuth.'.format(name))
             ret['result'] = False
     return ret
