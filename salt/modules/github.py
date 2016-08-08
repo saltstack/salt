@@ -123,17 +123,27 @@ def _get_members(organization, params=None):
     )
 
 
-def _get_repos(profile, params=None):
-    org_name = _get_config_value(profile, 'org_name')
-    client = _get_client(profile)
-    organization = client.get_organization(org_name)
-
-    return github.PaginatedList.PaginatedList(
-        github.Repository.Repository,
-        organization._requester,
-        organization.url + '/repos',
-        params
+def _get_repos(profile, params=None, ignore_cache=False):
+    # Use cache when no params are given
+    key = 'github.{0}:repos'.format(
+        _get_config_value(profile, 'org_name')
     )
+
+    if key not in __context__ or ignore_cache or params is not None:
+        org_name = _get_config_value(profile, 'org_name')
+        client = _get_client(profile)
+        organization = client.get_organization(org_name)
+
+        result = github.PaginatedList.PaginatedList(
+            github.Repository.Repository,
+            organization._requester,
+            organization.url + '/repos',
+            params
+        )
+        if params is not None:
+            return result
+        __context__[key] = list(result)  # force evaluation of all pages
+    return __context__[key]
 
 
 def list_users(profile="github", ignore_cache=False):
@@ -722,7 +732,7 @@ def get_repo_info(repo_name, profile='github'):
     .. versionadded:: Carbon
 
     repo_name
-        The name of repository.
+        The name of the repository.
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
@@ -771,6 +781,9 @@ def get_repo_info(repo_name, profile='github'):
         ret['open_issues'] = repo.open_issues
         ret['watchers'] = repo.watchers
         ret['default_branch'] = repo.default_branch
+        ret['has_issues'] = repo.has_issues
+        ret['has_wiki'] = repo.has_wiki
+        ret['has_downloads'] = repo.has_downloads
 
     return ret
 
@@ -843,6 +856,205 @@ def list_public_repos(profile='github'):
     return repos
 
 
+def add_repo(name,
+             description=None,
+             homepage=None,
+             private=None,
+             has_issues=None,
+             has_wiki=None,
+             has_downloads=None,
+             auto_init=None,
+             gitignore_template=None,
+             license_template=None,
+             profile="github"):
+    '''
+    Create a new github repository.
+
+    name
+        The name of the team to be created.
+
+    description
+        The description of the repository.
+
+    homepage
+        The URL with more information about the repository.
+
+    private
+        The visiblity of the repository. Note that private repositories require
+        a paid GitHub account.
+
+    has_issues
+        Whether to enable issues for this repository.
+
+    has_wiki
+        Whether to enable the wiki for this repository.
+
+    has_downloads
+        Whether to enable downloads for this repository.
+
+    auto_init
+        Whether to create an initial commit with an empty README.
+
+    gitignore_template
+        The desired language or platform for a .gitignore, e.g "Haskell".
+
+    license_template
+        The desired LICENSE template to apply, e.g "mit" or "mozilla".
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.add_repo 'repo_name'
+
+    .. versionadded:: Carbon
+    '''
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        given_params = {
+            'description': description,
+            'homepage': homepage,
+            'private': private,
+            'has_issues': has_issues,
+            'has_wiki': has_wiki,
+            'has_downloads': has_downloads,
+            'auto_init': auto_init,
+            'gitignore_template': gitignore_template,
+            'license_template': license_template
+        }
+        parameters = {'name': name}
+        for param_name, param_value in six.iteritems(given_params):
+            if param_value is not None:
+                parameters[param_name] = param_value
+
+        organization._requester.requestJsonAndCheck(
+            "POST",
+            organization.url + "/repos",
+            input=parameters
+        )
+        return True
+    except github.GithubException as e:
+        log.exception('Error creating a repo: {0}'.format(str(e)))
+        return False
+
+
+def edit_repo(name,
+              description=None,
+              homepage=None,
+              private=None,
+              has_issues=None,
+              has_wiki=None,
+              has_downloads=None,
+              profile="github"):
+    '''
+    Updates an existing Github repository.
+
+    name
+        The name of the team to be created.
+
+    description
+        The description of the repository.
+
+    homepage
+        The URL with more information about the repository.
+
+    private
+        The visiblity of the repository. Note that private repositories require
+        a paid GitHub account.
+
+    has_issues
+        Whether to enable issues for this repository.
+
+    has_wiki
+        Whether to enable the wiki for this repository.
+
+    has_downloads
+        Whether to enable downloads for this repository.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.add_repo 'repo_name'
+
+    .. versionadded:: Carbon
+    '''
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        repo = organization.get_repo(name)
+
+        given_params = {
+            'description': description,
+            'homepage': homepage,
+            'private': private,
+            'has_issues': has_issues,
+            'has_wiki': has_wiki,
+            'has_downloads': has_downloads
+        }
+        parameters = {'name': name}
+        for param_name, param_value in six.iteritems(given_params):
+            if param_value is not None:
+                parameters[param_name] = param_value
+
+        organization._requester.requestJsonAndCheck(
+            "PATCH",
+            repo.url,
+            input=parameters
+        )
+        return True
+    except github.GithubException as e:
+        log.exception('Error editing a repo: {0}'.format(str(e)))
+        return False
+
+
+def remove_repo(name, profile="github"):
+    '''
+    Remove a Github repository.
+
+    name
+        The name of the repository to be removed.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.remove_repo 'my-repo'
+
+    .. versionadded:: Carbon
+    '''
+    repo_info = get_repo_info(name, profile=profile)
+    if not repo_info:
+        log.error('Repo {0} to be removed does not exist.'.format(name))
+        return False
+    try:
+        client = _get_client(profile)
+        organization = client.get_organization(
+            _get_config_value(profile, 'org_name')
+        )
+        repo = organization.get_repo(name)
+        repo.delete()
+        _get_repos(profile=profile, ignore_cache=True)  # refresh cache
+        return True
+    except github.GithubException as e:
+        log.exception('Error deleting a repo: {0}'.format(str(e)))
+        return False
+
+
 def get_team(name, profile="github"):
     '''
     Returns the team details if a team with the given name exists, or None
@@ -870,7 +1082,7 @@ def add_team(name,
              permission=None,
              profile="github"):
     '''
-    Create a new github team.
+    Create a new Github team within an organization.
 
     name
         The name of the team to be created.
@@ -934,7 +1146,7 @@ def edit_team(name,
               permission=None,
               profile="github"):
     '''
-    Updates the team properties.
+    Updates an existing Github team.
 
     name
         The name of the team to be edited.
