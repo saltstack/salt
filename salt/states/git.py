@@ -839,16 +839,11 @@ def latest(name,
                         elif remote_rev_type == 'sha1':
                             has_remote_rev = True
 
-            # If has_remote_rev is False, then either the remote rev could not
-            # be found with git ls-remote (in which case we won't know more
-            # until fetching) or we're going to be checking out a new branch
-            # and don't have to worry about fast-forwarding. So, we will set
-            # fast_forward to None (to signify uncertainty) unless there are
-            # local changes, in which case we will set it to False.
+            # If fast_forward is not boolean, then we don't know if this will
+            # be a fast forward or not, because a fetch is requirde.
             fast_forward = None if not local_changes else False
 
             if has_remote_rev:
-                # Remote rev already present
                 if (not revs_match and not update_head) \
                         and (branch is None or branch == local_branch):
                     ret['comment'] = remote_loc.capitalize() \
@@ -861,25 +856,26 @@ def latest(name,
                     )
                     return ret
 
-            # No need to check if this is a fast_forward if we already know
-            # that it won't be (due to local changes).
-            if fast_forward is not False:
-                if base_rev is None:
-                    # If we're here, the remote_rev exists in the local
-                    # checkout but there is still no HEAD locally. A possible
-                    # reason for this is that an empty repository existed there
-                    # and a remote was added and fetched, but the repository
-                    # was not fast-forwarded. Regardless, going from no HEAD to
-                    # a locally-present rev is considered a fast-forward
-                    # update, unless there are local changes.
-                    fast_forward = not bool(local_changes)
-                else:
-                    fast_forward = __salt__['git.merge_base'](
-                        target,
-                        refs=[base_rev, remote_rev],
-                        is_ancestor=True,
-                        user=user,
-                        ignore_retcode=True)
+                # No need to check if this is a fast_forward if we already know
+                # that it won't be (due to local changes).
+                if fast_forward is not False:
+                    if base_rev is None:
+                        # If we're here, the remote_rev exists in the local
+                        # checkout but there is still no HEAD locally. A
+                        # possible reason for this is that an empty repository
+                        # existed there and a remote was added and fetched, but
+                        # the repository was not fast-forwarded. Regardless,
+                        # going from no HEAD to a locally-present rev is
+                        # considered a fast-forward update, unless there are
+                        # local changes.
+                        fast_forward = not bool(local_changes)
+                    else:
+                        fast_forward = __salt__['git.merge_base'](
+                            target,
+                            refs=[base_rev, remote_rev],
+                            is_ancestor=True,
+                            user=user,
+                            ignore_retcode=True)
 
             if fast_forward is False:
                 if not force_reset:
