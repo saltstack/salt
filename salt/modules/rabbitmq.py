@@ -312,11 +312,11 @@ def check_password(name, password, runas=None):
         runas = salt.utils.get_user()
 
     try:
-	res = __salt__['cmd.run'](['rabbitmqctl', 'status'], runas=runas, python_shell=False)
-	server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}',res)
+        res = __salt__['cmd.run'](['rabbitmqctl', 'status'], runas=runas, python_shell=False)
+        server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
 
         if server_version is None:
-            raise ValueError("")
+            raise ValueError
 
         server_version = server_version.group(1)
         version = [int(i) for i in server_version.split('.')]
@@ -333,7 +333,7 @@ def check_password(name, password, runas=None):
             output_loglevel='quiet',
             python_shell=False)
 
-        return not 'Error:' in res
+        return 'Error:' not in res
 
     cmd = ('rabbit_auth_backend_internal:check_user_login'
         '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
