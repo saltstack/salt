@@ -3,6 +3,13 @@
 Classification of Salt exit codes.  These are intended to augment
 universal exit codes (found in Python's `os` module with the `EX_`
 prefix or in `sysexits.h`).
+
+Lower value exit codes are, in-general, considered more serious.
+
+:32-63: Reserved for Salt internal failures
+:80-125: Reserved for Salt remote execution failures
+:=> 80-89: remote execution: state system failures
+:=> 90-95: remote execution: build failures
 '''
 
 # Too many situations use "exit 1" - try not to use it when something
@@ -19,6 +26,7 @@ EX_SCP_NOT_FOUND = 14
 # One of a collection failed
 EX_AGGREGATE = 20
 
+
 # The os.EX_* exit codes are Unix only so in the interest of cross-platform
 # compatiblility define them explicitly here.
 #
@@ -26,12 +34,15 @@ EX_AGGREGATE = 20
 # https://docs.python.org/2/library/os.html#os.EX_OK
 
 EX_OK = 0                 # successful termination
+# BSD range 64 - 78
 EX_USAGE = 64             # command line usage error
 EX_NOUSER = 67            # addressee unknown
 EX_UNAVAILABLE = 69       # service unavailable
 EX_SOFTWARE = 70          # internal software error
 EX_CANTCREAT = 73         # can't create (user) output file
 EX_TEMPFAIL = 75          # temp failure; user is invited to retry
+EX_CONFIG = 78            # configuration failure
+
 
 # The Salt specific exit codes are defined below:
 
