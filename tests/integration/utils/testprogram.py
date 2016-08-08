@@ -853,7 +853,10 @@ class TestSaltDaemon(six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSal
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-    pass
+    def __init__(self, *args, **kwargs):
+        if getattr(self, 'sock_dir', None) and 'sock_dir' in kwargs:
+            self.sock_dir = kwargs.pop('sock_dir')
+        super(TestSaltDaemon, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -861,12 +864,20 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    configs = {'master': {}}
+    configs = {'master': {'map': {'sock_dir': '{sock_dir}'}}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'master')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
         _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
+
+    def wait_for_daemon(self, timeout=10):
+        '''Wait for the daemon to be alive and responding'''
+        time_start = time.time()
+        super(TestDaemonSaltMaster, self).wait_for_daemon(timeout=timeout)
 
 
 class TestDaemonSaltMinion(TestSaltDaemon):
@@ -874,7 +885,13 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    configs = {'minion': {'map': {'id': '{name}'}}}
+    configs = {'minion': {'map': {
+        'id': '{name}',
+        'sock_dir': '{sock_dir}',
+    }}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'minion')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
