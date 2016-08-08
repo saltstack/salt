@@ -784,20 +784,13 @@ def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        _use_fnmatch = False
-        if '*' in module:
-            target_mod = module
-            _use_fnmatch = True
-        elif module:
-            # allow both "sys" and "sys." to match sys, without also matching
-            # sysctl
-            module = module + '.' if not module.endswith('.') else module
-        if _use_fnmatch:
-            for func in returners_:
-                if func.startswith(module):
-                    names.add(func)
+        if '*' in module or '.' in module:
+            for func in fnmatch.filter(returners_, module):
+                names.add(func)
         else:
-            for func in six.iterkeys(returners_):
+            # "sys" should just match sys without also matching sysctl
+            module = module + '.'
+            for func in returners_:
                 if func.startswith(module):
                     names.add(func)
     return sorted(names)

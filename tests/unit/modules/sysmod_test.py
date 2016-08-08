@@ -79,7 +79,7 @@ class Mockloader(object):
     Mock of loader
     """
     flag = None
-    functions = []
+    functions = []	# ? does not have any effect on existing tests
 
     def __init__(self):
         self.opts = None
@@ -93,7 +93,7 @@ class Mockloader(object):
         self.lst = lst
         if self.flag:
             return {}
-        return []
+        return sysmod.__salt__
 
     def render(self, opts, lst):
         """
@@ -119,6 +119,8 @@ class SysmodTestCase(TestCase):
         Test if it return the docstrings for all modules.
         '''
         self.assertDictEqual(sysmod.doc(), sysmod.__salt__)
+
+        self.assertDictEqual(sysmod.doc('sys.doc'), {'sys.doc': None})
 
     # 'state_doc' function tests: 1
 
@@ -322,10 +324,20 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the functions for all returner modules.
         '''
-        self.assertListEqual(sysmod.list_returner_functions(), [])
+        self.assertListEqual(sysmod.list_returner_functions(), _functions)
 
-        self.assertListEqual(sysmod.list_returner_functions('sqlite3.get_*'),
-                             [])
+        self.assertListEqual(sysmod.list_returner_functions('nonexist'), [])
+
+        # list all functions in/given a specific module
+        self.assertListEqual(sysmod.list_returner_functions('sys'), ['sys.doc', 'sys.list_functions', 'sys.list_modules'])
+
+        # globs can be used for both module names and function names:
+        self.assertListEqual(sysmod.list_returner_functions('sys*'), ['sys.doc', 'sys.list_functions', 'sys.list_modules', 'sysctl.get', 'sysctl.show', 'system.halt', 'system.reboot'])
+        self.assertListEqual(sysmod.list_returner_functions('sys.list*'), ['sys.list_functions', 'sys.list_modules'])
+
+        # "list", or check for a specific function:
+        self.assertListEqual(sysmod.list_returner_functions('sys.list'), [])
+        self.assertListEqual(sysmod.list_returner_functions('exist.exist'), ['exist.exist'])
 
     # 'list_renderers' function tests: 1
 
