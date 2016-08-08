@@ -139,6 +139,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt/renderers/*.py tests'
         )
         self.test_selection_group.add_option(
+            '--returners',
+            dest='returners',
+            default=False,
+            action='store_true',
+            help='Run salt/returners/*.py tests'
+        )
+        self.test_selection_group.add_option(
             '-l',
             '--loader',
             default=False,
@@ -222,6 +229,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.state,
                 self.options.runners,
                 self.options.renderers,
+                self.options.returners,
                 self.options.loader,
                 self.options.name,
                 self.options.outputter,
@@ -253,6 +261,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.unit = True
             self.options.runners = True
             self.options.renderers = True
+            self.options.returners = True
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
@@ -372,6 +381,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runners or
                  self.options.renderers or
+                 self.options.returners or
                  self.options.state or
                  self.options.module or
                  self.options.cli or
