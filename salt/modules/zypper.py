@@ -1595,14 +1595,17 @@ def download(*packages, **kwargs):
     pkg_ret = {}
     for dld_result in __zypper__.xml.call('download', *packages).getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
+        path = dld_result.getElementsByTagName("localfile")[0].getAttribute("path")
         pkg_info = {
             'repository-name': repo.getAttribute('name'),
             'repository-alias': repo.getAttribute('alias'),
+            'path': path,
         }
         key = _get_first_aggregate_text(
             dld_result.getElementsByTagName('name')
         )
-        pkg_ret[key] = pkg_info
+        if __salt__['lowpkg.checksum'](pkg_info['path']):
+            pkg_ret[key] = pkg_info
 
     if pkg_ret:
         failed = [pkg for pkg in packages if pkg not in pkg_ret]
