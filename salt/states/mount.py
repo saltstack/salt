@@ -51,7 +51,7 @@ def mounted(name,
             mount=True,
             user=None,
             match_on='auto',
-            device_name_regex=[],
+            device_name_regex=None,
             extra_mount_invisible_options=None,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
@@ -104,8 +104,8 @@ def mounted(name,
         device otherwise.
 
     device_name_regex
-        A list of device exact names or regilar expressions which should
-        not force a remount. For example, glusterfs may be mounted with
+        A list of device exact names or regular expressions which should
+        not force a remount. For example, glusterfs may be mounted with a
         comma-separated list of servers in fstab, but the /proc/self/mountinfo
         will show only the first available server.
 
@@ -126,7 +126,7 @@ def mounted(name,
                 - device_name_regex:
                   - ({{ glusterfs_ip_list|join('|') }}):/volume_name
 
-        .. versionadded:: 2016.3.4
+        .. versionadded:: Carbon
 
     extra_mount_invisible_options
         A list of extra options that are not visible through the /proc/self/mountinfo
@@ -166,6 +166,9 @@ def mounted(name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if device_name_regex is None:
+        device_name_regex = []
 
     # Defaults is not a valid option on Mac OS
     if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
@@ -409,7 +412,7 @@ def mounted(name,
                     ret['comment'] = "An umount would have been forced " \
                                      + "because devices do not match.  Watched: " \
                                      + device
-                elif _device_mismatch_is_ignored != False:
+                elif _device_mismatch_is_ignored is True:
                     ret['result'] = None
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
