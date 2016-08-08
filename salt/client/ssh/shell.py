@@ -58,7 +58,8 @@ class Shell(object):
             sudo=False,
             tty=False,
             mods=None,
-            identities_only=False):
+            identities_only=False,
+            sudo_user=None):
         self.opts = opts
         self.host = host
         self.user = user
