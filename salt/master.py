@@ -145,13 +145,13 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
     A generalized maintenance process which performs maintenance routines.
     '''
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, log_queue=None, pm_queue=None):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__(log_queue=log_queue)
+        super(Maintenance, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
@@ -231,6 +231,9 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
+
+        self._notify_ready()
+
         while True:
             now = int(time.time())
             if (now - last) >= self.loop_interval:
@@ -523,7 +526,7 @@ class Master(SMaster):
                 **kwargs)
             reqserv.run()
 
-    def start(self):
+    def start(self, notify_ready=None):
         '''
         Turn on the master server components
         '''
@@ -551,7 +554,7 @@ class Master(SMaster):
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
-            self.process_manager = salt.utils.process.ProcessManager()
+            self.process_manager = salt.utils.process.ProcessManager(notify_ready=notify_ready)
             pub_channels = []
             log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
@@ -644,13 +647,13 @@ class Halite(SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts, log_queue=None):
+    def __init__(self, hopts, log_queue=None, pm_queue=None):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__(log_queue=log_queue)
+        super(Halite, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.hopts = hopts
 
     # __setstate__ and __getstate__ are only used on Windows.
@@ -669,6 +672,7 @@ class Halite(SignalHandlingMultiprocessingProcess):
         Fire up halite!
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
+        self._notify_ready()
         halite.start(self.hopts)
 
 
@@ -677,7 +681,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None):
+    def __init__(self, opts, key, mkey, log_queue=None, pm_queue=None):
         '''
         Create a request server
 
@@ -688,7 +692,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         :rtype: ReqServer
         :returns: Request server
         '''
-        super(ReqServer, self).__init__(log_queue=log_queue)
+        super(ReqServer, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
@@ -716,7 +720,10 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
             except os.error:
                 pass
 
-        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(
+            name='ReqServer_ProcessManager',
+            notify_ready=self._notify_ready
+        )
 
         req_channels = []
         tcp_only = True
@@ -849,6 +856,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.io_loop = LOOP_CLASS()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
+        self._notify_ready()
         self.io_loop.start()
 
     @tornado.gen.coroutine
