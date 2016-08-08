@@ -418,9 +418,9 @@ against the ``return`` statement in the ``if`` clause.
 There are more examples of writing unit tests of varying complexities available
 in the following docs:
 
-* `Simple Unit Test Example<simple-unit-example>`
-* `Complete Unit Test Example<complete-unit-example>`
-* `Complex Unit Test Example<complex-unit-example>`
+* :ref:`Simple Unit Test Example<simple-unit-example>`
+* :ref:`Complete Unit Test Example<complete-unit-example>`
+* :ref:`Complex Unit Test Example<complex-unit-example>`
 
 .. note::
 
@@ -435,7 +435,7 @@ Automated Test Runs
 ===================
 
 SaltStack maintains a Jenkins server which can be viewed at
-http://jenkins.saltstack.com. The tests executed from this Jenkins server
+https://jenkins.saltstack.com. The tests executed from this Jenkins server
 create fresh virtual machines for each test run, then execute the destructive
 tests on the new, clean virtual machine. This allows for the execution of tests
 across supported platforms.
