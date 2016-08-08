@@ -46,6 +46,7 @@ _PKGS_INSTALLED = set()
 
 
 class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+    '''Test the `call` command line executable'''
 
     _call_binary_ = 'salt-call'
 
@@ -453,7 +454,6 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
         call = testprogram.TestProgramSaltCall(
             name='unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         call.setup()
@@ -475,7 +475,6 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
         call = testprogram.TestProgramSaltCall(
             name='correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         call.setup()

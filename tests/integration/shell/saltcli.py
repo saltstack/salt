@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 class SaltTest(testprogram.TestProgramCase):
     '''
-    Various integration tests for the salt executable.
+    Various integration tests for the `salt` command line executable.
     '''
 
     # pylint: disable=invalid-name
@@ -37,7 +37,6 @@ class SaltTest(testprogram.TestProgramCase):
 
         runner = testprogram.TestProgramSalt(
             name='run-unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         runner.setup()
@@ -60,7 +59,6 @@ class SaltTest(testprogram.TestProgramCase):
 
         runner = testprogram.TestProgramSalt(
             name='run-correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         runner.setup()

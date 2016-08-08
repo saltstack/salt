@@ -26,6 +26,7 @@ import salt.utils
 
 
 class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
+    '''Test the `salt-master` command line executable'''
 
     _call_binary_ = 'salt-master'
 
@@ -88,7 +89,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         master = testprogram.TestDaemonSaltMaster(
             name='unknown_user',
             configs={'master': {'map': {'user': 'some_unknown_user_xyz'}}},
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         master.setup()
@@ -116,7 +116,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         master = testprogram.TestDaemonSaltMaster(
             name='unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         master.setup()
@@ -143,7 +142,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         master = testprogram.TestDaemonSaltMaster(
             name='correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         master.setup()

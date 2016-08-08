@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 class ProxyTest(testprogram.TestProgramCase):
     '''
-    Various integration tests for the salt-proxy executable.
+    Various integration tests for the `salt-proxy` command line executable.
     '''
 
     def test_exit_status_no_proxyid(self):
@@ -34,7 +34,6 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-no_proxyid',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         proxy.setup()
@@ -66,7 +65,6 @@ class ProxyTest(testprogram.TestProgramCase):
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_user',
             config_base={'user': 'some_unknown_user_xyz'},
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         proxy.setup()
@@ -91,7 +89,6 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         proxy.setup()
@@ -114,7 +111,6 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         proxy.setup()
