@@ -120,6 +120,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+.. code-block:: yaml
+
+    add-saml-provider:
+      boto_iam.saml_provider_present:
+        - name: my_saml_provider
+        - saml_metadata_document: salt://base/files/provider.xml
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
 '''
 
 # Import Python Libs
@@ -265,7 +274,8 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
     return ret
 
 
-def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
+def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None,
+                 save_format="{2}\n{0}\n{3}\n{1}\n"):
     '''
 
     .. versionadded:: 2015.8.0
@@ -294,6 +304,11 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    save_format (dict)
+        Save format is repeated for each key. Default format is "{2}\n{0}\n{3}\n{1}\n",
+        where {0} and {1} are placeholders for new key_id and key respectively,
+        whereas {2} and {3} are "key_id-{number}" and 'key-{number}' strings kept for compatibility.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -337,12 +352,15 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         log.debug('Created is : {0}'.format(created))
         response = 'create_access_key_response'
         result = 'create_access_key_result'
-        new_keys['key-{0}'.format(i)] = created[response][result]['access_key']['access_key_id']
-        new_keys['key_id-{0}'.format(i)] = created[response][result]['access_key']['secret_access_key']
+        new_keys[str(i)] = {}
+        new_keys[str(i)]['key_id'] = created[response][result]['access_key']['access_key_id']
+        new_keys[str(i)]['secret_key'] = created[response][result]['access_key']['secret_access_key']
     try:
         with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
-            for key_id, access_key in new_keys.items():
-                _wrf.write('{0}\n{1}\n'.format(key_id, access_key))
+            for key_num, key in new_keys.items():
+                key_id = key['key_id']
+                secret_key = key['secret_key']
+                _wrf.write(save_format.format(key_id, secret_key, 'key_id-{0}'.format(key_num), 'key-{0}'.format(key_num)))
         ret['comment'] = 'Keys have been written to file {0}/{1}.'.format(save_dir, name)
         ret['result'] = True
         ret['changes'] = new_keys
@@ -1483,10 +1501,10 @@ def policy_absent(name,
     return ret
 
 
-def saml_provider_present(name, saml_metadata_document, update=False):
+def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8.0
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is present.
 
@@ -1510,24 +1528,41 @@ def saml_provider_present(name, saml_metadata_document, update=False):
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if 'salt://' in saml_metadata_document:
+        try:
+            saml_metadata_document = __salt__['cp.get_file_str'](saml_metadata_document)
+            ET.fromstring(saml_metadata_document)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'SAML document file {0} not found or could not be loaded'.format(name)
+            ret['result'] = False
+            return ret
+    for provider in __salt__['boto_iam.list_saml_providers'](region=region,
+                                                             key=key, keyid=keyid,
+                                                             profile=profile):
+        if provider == name:
+            ret['comment'] = 'SAML provider {0} is present.'.format(name)
+            return ret
     if __opts__['test']:
         ret['comment'] = 'SAML provider {0} is set to be create.'.format(name)
         ret['result'] = None
         return ret
-    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document, update)
-    if created is not False:
+    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document,
+                                                        region=region, key=key, keyid=keyid,
+                                                        profile=profile)
+    if created:
         ret['comment'] = 'SAML provider {0} was created.'.format(name)
-        ret['changes'] = created
+        ret['changes']['new'] = name
         return ret
     ret['result'] = False
     ret['comment'] = 'SAML provider {0} failed to be created.'.format(name)
     return ret
 
 
-def saml_provider_absent(name):
+def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8.0
+    .. versionadded::
 
     Ensure the SAML provider with the specified name is absent.
 
@@ -1551,14 +1586,22 @@ def saml_provider_absent(name):
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    provider = __salt__['boto_iam.list_saml_providers'](region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
+    if len(provider) == 0:
+        ret['comment'] = 'SAML provider {0} is absent.'.format(name)
+        return ret
     if __opts__['test']:
         ret['comment'] = 'SAML provider {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_iam.delete_saml_provider'](name)
+    deleted = __salt__['boto_iam.delete_saml_provider'](name, region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
     if deleted is not False:
         ret['comment'] = 'SAML provider {0} was deleted.'.format(name)
-        ret['changes'] = deleted
+        ret['changes']['old'] = name
         return ret
     ret['result'] = False
     ret['comment'] = 'SAML provider {0} failed to be deleted.'.format(name)
