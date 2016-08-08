@@ -79,7 +79,7 @@ class Mockloader(object):
     Mock of loader
     """
     flag = None
-    functions = []	# ? does not have any effect on existing tests
+    functions = []  # ? does not have any effect on existing tests
 
     def __init__(self):
         self.opts = None
