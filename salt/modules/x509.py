@@ -1424,8 +1424,8 @@ def create_certificate(
             prepend = str(kwargs['CN']) + '-'
         else:
             prepend = ''
-        write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'], 
-                  prepend + kwargs['serial_number']+'.crt'), 
+        write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
+                  prepend + kwargs['serial_number']+'.crt'),
                   pem_type='CERTIFICATE')
 
     if path:
