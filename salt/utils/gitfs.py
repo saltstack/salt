@@ -946,6 +946,7 @@ class GitPython(GitProvider):
         while True:
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
+                blob = None
                 break
             try:
                 file_blob = tree / path
@@ -967,6 +968,7 @@ class GitPython(GitProvider):
                     break
             except KeyError:
                 # File not found or repo_path points to a directory
+                blob = None
                 break
         if isinstance(blob, git.Blob):
             return blob, blob.hexsha, blob.mode
@@ -1489,6 +1491,7 @@ class Pygit2(GitProvider):
         while True:
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
+                blob = None
                 break
             try:
                 entry = tree[path]
@@ -1504,7 +1507,9 @@ class Pygit2(GitProvider):
                     )
                 else:
                     blob = self.repo[entry.oid]
+                    break
             except KeyError:
+                blob = None
                 break
         if isinstance(blob, pygit2.Blob):
             return blob, blob.hex, mode
@@ -1840,6 +1845,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         while True:
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
+                blob = None
                 break
             prefix_dirs, _, filename = path.rpartition(os.path.sep)
             tree = self.walk_tree(tree, prefix_dirs)
@@ -1861,6 +1867,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     blob = self.repo.get_object(oid)
                     break
             except KeyError:
+                blob = None
                 break
         if isinstance(blob, dulwich.objects.Blob):
             return blob, blob.sha().hexdigest(), mode

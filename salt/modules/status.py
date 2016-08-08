@@ -132,7 +132,7 @@ def custom():
     return ret
 
 
-@with_deprecated(globals(), "Boron")
+@with_deprecated(globals(), "Carbon")
 def uptime():
     '''
     Return the uptime for this system.

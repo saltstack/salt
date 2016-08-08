@@ -346,7 +346,7 @@ def repo(name,
 
     if __opts__['test'] is True:
         ret['result'] = None
-        ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
+        ret['comment'] = 'Package repo metadata at {0} will be refreshed'.format(name)
         return ret
 
     # Need the check for None here, if env is not provided then it falls back
@@ -363,6 +363,18 @@ def repo(name,
                 func = 'rpmbuild.make_repo'
                 break
 
-    __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
-    ret['changes'] = {'refresh': True}
+    res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
+
+    if res['retcode'] > 0:
+        ret['result'] = False
+    else:
+        ret['changes'] = {'refresh': True}
+
+    if res['stdout'] and res['stderr']:
+        ret['comment'] = "{0}\n{1}".format(res['stdout'], res['stderr'])
+    elif res['stdout']:
+        ret['comment'] = res['stdout']
+    elif res['stderr']:
+        ret['comment'] = res['stderr']
+
     return ret

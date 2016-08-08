@@ -395,7 +395,24 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_minion:: verify_env
+.. conf_minion:: append_minionid_config_dirs
+
+``append_minionid_config_dirs``
+-------------------------------
+
+Default: ``[]`` (the empty list) for regular minions, ``['cachedir']`` for proxy minions.
+
+Append minion_id to these configuration directories.  Helps with multiple proxies
+and minions running on the same machine. Allowed elements in the list:
+``pki_dir``, ``cachedir``, ``extension_modules``.
+Normally not needed unless running several proxies and/or minions on the same machine.
+
+.. code-block:: yaml
+
+    append_minionid_config_dirs:
+      - pki_dir
+      - cachedir
+
 
 ``verify_env``
 --------------
