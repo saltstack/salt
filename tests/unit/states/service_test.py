@@ -142,9 +142,9 @@ class ServiceTestCase(TestCase):
                     self.assertDictEqual(service.dead("salt"), ret[2])
 
             with patch.dict(service.__opts__, {'test': False}):
-                with patch.dict( service.__salt__, {'service.enabled': fmock,
-                                                    'service.stop': tmock,
-                                                    'service.status': fmock}):
+                with patch.dict(service.__salt__, {'service.enabled': fmock,
+                                                   'service.stop': tmock,
+                                                   'service.status': fmock}):
                     with patch.object(service, '_enable', mock):
                         self.assertDictEqual(service.dead("salt", True), ret[1])
 
