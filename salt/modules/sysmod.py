@@ -344,6 +344,12 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' sys.list_functions 'sys.list_*'
 
+    .. versionadded:: ?
+
+    .. code-block:: bash
+
+        salt '*' sys.list_functions 'module.specific_function'
+
     '''
     # ## NOTE: **kwargs is used here to prevent a traceback when garbage
     # ##       arguments are tacked on to the end.
@@ -354,15 +360,14 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        if '*' in module:
+        if '*' in module or '.' in module:
             for func in fnmatch.filter(__salt__, module):
                 names.add(func)
         else:
-            # allow both "sys" and "sys." to match sys, without also matching
-            # sysctl
-            module = module + '.' if not module.endswith('.') else module
+            # "sys" should just match sys without also matching sysctl
+            moduledot = module + '.'
             for func in __salt__:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -546,6 +551,12 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_state_functions 'file.*'
         salt '*' sys.list_state_functions 'file.s*'
 
+    .. versionadded:: ?
+
+    .. code-block:: bash
+
+        salt '*' sys.list_state_functions 'module.specific_function'
+
     '''
     # NOTE: **kwargs is used here to prevent a traceback when garbage
     #       arguments are tacked on to the end.
@@ -557,20 +568,14 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        _use_fnmatch = False
-        if '*' in module:
-            target_mod = module
-            _use_fnmatch = True
-        elif module:
-            # allow both "sys" and "sys." to match sys, without also matching
-            # sysctl
-            module = module + '.' if not module.endswith('.') else module
-        if _use_fnmatch:
-            for func in fnmatch.filter(st_.states, target_mod):
+        if '*' in module or '.' in module:
+            for func in fnmatch.filter(st_.states, module):
                 names.add(func)
         else:
+            # "sys" should just match sys without also matching sysctl
+            moduledot = module + '.'
             for func in st_.states:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -692,20 +697,14 @@ def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        _use_fnmatch = False
-        if '*' in module:
-            target_mod = module
-            _use_fnmatch = True
-        elif module:
-            # allow both "sys" and "sys." to match sys, without also matching
-            # sysctl
-            module = module + '.' if not module.endswith('.') else module
-        if _use_fnmatch:
-            for func in fnmatch.filter(run_.functions, target_mod):
+        if '*' in module or '.' in module:
+            for func in fnmatch.filter(run_.functions, module):
                 names.add(func)
         else:
+            # "sys" should just match sys without also matching sysctl
+            moduledot = module + '.'
             for func in run_.functions:
-                if func.startswith(module):
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
@@ -785,21 +784,14 @@ def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
     names = set()
     for module in args:
-        _use_fnmatch = False
-        if '*' in module:
-            target_mod = module
-            _use_fnmatch = True
-        elif module:
-            # allow both "sys" and "sys." to match sys, without also matching
-            # sysctl
-            module = module + '.' if not module.endswith('.') else module
-        if _use_fnmatch:
-            for func in returners_:
-                if func.startswith(module):
-                    names.add(func)
+        if '*' in module or '.' in module:
+            for func in fnmatch.filter(returners_, module):
+                names.add(func)
         else:
-            for func in six.iterkeys(returners_):
-                if func.startswith(module):
+            # "sys" should just match sys without also matching sysctl
+            moduledot = module + '.'
+            for func in returners_:
+                if func.startswith(moduledot):
                     names.add(func)
     return sorted(names)
 
