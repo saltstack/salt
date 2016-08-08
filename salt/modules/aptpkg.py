@@ -195,7 +195,12 @@ def _get_virtual():
     except KeyError:
         __context__['pkg._get_virtual'] = {}
         if HAS_APT:
-            apt_cache = apt.cache.Cache()
+            try:
+                apt_cache = apt.cache.Cache()
+            except SystemError as se:
+                msg = 'Failed to get virtual package information ({0})'.format(se)
+                log.error(msg)
+                raise CommandExecutionError(msg)
             pkgs = getattr(apt_cache._cache, 'packages', [])
             for pkg in pkgs:
                 for item in getattr(pkg, 'provides_list', []):
@@ -281,7 +286,10 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db(cache_valid_time)
 
-    virtpkgs = _get_virtual()
+    try:
+        virtpkgs = _get_virtual()
+    except CommandExecutionError as cee:
+        raise CommandExecutionError(cee)
     all_virt = set()
     for provides in six.itervalues(virtpkgs):
         all_virt.update(provides)
@@ -1263,7 +1271,10 @@ def list_pkgs(versions_as_list=False,
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed:
-        virtpkgs_all = _get_virtual()
+        try:
+            virtpkgs_all = _get_virtual()
+        except CommandExecutionError as cee:
+            raise CommandExecutionError(cee)
         virtpkgs = set()
         for realpkg, provides in six.iteritems(virtpkgs_all):
             # grep-available returns info on all virtual packages. Ignore any

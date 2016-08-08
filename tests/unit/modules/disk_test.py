@@ -114,7 +114,7 @@ class DiskTestCase(TestCase):
         with patch.dict(disk.__salt__, {'cmd.run_all': mock}):
             disk.wipe('/dev/sda')
             mock.assert_called_once_with(
-                'wipefs /dev/sda',
+                'wipefs -a /dev/sda',
                 python_shell=False
             )
 

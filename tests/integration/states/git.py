@@ -197,6 +197,62 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    def test_latest_fast_forward(self):
+        '''
+        Test running git.latest state a second time after changes have been
+        made to the remote repo.
+        '''
+        def _head(cwd):
+            return self.run_function('git.rev_parse', [cwd, 'HEAD'])
+
+        repo_url = 'https://{0}/saltstack/salt-test-repo.git'.format(self.__domain)
+        mirror_dir = os.path.join(integration.TMP, 'salt_repo_mirror')
+        mirror_url = 'file://' + mirror_dir
+        admin_dir = os.path.join(integration.TMP, 'salt_repo_admin')
+        clone_dir = os.path.join(integration.TMP, 'salt_repo')
+
+        try:
+            # Mirror the repo
+            self.run_function('git.clone',
+                              [mirror_dir, repo_url, None, '--mirror'])
+
+            # Make sure the directory for the mirror now exists
+            self.assertTrue(os.path.exists(mirror_dir))
+
+            # Clone the mirror twice, once to the admin location and once to
+            # the clone_dir
+            ret = self.run_state('git.latest', name=mirror_url, target=admin_dir)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+            self.assertSaltTrueReturn(ret)
+
+            # Make a change to the repo by editing the file in the admin copy
+            # of the repo and committing.
+            head_pre = _head(admin_dir)
+            with open(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
+                fp_.write('Hello world!')
+            self.run_function('git.commit', [admin_dir, 'Added a line', '-a'])
+            # Make sure HEAD is pointing to a new SHA so we know we properly
+            # committed our change.
+            head_post = _head(admin_dir)
+            self.assertNotEqual(head_pre, head_post)
+
+            # Push the change to the mirror
+            # NOTE: the test will fail if the salt-test-repo's default branch
+            # is changed.
+            self.run_function('git.push', [admin_dir, 'origin', 'develop'])
+
+            # Re-run the git.latest state on the clone_dir
+            ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+            self.assertSaltTrueReturn(ret)
+
+            # Make sure that the clone_dir now has the correct SHA
+            self.assertEqual(head_post, _head(clone_dir))
+
+        finally:
+            for path in (mirror_dir, admin_dir, clone_dir):
+                shutil.rmtree(path, ignore_errors=True)
+
     def test_present(self):
         '''
         git.present

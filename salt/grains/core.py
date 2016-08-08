@@ -1591,72 +1591,30 @@ def append_domain():
     return grain
 
 
-def ip4():
+def ip_fqdn():
     '''
-    Return a list of ipv4 addrs
+    Return ip address and FQDN grains
     '''
-
     if salt.utils.is_proxy():
         return {}
 
-    return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
+    ret = {}
+    ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
+    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
 
+    _fqdn = hostname()['fqdn']
+    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
+        key = 'fqdn_ip' + ipv_num
+        if not ret['ipv' + ipv_num]:
+            ret[key] = []
+        else:
+            try:
+                info = socket.getaddrinfo(_fqdn, None, socket_type)
+                ret[key] = list(set(item[4][0] for item in info))
+            except socket.error:
+                ret[key] = []
 
-def fqdn_ip4():
-    '''
-    Return a list of ipv4 addrs of fqdn
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    addrs = []
-    try:
-        hostname_grains = hostname()
-        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
-        addrs = list(set(item[4][0] for item in info))
-    except socket.error:
-        pass
-    return {'fqdn_ip4': addrs}
-
-
-def has_ipv6():
-    '''
-    Check whether IPv6 is supported on this platform.
-
-    .. versionadded:: Carbon
-    '''
-
-    return {'has_ipv6': socket.has_ipv6}
-
-
-def ip6():
-    '''
-    Return a list of ipv6 addrs
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
-
-
-def fqdn_ip6():
-    '''
-    Return a list of ipv6 addrs of fqdn
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    addrs = []
-    try:
-        hostname_grains = hostname()
-        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
-        addrs = list(set(item[4][0] for item in info))
-    except socket.error:
-        pass
-    return {'fqdn_ip6': addrs}
+    return ret
 
 
 def ip_interfaces():

@@ -309,13 +309,16 @@ def wipe(device):
         salt '*' disk.wipe /dev/sda1
     '''
 
-    cmd = 'wipefs {0}'.format(device)
+    cmd = 'wipefs -a {0}'.format(device)
     try:
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
     if out['retcode'] == 0:
         return True
+    else:
+        log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
+        return False
 
 
 def dump(device, args=None):
