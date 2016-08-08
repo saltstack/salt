@@ -443,7 +443,7 @@ def _format_host(host, data):
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
-        if __opts__.get('state_output_profile', False):
+        if __opts__.get('state_output_profile', True):
             sum_duration = sum(rdurations)
             duration_unit = 'ms'
             # convert to seconds if duration is 1000ms or more
@@ -516,7 +516,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u'{0}'
-        if __opts__.get('state_output_profile', False):
+        if __opts__.get('state_output_profile', True):
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
@@ -528,7 +528,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
-        if __opts__.get('state_output_profile', False):
+        if __opts__.get('state_output_profile', True):
             fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
         fmt_string += u'{5}'
 
