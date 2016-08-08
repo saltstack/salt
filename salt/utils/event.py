@@ -969,8 +969,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts, log_queue=None):
-        super(EventPublisher, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, log_queue=None, pm_queue=None):
+        super(EventPublisher, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1044,6 +1044,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             # destroyed
             Finalize(self, self.close, exitpriority=15)
 
+            self._notify_ready()
+
             self.io_loop.start()
 
     def handle_publish(self, package, _):
@@ -1083,13 +1085,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, log_queue=None, pm_queue=None):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__(log_queue=log_queue)
+        super(EventReturn, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -1158,6 +1160,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
+        self._notify_ready()
         try:
             for event in events:
                 if event['tag'] == 'salt/event/exit':
