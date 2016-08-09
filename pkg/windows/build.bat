@@ -1,9 +1,10 @@
-@ echo off
-@ echo Salt Windows Build Script
-@ echo.
+@echo off
+@echo Salt Windows Build Script
+@echo ------------------------------------------------------------------
+@echo.
 
 :: Make sure the script is run as Admin
-@ echo Administrative permissions required. Detecting permissions...
+@echo Administrative permissions required. Detecting permissions...
 net session >nul 2>&1
 if %errorLevel%==0 (
     echo Success: Administrative permissions confirmed.
@@ -14,7 +15,7 @@ if %errorLevel%==0 (
 
 :: Define Variables
 @echo %0 :: Defining Variables...
-@echo ---------------------
+@echo ------------------------------------------------------------------
 Set "PyDir=C:\Python27"
 Set "CurDir=%~dp0"
 Set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
@@ -36,16 +37,16 @@ if not %errorLevel%==0 (
 )
 
 :: Install Current Version of salt
-@echo  %0 :: Install Current Version of salt...
-@echo ---------------------
+@echo %0 :: Install Current Version of salt...
+@echo ------------------------------------------------------------------
 "%PyDir%\python.exe" "%SrcDir%\setup.py" --quiet install --force
 
 :: Build the Salt Package
-@echo  %0 :: Build the Salt Package...
-@echo ---------------------
+@echo %0 :: Build the Salt Package...
+@echo ------------------------------------------------------------------
 call "%CurDir%build_pkg.bat" "%Version%"
 
 :eof
 
-@echo  End of %0
-@echo ---------------------
+@echo End of %0
+@echo ------------------------------------------------------------------
