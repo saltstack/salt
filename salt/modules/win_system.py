@@ -264,7 +264,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     if only_on_pending_reboot and not get_pending_reboot():
         return True
 
-    if message:
+    if message and not isinstance(message, str):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -432,10 +432,11 @@ def set_computer_desc(desc=None):
     system_info = win32net.NetServerGetInfo(None, 101)
 
     # If desc is passed, decode it for unicode
-    if desc:
-        system_info['comment'] = desc.decode('utf-8')
-    else:
+    if desc is None:
         return False
+    if not isinstance(desc, str):
+        desc = desc.decode('utf-8')
+    system_info['comment'] = desc
 
     # Apply new settings
     try:
@@ -522,7 +523,7 @@ def get_computer_desc():
         salt 'minion-id' system.get_computer_desc
     '''
     desc = get_system_info()['description']
-    return desc if desc else False
+    return False if desc is None else desc
 
 
 get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
