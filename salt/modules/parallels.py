@@ -209,6 +209,63 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None, template=F
     return prlctl('list', args, runas=runas)
 
 
+def clone(name, new_name, linked=False, template=False, runas=None):
+    '''
+    Clone a VM
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM to clone
+
+    :param str new_name:
+        Name of the new VM
+
+    :param bool linked:
+        Create a linked virtual machine.
+
+    :param bool template:
+        Create a virtual machine template instead of a real virtual machine.
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.clone macvm macvm_new runas=macdev
+        salt '*' parallels.clone macvm macvm_templ template=True runas=macdev
+    '''
+    args = [_sdecode(name), '--name', _sdecode(new_name)]
+    if linked:
+        args.append('--linked')
+    if template:
+        args.append('--template')
+    return prlctl('clone', args, runas=runas)
+
+
+def delete(name, runas=None):
+    '''
+    Delete a VM
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM to clone
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
+    '''
+    return prlctl('delete', _sdecode(name), runas=runas)
+
+
 def start(name, runas=None):
     '''
     Start a VM
