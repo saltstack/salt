@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for the salt-run command
+Tests for the local_cache returner
 '''
 # Import Python libs
 from __future__ import absolute_import
@@ -47,7 +47,6 @@ class Local_CacheTest(integration.ShellCase):
     '''
     Test the local cache returner
     '''
-
     def _check_dir_files(self, msg, contents, status='None'):
         '''
         helper method to ensure files or dirs
