@@ -39,17 +39,17 @@ Please file a bug report on our GitHub repo if issues for other platforms are
 found.
 
 The installer will detect previous installations of Salt and ask if you would
-like to remove them. Clicking OK will remove the Salt binaries but should leave
-any existing config, cache, and pki information.
+like to remove them. Clicking OK will remove the Salt binaries and related
+files but leave any existing config, cache, and PKI information.
 
 You will next be prompted to choose to install the minion and master. The
 minion check box is checked by default. To also install the master, check the
 appropriate checkbox. To not install the minion, uncheck the checkbox. At least
 one item must be selected for install.
 
-The installer asks for two mroe bits of information to configure the minion;
-the master hostname and the minion name. The installer will update the minion
-config with these options.
+The installer asks for two additional bits of information to configure the
+minion; the master hostname and the minion name. The installer will update the
+minion config with these options.
 
 The final page allows you to select which services to start. Checking the box
 next to master or minion will start that service when the installer exits.
@@ -80,11 +80,11 @@ Minion silently:
 .. note::
     `/start-service` has been deprecated but will continue to function as expected for the time being.
 
-Here's are some examples of using the silent installer:
+Here are some examples of using the silent installer:
 
 .. code-block:: bat
 
-    # Will install both minion and master, configure the minion, and start both services
+    # Will install both minion and master, configure the minion and start both services
 
     Salt-2016.9.1-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname /install-master
 
