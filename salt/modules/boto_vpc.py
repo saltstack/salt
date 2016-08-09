@@ -2625,24 +2625,50 @@ def _get_subnet_explicit_route_table(subnet_id, vpc_id, conn=None, region=None, 
     return None
 
 
-def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
-                                   requester_vpc_id, peer_vpc_id,
-                                   name='', peer_owner_id=None, region=None,
+def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, name=None,
+                                   peer_owner_id=None, region=None,
                                    key=None, keyid=None, profile=None, dry_run=False):
     '''
     Request a VPC peering connection between two VPCs.
-    :param requester_vpc_id: Your VPC's ID. String type.
-    :param peer_vpc_id: ID of the VPC tp crete VPC peering connection with.
-    This can be a VPC in another account. String type.
-    :param name: The name to use for this VPC peering connection. String type.
-    :param peer_owner_id: ID of the owner of the peer VPC. Optional String
-    parameter. If this isn't supplied AWS uses your account ID.
-    :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
-    :return: dict
+
+    requester_vpc_id
+        ID of the requesting VPC. Exclusive with requester_vpc_name.
+
+    requester_vpc_name
+        Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
+
+    peer_vpc_id
+        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        another account. Exclusive with peer_vpc_name.
+
+    peer_vpc_name
+        Name tag of the VPC tp crete VPC peering connection with. This can only
+        be a VPC in the same account, else resolving it into a vpc ID will almost
+        certainly fail. Exclusive with peer_vpc_id.
+
+    name
+        The name to use for this VPC peering connection.
+
+    peer_owner_id
+        ID of the owner of the peer VPC. Defaults to your account ID, so a value
+        is required if peering with a VPC in a different account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    dry_run
+        If True, skip application and return status.
 
     .. versionadded:: Carbon
 
@@ -2662,9 +2688,26 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
                       profile=profile)
 
     if name and _vpc_peering_conn_id_for_name(name, conn):
-        raise SaltInvocationError('A VPC peering connection with this '
-                                  'name already exists! '
-                                  'Please specify a different name.')
+        raise SaltInvocationError('A VPC peering connection with this name already '
+                                  'exists! Please specify a different name.')
+
+    if not _exactly_one((requester_vpc_id, requester_vpc_name)):
+        raise SaltInvocationError('Exactly one of requester_vpc_id or '
+                                  'requester_vpc_name is required')
+    if not _exactly_one((peer_vpc_id, peer_vpc_name)):
+        raise SaltInvocationError('Exactly one of peer_vpc_id or '
+                                  'peer_vpc_name is required.')
+
+    if requester_vpc_name:
+        requester_vpc_id = _get_id(vpc_name=requester_vpc_name, region=region, key=key,
+                         keyid=keyid, profile=profile)
+        if not requester_vpc_id:
+            return {'error': 'Could not resolve VPC name {0} to an ID'.format(requester_vpc_name)}
+    if peer_vpc_name:
+        peer_vpc_id = _get_id(vpc_name=peer_vpc_name, region=region, key=key,
+                         keyid=keyid, profile=profile)
+        if not peer_vpc_id:
+            return {'error': 'Could not resolve VPC name {0} to an ID'.format(peer_vpc_name)}
 
     try:
         log.debug('Trying to request vpc peering connection')
@@ -2681,8 +2724,8 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
                 DryRun=dry_run)
         peering = vpc_peering.get('VpcPeeringConnection', {})
         peering_conn_id = peering.get('VpcPeeringConnectionId', 'ERROR')
-        msg = ['VPC peering {0} requested.'.format(peering_conn_id)]
-        log.debug('Requested vpc peering connection')
+        msg = 'VPC peering {0} requested.'.format(peering_conn_id)
+        log.debug(msg)
 
         if name:
             log.debug('Adding name tag to vpc peering connection')
@@ -2691,11 +2734,9 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
                 Tags=[{'Key': 'Name', 'Value': name}]
             )
             log.debug('Applied name tag to vpc peering connection')
-            msg.append(' With name {0}.'.format(name))
+            msg += ' With name {0}.'.format(name)
 
-        return {
-            'msg': ''.join(msg)
-        }
+        return {'msg': msg}
     except botocore.exceptions.ClientError as err:
         log.error('Got an error while trying to request vpc peering')
         return {'error': salt.utils.boto.get_error(err)}
@@ -2846,28 +2887,32 @@ def _vpc_peering_conn_id_for_name(name, conn):
     return ids[0]
 
 
-def delete_vpc_peering_connection(  # pylint: disable=too-many-arguments
-                                  conn_id='',
-                                  name='',
-                                  region=None,
-                                  key=None,
-                                  keyid=None,
-                                  profile=None,
-                                  dry_run=False):
+def delete_vpc_peering_connection(conn_id=None, conn_name=None, region=None,
+                                  key=None, keyid=None, profile=None, dry_run=False):
     '''
     Delete a VPC peering connection.
 
-    :param conn_id: The ID to use. String type.
-    :param name: The name to use. String type.
-    :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
-    :return: dict
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
 
-    Warning: Please specify either the ``vpc_peering_connection_id`` or
-    ``name`` but not both. Specifying both will result in an error!
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    dry_run
+        If True, skip application and simply return projected status.
 
     .. versionadded:: Carbon
 
@@ -2876,62 +2921,124 @@ def delete_vpc_peering_connection(  # pylint: disable=too-many-arguments
     .. code-block:: bash
 
         # Create a named VPC peering connection
-        salt myminion boto_vpc.delete_vpc_peering_connection name=salt-vpc
+        salt myminion boto_vpc.delete_vpc_peering_connection conn_name=salt-vpc
         # Specify a region
-        salt myminion boto_vpc.delete_vpc_peering_connection name=salt-vpc region=us-west-2
+        salt myminion boto_vpc.delete_vpc_peering_connection conn_name=salt-vpc region=us-west-2
         # specify an id
         salt myminion boto_vpc.delete_vpc_peering_connection conn_id=pcx-8a8939e3
 
     '''
-    if not _exactly_one((conn_id, name)):
-        raise SaltInvocationError('One (but not both) of '
-                                  'vpc_peering_connection_id or name '
-                                  'must be provided.')
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or '
+                                  'conn_name must be provided.')
 
-    conn = _get_conn3(region=region, key=key, keyid=keyid,
-                      profile=profile)
-    if name:
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    if conn_name:
         conn_id = _vpc_peering_conn_id_for_name(name, conn)
         if not conn_id:
-            raise SaltInvocationError('No ID found for this '
-                                      'VPC peering connection! ({0}) '
-                                      'Please make sure this VPC peering '
-                                      'connection exists '
-                                      'or invoke this function with '
-                                      'a VPC peering connection '
-                                      'ID'.format(name))
-
+            raise SaltInvocationError("Couldn't resolve VPC peering connection "
+                                      "{0} to an ID".format(name))
     try:
         log.debug('Trying to delete vpc peering connection')
-        conn.delete_vpc_peering_connection(
-            DryRun=dry_run,
-            VpcPeeringConnectionId=conn_id)
+        conn.delete_vpc_peering_connection( DryRun=dry_run, VpcPeeringConnectionId=conn_id)
         return {'msg': 'VPC peering connection deleted.'}
     except botocore.exceptions.ClientError as err:
-        log.error('Got an error while trying to deleting vpc peering')
-        return {'error': salt.utils.boto.get_error(err)}
+        e = salt.utils.boto.get_error(err)
+        log.error('Failed to delete VPC peering {0}: {1}'.format(conn_name or conn_id, e))
+        return {'error': e}
 
 
-def is_peering_connection_pending(  # pylint: disable=too-many-arguments
-                                  conn_id='',
-                                  name='',
-                                  region=None,
-                                  key=None,
-                                  keyid=None,
-                                  profile=None):
+def is_peering_connection_pending(conn_id=None, conn_name=None, region=None,
+                                  key=None, keyid=None, profile=None):
     '''
     Check if a VPC peering connection is in the pending state.
 
-    :param conn_id: The ID to use. String type.
-    :param name: The name to use. String type.
-    :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :return: dict
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
 
-    Warning: Please specify either the ``vpc_peering_connection_id`` or
-    ``name`` but not both. Specifying both will result in an error!
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.is_peering_connection_pending conn_name=salt-vpc
+        # Specify a region
+        salt myminion boto_vpc.is_peering_connection_pending conn_name=salt-vpc region=us-west-2
+        # specify an id
+        salt myminion boto_vpc.is_peering_connection_pending conn_id=pcx-8a8939e3
+
+    '''
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or conn_name must be provided.')
+
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+    if conn_id:
+        vpcs = conn.describe_vpc_peering_connections(VpcPeeringConnectionIds=[conn_id]).get('VpcPeeringConnections', [])
+    else:
+        filters = [{'Name': 'tag:Name', 'Values': [conn_name]},
+                   {'Name': 'status-code', 'Values': [ACTIVE, PENDING_ACCEPTANCE, PROVISIONING]}]
+        vpcs = conn.describe_vpc_peering_connections(Filters=filters).get('VpcPeeringConnections', [])
+
+    if not vpcs:
+        return False
+    elif len(vpcs) > 1:
+        raise SaltInvocationError('Found more than one ID for the VPC peering '
+                                  'connection ({0}). Please call this function '
+                                  'with an ID instead.'.format(conn_id or conn_name))
+    else:
+        status = vpcs[0]['Status']['Code']
+
+    return status == PENDING_ACCEPTANCE
+
+
+def peering_connection_pending_from_vpc(conn_id=None, conn_name=None, vpc_id=None,
+                                        vpc_name=None, region=None, key=None,
+                                        keyid=None, profile=None):
+    '''
+    Check if a VPC peering connection is in the pending state, and requested from the given VPC.
+
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
+
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    vpc_id
+        Is this the ID of the requesting VPC for this peering connection.  Exclusive with vpc_name.
+
+    vpc_name
+        Is this the Name of the requesting VPC for this peering connection.  Exclusive with vpc_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
 
     .. versionadded:: Carbon
 
@@ -2940,41 +3047,37 @@ def is_peering_connection_pending(  # pylint: disable=too-many-arguments
     .. code-block:: bash
 
         salt myminion boto_vpc.is_peering_connection_pending name=salt-vpc
-        # Specify a region
-        salt myminion boto_vpc.is_peering_connection_pending name=salt-vpc region=us-west-2
-        # specify an id
-        salt myminion boto_vpc.is_peering_connection_pending conn_id=pcx-8a8939e3
 
     '''
-    if not _exactly_one((conn_id, name)):
-        raise SaltInvocationError('One (but not both) of '
-                                  'vpc_peering_connection_id or name '
-                                  'must be provided.')
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or conn_name must be provided.')
 
-    conn = _get_conn3(region=region, key=key, keyid=keyid,
-                      profile=profile)
+    if not _exactly_one((vpc_id, vpc_name)):
+        raise SaltInvocationError('Exactly one of vpc_id or vpc_name must be provided.')
 
-    if name:
-        vpcs = __salt__['boto_vpc.describe_vpc_peering_connection'](
-            name=name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile
-        )['VPC-Peerings']
+    if vpc_name:
+        vpc_id = check_vpc(vpc_name=vpc_name, region=region, key=key, keyid=keyid, profile=profile)
+        if not vpc_id:
+            log.warning('Could not resolve VPC name {0} to an ID'.format(vpc_name))
+            return False
 
-        if not vpcs:
-            return {'exists': False}
-        elif len(vpcs) > 1:
-            raise SaltInvocationError('Found more than one ID '
-                                      'for the VPC peering '
-                                      'connection ({0}). '
-                                      'Please call this function with an '
-                                      'ID instead.')
-        else:
-            conn_id = vpcs[0]
-    status_code = conn.describe_vpc_peering_connections(
-        VpcPeeringConnectionIds=[conn_id]
-    )['VpcPeeringConnections'][0]['Status']['Code']
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    filters = [{'Name': 'requester-vpc-info.vpc-id', 'Values': [vpc_id]},
+               {'Name': 'status-code', 'Values': [ACTIVE, PENDING_ACCEPTANCE, PROVISIONING]}]
+    if conn_id:
+        filters += [{'Name': 'vpc-peering-connection-id', 'Values': [conn_id]}]
+    else:
+        filters += [{'Name': 'tag:Name', 'Values': [conn_name]}]
 
-    return {'exists': status_code == PENDING_ACCEPTANCE}
+    vpcs = conn.describe_vpc_peering_connections(Filters=filters).get('VpcPeeringConnections', [])
+
+    if not vpcs:
+        return False
+    elif len(vpcs) > 1:
+        raise SaltInvocationError('Found more than one ID for the VPC peering '
+                                  'connection ({0}). Please call this function '
+                                  'with an ID instead.'.format(conn_id or conn_name))
+    else:
+        status = vpcs[0]['Status']['Code']
+
+    return bool(status == PENDING_ACCEPTANCE)

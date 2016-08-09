@@ -1423,28 +1423,33 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
     return ret
 
 
-def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
-                                  name='',
-                                  conn_id='',
-                                  conn_name='',
-                                  region=None,
-                                  key=None,
-                                  keyid=None,
-                                  profile=None):
+# pylint: disable=too-many-arguments
+def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
+                                  region=None, key=None, keyid=None, profile=None):
     '''
-    Request a VPC peering connection between two VPCs.
-    :param name: Name of this state
-    :param conn_id: The ID to use. String type.
-    :param conn_name: The name of this VPC peering connection. String type.
-    :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :param dry_run. The dry_run flag to set.
-    :return: dict
+    Accept a VPC pending requested peering connection between two VPCs.
 
-    Warning: Please specify either the ``vpc_peering_connection_id`` or
-    ``name`` but not both. Specifying both will result in an error!
+    name
+        Name of this state
+
+    conn_id
+        The connection ID to accept. Exclusive with conn_name. String type.
+
+    conn_name
+        The name of the VPC peering connection to accept. Exclusive with conn_id. String type.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
 
     .. versionadded:: Carbon
 
@@ -1489,43 +1494,64 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
     if __opts__['test']:
         ret['changes'].update({'old': 'Pending VPC peering connection found '
                                       'and can be accepted'})
-    else:
-        log.debug('Calling module to accept this VPC peering connection')
-        result = __salt__['boto_vpc.accept_vpc_peering_connection'](
-            conn_id=conn_id,
-            name=conn_name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-            dry_run=False
-        )
-        ret['changes'].update({
-            'old': '',
-            'new': result['msg']
-        })
+        return ret
+    log.debug('Calling module to accept this VPC peering connection')
+    result = __salt__['boto_vpc.accept_vpc_peering_connection'](
+            conn_id=conn_id, name=conn_name, region=region, key=key,
+            keyid=keyid, profile=profile)
+
+    if 'error' in result:
+        ret['comment'] = "Failed to request VPC peering: {0}".format(result['error'])
+        ret['result'] = False
+        return ret
+
+    ret['changes'].update({
+        'old': '',
+        'new': result['msg']
+    })
 
     return ret
 
 
-def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
-                           name, requester_vpc_id='', peer_vpc_id='',
-                           conn_name='', peer_owner_id=None, region=None,
-                           key=None, keyid=None, profile=None):
+# pylint: disable=too-many-arguments
+def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
+                                   peer_owner_id=None, region=None, key=None, keyid=None,
+                                   profile=None):
     '''
-    :param name: Name of the state
-    :param requester_vpc_id:
-    :param requester_vpc_id: Your VPC's ID. String type.
-    :param peer_vpc_id: ID of the VPC tp crete VPC peering connection with.
-    This can be a VPC in another account. String type.
-    :param conn_name: The name to use for this VPC peering connection. String type.
-    :param peer_owner_id: ID of the owner of the peer VPC. Optional String
-    parameter. If this isn't supplied AWS uses your account ID.
-    :param region: The AWS region to use. Type string.
-    :param key. The key to use for this connection. Type string.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :return: dict
+    name
+        Name of the state
+
+    requester_vpc_id
+        ID of the requesting VPC. Exclusive with requester_vpc_name. String type.
+
+    requester_vpc_name
+        Name tag of the requesting VPC.  Exclusive with requester_vpc_id.  String type.
+
+    peer_vpc_id
+        ID of the VPC tp crete VPC peering connection with.  This can be a VPC in another account. Exclusive with peer_vpc_name. String type.
+
+    peer_vpc_name
+        Name tag of the VPC tp crete VPC peering connection with.  This can only be a VPC the same account. Exclusive with peer_vpc_id.  String type.
+
+    conn_name
+        The (optional) name to use for this VPC peering connection. String type.
+
+    peer_owner_id
+        ID of the owner of the peer VPC. String type. If this isn't supplied AWS uses your account ID.  Required if peering to a different account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
 
     .. versionadded:: Carbon
 
@@ -1538,15 +1564,6 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
             - requester_vpc_id: vpc-4b3522e
             - peer_vpc_id: vpc-ae83f9ca
             - conn_name: salt_peering_connection
-
-    Name can be omitted
-
-    .. code-block:: yaml
-
-        request a vpc peering connection:
-          boto_vpc.request_vpc_peering_connection:
-            - requester_vpc_id: vpc-4a3d522e
-            - peer_vpc_id: vpc-ae81e9ca
 
     '''
     log.debug('Called state to request VPC peering connection')
@@ -1568,23 +1585,22 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
         vpc_ids = []
 
     if vpc_ids:
-        ret['changes']['old'] = 'VPC peering connection already exists' \
-                                ' nothing to be done.'
-        ret['changes']['new'] = ''
+        ret['comment'] = ('VPC peering connection already exists, '
+                          'nothing to be done.')
         return ret
 
     if __opts__['test']:
         if not vpc_ids:
-            ret['changes']['old'] = ''
-            ret['changes']['new'] = 'VPC peering connection will ' \
-                                    'be created'
+            ret['comment'] = 'VPC peering connection will be created'
         return ret
 
     log.debug('Called module to create VPC peering connection')
 
     result = __salt__['boto_vpc.request_vpc_peering_connection'](
         requester_vpc_id,
+        requester_vpc_name,
         peer_vpc_id,
+        peer_vpc_name,
         name=conn_name,
         peer_owner_id=peer_owner_id,
         region=region,
@@ -1593,6 +1609,11 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
         profile=profile
     )
 
+    if 'error' in result:
+        ret['comment'] = "Failed to request VPC peering: {0}".format(result['error'])
+        ret['result'] = False
+        return ret
+
     ret['changes'].update({
         'old': '',
         'new': result['msg']
@@ -1600,20 +1621,121 @@ def request_vpc_peering_connection(  # pylint: disable=too-many-arguments
     return ret
 
 
-def delete_vpc_peering_connection(  # pylint: disable=too-many-arguments
-    name, conn_id='',
-    conn_name='',
-    region=None,
-    key=None, keyid=None, profile=None):
+def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
+                                   peer_owner_id=None, region=None, key=None, keyid=None,
+                                   profile=None):
     '''
-    :param name: Name of the state
-    :param conn_id:
-    :param conn_name: The name to use for this VPC peering connection.
-    :param region: The AWS region to use.
-    :param key. The key to use for this connection.
-    :param keyid. The key id to use.
-    :param profile. The profile to use.
-    :return: dict
+    name
+        Name of the state
+
+    requester_vpc_id
+        ID of the requesting VPC. Exclusive with requester_vpc_name.
+
+    requester_vpc_name
+        Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
+
+    peer_vpc_id
+        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        another account. Exclusive with peer_vpc_name.
+
+    peer_vpc_name
+        Name tag of the VPC tp crete VPC peering connection with. This can only
+        be a VPC in the same account, else resolving it into a vpc ID will fail.
+        Exclusive with peer_vpc_id.
+
+    conn_name
+        The name to use for this VPC peering connection.
+
+    peer_owner_id
+        ID of the owner of the peer VPC. Defaults to your account ID, so a value
+        is required if peering with a VPC in a different account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+
+    Example:
+
+    .. code-block:: yaml
+
+        ensure peering twixt local vpc and the other guys:
+          boto_vpc.vpc_peering_connection_present:
+            - requester_vpc_name: my_local_vpc
+            - peer_vpc_name: some_other_guys_vpc
+            - conn_name: peering_from_here_to_there
+            - peer_owner_id: 012345654321
+
+
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    if __salt__['boto_vpc.is_peering_connection_pending'](conn_name=conn_name, region=region,
+                                                          key=key, keyid=keyid, profile=profile):
+        if __salt__['boto_vpc.peering_connection_pending_from_vpc'](conn_name=conn_name,
+                                                                    vpc_id=requester_vpc_id,
+                                                                    vpc_name=requester_vpc_name,
+                                                                    region=region, key=key,
+                                                                    keyid=keyid, profile=profile):
+            ret['comment'] = ('VPC peering {0} already requested - pending '
+                              'acceptance by {1}'.format(conn_name, peer_owner_id
+                                                         or peer_vpc_name or peer_vpc_id))
+            log.info(ret['comment'])
+            return ret
+        return accept_vpc_peering_connection(name=name, conn_name=conn_name,
+                                             region=region, key=key, keyid=keyid,
+                                             profile=profile)
+    return request_vpc_peering_connection(name=name, requester_vpc_id=requester_vpc_id,
+                                          requester_vpc_name=requester_vpc_name,
+                                          peer_vpc_id=peer_vpc_id, peer_vpc_name=peer_vpc_name,
+                                          conn_name=conn_name, peer_owner_id=peer_owner_id,
+                                          region=region, key=key, keyid=keyid, profile=profile)
+
+
+def vpc_peering_connection_absent(name, conn_id=None, conn_name=None,
+                                  region=None, key=None, keyid=None, profile=None):
+    return delete_vpc_peering_connection(name, conn_id, conn_name, region, key, keyid, profile)
+
+
+# pylint: disable=too-many-arguments
+def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
+                                  region=None, key=None, keyid=None, profile=None):
+    '''
+    name
+        Name of the state
+
+    conn_id
+        ID of the peering connection to delete.  Exlusive with conn_name.
+
+    conn_name
+        The name of the peering connection to delete.  Exlusive with conn_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
 
     .. versionadded:: Carbon
 
@@ -1646,38 +1768,29 @@ def delete_vpc_peering_connection(  # pylint: disable=too-many-arguments
     }
     if conn_name:
         vpc_ids = __salt__['boto_vpc.describe_vpc_peering_connection'](
-            conn_name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile
-        ).get('VPC-Peerings', [])
+            conn_name, region=region, key=key, keyid=keyid, profile=profile).get('VPC-Peerings', [])
     else:
         vpc_ids = [conn_id]
 
     if not vpc_ids:
-        ret['changes']['old'] = 'No VPC connection found' \
-                                ' nothing to be done.'
-        ret['changes']['new'] = ''
+        ret['comment'] = 'No VPC connection found, nothing to be done.'
         return ret
 
     if __opts__['test']:
         if vpc_ids:
-            ret['changes']['old'] = ''
-            ret['changes']['new'] = 'VPC peering connection will ' \
-                                    'be deleted'
+            ret['comment'] = 'VPC peering connection would be deleted'
         return ret
 
     log.debug('Called module to delete VPC peering connection')
 
     result = __salt__['boto_vpc.delete_vpc_peering_connection'](
-        conn_id=conn_id,
-        name=conn_name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile
-    )
+        conn_id=conn_id, conn_name=conn_name, region=region, key=key,
+        keyid=keyid, profile=profile)
+
+    if 'error' in result:
+        ret['comment'] = "Failed to delete VPC peering: {0}".format(result['error'])
+        ret['result'] = False
+        return ret
 
     ret['changes'].update({
         'old': '',
