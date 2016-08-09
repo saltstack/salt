@@ -386,9 +386,9 @@ Section -Post
     ${If} $CheckBox_Minion_State == ${BST_CHECKED}
 
         ; Commandline Registry Entries
-        WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-call"
+        WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
         WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
-        WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-minion"
+        WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
         WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
         ; Register the Salt-Minion Service
@@ -410,13 +410,13 @@ Section -Post
     ${If} $CheckBox_Master_State == ${BST_CHECKED}
 
         ; Command Line Registry Entries
-        WriteRegStr HKLM "${PRODUCT_CP_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-cp"
+        WriteRegStr HKLM "${PRODUCT_CP_REGKEY}" "" "$INSTDIR\salt-cp.bat"
         WriteRegStr HKLM "${PRODUCT_CP_REGKEY}" "Path" "$INSTDIR\bin\"
-        WriteRegStr HKLM "${PRODUCT_KEY_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-key"
+        WriteRegStr HKLM "${PRODUCT_KEY_REGKEY}" "" "$INSTDIR\salt-key.bat"
         WriteRegStr HKLM "${PRODUCT_KEY_REGKEY}" "Path" "$INSTDIR\bin\"
-        WriteRegStr HKLM "${PRODUCT_MASTER_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-master"
+        WriteRegStr HKLM "${PRODUCT_MASTER_REGKEY}" "" "$INSTDIR\salt-master.bat"
         WriteRegStr HKLM "${PRODUCT_MASTER_REGKEY}" "Path" "$INSTDIR\bin\"
-        WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "" "$INSTDIR\bin\Python.exe $INSTDIR\bin\Scripts\salt-run"
+        WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "" "$INSTDIR\salt-run.bat"
         WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "Path" "$INSTDIR\bin\"
 
         ; Register the Salt-Master Service
