@@ -526,7 +526,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             if children:
                 try:
                     # If we *still* have children, go ahead and attempt to use os.kill() to destroy them
-                    psutil.wait_procs(children, timeout=5, callback=lambda nukeem: [os.kill(child.pid, signal.SIGKILL) for child in children]) 
+                    psutil.wait_procs(children, timeout=5, callback=lambda nukeem: [os.kill(child.pid, signal.SIGKILL) for child in children])
                 except Exception:
                     pass
 
