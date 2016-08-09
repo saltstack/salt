@@ -15,10 +15,16 @@ if %errorLevel%==0 (
 )
 @echo.
 
-:: Uninstall Python 2.7.12 64bit
+:: Uninstall Python 2.7.12
 @echo %0 :: Uninstalling Python 2.7.12 ...
 @echo ---------------------------------------------------------------------
-MsiExec.exe /X {9DA28CE5-0AA5-429E-86D8-686ED898C666} /QN
+if "%PROCESSOR_ARCHITECTURE"=="AMD64" (
+    :: 64 Bit
+    MsiExec.exe /X {9DA28CE5-0AA5-429E-86D8-686ED898C666} /QN
+) else (
+    :: 32 Bit
+    MsiExec.exe /X {9DA28CE5-0AA5-429E-86D8-686ED898C665} /QN
+)
 @echo.
 
 :: wipe the Python directory
