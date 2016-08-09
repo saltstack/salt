@@ -18,7 +18,7 @@ if %errorLevel%==0 (
 :: Uninstall Python 2.7.12
 @echo %0 :: Uninstalling Python 2.7.12 ...
 @echo ---------------------------------------------------------------------
-if "%PROCESSOR_ARCHITECTURE"=="AMD64" (
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
     :: 64 Bit
     MsiExec.exe /X {9DA28CE5-0AA5-429E-86D8-686ED898C666} /QN
 ) else (
