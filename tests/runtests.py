@@ -252,7 +252,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
                     self.options.fileserver, self.options.wheel,
-                    self.options.api, self.options.renderers)):
+                    self.options.api, self.options.returners, self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -416,7 +416,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.shell, self.options.state,
                     self.options.loader, self.options.outputter,
                     self.options.name, self.options.cloud_provider_tests,
-                    self.options.api, self.options.renderers,
+                    self.options.api, self.options.returners, self.options.renderers,
                     self.options.fileserver, self.options.wheel]):
             return status
 
@@ -454,6 +454,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
             if self.options.api:
                 status.append(self.run_integration_suite('netapi', 'NetAPI'))
+            if self.options.returners:
+                status.append(self.run_integration_suite('returners', 'Returners'))
             if self.options.renderers:
                 status.append(self.run_integration_suite('renderers', 'Renderers'))
         return status
