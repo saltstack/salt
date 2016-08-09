@@ -116,10 +116,9 @@ class Terminal(object):
         # Let's avoid Zombies!!!
         _cleanup()
 
-        if not args and not executable and not shell:
+        if not args and not executable:
             raise TerminalException(
-                'You need to pass at least one of \'args\', \'executable\' '
-                'or \'shell=True\''
+                'You need to pass at least one of "args", "executable" '
             )
 
         self.args = args
