@@ -309,19 +309,19 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for fun in six.iterkeys(renderers_):
-            docs[fun] = renderers_[fun].__doc__
+        for func in six.iterkeys(renderers_):
+            docs[func] = renderers_[func].__doc__
         return _strip_rst(docs)
 
     for module in args:
         if '*' in module or '.' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):
-                docs[fun] = renderers_[fun].__doc__
+            for func in fnmatch.filter(renderers_.keys(), module):
+                docs[func] = renderers_[func].__doc__
         else:
             moduledot = module + '.'
-            for fun in six.iterkeys(renderers_):
-                if fun.startswith(moduledot):
-                    docs[fun] = renderers_[fun].__doc__
+            for func in six.iterkeys(renderers_):
+                if func.startswith(moduledot):
+                    docs[func] = renderers_[func].__doc__
     return _strip_rst(docs)
 
 
