@@ -17,6 +17,7 @@ if %errorLevel%==0 (
 @echo ---------------------
 Set "PyDir=C:\Python27"
 Set "CurDir=%~dp0"
+Set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Get the version from git if not passed
