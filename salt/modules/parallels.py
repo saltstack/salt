@@ -1,8 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Parallels Desktop VMs with prlctl
+Manage Parallels Desktop VMs with ``prlctl`` and ``prlsrvctl``.  Only some of
+the prlctl commands implemented so far.  Of those that have been implemented,
+not all of the options may have been provided yet.  For a complete reference,
+see the `Parallels Desktop Reference Guide
+<http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
-http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf
+What has not been implemented yet can be accessed through ``parallels.prlctl``
+and ``parallels.prlsrvctl`` (note the preceeding double dash ``--`` as
+necessary):
+
+.. code-block::
+
+    salt '*' parallels.prlctl installtools macvm runas=macdev
+    salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
+    salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
 
 .. versionadded:: 2016.3.0
 '''
