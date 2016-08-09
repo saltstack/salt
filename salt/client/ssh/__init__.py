@@ -792,6 +792,12 @@ class Single(object):
                 minion_opts=self.minion_opts,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()  # pylint: disable=E1102
+            if '_error' in opts_pkg:
+                #Refresh failed
+                retcode = opts_pkg['retcode']
+                ret = json.dumps({'local': opts_pkg})
+                return ret, retcode
+
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
@@ -806,12 +812,6 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
-
-            if '_error' in opts_pkg:
-                #Refresh failed
-                retcode = opts_pkg['retcode']
-                ret = json.dumps({'local': opts_pkg['_error']})
-                return ret, retcode
 
             pillar = salt.pillar.Pillar(
                     opts_pkg,
