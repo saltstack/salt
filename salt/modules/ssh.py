@@ -750,7 +750,6 @@ def get_known_host(user, hostname, config=None, port=None):
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
-                    hash_hostname=True,
                     hash_known_hosts=True,
                     timeout=5):
     '''
@@ -767,13 +766,6 @@ def recv_known_host(hostname,
         optional parameter, denoting the port of the remote host, which will be
         used in case, if the public key will be requested from it. By default
         the port 22 is used.
-
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
@@ -792,15 +784,6 @@ def recv_known_host(hostname,
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
-
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
     need_dash_t = ('CentOS-5',)
@@ -905,7 +888,6 @@ def set_known_host(user=None,
                    key=None,
                    port=None,
                    enc=None,
-                   hash_hostname=True,
                    config=None,
                    hash_known_hosts=True,
                    timeout=5):
@@ -939,13 +921,6 @@ def set_known_host(user=None,
         Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
         or ssh-dss
 
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
-
     config
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/known_hosts". If no user is specified,
@@ -972,14 +947,6 @@ def set_known_host(user=None,
     if not hostname:
         return {'status': 'error',
                 'error': 'hostname argument required'}
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
 
     if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
         return {'status': 'error',

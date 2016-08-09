@@ -371,3 +371,35 @@ Deprecations
 
   For additional information see the documentation for the ``reg`` execution and
   state modules.
+
+- ``lxc`` state module: The following functions were removed from the ``lxc`` state
+  module:
+
+  - ``created``: replaced by the ``present`` state.
+  - ``started``: replaced by the ``running`` state.
+  - ``cloned``: replaced by the ``present`` state. Use the ``clone_from`` argument
+    to set the name of the clone source.
+
+- ``ip_in_subnet`` function in ``salt.utils.network.py`` has been removed. Use the
+  ``in_subnet`` function instead.
+
+- The ``iam`` utils module had two functions removed: ``salt.utils.iam.get_iam_region``
+  and ``salt.utils.iam.get_iam_metadata`` in favor of the aws utils functions
+  ``salt.utils.aws.get_region_from_metadata`` and ``salt.utils.aws.creds``, respectively.
+
+- The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
+  module and the ``salt.states.ssh_known_hosts`` state. The ``hash_known_hosts``
+  option should be used instead in both the execution module and the state.
+
+- The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
+  was removed. Use ``force`` instead.
+
+- ``virt`` runner module:
+
+  - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
+    Use the ``host`` option instead.
+  - The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
+  - The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
+
+- The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
+  instead.
