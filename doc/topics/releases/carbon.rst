@@ -336,9 +336,12 @@ Execution Module Deprecations
 Runner Module Deprecations
 --------------------------
 
-- The ``grains.cache`` runner no longer accpets ``outputter`` or ``minion`` as keyword arguments.
+- The ``grains.cache`` runner no longer accepts ``outputter`` or ``minion`` as keyword arguments.
   Users will need to specify an outputter using the ``--out`` option. ``tgt`` is
   replacing the ``minion`` kwarg.
+
+- The ``fileserver`` runner no longer accepts the ``outputter`` keyword argument. Users will
+  need to specify an outputter using the ``--out`` option.
 
 - ``virt`` runner module:
 
