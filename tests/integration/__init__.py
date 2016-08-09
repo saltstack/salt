@@ -524,7 +524,12 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                 except psutil.NoSuchProcess:
                     children.remove(child)
             if children:
-                psutil.wait_procs(children, timeout=5)
+                try:
+                    # If we *still* have children, go ahead and attempt to use os.kill() to destroy them
+                    psutil.wait_procs(children, timeout=5, callback=lambda nukeem: [os.kill(child.pid, signal.SIGKILL) for child in children])
+                except Exception:
+                    pass
+
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
