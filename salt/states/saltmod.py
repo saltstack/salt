@@ -598,6 +598,7 @@ def runner(name, **kwargs):
     ret['result'] = True
     ret['comment'] = "Runner function '{0}' executed.".format(name)
 
+    ret['__orchestration__'] = True
     if out:
         ret['changes'] = out
 
@@ -630,6 +631,7 @@ def wheel(name, **kwargs):
     ret['result'] = True
     ret['comment'] = "Wheel function '{0}' executed.".format(name)
 
+    ret['__orchestration__'] = True
     if out:
         ret['changes'] = out
 
