@@ -628,7 +628,7 @@ def vmstats():
         '''
         procf = '/proc/vmstat'
         if not os.path.isfile(procf):
-            return {}
+            return psutil.virtual_memory()
         stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
         for line in stats:
@@ -657,10 +657,14 @@ def vmstats():
         note: works on FreeBSD, SunOS and OpenBSD (possibly others)
         '''
         ret = {}
-        for line in __salt__['cmd.run']('vmstat -s').splitlines():
-            comps = line.split()
-            if comps[0].isdigit():
-                ret[' '.join(comps[1:])] = _number(comps[0].strip())
+        try:
+            for line in __salt__['cmd.run']('vmstat -s').splitlines():
+                comps = line.split()
+                if comps[0].isdigit():
+                    ret[' '.join(comps[1:])] = _number(comps[0].strip())
+        except:
+            log.debug('Switching to psutil as backup on Windows')
+            ret = psutil.virtual_memory()
         return ret
 
     # dict that returns a function that does the right thing per platform
