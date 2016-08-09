@@ -482,7 +482,7 @@ class Query(EnvLoader):
                     'uid': self._id_resolv(pld_data.uid, named=(owners == "id")),
                     'gid': self._id_resolv(pld_data.gid, named=(owners == "id"), uid=False),
                     'size': _size_format(pld_data.p_size, fmt=size_fmt),
-                    'mode': oct(pld_data.mode),
+                    'mode': salt.utils.normalize_mode(pld_data.mode),
                     'accessed': tfmt(pld_data.atime),
                     'modified': tfmt(pld_data.mtime),
                     'created': tfmt(pld_data.ctime),
