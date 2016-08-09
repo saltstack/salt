@@ -324,7 +324,8 @@ Function .onInit
 
     ; Check for existing installation
     ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
-    StrCmp $R0 "" skipUninstall Uninstall
+    StrCmp $R0 "" 0 Uninstall
+
     ; Check for existing installation old
     ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OLD}" "UninstallString"
     StrCmp $R0 "" skipUninstall
