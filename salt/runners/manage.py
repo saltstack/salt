@@ -663,7 +663,7 @@ def bootstrap(version='develop',
 
         .. versionchanged:: Carbon
 
-        .. deprecated:: Oxygen
+        .. deprecated:: Carbon
 
     script_args
         Any additional arguments that you want to pass to the script.
