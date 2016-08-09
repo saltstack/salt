@@ -96,10 +96,7 @@ def beacon(config):
             send_beacon = True
 
     if config['onchangeonly']:
-        if LAST_STATUS == cpu_percent:
-            send_beacon = True
-        else:
-            send_beacon = False
+        send_beacon = LAST_STATUS == cpu_percent
         LAST_STATUS = cpu_percent
 
     if send_beacon:
@@ -115,7 +112,6 @@ def beacon(config):
     return [ret]
 
 def getProcessorQueueLength():
-
     if salt.utils.is_windows():
         return getWindowsProcessorQueueLength()
     else:
