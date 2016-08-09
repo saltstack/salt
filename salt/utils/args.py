@@ -24,13 +24,7 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        # XXX: We might need to revisit this code when we move to Py3
-        #      since long's are int's in Py3
-        if (six.PY3 and isinstance(arg, six.integer_types)) or \
-                (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
-            ret.append(str(arg))
-        else:
-            ret.append(arg)
+        ret.append(arg)
     if isinstance(kwargs, dict) and kwargs:
         kw_ = {'__kwarg__': True}
         for key, val in six.iteritems(kwargs):
