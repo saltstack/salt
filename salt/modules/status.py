@@ -13,6 +13,8 @@ import fnmatch
 import collections
 import copy
 import time
+import psutil
+import logging
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -31,6 +33,7 @@ from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
 __opts__ = {}
+log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
@@ -38,8 +41,8 @@ __func_alias__ = {
 }
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False, 'Windows platform is not supported by this module'
+    #if salt.utils.is_windows():
+    #    return False, 'Windows platform is not supported by this module'
     return __virtualname__
 
 def _number(text):
@@ -631,6 +634,19 @@ def vmstats():
             ret[comps[0]] = _number(comps[1])
         return ret
 
+    def windows_vmstats():
+        try:
+            rstring = os.popen('wmic path Win32_PerfFormattedData_PerfOS_Memory' + ' 2>&1','r').read().strip()
+            arr = rstring.split()
+            intlist = [x for x in arr if x.isdigit()]
+            log.trace('intlist {0}'.format(str(intlist)))
+            strlist = [x for x in arr if not x.isdigit()]
+            log.trace('strlist {0}'.format(str(strlist)))
+            return dict(zip(strlist, intlist))
+        except:
+            log.debug('Switching to psutil as backup on Windows')
+            return psutil.virtual_memory()
+
     def generic_vmstats():
         '''
         generic implementation of vmstats
@@ -642,12 +658,14 @@ def vmstats():
             if comps[0].isdigit():
                 ret[' '.join(comps[1:])] = _number(comps[0].strip())
         return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_vmstats,
         'FreeBSD': generic_vmstats,
         'OpenBSD': generic_vmstats,
         'SunOS': generic_vmstats,
+        'Windows': windows_vmstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
