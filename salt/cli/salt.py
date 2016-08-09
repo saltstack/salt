@@ -195,7 +195,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         sys.stderr.write(
                             'ERROR: Minions returned with non-success exit code ({0})\n'.format(exitcodes.EX_OK)
                         )
-                        sys.exit(min_retcode)
+                        if self.options.retcode_passthrough:
+                            sys.exit(min_retcode)
 
             except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
                 ret = str(exc)
