@@ -48,7 +48,9 @@ def __virtual__():
     Load this module if prlctl is available
     '''
     if not salt.utils.which('prlctl'):
-        return (False, 'Cannot load prlctl module: prlctl utility not available')
+        return (False, 'prlctl utility not available')
+    if not salt.utils.which('prlsrvctl'):
+        return (False, 'prlsrvctl utility not available')
     return __virtualname__
 
 
@@ -88,6 +90,38 @@ def _find_guids(guid_string):
     return sorted(list(set(guids)))
 
 
+def prlsrvctl(sub_cmd, args=None, runas=None):
+    '''
+    Execute a prlsrvctl command
+
+    .. versionadded:: Carbon
+
+    :param str sub_cmd:
+        prlsrvctl subcommand to execute
+
+    :param str args:
+        The arguments supplied to ``prlsrvctl <sub_cmd>``
+
+    :param str runas:
+        The user that the prlsrvctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.prlsrvctl info runas=macdev
+        salt '*' parallels.prlsrvctl usb list runas=macdev
+        salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
+    '''
+    # Construct command
+    cmd = ['prlsrvctl', sub_cmd]
+    if args:
+        cmd.extend(_normalize_args(args))
+
+    # Execute command and return output
+    return __salt__['cmd.run'](cmd, runas=runas)
+
+
 def prlctl(sub_cmd, args=None, runas=None):
     '''
     Execute a prlctl command
@@ -107,6 +141,7 @@ def prlctl(sub_cmd, args=None, runas=None):
 
         salt '*' parallels.prlctl user list runas=macdev
         salt '*' parallels.prlctl exec 'macvm uname' runas=macdev
+        salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
     '''
     # Construct command
     cmd = ['prlctl', sub_cmd]
