@@ -378,7 +378,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not verbatim_env:
             env_pypath = env_delta.get('PYTHONPATH', os.environ.get('PYTHONPATH'))
             if not env_pypath:
-                env_pypath = ':'.join(sys.path)
+                env_pypath = sys.path
             else:
                 env_pypath = env_pypath.split(':')
                 for path in sys.path:
