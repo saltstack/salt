@@ -65,7 +65,7 @@ Ponies!
 -------
 
 We all agreed that cowsay was just not good enough, install the `ponysay`
-command and the new `pony` outputter will work. For for the whole family!
+command and the new `pony` outputter will work. Fun for the whole family!
 
 Additional Features
 -------------------
@@ -244,7 +244,16 @@ Functionality Changes
         - group1:
           - host1
           - host2
-          - host3
+        - host3
+
+- The ``salt`` and ``salt-call`` executables now default to
+  ``--retcode-passthrough`` behavior.  This means that failures in commands or
+  state execution will contribute to a non-zero exit status.  More "important"
+  errors (viz. errors with lower values) will have precedence in the exit
+  status.  The previous behavior of exit status only representing the status of
+  only the executable can be obtained using ``--cli-retcode``.  Value
+  representation is documented in :py:mod:`defaults.exitcodes
+  <salt.defaults.exitcodes>`
 
 Deprecations
 ============
