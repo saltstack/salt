@@ -1,11 +1,11 @@
 @echo off
 @echo Salt Windows Build Package Script
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 @echo.
 
 :: Define Variables
 @echo Defining Variables...
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
@@ -28,26 +28,27 @@ Set "PATH=%NSIS%;%PATH%"
 @echo.
 
 @echo Copying C:\Python27 to bin...
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 :: Check for existing bin directory and remove
 If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 
 :: Copy the Python27 directory to bin
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
-@ echo.
+@echo.
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
 %PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
+@echo.
 
 @echo Cleaning up unused files and directories...
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 :: Remove all Compiled Python files (.pyc)
 del /S /Q "%BinDir%\*.pyc" 1>nul
 :: Remove all Compiled HTML Help (.chm)
@@ -78,14 +79,14 @@ If Exist "%BinDir%\README.txt" del /q "%BinDir%\README.txt" 1>nul
 @echo.
 
 @echo Building the installer...
-@echo ---------------------------------------------------------------------
+@echo ----------------------------------------------------------------------
 makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.
-@echo =====================================================================
+@echo ======================================================================
 @echo Script completed...
-@echo ---------------------------------------------------------------------
+@echo ======================================================================
 @echo Installation file can be found in the following directory:
 @echo %InsDir%
 
