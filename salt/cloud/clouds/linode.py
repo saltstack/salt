@@ -43,7 +43,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-from salt.utils import warn_until
 
 # Import Salt-Cloud Libs
 import salt.utils.cloud
