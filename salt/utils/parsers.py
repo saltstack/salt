@@ -2022,6 +2022,22 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             help=('Dump the master configuration values')
         )
+        self.add_option(
+            '--retcode-passthrough',
+            default=True,
+            action='store_true',
+            help=('Exit with the salt module retcode and not the salt CLI'
+                  ' retcode (see --cli-retcode).')
+        )
+        self.add_option(
+            '--cli-retcode',
+            default=True,
+            action='store_false',
+            dest='retcode_passthrough',
+            help=('Exit with the salt CLI status rather than the retcode of'
+                  ' the called module (this is the old behavior - see'
+                  ' --retcode-passthrough).')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
