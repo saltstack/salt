@@ -30,6 +30,7 @@ import integration
 from integration.utils import testprogram
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.ext.six as six
 
@@ -488,6 +489,44 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             message='correct usage',
             stdout=stdout, stderr=stderr
         )
+
+    def test_exit_status_retcode_passthrough(self):
+        '''
+        Ensure that the salt-call CLI exits with the retcode of the command
+        '''
+
+        call = testprogram.TestProgramSaltCall(
+            name='run-retcode_passthrough',
+        )
+        # Call setup here to ensure config and script exist
+        call.setup()
+
+        for excode in ('EX_OK', 'EX_GENERIC', 'SALT_BUILD_FAIL'):
+            exval = getattr(exitcodes, excode)
+
+            # Test with --retcode-passthrough
+            stdout, stderr, status = call.run(
+                args=['--local', '--retcode-passthrough', '-l', 'debug', 'test.retcode', '{0}'.format(exval)],
+                catch_stderr=True,
+                with_retcode=True,
+            )
+            self.assert_exit_status(
+                status, excode,
+                message='Test: --retcode-passthrough test.retcode {0}({1})'.format(excode, exval),
+                stdout=stdout, stderr=stderr
+            )
+
+            # Test with --retcode-passthrough - which should always result in EX_OK
+            stdout, stderr, status = call.run(
+                args=['--local', '--cli-retcode', '-l', 'debug', 'test.retcode', '{0}'.format(exval)],
+                catch_stderr=True,
+                with_retcode=True,
+            )
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='Test: --cli-retcode test.retcode {0}({1})'.format('EX_OK', exitcodes.EX_OK),
+                stdout=stdout, stderr=stderr
+            )
 
 
 if __name__ == '__main__':
