@@ -1562,10 +1562,10 @@ def cert_info(cert_path, digest='sha256'):
         'issuer': dict(cert.get_issuer().get_components()),
         'serial_number': cert.get_serial_number(),
         'not_before': calendar.timegm(time.strptime(
-            cert.get_notBefore(),
+            str(cert.get_notBefore().decode(__salt_system_encoding__)),
             date_fmt)),
         'not_after': calendar.timegm(time.strptime(
-            cert.get_notAfter(),
+            cert.get_notAfter().decode('utf-8'),
             date_fmt)),
     }
 
