@@ -88,6 +88,33 @@ class ParallelsTestCase(TestCase):
 
         self.assertEqual(parallels._find_guids(guid_str), guids)
 
+    def test_prlsrvctl(self):
+        '''
+        Test parallels.prlsrvctl
+        '''
+        runas = 'macdev'
+
+        # Validate 'prlsrvctl info'
+        info_cmd = ['prlsrvctl', 'info']
+        info_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': info_fcn}):
+            parallels.prlsrvctl('info', runas=runas)
+            info_fcn.assert_called_once_with(info_cmd, runas=runas)
+
+        # Validate 'prlsrvctl usb list'
+        usb_cmd = ['prlsrvctl', 'usb', 'list']
+        usb_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': usb_fcn}):
+            parallels.prlsrvctl('usb', 'list', runas=runas)
+            usb_fcn.assert_called_once_with(usb_cmd, runas=runas)
+
+        # Validate 'prlsrvctl set "--mem-limit auto"'
+        set_cmd = ['prlsrvctl', 'set', '--mem-limit', 'auto']
+        set_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': set_fcn}):
+            parallels.prlsrvctl('set', '--mem-limit auto', runas=runas)
+            set_fcn.assert_called_once_with(set_cmd, runas=runas)
+
     def test_prlctl(self):
         '''
         Test parallels.prlctl
@@ -101,12 +128,19 @@ class ParallelsTestCase(TestCase):
             parallels.prlctl('user', 'list', runas=runas)
             user_fcn.assert_called_once_with(user_cmd, runas=runas)
 
-        # Validate 'prlctl exec macvm uname'
+        # Validate 'prlctl exec "macvm uname"'
         exec_cmd = ['prlctl', 'exec', 'macvm', 'uname']
         exec_fcn = MagicMock()
         with patch.dict(parallels.__salt__, {'cmd.run': exec_fcn}):
             parallels.prlctl('exec', 'macvm uname', runas=runas)
             exec_fcn.assert_called_once_with(exec_cmd, runas=runas)
+
+        # Validate 'prlctl capture "macvm --file macvm.display.png"'
+        cap_cmd = ['prlctl', 'capture', 'macvm', '--file', 'macvm.display.png']
+        cap_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': cap_fcn}):
+            parallels.prlctl('capture', 'macvm --file macvm.display.png', runas=runas)
+            cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
 
     def test_list_vms(self):
         '''
