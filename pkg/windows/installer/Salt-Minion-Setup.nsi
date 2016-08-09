@@ -242,18 +242,23 @@ FunctionEnd
 ###############################################################################
 Function pageFinish_Show
 
+    # Imports so the checkboxes will show up
     !define SWP_NOSIZE 0x0001
     !define SWP_NOMOVE 0x0002
     !define HWND_TOP 0x0000
 
+    # Create Start Minion Checkbox
     ${NSD_CreateCheckbox} 120u 90u 100% 12u "&Start salt-minion"
     Pop $CheckBox_Minion
     SetCtlColors $CheckBox_Minion "" "ffffff"
+    # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
+    # Create Start Master Checkbox
     ${NSD_CreateCheckbox} 120u 105u 100% 12u "&Start salt-master"
     Pop $CheckBox_Master
     SetCtlColors $CheckBox_Master "" "ffffff"
+    # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Master, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Load current settings for Minion
@@ -268,7 +273,7 @@ Function pageFinish_Show
 
     # Load current settings for Master
     ${If} $CheckBox_Master_State == ${BST_CHECKED}
-        ${If} $StartMinion == 1
+        ${If} $StartMaster == 1
             ${NSD_Check} $CheckBox_Master
         ${EndIf}
     ${Else}
@@ -281,13 +286,9 @@ FunctionEnd
 
 Function pageFinish_Leave
 
-    # Assign the current checkbox states to the state variables
-    ${NSD_GetState} $CheckBox_Minion $CheckBox_Minion_State
-    ${NSD_GetState} $CheckBox_Master $CheckBox_Master_State
-
-    # Set Master/Minion Start Flags
-    StrCpy $CheckBox_Minion_State StartMinion
-    StrCpy $CheckBox_Master_State StartMaster
+    # Assign the current checkbox states
+    ${NSD_GetState} $CheckBox_Minion $StartMinion
+    ${NSD_GetState} $CheckBox_Master $StartMaster
 
 FunctionEnd
 
@@ -310,7 +311,7 @@ Section "MainSection" SEC01
     CreateDirectory $INSTDIR\conf\pki\minion
     CreateDirectory $INSTDIR\conf\minion.d
     File /r "..\buildenv\"
-    Exec 'icacls c:\salt /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
+    nsExec::Exec 'icacls c:\salt /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
 SectionEnd
 
@@ -323,10 +324,12 @@ Function .onInit
 
     ; Check for existing installation
     ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
-    StrCmp $R0 "" skipUninstall
+    StrCmp $R0 "" skipUninstall Uninstall
     ; Check for existing installation old
     ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OLD}" "UninstallString"
     StrCmp $R0 "" skipUninstall
+
+    Uninstall:
     ; Found existing installation, prompt to uninstall
     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed.$\n$\nClick `OK` to remove the existing installation." /SD IDOK IDOK uninst
     Abort
@@ -338,12 +341,12 @@ Function .onInit
         ${EndIf}
 
         ; Stop and remove the salt-minion service
-        ExecWait "net stop salt-minion"
-        ExecWait "sc delete salt-minion"
+        nsExec::Exec 'net stop salt-minion'
+        nsExec::Exec 'sc delete salt-minion'
 
         ; Stop and remove the salt-master service
-        ExecWait "net stop salt-master"
-        ExecWait "sc delete salt-master"
+        nsExec::Exec 'net stop salt-master'
+        nsExec::Exec 'sc delete salt-master'
 
         ; Remove salt binaries and batch files
         Delete "$INSTDIR\uninst.exe"
@@ -389,9 +392,9 @@ Section -Post
         WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
         ; Register the Salt-Minion Service
-        ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-        ExecWait "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
-        ExecWait "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+        nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
+        nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+        nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
 
     ${Else}
 
@@ -417,9 +420,9 @@ Section -Post
         WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "Path" "$INSTDIR\bin\"
 
         ; Register the Salt-Master Service
-        ExecWait "nssm.exe install salt-master $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-master -c $INSTDIR\conf -l quiet"
-        ExecWait "nssm.exe set salt-master AppEnvironmentExtra PYTHONHOME="
-        ExecWait "nssm.exe set salt-master Description Salt Master from saltstack.com"
+        nsExec::Exec "nssm.exe install salt-master $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-master -c $INSTDIR\conf -l quiet"
+        nsExec::Exec "nssm.exe set salt-master AppEnvironmentExtra PYTHONHOME="
+        nsExec::Exec "nssm.exe set salt-master Description Salt Master from saltstack.com"
 
     ${Else}
 
@@ -446,11 +449,11 @@ Function .onInstSuccess
 
     ; If start-minion is 1, then start the service
     ${If} $StartMinion == 1
-        Exec '"$INSTDIR\nssm.exe" Start salt-minion'
+        nsExec::Exec 'net start salt-minion'
     ${EndIf}
 
     ${If} $StartMaster == 1
-        Exec '"$INSTDIR\nssm.exe" Start salt-master'
+        nsExec::Exec 'net start salt-master'
     ${EndIf}
 
 FunctionEnd
@@ -464,12 +467,12 @@ FunctionEnd
 
 Section Uninstall
     ; Stop and Remove salt-minion service
-    ExecWait "net stop salt-minion"
-    ExecWait "sc delete salt-minion"
+    nsExec::Exec 'net stop salt-minion'
+    nsExec::Exec 'sc remove salt-minion'
 
     ; Stop and Remove salt-master service
-    ExecWait "net stop salt-master"
-    ExecWait "sc delete salt-master"
+    nsExec::Exec 'net stop salt-master'
+    nsExec::Exec 'sc delete salt-master'
 
     ; Remove files
     Delete "$INSTDIR\uninst.exe"
@@ -656,8 +659,8 @@ Function parseCommandLineSwitches
         ; If start-master was passed something, then set it
         StrCpy $StartMaster $R1
     ${Else}
-        ; Otherwise default to 0
-        StrCpy $StartMaster 0
+        ; Otherwise default to 1
+        StrCpy $StartMaster 1
     ${EndIf}
 
     # Minion Config: Master IP/Name
