@@ -314,12 +314,14 @@ def renderer_doc(*args):
         return _strip_rst(docs)
 
     for module in args:
-        if '*' in module:
+        if '*' in module or '.' in module:
             for fun in fnmatch.filter(renderers_.keys(), module):
                 docs[fun] = renderers_[fun].__doc__
         else:
+            moduledot = module + '.'
             for fun in six.iterkeys(renderers_):
-                docs[fun] = renderers_[fun].__doc__
+                if fun.startswith(moduledot):
+                    docs[fun] = renderers_[fun].__doc__
     return _strip_rst(docs)
 
 
