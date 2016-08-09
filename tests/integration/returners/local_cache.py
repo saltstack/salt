@@ -88,8 +88,7 @@ class Local_CacheTest(integration.ShellCase):
         self._add_job()
 
         # remove job
-        remove_cache = local_cache.clean_old_jobs()
-        self.assertEqual(remove_cache, None)
+        self.assertEqual(local_cache.clean_old_jobs(), None)
 
         self._check_dir_files('job cache was not removed: ',
                               JOB_CACHE_DIR_FILES,
@@ -103,8 +102,7 @@ class Local_CacheTest(integration.ShellCase):
         self._add_job()
 
         local_cache.__opts__['keep_jobs'] = 24
-        remove_cache = local_cache.clean_old_jobs()
-        self.assertEqual(remove_cache, None)
+        self.assertEqual(local_cache.clean_old_jobs(), None)
 
         self._check_dir_files('job cache was removed: ',
                               JOB_CACHE_DIR_FILES,
@@ -128,8 +126,7 @@ class Local_CacheTest(integration.ShellCase):
                               status='present')
 
         # remove job
-        remove_cache = local_cache.clean_old_jobs()
-        self.assertEqual(remove_cache, None)
+        self.assertEqual(local_cache.clean_old_jobs(), None)
 
         # check jid dir is removed
         self._check_dir_files('new_jid_dir was not removed',
