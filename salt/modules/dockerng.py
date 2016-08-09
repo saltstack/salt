@@ -2237,7 +2237,9 @@ def list_tags():
     '''
     ret = set()
     for item in six.itervalues(images()):
-        for repo_tag in item.get('RepoTags', []):
+        if not item.get('RepoTags'):
+            continue
+        for repo_tag in item['RepoTags']:
             ret.add(repo_tag)
     return sorted(ret)
 
