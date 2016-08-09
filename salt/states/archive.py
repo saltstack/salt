@@ -250,12 +250,12 @@ def extracted(name,
     use_cmd_unzip
         When archive_format is zip, setting this flag to True will use the archive.cmd_unzip module function
 
-        .. versionadded:: Boron
+        .. versionadded:: Carbon
 
     kwargs
         kwargs to pass to the archive.unzip or archive.unrar function
 
-        .. versionadded:: Boron
+        .. versionadded:: Carbon
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
