@@ -4,7 +4,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-
 # Import python libs
 from __future__ import absolute_import
 import datetime
@@ -38,13 +37,10 @@ __func_alias__ = {
     'time_': 'time'
 }
 
-
 def __virtual__():
     if salt.utils.is_windows():
         return False, 'Windows platform is not supported by this module'
-
     return __virtualname__
-
 
 def _number(text):
     '''
@@ -59,7 +55,6 @@ def _number(text):
         return float(text)
     except ValueError:
         return text
-
 
 def procs():
     '''
@@ -96,7 +91,6 @@ def procs():
                             'cmd': ' '.join(comps[cind:])}
     return ret
 
-
 def custom():
     '''
     Return a custom composite of status data and info for this minion,
@@ -131,7 +125,6 @@ def custom():
 
     return ret
 
-
 @with_deprecated(globals(), "Boron")
 def uptime():
     '''
@@ -162,7 +155,6 @@ def uptime():
 
     return ut_ret
 
-
 def _uptime(human_readable=True):
     '''
     Return the uptime for this minion
@@ -190,7 +182,6 @@ def _uptime(human_readable=True):
                 return 'unexpected format in /proc/uptime'
         return 'cannot find /proc/uptime'
 
-
 def loadavg():
     '''
     Return the load averages for this minion
@@ -205,7 +196,6 @@ def loadavg():
     return {'1-min': load_avg[0],
             '5-min': load_avg[1],
             '15-min': load_avg[2]}
-
 
 def cpustats():
     '''
@@ -294,7 +284,6 @@ def cpustats():
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
-
 def meminfo():
     '''
     Return the memory info for this minion
@@ -352,7 +341,6 @@ def meminfo():
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
-
 
 def cpuinfo():
     '''
@@ -477,7 +465,6 @@ def cpuinfo():
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
-
 def diskstats():
     '''
     ..versionchanged:: 2016.3.2
@@ -542,7 +529,6 @@ def diskstats():
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
-
 
 def diskusage(*args):
     '''
@@ -618,7 +604,6 @@ def diskusage(*args):
         ret[path] = {"available": available, "total": total}
     return ret
 
-
 def vmstats():
     '''
     ..versionchanged:: 2016.3.2
@@ -668,7 +653,6 @@ def vmstats():
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
-
 def nproc():
     '''
     Return the number of processing units available on this system
@@ -683,7 +667,6 @@ def nproc():
         return _number(__salt__['cmd.run']('nproc').strip())
     except ValueError:
         return 0
-
 
 def netstats():
     '''
@@ -769,7 +752,6 @@ def netstats():
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
-
 
 def netdev():
     '''
@@ -881,7 +863,6 @@ def netdev():
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
-
 def w():  # pylint: disable=C0103
     '''
     Return a list of logged in users for this minion, using the w command
@@ -908,7 +889,6 @@ def w():  # pylint: disable=C0103
         user_list.append(rec)
     return user_list
 
-
 def all_status():
     '''
     Return a composite of all status data and info for this minion.
@@ -931,7 +911,6 @@ def all_status():
             'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
             'vmstats': vmstats(),
             'w': w()}
-
 
 def pid(sig):
     '''
@@ -961,7 +940,6 @@ def pid(sig):
 
     return pids
 
-
 def version():
     '''
     Return the system version for this minion
@@ -989,7 +967,6 @@ def version():
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
-
 
 def master(master=None, connected=True):
     '''
@@ -1032,7 +1009,6 @@ def master(master=None, connected=True):
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': master}, '__master_connected')
-
 
 def ping_master(master):
     '''
@@ -1077,7 +1053,6 @@ def ping_master(master):
 
     return result
 
-
 def time_(format='%A, %d. %B %Y %I:%M%p'):
     '''
     .. versionadded:: 2016.3.0
@@ -1096,6 +1071,5 @@ def time_(format='%A, %d. %B %Y %I:%M%p'):
         salt '*' status.time '%s'
 
     '''
-
     dt = datetime.datetime.today()
     return dt.strftime(format)
