@@ -26,7 +26,6 @@ import salt.utils
 import salt.log.setup
 import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
-from salt.ext.six.moves import queue
 
 # Import 3rd-party libs
 import salt.ext.six as six
