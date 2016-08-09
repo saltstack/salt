@@ -158,14 +158,27 @@ class SaltTest(testprogram.TestProgramCase):
         for excode in ('EX_OK', 'EX_GENERIC', 'SALT_BUILD_FAIL'):
             exval = getattr(exitcodes, excode)
 
+            # Test with --retcode-passthrough
             stdout, stderr, status = saltcli.run(
-                args=['-l', 'debug', '*', 'test.retcode', '{0}'.format(exval)],
+                args=['--retcode-passthrough', '-l', 'debug', '*', 'test.retcode', '{0}'.format(exval)],
                 catch_stderr=True,
                 with_retcode=True,
             )
             self.assert_exit_status(
                 status, excode,
-                message='Test: test.retcode {0}'.format(exval),
+                message='Test: --retcode-passthrough test.retcode {0}({1})'.format(excode, exval),
+                stdout=stdout, stderr=stderr
+            )
+
+            # Test with --retcode-passthrough - which should always result in EX_OK
+            stdout, stderr, status = saltcli.run(
+                args=['--cli-retcode', '-l', 'debug', '*', 'test.retcode', '{0}'.format(exval)],
+                catch_stderr=True,
+                with_retcode=True,
+            )
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='Test: --cli-retcode test.retcode {0}({1})'.format('EX_OK', exitcodes.EX_OK),
                 stdout=stdout, stderr=stderr
             )
         self._shutdown(saltcli, master, minions)
