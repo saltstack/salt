@@ -112,7 +112,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop('fun')
         return self.async(fun, low)
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True):
         '''
         Execute a function
 
@@ -121,7 +121,11 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             >>> wheel.cmd('key.finger', ['jerry'])
             {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
-        return super(WheelClient, self).cmd(fun, arg, pub_data, kwarg)
+        return super(WheelClient, self).cmd(fun,
+                                            arg,
+                                            pub_data,
+                                            kwarg,
+                                            print_event)
 
 
 Wheel = WheelClient  # for backward-compat
