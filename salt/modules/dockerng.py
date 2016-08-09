@@ -1819,9 +1819,9 @@ def _validate_input(kwargs,
                 'pid_mode can only be \'host\', if set'
             )
 
-    def _valid_log_config(): # pylint: disable=unused-variable
+    def _valid_log_config():  # pylint: disable=unused-variable
         '''
-        Needs to be a dictionary that might contain keys (type|Type) and (config|Config)
+        Needs to be a dictionary that might contain keys Type and Config
         '''
         try:
             _valid_dict('log_config')
