@@ -274,7 +274,7 @@ class SSH(object):
         '''
         if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
             target = self.targets[host]
-            if 'passwd' in target or self.opts['ssh_passwd']:
+            if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
         if ret[host].get('stderr', '').count('Permission denied'):
