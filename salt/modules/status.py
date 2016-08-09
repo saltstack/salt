@@ -612,6 +612,10 @@ def vmstats():
     ..versionchanged:: 2016.3.2
     Return the virtual memory stats for this minion
 
+    Tested and working in:
+    -Windows Server 2012r2
+    -CentOS 6
+
     CLI Example:
 
     .. code-block:: bash
