@@ -8,7 +8,7 @@ Beacon to monitor network adapter setting changes on Linux
 from __future__ import absolute_import
 # Import third party libs
 try:
-    from pyroute2.ipdb import IPDB
+    from pyroute2 import IPDB
     IP = IPDB()
     HAS_PYROUTE2 = True
 except ImportError:
