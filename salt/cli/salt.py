@@ -379,10 +379,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if ret[host] == 'Minion did not return. [Not connected]':
                 continue
             for fun in ret[host]:
-                if fun not in docs:
-                    if ret[host][fun]:
-                        docs[fun] = ret[host][fun]
-        for fun in sorted(docs):
-            salt.output.display_output(fun + ':', 'nested', self.config)
-            print_cli(docs[fun])
-            print_cli('')
+                if fun not in docs and ret[host][fun]:
+                    docs[fun] = ret[host][fun]
+        if 'output' in self.config:
+            for fun in sorted(docs):
+                salt.output.display_output({fun: docs[fun]}, 'nested', self.config)
+        else:
+            for fun in sorted(docs):
+                print_cli('{0}:'.format(fun))
+                print_cli(docs[fun])
+                print_cli('')
