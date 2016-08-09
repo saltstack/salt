@@ -166,7 +166,7 @@ class SyncClientMixin(object):
 
         return ret['data']['return']
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True):
         '''
         Execute a function
 
@@ -226,7 +226,7 @@ class SyncClientMixin(object):
         low = {'fun': fun,
                'args': args,
                'kwargs': kwargs}
-        return self.low(fun, low)
+        return self.low(fun, low, print_event)
 
     @property
     def mminion(self):
@@ -234,7 +234,7 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low):
+    def low(self, fun, low, print_event=True):
         '''
         Execute a function from low data
         Low data includes:
@@ -266,12 +266,18 @@ class SyncClientMixin(object):
                 opts=self.opts,
                 listen=False)
 
+        if print_event:
+            print_func = self.print_async_event \
+                if hasattr(self, 'print_async_event') \
+                else None
+        else:
+            # Suppress printing of return event (this keeps us from printing
+            # runner/wheel output during orchestration).
+            print_func = None
         namespaced_event = salt.utils.event.NamespacedEvent(
             event,
             tag,
-            print_func=self.print_async_event
-                       if hasattr(self, 'print_async_event')
-                       else None
+            print_func=print_func
         )
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
