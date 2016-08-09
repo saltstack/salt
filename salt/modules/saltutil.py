@@ -1094,7 +1094,7 @@ def runner(name, **kwargs):
         if 'saltenv' in aspec.args:
             kwargs['saltenv'] = saltenv
 
-    return rclient.cmd(name, kwarg=kwargs)
+    return rclient.cmd(name, kwarg=kwargs, print_event=False)
 
 
 def wheel(name, *args, **kwargs):
@@ -1152,7 +1152,8 @@ def wheel(name, *args, **kwargs):
         ret = wheel_client.cmd(name,
                                arg=args,
                                pub_data=pub_data,
-                               kwarg=valid_kwargs)
+                               kwarg=valid_kwargs,
+                               print_event=False)
     except SaltInvocationError:
         raise CommandExecutionError(
             'This command can only be executed on a minion that is located on '
