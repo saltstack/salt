@@ -215,6 +215,9 @@ Functionality Changes
 Deprecations
 ============
 
+General Deprecations
+--------------------
+
 - ``env`` to ``saltenv``
 
   All occurrences of ``env`` and some occurrences of ``__env__`` marked for
@@ -272,6 +275,23 @@ Deprecations
       # will result in refresh evaluating to True and saltenv likely not being a string at all
       fcn('add more salt', 'prod', False)
 
+Cloud Deprecations
+------------------
+
+- The ``vsphere`` cloud driver has been removed. Please use the ``vmware`` cloud driver
+  instead.
+
+- The ``private_ip`` option in the ``linode`` cloud driver is deprecated and has been
+  removed. Use the ``assign_private_ip`` option instead.
+
+- The ``create_dns_record`` and ``delete_dns_record`` functions are deprecated and have
+  been removed from the ``digital_ocean`` driver. Use the ``post_dns_record`` function
+  instead.
+
+
+Execution Module Deprecations
+-----------------------------
+
 - The ``boto_vpc`` execution module had two functions removed,
   ``boto_vpc.associate_new_dhcp_options_to_vpc`` and
   ``boto_vpc.associate_new_network_acl_to_subnet`` in favor of more concise function
@@ -280,15 +300,6 @@ Deprecations
 - The ``data`` execution module had ``getval`` and ``getvals`` functions removed
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
-
-- The ``grains.cache`` runner no longer accpets ``outputter`` or ``minion`` as keyword arguments.
-  Users will need to specify an outputter using the ``--out`` option. ``tgt`` is
-  replacing the ``minion`` kwarg.
-
-- The use of ``jid_dir`` and ``jid_load`` were removed from the
-  ``salt.utils.jid``. ``jid_dir`` functionality for job_cache management was moved to
-  the ``local_cache`` returner. ``jid_load`` data is now retreived from the
-  ``master_job_cache``
 
 - ``reg`` execution module
 
@@ -314,6 +325,31 @@ Deprecations
   - for ``create_key`` use ``set_value`` with no ``vname`` and no ``vdata``
   - for ``delete_key`` use ``delete_key_recursive``. To delete a value, use
     ``delete_value``.
+
+- The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
+  module. The ``hash_known_hosts`` option should be used instead.
+
+- The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
+  instead.
+
+
+Runner Module Deprecations
+--------------------------
+
+- The ``grains.cache`` runner no longer accpets ``outputter`` or ``minion`` as keyword arguments.
+  Users will need to specify an outputter using the ``--out`` option. ``tgt`` is
+  replacing the ``minion`` kwarg.
+
+- ``virt`` runner module:
+
+  - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
+    Use the ``host`` option instead.
+  - The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
+  - The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
+
+
+State Module Deprecations
+-------------------------
 
 - ``reg`` state module
 
@@ -377,39 +413,24 @@ Deprecations
   - ``cloned``: replaced by the ``present`` state. Use the ``clone_from`` argument
     to set the name of the clone source.
 
+- The ``hash_hostname`` option was removed from the ``salt.states.ssh_known_hosts``
+  state. The ``hash_known_hosts`` option should be used instead.
+
+- The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
+  was removed. Use ``force`` instead.
+
+
+Utils Module Deprecations
+-------------------------
+
+- The use of ``jid_dir`` and ``jid_load`` were removed from the
+  ``salt.utils.jid``. ``jid_dir`` functionality for job_cache management was moved to
+  the ``local_cache`` returner. ``jid_load`` data is now retrieved from the
+  ``master_job_cache``.
+
 - ``ip_in_subnet`` function in ``salt.utils.network.py`` has been removed. Use the
   ``in_subnet`` function instead.
 
 - The ``iam`` utils module had two functions removed: ``salt.utils.iam.get_iam_region``
   and ``salt.utils.iam.get_iam_metadata`` in favor of the aws utils functions
   ``salt.utils.aws.get_region_from_metadata`` and ``salt.utils.aws.creds``, respectively.
-
-- The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
-  module and the ``salt.states.ssh_known_hosts`` state. The ``hash_known_hosts``
-  option should be used instead in both the execution module and the state.
-
-- The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
-  was removed. Use ``force`` instead.
-
-- ``virt`` runner module:
-
-  - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
-    Use the ``host`` option instead.
-  - The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
-  - The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
-
-- The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
-  instead.
-
-Cloud Deprecations
-------------------
-
-- The ``vsphere`` cloud driver has been removed. Please use the ``vmware`` cloud driver
-  instead.
-
-- The ``private_ip`` option in the ``linode`` cloud driver is deprecated and has been
-  removed. Use the ``assign_private_ip`` option instead.
-
-- The ``create_dns_record`` and ``delete_dns_record`` functions are deprecated and have
-  been removed from the ``digital_ocean`` driver. Use the ``post_dns_record`` function
-  instead.
