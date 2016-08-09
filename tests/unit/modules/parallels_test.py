@@ -186,6 +186,50 @@ class ParallelsTestCase(TestCase):
                                                  ['-o', 'uuid,status', '--all'],
                                                  runas=runas)
 
+    def test_clone(self):
+        '''
+        Test parallels.clone
+        '''
+        name = 'macvm'
+        runas = 'macdev'
+
+        # Validate clone
+        mock_clone = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_clone):
+            parallels.clone(name, 'macvm_new', runas=runas)
+            mock_clone.assert_called_once_with('clone',
+                                               [name, '--name', 'macvm_new'],
+                                               runas=runas)
+
+        # Validate linked clone
+        mock_linked = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_linked):
+            parallels.clone(name, 'macvm_link', linked=True, runas=runas)
+            mock_linked.assert_called_once_with('clone',
+                                                [name, '--name', 'macvm_link', '--linked'],
+                                                runas=runas)
+
+        # Validate template clone
+        mock_template = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_template):
+            parallels.clone(name, 'macvm_templ', template=True, runas=runas)
+            mock_template.assert_called_once_with('clone',
+                                                  [name, '--name', 'macvm_templ', '--template'],
+                                                  runas=runas)
+
+    def test_delete(self):
+        '''
+        Test parallels.delete
+        '''
+        name = 'macvm'
+        runas = 'macdev'
+
+        # Validate delete
+        mock_delete = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_delete):
+            parallels.delete(name, runas=runas)
+            mock_delete.assert_called_once_with('delete', name, runas=runas)
+
     def test_start(self):
         '''
         Test parallels.start
