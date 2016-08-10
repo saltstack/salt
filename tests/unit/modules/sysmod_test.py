@@ -325,7 +325,7 @@ class SysmodTestCase(TestCase):
         self.assertListEqual(sysmod.list_runner_functions('sys.list'), [])
         self.assertListEqual(sysmod.list_runner_functions('exist.exist'), ['exist.exist'])
 
-    # 'list_returners' function tests: 3
+    # 'list_returners' function tests: 4
 
     def test_list_returners(self):
         '''
@@ -335,7 +335,7 @@ class SysmodTestCase(TestCase):
 
         self.assertListEqual(sysmod.list_returners('nonexist'), [])
 
-        #TODO self.assertListEqual(sysmod.list_returners('user'), ['user'])
+        self.assertListEqual(sysmod.list_returners('user'), ['user'])
 
         self.assertListEqual(sysmod.list_returners('s*'), ['sys', 'sysctl', 'system'])
 

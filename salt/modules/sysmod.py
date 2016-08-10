@@ -737,18 +737,18 @@ def list_returners(*args):
 
     if not args:
         for func in six.iterkeys(returners_):
-            comps = func.split('.')
-            if len(comps) < 2:
-                continue
-            returners.add(comps[0])
+            returners.add(func.split('.')[0])
         return sorted(returners)
 
     for module in args:
-        for func in fnmatch.filter(returners_.keys(), module):
-            comps = func.split('.')
-            if len(comps) < 2:
-                continue
-            returners.add(comps[0])
+        if '*' not in module:
+            for func in returners_:
+                comps = func.split('.')
+                if comps[0] == module:
+                    returners.add(comps[0])
+        else:
+            for func in fnmatch.filter(returners_.keys(), module):
+                returners.add(func.split('.')[0])
     return sorted(returners)
 
 
