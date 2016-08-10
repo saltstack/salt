@@ -2,8 +2,7 @@
 '''
 Windows Service module.
 
-.. versionadded:: Carbon
-    Rewritten to use PyWin32
+.. versionchanged:: Carbon - Rewritten to use PyWin32
 '''
 
 # Import python libs
@@ -1173,7 +1172,7 @@ def config(name,
         salt '*' service.config <service name> <path to exe> display_name='<display name>'
     '''
     salt.utils.warn_until(
-        'Nitrogen',
+        'Oxygen',
         'The \'service.change\' function is deprecated, and will be removed in '
         'Salt {version}. Please use \'service.modify\' instead.')
 
