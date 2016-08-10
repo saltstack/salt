@@ -184,7 +184,7 @@ class SaltColorLogRecord(SaltLogRecord):
                                           reset)
         self.colorlevel = '%s[%-8s]%s' % (clevel,
                                           self.levelname,
-                                          TextFormat('reset'))
+                                          reset)
         self.colorprocess = '%s[%5s]%s' % (LOG_COLORS['process'],
                                            self.process,
                                            reset)
