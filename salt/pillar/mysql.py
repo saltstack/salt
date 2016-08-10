@@ -11,17 +11,6 @@ This module is a concrete implementation of the sql_base ext_pillar for MySQL.
 :depends: python-mysqldb
 :platform: all
 
-Legacy compatibility
-=====================================
-
-This module has an extra addition for backward compatibility.
-
-If there's a keyword arg of mysql_query, that'll go first before other args.
-This legacy compatibility translates to depth 1.
-
-We do this so that it's backward compatible with older configs.
-This is deprecated and slated to be removed in Carbon.
-
 Configuring the mysql ext_pillar
 =====================================
 
