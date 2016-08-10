@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import re
 import inspect
 
+# Import salt libs
+import salt.utils.jid
+
 # Import 3rd-party libs
 import salt.ext.six as six
 
@@ -24,7 +27,11 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        ret.append(arg)
+        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(str(arg))) or \
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+            ret.append(str(arg))
+        else:
+            ret.append(arg)
     if isinstance(kwargs, dict) and kwargs:
         kw_ = {'__kwarg__': True}
         for key, val in six.iteritems(kwargs):
