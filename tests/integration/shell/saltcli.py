@@ -77,7 +77,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
         saltcli.cleanup()
 
-    def _setup(self, name, minions, port=4506):
+    def _setup(self, name, minions, port=9707):
         '''Re-usable setup for running salt-minion tests'''
 
         saltcli = testprogram.TestProgramSalt(
