@@ -474,6 +474,10 @@ class SSH(object):
                     returned.add(ret['id'])
                     yield {ret['id']: ret['ret']}
             except Exception:
+                # This bare exception is here to catch spurious exceptions
+                # thrown by que.get during healthy operation. Please do not
+                # worry about this bare exception, it is entirely here to
+                # control program flow.
                 pass
             for host in running:
                 if not running[host]['thread'].is_alive():
