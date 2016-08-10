@@ -4,6 +4,7 @@ Tests for the file state
 '''
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import textwrap
 import tempfile
@@ -52,11 +53,16 @@ class CMDRunRedirectTest(integration.ModuleCase,
         self.state_name = 'run_redirect'
         state_filename = self.state_name + '.sls'
         self.state_file = os.path.join(STATE_DIR, state_filename)
-        self.test_file = tempfile.mkstemp()[1]
+        self.fd, self.test_file = tempfile.mkstemp()
         super(CMDRunRedirectTest, self).setUp()
 
     def tearDown(self):
         os.remove(self.state_file)
+        try:
+            os.close(self.fd)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
         os.remove(self.test_file)
         super(CMDRunRedirectTest, self).tearDown()
 
