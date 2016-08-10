@@ -425,7 +425,7 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
         for file in os.listdir(repodir):
             if file.endswith('.rpm'):
                 abs_file = os.path.join(repodir, file)
-                number_retries = 5
+                number_retries = 20
                 times_looped = 0
                 error_msg = 'Failed to sign file {0}'.format(abs_file)
                 cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)

@@ -1401,8 +1401,7 @@ def os_data():
                 grains.pop('lsb_distrib_release', None)
             grains['osrelease'] = \
                 grains.get('lsb_distrib_release', osrelease).strip()
-        grains['oscodename'] = grains.get('lsb_distrib_codename',
-                                          oscodename).strip()
+        grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
@@ -1519,9 +1518,12 @@ def os_data():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
-        grains['osmajorrelease'] = grains['osrelease_info'][0]
-        os_name = 'os' if grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname'
-        grains['osfinger'] = '{0}-{1}'.format(grains[os_name], grains['osrelease_info'][0])
+        grains['osmajorrelease'] = str(grains['osrelease_info'][0])  # This will be an integer in the two releases
+        salt.utils.warn_until('Nitrogen', 'The "osmajorrelease" will be a type of an integer.')
+        os_name = grains['os' if grains.get('os') in (
+            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+        grains['osfinger'] = '{0}-{1}'.format(
+            os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 
     return grains
 
