@@ -10,7 +10,6 @@ system, please head over to the :doc:`logging development
 document</topics/development/logging>`, if all you're after is salt's logging
 configurations, please continue reading.
 
-
 Available Configuration Settings
 ================================
 
@@ -19,29 +18,28 @@ Available Configuration Settings
 ``log_file``
 ------------
 
-The log records can be sent to a regular file, local path name, or network location.
-Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
-with rsyslogd(8) configured for network logging.  The format for remote addresses is:
-``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``. Where ``log-facility`` is the symbolic name of a syslog facility as defined in the :ref:`SysLogHandler documentation <python2:logging.handlers.SysLogHandler.encodePriority>` . It defaults to ``LOG_USER``.
+The log records can be sent to a regular file, local path name, or network
+location.  Remote logging works best when configured to use rsyslogd(8) (e.g.:
+``file:///dev/log``), with rsyslogd(8) configured for network logging.  The
+format for remote addresses is:
+``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``. Where
+``log-facility`` is the symbolic name of a syslog facility as defined in the
+:ref:`SysLogHandler documentation
+<python2:logging.handlers.SysLogHandler.encodePriority>` . It defaults to
+``LOG_USER``.
 
-Default: Dependent of the binary being executed, for example, for ``salt-master``,
-``/var/log/salt/master``.
-
-
-
+Default: Dependent of the binary being executed, for example, for
+``salt-master``, ``/var/log/salt/master``.
 
 Examples:
-
 
 .. code-block:: yaml
 
     log_file: /var/log/salt/master
 
-
 .. code-block:: yaml
 
     log_file: /var/log/salt/minion
-
 
 .. code-block:: yaml
 
@@ -54,8 +52,6 @@ Examples:
 .. code-block:: yaml
 
     log_file: udp://loghost:10514
-
-
 
 .. conf_log:: log_level
 
@@ -77,7 +73,6 @@ The level of log record messages to send to the console. One of ``all``,
     logging. In case of running salt in command line use``--log-level=quiet``
     instead.
 
-
 .. conf_log:: log_level_logfile
 
 ``log_level_logfile``
@@ -93,8 +88,6 @@ The level of messages to send to the log file. One of ``all``, ``garbage``,
 
     log_level_logfile: warning
 
-
-
 .. conf_log:: log_datefmt
 
 ``log_datefmt``
@@ -109,8 +102,6 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
     log_datefmt: '%H:%M:%S'
 
-
-
 .. conf_log:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -124,8 +115,6 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
-
-
 
 .. conf_log:: log_fmt_console
 
@@ -155,8 +144,6 @@ also provides these custom LogRecord attributes to colorize console log output:
 
     log_fmt_console: '[%(levelname)-8s] %(message)s'
 
-
-
 .. conf_log:: log_fmt_logfile
 
 ``log_fmt_logfile``
@@ -179,8 +166,6 @@ enclosing brackets ``[`` and ``]``:
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
-
-
 .. conf_log:: log_granular_levels
 
 ``log_granular_levels``
@@ -197,7 +182,6 @@ at the ``debug`` level:
   log_granular_levels:
     'salt': 'warning'
     'salt.modules': 'debug'
-
 
 External Logging Handlers
 -------------------------
