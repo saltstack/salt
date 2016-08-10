@@ -10,6 +10,45 @@ system, please head over to the :doc:`logging development
 document</topics/development/logging>`, if all you're after is salt's logging
 configurations, please continue reading.
 
+
+.. conf_log:: log_levels
+
+Log Levels
+==========
+
+The log levels are ordered numerically such that setting the log level to a
+specific level will record all log statements at that level and higher.  For
+example, setting ``log_level: error`` will log statements at ``error``,
+``critical``, and ``quiet`` levels, although nothing *should* be logged at
+``quiet`` level.
+
+Most of the logging levels are defined by default in Python's logging library
+and can be found in the official `Python documentation
+<https://docs.python.org/library/logging.html#levels>`_.  Salt uses some more
+levels in addition to the standard levels.  All levels available in salt are
+shown in the table below.
+
+.. note::
+
+    Python dependencies used by salt may define and use additional logging
+    levels.  For example, the Python 2 version of the ``multiprocessing``
+    standard Python library `uses the levels
+    <https://docs.python.org/2/library/multiprocessing.html#logging>`_
+    ``subwarning``, 25 and ``subdebug``, 5.
+
+Level    Numeric value Description
+======== ============= ========================================================================
+quiet    1000          Nothing should be logged at this level
+critical   50          Critical errors
+error      40          Errors
+warning    30          Warnings
+info       20          Normal log information
+profile    15          Profiling information on salt performance
+debug      10          Information useful for debugging both salt implementations and salt code
+trace       5          More detailed code debugging information
+garbage     1          Even more debugging information
+all         0          Everything
+
 Available Configuration Settings
 ================================
 
