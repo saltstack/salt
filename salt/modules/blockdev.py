@@ -42,7 +42,7 @@ def tune(device, **kwargs):
     '''
     Set attributes for the specified device
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.3.0
        Use `disk.tune`
 
     CLI Example:
@@ -59,7 +59,7 @@ def tune(device, **kwargs):
     '''
     salt.utils.warn_until(
         'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+        'The tune function has been moved to the disk module, and will disappear in Carbon'
     )
     return __salt__['disk.tune'](device, **kwargs)
 
@@ -69,7 +69,7 @@ def wipe(device):
     '''
     Remove the filesystem information
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.3.0
        Use `disk.tune`
 
     CLI Example:
@@ -80,7 +80,7 @@ def wipe(device):
     '''
     salt.utils.warn_until(
         'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+        'The wipe function has been moved to the disk module, and will disappear in Carbon'
     )
     return __salt__['disk.wipe'](device)
 
@@ -89,7 +89,7 @@ def dump(device, args=None):
     '''
     Return all contents of dumpe2fs for a specified device
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.3.0
        Use `disk.dump`
 
     args
@@ -103,7 +103,7 @@ def dump(device, args=None):
     '''
     salt.utils.warn_until(
         'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+        'The dump function has been moved to the disk module, and will disappear in Carbon'
     )
     return __salt__['disk.dump'](device, args)
 
@@ -200,7 +200,7 @@ def resize2fs(device):
     '''
     Resizes the filesystem.
 
-    .. deprecated:: Carbon
+    .. deprecated:: 2016.3.0
        Use `disk.resize2fs`
 
     CLI Example:
@@ -210,6 +210,6 @@ def resize2fs(device):
     '''
     salt.utils.warn_until(
         'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+        'The resizefs function has been moved to the disk module, and will disappear in Carbon'
     )
     return __salt__['disk.resize2fs'](device)
