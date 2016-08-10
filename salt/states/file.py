@@ -1238,9 +1238,9 @@ def managed(name,
         on Windows
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        If this setting is applied, then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, py, genshi,
+        cheetah, and wempy are supported.
 
     makedirs : False
         If set to ``True``, then the parent directories will be created to
