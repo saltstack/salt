@@ -81,7 +81,7 @@ def doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(__salt__.keys(), target_mod):
+            for fun in fnmatch.filter(__salt__, target_mod):
                 docs[fun] = __salt__[fun].__doc__
         else:
 
@@ -315,7 +315,7 @@ def renderer_doc(*args):
 
     for module in args:
         if '*' in module or '.' in module:
-            for func in fnmatch.filter(renderers_.keys(), module):
+            for func in fnmatch.filter(renderers_, module):
                 docs[func] = renderers_[func].__doc__
         else:
             moduledot = module + '.'
@@ -747,7 +747,7 @@ def list_returners(*args):
                 if comps[0] == module:
                     returners.add(comps[0])
         else:
-            for func in fnmatch.filter(returners_.keys(), module):
+            for func in fnmatch.filter(returners_, module):
                 returners.add(func.split('.')[0])
     return sorted(returners)
 
