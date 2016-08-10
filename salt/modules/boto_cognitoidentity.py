@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CognitoIdentity
 
-.. versionadded:: Boron
+.. versionadded:: Carbon
 
 :configuration: This module accepts explicit CognitoIdentity credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
