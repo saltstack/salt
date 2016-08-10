@@ -307,7 +307,11 @@ def load_states():
     __opts__['pillar'] = __pillar__
     lazy_funcs = salt.loader.minion_mods(__opts__)
     lazy_utils = salt.loader.utils(__opts__)
-    lazy_states = salt.loader.states(__opts__, lazy_funcs, lazy_utils)
+    lazy_serializers = salt.loader.serializers(__opts__)
+    lazy_states = salt.loader.states(__opts__,
+            lazy_funcs,
+            lazy_utils,
+            lazy_serializers)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):

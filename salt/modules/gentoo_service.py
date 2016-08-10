@@ -23,7 +23,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo':
         return __virtualname__
-    return False
+    return (False, 'The gentoo_service execution module cannot be loaded: '
+            'only available on Gentoo systems.')
 
 
 def get_enabled():

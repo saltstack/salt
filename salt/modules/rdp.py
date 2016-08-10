@@ -17,7 +17,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return 'rdp'
-    return False
+    return (False, 'Module only works on Windows.')
 
 
 def _parse_return_code_powershell(string):
@@ -27,7 +27,7 @@ def _parse_return_code_powershell(string):
 
     regex = re.search(r'ReturnValue\s*: (\d*)', string)
     if not regex:
-        return False
+        return (False, 'Could not parse PowerShell return code.')
     else:
         return int(regex.group(1))
 

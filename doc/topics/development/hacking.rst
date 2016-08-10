@@ -35,8 +35,12 @@ Create a new `virtualenv`_:
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
 Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+
 On Arch Linux, where Python 3 is the default installation of Python, use
 the ``virtualenv2`` command instead of ``virtualenv``.
+
+On Gentoo you must use ``--system-site-packages`` to enable pkg and portage_config
+functionality
 
 .. note:: Using system Python modules in the virtualenv
 
@@ -45,6 +49,12 @@ the ``virtualenv2`` command instead of ``virtualenv``.
     Using this method eliminates the requirement to install the salt dependencies
     again, although it does assume that the listed modules are all installed in the
     system PYTHONPATH at the time of virtualenv creation.
+
+.. note:: Python development package
+
+    Be sure to install python devel package in order to install required Python
+    modules. In Debian/Ubuntu run ``sudo apt-get install -y python-dev``. In RedHat
+    based system install ``python-devel``
 
 Activate the virtualenv:
 
@@ -57,7 +67,7 @@ Install Salt (and dependencies) into the virtualenv:
 .. code-block:: bash
 
     pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
-    pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
+    pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil futures tornado
     pip install -e ./salt   # the path to the salt git clone from above
 
 .. note:: Installing M2Crypto
@@ -278,7 +288,7 @@ to a virtualenv using pip:
 
 .. code-block:: bash
 
-    pip install Sphinx==1.3b2
+    pip install Sphinx==1.3.1
 
 Change to salt documentation directory, then:
 
@@ -309,7 +319,7 @@ Change to salt documentation directory, then:
 
 .. code-block:: bash
 
-    make SPHINXBUILD=sphinx-1.0-build html
+    make SPHINXBUILD=sphinx-build html
 
 Once you've updated the documentation, you can run the following command to
 launch a simple Python HTTP server to see your changes:

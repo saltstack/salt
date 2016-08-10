@@ -542,7 +542,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         if ret is None:
             ret = merge
         else:
-            salt.utils.dictupdate.update(ret, merge)
+            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
 
@@ -726,3 +726,7 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get

@@ -1,25 +1,26 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import sys, getopt
 
 def display_help():
-    print '####################################################################'
-    print '#                                                                  #'
-    print '# File: portable.py                                                #'
-    print '# Description:                                                     #'
-    print '#   - search and replace within a binary file                      #'
-    print '#                                                                  #'
-    print '# Parameters:                                                      #'
-    print '#   -f, --file    :  target file                                   #'
-    print '#   -s, --search  :  term to search for                            #'
-    print '#                    default is "C:\Python"                        #'
-    print '#   -r, --replace :  replace with this                             #'
-    print '#                    default is ".."                               #'
-    print '#                                                                  #'
-    print '# example:                                                         #'
-    print '#  portable.py -f <target_file> -s <search_term> -r <replace_term> #'
-    print '#                                                                  #'
-    print '####################################################################'
+    print('####################################################################')
+    print('#                                                                  #')
+    print('# File: portable.py                                                #')
+    print('# Description:                                                     #')
+    print('#   - search and replace within a binary file                      #')
+    print('#                                                                  #')
+    print('# Parameters:                                                      #')
+    print('#   -f, --file    :  target file                                   #')
+    print('#   -s, --search  :  term to search for                            #')
+    print('#                    default is "C:\Python"                        #')
+    print('#   -r, --replace :  replace with this                             #')
+    print('#                    default is ".."                               #')
+    print('#                                                                  #')
+    print('# example:                                                         #')
+    print('#  portable.py -f <target_file> -s <search_term> -r <replace_term> #')
+    print('#                                                                  #')
+    print('####################################################################')
     sys.exit(2)
 
 def main(argv):

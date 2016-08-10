@@ -185,6 +185,66 @@ The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
 this instance. The `domain` setting will be used in conjunction with the
 instance name to form the FQDN.
 
+use_fqdn
+--------
+If set to True, the Minion will be identified by the FQDN (Fully Qualified Domain
+Name) which is a result of combining the ``domain`` configuration value and the
+Minion name specified either via the CLI or a map file rather than only using the
+short host name, or Minion ID. Default is False.
+
+.. versionadded:: 2016.3.0
+
+For example, if the value of ``domain`` is ``example.com`` and a new VM was created
+via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting
+Minion ID would be ``my-vm.example.com``.
+
+.. note::
+    When enabling the ``use_fqdn`` setting, the Minion ID will be the FQDN and will
+    interact with salt commands with the FQDN instead of the short hostname. However,
+    due to the way the SoftLayer API is constructed, some Salt Cloud functions such
+    as listing nodes or destroying VMs will only list the short hostname of the VM
+    instead of the FQDN.
+
+Example output displaying the SoftLayer hostname quirk mentioned in the note above
+(note the Minion ID is ``my-vm.example.com``, but the VM to be destroyed is listed
+with its short hostname, ``my-vm``):
+
+.. code-block:: bash
+
+    # salt-key -L
+    Accepted Keys:
+    my-vm.example.com
+    Denied Keys:
+    Unaccepted Keys:
+    Rejected Keys:
+    #
+    #
+    # salt my-vm.example.com test.ping
+    my-vm.example.com:
+        True
+    #
+    #
+    # salt-cloud -d my-vm.example.com
+    [INFO    ] salt-cloud starting
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    The following virtual machines are set to be destroyed:
+      softlayer-config:
+        softlayer:
+          my-vm
+
+    Proceed? [N/y] y
+    ... proceeding
+    [INFO    ] Destroying in non-parallel mode.
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Virtual_Guest
+    softlayer-config:
+        ----------
+        softlayer:
+            ----------
+            my-vm:
+                True
+
+
 location
 --------
 Images to build an instance can be found using the `--list-locations` option:

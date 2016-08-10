@@ -103,6 +103,11 @@ def install(pkg=None,
 
         .. versionadded:: 2014.7.0
 
+    silent
+        Whether or not to run NPM install with --silent flag.
+
+        .. versionadded:: 2016.3.0
+
     dry_run
         Whether or not to run NPM install with --dry-run flag.
 

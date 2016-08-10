@@ -130,35 +130,38 @@ class TimezoneTestCase(TestCase):
         Test to checks the hash sum between the given timezone, and the
         one set in /etc/localtime.
         '''
-        with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-            self.assertEqual(timezone.zone_compare('timezone'),
-                             'Not implemented for Solaris family')
+        with patch.object(timezone, 'get_zone', return_value='US/Central'):
+            with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
+                self.assertFalse(timezone.zone_compare('Antarctica/Mawson'))
 
-        with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
             with patch.object(os.path, 'exists', return_value=False):
-                self.assertEqual(timezone.zone_compare('timezone'),
-                                 'Error: /etc/localtime does not exist.')
+                with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
+                    self.assertFalse(timezone.zone_compare('America/New_York'))
 
-        with patch.object(os.path, 'exists', return_value=True):
-            with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
-                with patch.dict(timezone.__opts__, {'hash_type': 'md5'}):
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=IOError('foo')):
-                        self.assertRaises(SaltInvocationError,
-                                          timezone.zone_compare, 't')
+                    self.assertEqual(timezone.zone_compare('US/Central'),
+                                     'Error: /etc/localtime does not exist.')
 
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', IOError('foo')]):
-                        self.assertRaises(CommandExecutionError,
-                                          timezone.zone_compare, 't')
+            with patch.object(os.path, 'exists', return_value=True):
+                with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
+                    self.assertFalse(timezone.zone_compare('America/New_York'))
+                    with patch.dict(timezone.__opts__, {'hash_type': 'md5'}):
+                        with patch.object(salt.utils, 'get_hash',
+                                          side_effect=IOError('foo')):
+                            self.assertRaises(SaltInvocationError,
+                                              timezone.zone_compare, 'US/Central')
 
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', 'A']):
-                        self.assertTrue(timezone.zone_compare('timezone'))
+                        with patch.object(salt.utils, 'get_hash',
+                                          side_effect=['A', IOError('foo')]):
+                            self.assertRaises(CommandExecutionError,
+                                              timezone.zone_compare, 'US/Central')
 
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', 'B']):
-                        self.assertFalse(timezone.zone_compare('timezone'))
+                        with patch.object(salt.utils, 'get_hash',
+                                          side_effect=['A', 'A']):
+                            self.assertTrue(timezone.zone_compare('US/Central'))
+
+                        with patch.object(salt.utils, 'get_hash',
+                                          side_effect=['A', 'B']):
+                            self.assertFalse(timezone.zone_compare('US/Central'))
 
     def test_get_hwclock(self):
         '''

@@ -125,9 +125,9 @@ def find_file(path, saltenv='base', env=None, **kwargs):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -167,9 +167,9 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -199,9 +199,9 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -240,9 +240,9 @@ def file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -280,9 +280,9 @@ def dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -320,11 +320,12 @@ def _get_s3_key():
     verify_ssl = __opts__['s3.verify_ssl'] \
         if 's3.verify_ssl' in __opts__ \
         else None
+    kms_keyid = __opts__['aws.kmw.keyid'] if 'aws.kms.keyid' in __opts__ else None
     location = __opts__['s3.location'] \
         if 's3.location' in __opts__ \
         else None
 
-    return key, keyid, service_url, verify_ssl, location
+    return key, keyid, service_url, verify_ssl, kms_keyid, location
 
 
 def _init():
@@ -394,7 +395,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url, verify_ssl, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -402,6 +403,7 @@ def _refresh_buckets_cache_file(cache_file):
         return s3.query(
                 key=key,
                 keyid=keyid,
+                kms_keyid=keyid,
                 bucket=bucket,
                 service_url=service_url,
                 verify_ssl=verify_ssl,
@@ -604,7 +606,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
-    key, keyid, service_url, verify_ssl, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
@@ -635,6 +637,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                     ret = s3.query(
                         key=key,
                         keyid=keyid,
+                        kms_keyid=keyid,
                         method='HEAD',
                         bucket=bucket_name,
                         service_url=service_url,
@@ -665,6 +668,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     s3.query(
         key=key,
         keyid=keyid,
+        kms_keyid=keyid,
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,

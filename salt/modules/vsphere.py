@@ -210,8 +210,8 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
     cmd_str
         The ESXCLI command to run. Note: This should not include the ``-s``, ``-u``,
         ``-p``, ``-h``, ``--protocol``, or ``--portnumber`` arguments that are
-         frequently passed when using a bare ESXCLI command from the command line.
-         Those arguments are handled by this function via the other args and kwargs.
+        frequently passed when using a bare ESXCLI command from the command line.
+        Those arguments are handled by this function via the other args and kwargs.
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -3523,35 +3523,218 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
 
 
 def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
-                    dvs_name, portgroup_name, protocol=None, port=None,
-                    host_names=None):
+                    dvs_name, target_portgroup_name, uplink_portgroup_name,
+                    protocol=None, port=None, host_names=None):
     '''
-    Adds an ESXi host to a vSphere Distributed Virtual Switch
-    DOES NOT migrate the ESXi's physical and virtual NICs to the switch (yet)
-    (please don't remove the commented code)
+    Adds an ESXi host to a vSphere Distributed Virtual Switch and migrates
+    the desired adapters to the DVS from the standard switch.
+
+    host
+        The location of the vCenter server.
+
+    username
+        The username used to login to the vCenter server.
+
+    password
+        The password used to login to the vCenter server.
+
+    vmknic_name
+        The name of the virtual NIC to migrate.
+
+    vmnic_name
+        The name of the physical NIC to migrate.
+
+    dvs_name
+        The name of the Distributed Virtual Switch.
+
+    target_portgroup_name
+        The name of the distributed portgroup in which to migrate the
+        virtual NIC.
+
+    uplink_portgroup_name
+        The name of the uplink portgroup in which to migrate the
+        physical NIC.
+
+    protocol
+        Optionally set to alternate protocol if the vCenter server or ESX/ESXi host is not
+        using the default protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the vCenter server or ESX/ESXi host is not
+        using the default port. Default port is ``443``.
+
+    host_names:
+        An array of VMware host names to migrate
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt some_host vsphere.add_host_to_dvs host='vsphere.corp.com'
+            username='administrator@vsphere.corp.com' password='vsphere_password'
+            vmknic_name='vmk0' vmnic_name='vnmic0' dvs_name='DSwitch'
+            target_portgroup_name='DPortGroup' uplink_portgroup_name='DSwitch1-DVUplinks-181'
+            protocol='https' port='443', host_names="['esxi1.corp.com','esxi2.corp.com','esxi3.corp.com']"
+
+    Return Example:
+
+    .. code-block:: yaml
+        somehost:
+            ----------
+            esxi1.corp.com:
+                ----------
+                dvs:
+                    DSwitch
+                portgroup:
+                    DPortGroup
+                status:
+                    True
+                uplink:
+                    DSwitch-DVUplinks-181
+                vmknic:
+                    vmk0
+                vmnic:
+                    vmnic0
+            esxi2.corp.com:
+                ----------
+                dvs:
+                    DSwitch
+                portgroup:
+                    DPortGroup
+                status:
+                    True
+                uplink:
+                    DSwitch-DVUplinks-181
+                vmknic:
+                    vmk0
+                vmnic:
+                    vmnic0
+            esxi3.corp.com:
+                ----------
+                dvs:
+                    DSwitch
+                portgroup:
+                    DPortGroup
+                status:
+                    True
+                uplink:
+                    DSwitch-DVUplinks-181
+                vmknic:
+                    vmk0
+                vmnic:
+                    vmnic0
+            message:
+            success:
+                True
+
+    This was very difficult to figure out.  VMware's PyVmomi documentation at
+
+    https://github.com/vmware/pyvmomi/blob/master/docs/vim/DistributedVirtualSwitch.rst
+    (which is a copy of the official documentation here:
+    https://www.vmware.com/support/developer/converter-sdk/conv60_apireference/vim.DistributedVirtualSwitch.html)
+
+    says to create the DVS, create distributed portgroups, and then add the
+    host to the DVS specifying which physical NIC to use as the port backing.
+    However, if the physical NIC is in use as the only link from the host
+    to vSphere, this will fail with an unhelpful "busy" error.
+
+    There is, however, a Powershell PowerCLI cmdlet called Add-VDSwitchPhysicalNetworkAdapter
+    that does what we want.  I used Onyx (https://labs.vmware.com/flings/onyx)
+    to sniff the SOAP stream from Powershell to our vSphere server and got
+    this snippet out:
+
+    <UpdateNetworkConfig xmlns="urn:vim25">
+      <_this type="HostNetworkSystem">networkSystem-187</_this>
+      <config>
+        <vswitch>
+          <changeOperation>edit</changeOperation>
+          <name>vSwitch0</name>
+          <spec>
+            <numPorts>7812</numPorts>
+          </spec>
+        </vswitch>
+        <proxySwitch>
+            <changeOperation>edit</changeOperation>
+            <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
+            <spec>
+            <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
+                <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
+            </backing>
+            </spec>
+        </proxySwitch>
+        <portgroup>
+          <changeOperation>remove</changeOperation>
+          <spec>
+            <name>Management Network</name><vlanId>-1</vlanId><vswitchName /><policy />
+          </spec>
+        </portgroup>
+        <vnic>
+          <changeOperation>edit</changeOperation>
+          <device>vmk0</device>
+          <portgroup />
+          <spec>
+            <distributedVirtualPort>
+              <switchUuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</switchUuid>
+              <portgroupKey>dvportgroup-191</portgroupKey>
+            </distributedVirtualPort>
+          </spec>
+        </vnic>
+      </config>
+      <changeMode>modify</changeMode>
+    </UpdateNetworkConfig>
+
+    The SOAP API maps closely to PyVmomi, so from there it was (relatively)
+    easy to figure out what Python to write.
     '''
+    ret = {}
+    ret['success'] = True
+    ret['message'] = []
     service_instance = salt.utils.vmware.get_service_instance(host=host,
                                                               username=username,
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
     dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
-    target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs,
-                                                            portgroup_name)
-    uplink_portgroup = salt.utils.vmware._get_dvs_uplink_portgroup(dvs,
-                                                                   'DSwitch-DVUplinks-34')
-    dvs_uuid = dvs.config.uuid
-    host_names = _check_hosts(service_instance, host, host_names)
+    if not dvs:
+        ret['message'].append('No Distributed Virtual Switch found with name {0}'.format(dvs_name))
+        ret['success'] = False
 
-    ret = {}
+    target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs,
+                                                            target_portgroup_name)
+    if not target_portgroup:
+        ret['message'].append('No target portgroup found with name {0}'.format(target_portgroup_name))
+        ret['success'] = False
+
+    uplink_portgroup = salt.utils.vmware._get_dvs_uplink_portgroup(dvs,
+                                                                   uplink_portgroup_name)
+    if not uplink_portgroup:
+        ret['message'].append('No uplink portgroup found with name {0}'.format(uplink_portgroup_name))
+        ret['success'] = False
+
+    if len(ret['message']) > 0:
+        return ret
+
+    dvs_uuid = dvs.config.uuid
+    try:
+        host_names = _check_hosts(service_instance, host, host_names)
+    except CommandExecutionError as e:
+        ret['message'] = 'Error retrieving hosts: {0}'.format(e.msg)
+        return ret
+
     for host_name in host_names:
-        # try:
         ret[host_name] = {}
 
         ret[host_name].update({'status': False,
-                               'portgroup': portgroup_name,
+                               'uplink': uplink_portgroup_name,
+                               'portgroup': target_portgroup_name,
+                               'vmknic': vmknic_name,
+                               'vmnic': vmnic_name,
                                'dvs': dvs_name})
         host_ref = _get_host_ref(service_instance, host, host_name)
+        if not host_ref:
+            ret[host_name].update({'message': 'Host {1} not found'.format(host_name)})
+            ret['success'] = False
+            continue
 
         dvs_hostmember_config = vim.dvs.HostMember.ConfigInfo(
             host=host_ref
@@ -3560,10 +3743,25 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             config=dvs_hostmember_config
         )
         p_nics = salt.utils.vmware._get_pnics(host_ref)
-        p_nic = [x for x in p_nics if x.device == 'vmnic0']
+        p_nic = [x for x in p_nics if x.device == vmnic_name]
+        if len(p_nic) == 0:
+            ret[host_name].update({'message': 'Physical nic {0} not found'.format(vmknic_name)})
+            ret['success'] = False
+            continue
+
         v_nics = salt.utils.vmware._get_vnics(host_ref)
         v_nic = [x for x in v_nics if x.device == vmknic_name]
+
+        if len(v_nic) == 0:
+            ret[host_name].update({'message': 'Virtual nic {0} not found'.format(vmnic_name)})
+            ret['success'] = False
+            continue
+
         v_nic_mgr = salt.utils.vmware._get_vnic_manager(host_ref)
+        if not v_nic_mgr:
+            ret[host_name].update({'message': 'Unable to get the host\'s virtual nic manager.'})
+            ret['success'] = False
+            continue
 
         dvs_pnic_spec = vim.dvs.HostMember.PnicSpec(
             pnicDevice=vmnic_name,
@@ -3580,49 +3778,72 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                 configVersion=dvs.config.configVersion,
                 host=[dvs_hostmember_config_spec])
         task = dvs.ReconfigureDvs_Task(spec=dvs_config)
-        salt.utils.vmware.wait_for_task(task, host_name,
-                                        'Adding host to the DVS',
-                                        sleep_seconds=3)
+        try:
+            salt.utils.vmware.wait_for_task(task, host_name,
+                                            'Adding host to the DVS',
+                                            sleep_seconds=3)
+        except Exception as e:
+            if hasattr(e, 'message') and hasattr(e.message, 'msg'):
+                if not (host_name in e.message.msg and 'already exists' in e.message.msg):
+                    ret['success'] = False
+                    ret[host_name].update({'message': e.message.msg})
+                    continue
+            else:
+                raise
 
-        ret[host_name].update({'status': True})
+        network_system = host_ref.configManager.networkSystem
+
+        source_portgroup = None
+        for pg in host_ref.config.network.portgroup:
+            if pg.spec.name == v_nic[0].portgroup:
+                source_portgroup = pg
+                break
+
+        if not source_portgroup:
+            ret[host_name].update({'message': 'No matching portgroup on the vSwitch'})
+            ret['success'] = False
+            continue
+
+        virtual_nic_config = vim.HostVirtualNicConfig(
+            changeOperation='edit',
+            device=v_nic[0].device,
+            portgroup=source_portgroup.spec.name,
+            spec=vim.HostVirtualNicSpec(
+                distributedVirtualPort=vim.DistributedVirtualSwitchPortConnection(
+                                           portgroupKey=target_portgroup.key,
+                                           switchUuid=target_portgroup.config.distributedVirtualSwitch.uuid
+                                       )
+            )
+        )
+        current_vswitch_ports = host_ref.config.network.vswitch[0].numPorts
+        vswitch_config = vim.HostVirtualSwitchConfig(
+            changeOperation='edit',
+            name='vSwitch0',
+            spec=vim.HostVirtualSwitchSpec(numPorts=current_vswitch_ports)
+        )
+        proxyswitch_config = vim.HostProxySwitchConfig(
+            changeOperation='edit',
+            uuid=dvs_uuid,
+            spec=vim.HostProxySwitchSpec(backing=pnic_backing)
+        )
+        host_network_config = vim.HostNetworkConfig(
+            vswitch=[vswitch_config],
+            proxySwitch=[proxyswitch_config],
+            portgroup=[vim.HostPortGroupConfig(
+                           changeOperation='remove',
+                           spec=source_portgroup.spec)
+                      ],
+            vnic=[virtual_nic_config])
+
+        try:
+            network_system.UpdateNetworkConfig(changeMode='modify',
+                                               config=host_network_config)
+            ret[host_name].update({'status': True})
+        except Exception as e:
+            if hasattr(e, 'msg'):
+                ret[host_name].update({'message': 'Failed to migrate adapters ({0})'.format(e.msg)})
+                continue
+            else:
+                raise
 
     return ret
-        # # host_network_config.proxySwitch[0].spec.backing.pnicSpec = dvs_pnic_spec
-        #
-        # network_system = host_ref.configManager.networkSystem
-        #
-        # host_network_config = network_system.networkConfig
-        #
-        #
-        # orig_portgroup = network_system.networkInfo.portgroup[0]
-        # host_portgroup_config = []
-        # host_portgroup_config.append(vim.HostPortGroupConfig(
-        #     changeOperation='remove',
-        #     spec=orig_portgroup.spec
-        # ))
-        # # host_portgroup_config.append(vim.HostPortGroupConfig(
-        # #     changeOperation='add',
-        # #     spec=target_portgroup
-        # #
-        # # ))
-        # dvs_port_connection = vim.DistributedVirtualSwitchPortConnection(
-        #     portgroupKey=target_portgroup.key, switchUuid=dvs_uuid
-        # )
-        # host_vnic_spec = vim.HostVirtualNicSpec(
-        #         distributedVirtualPort=dvs_port_connection
-        # )
-        # host_vnic_config = vim.HostVirtualNicConfig(
-        #     changeOperation='add',
-        #     device=vmknic_name,
-        #     portgroup=target_portgroup.key,
-        #     spec=host_vnic_spec
-        # )
-        # host_network_config.proxySwitch[0].spec.backing = pnic_backing
-        # host_network_config.portgroup = host_portgroup_config
-        # host_network_config.vnic = [host_vnic_config]
-        # # host_network_config = vim.HostNetworkConfig(
-        # #     portgroup=[host_portgroup_config],
-        # #     vnic=[host_vnic_config]
-        # # )
-        # network_system.UpdateNetworkConfig(changeMode='modify',
-        #                                    config=host_network_config)

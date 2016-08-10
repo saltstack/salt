@@ -1372,6 +1372,204 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
     return conn.delete_ipsecpolicy(ipsecpolicy)
 
 
+def list_firewall_rules(profile=None):
+    '''
+    Fetches a list of all firewall rules for a tenant
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_firewall_rules
+
+    :param profile: Profile to build on (Optional)
+
+    :return: List of firewall rules
+    '''
+    conn = _auth(profile)
+    return conn.list_firewall_rules()
+
+
+def show_firewall_rule(firewall_rule, profile=None):
+    '''
+    Fetches information of a specific firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.show_firewall_rule firewall-rule-name
+
+    :param ipsecpolicy: ID or name of firewall rule to look up
+
+    :param profile: Profile to build on (Optional)
+
+    :return: firewall rule information
+    '''
+    conn = _auth(profile)
+    return conn.show_firewall_rule(firewall_rule)
+
+
+def create_firewall_rule(protocol, action, profile=None, **kwargs):
+    '''
+    Creates a new firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.create_firewall_rule protocol action
+                tenant_id=TENANT_ID name=NAME description=DESCRIPTION ip_version=IP_VERSION
+                source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS source_port=SOURCE_PORT
+                destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
+
+    :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None".
+    :param action: Action for the firewall rule, choose "allow" or "deny".
+    :param tenant_id: The owner tenant ID. (Optional)
+    :param name: Name for the firewall rule. (Optional)
+    :param description: Description for the firewall rule. (Optional)
+    :param ip_version: IP protocol version, default: 4. (Optional)
+    :param source_ip_address: Source IP address or subnet. (Optional)
+    :param destination_ip_address: Destination IP address or subnet. (Optional)
+    :param source_port: Source port (integer in [1, 65535] or range in a:b). (Optional)
+    :param destination_port: Destination port (integer in [1, 65535] or range in a:b). (Optional)
+    :param shared: Set shared to True, default: False. (Optional)
+    :param enabled: To enable this rule, default: True. (Optional)
+    '''
+    conn = _auth(profile)
+    return conn.create_firewall_rule(protocol, action, **kwargs)
+
+
+def delete_firewall_rule(firewall_rule, profile=None):
+    '''
+    Deletes the specified firewall_rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.delete_firewall_rule firewall-rule
+
+    :param firewall_rule: ID or name of firewall rule to delete
+    :param profile: Profile to build on (Optional)
+    :return: True(Succeed) or False
+    '''
+    conn = _auth(profile)
+    return conn.delete_firewall_rule(firewall_rule)
+
+
+def update_firewall_rule(firewall_rule,
+                         protocol=None,
+                         action=None,
+                         name=None,
+                         description=None,
+                         ip_version=None,
+                         source_ip_address=None,
+                         destination_ip_address=None,
+                         source_port=None,
+                         destination_port=None,
+                         shared=None,
+                         enabled=None,
+                         profile=None):
+    '''
+    Update a firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.update_firewall_rule firewall_rule protocol=PROTOCOL action=ACTION
+                name=NAME description=DESCRIPTION ip_version=IP_VERSION
+                source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS
+                source_port=SOURCE_PORT destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
+
+    :param firewall_rule: ID or name of firewall rule to update.
+    :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None". (Optional)
+    :param action: Action for the firewall rule, choose "allow" or "deny". (Optional)
+    :param name: Name for the firewall rule. (Optional)
+    :param description: Description for the firewall rule. (Optional)
+    :param ip_version: IP protocol version, default: 4. (Optional)
+    :param source_ip_address: Source IP address or subnet. (Optional)
+    :param destination_ip_address: Destination IP address or subnet. (Optional)
+    :param source_port: Source port (integer in [1, 65535] or range in a:b). (Optional)
+    :param destination_port: Destination port (integer in [1, 65535] or range in a:b). (Optional)
+    :param shared: Set shared to True, default: False. (Optional)
+    :param enabled: To enable this rule, default: True. (Optional)
+    :param profile: Profile to build on (Optional)
+    '''
+    conn = _auth(profile)
+    return conn.update_firewall_rule(firewall_rule, protocol, action, name, description, ip_version,
+                                     source_ip_address, destination_ip_address, source_port, destination_port,
+                                     shared, enabled)
+
+
+def list_firewalls(profile=None):
+    '''
+    Fetches a list of all firewalls for a tenant
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_firewalls
+    :param profile: Profile to build on (Optional)
+    :return: List of firewalls
+    '''
+    conn = _auth(profile)
+    return conn.list_firewalls()
+
+
+def show_firewall(firewall, profile=None):
+    '''
+    Fetches information of a specific firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.show_firewall firewall
+
+    :param firewall: ID or name of firewall to look up
+    :param profile: Profile to build on (Optional)
+    :return: firewall information
+    '''
+    conn = _auth(profile)
+    return conn.show_firewall(firewall)
+
+
+def list_l3_agent_hosting_routers(router, profile=None):
+    '''
+    List L3 agents hosting a router.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_l3_agent_hosting_routers router
+
+    :param router:router name or ID to query.
+    :param profile: Profile to build on (Optional)
+    :return: L3 agents message.
+    '''
+    conn = _auth(profile)
+    return conn.list_l3_agent_hosting_routers(router)
+
+
+def list_agents(profile=None):
+    '''
+    List agents.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_agents
+
+    :param profile: Profile to build on (Optional)
+    :return: agents message.
+    '''
+    conn = _auth(profile)
+    return conn.list_agents()
+
+
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #

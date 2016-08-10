@@ -58,12 +58,34 @@ class LaunchctlTestCase(TestCase):
         '''
         Test for Return the status for a service
         '''
+        launchctl_data = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>salt-minion</string>
+    <key>LastExitStatus</key>
+    <integer>0</integer>
+    <key>LimitLoadToSessionType</key>
+    <string>System</string>
+    <key>OnDemand</key>
+    <false/>
+    <key>PID</key>
+    <integer>71</integer>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/salt-minion</string>
+    </array>
+    <key>TimeOut</key>
+    <integer>30</integer>
+</dict>
+</plist>'''
         with patch.object(launchctl,
                           '_service_by_name',
                           return_value={'plist':
                                         {'Label': 'A'}}):
             with patch.object(launchctl, '_get_launchctl_data',
-                              return_value={'PID': 'B'}):
+                              return_value=launchctl_data):
                 self.assertTrue(launchctl.status('job_label'))
 
     def test_stop(self):

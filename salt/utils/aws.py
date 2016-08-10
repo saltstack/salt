@@ -88,7 +88,7 @@ def creds(provider):
             )
             result.raise_for_status()
             role = result.text
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 
         try:
@@ -97,7 +97,7 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 
         data = result.json()
@@ -203,7 +203,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
 
 def sig4(method, endpoint, params, prov_dict,
          aws_api_version=DEFAULT_AWS_API_VERSION, location=None,
-         product='ec2', uri='/', requesturl=None, data='',
+         product='ec2', uri='/', requesturl=None, data='', headers=None,
          role_arn=None, payload_hash=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
@@ -227,7 +227,7 @@ def sig4(method, endpoint, params, prov_dict,
         location = DEFAULT_LOCATION
 
     params_with_headers = params.copy()
-    if product != 's3':
+    if product not in ('s3', 'ssm'):
         params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
@@ -236,12 +236,18 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
 
-    canonical_headers = 'host:{0}\nx-amz-date:{1}\n'.format(
+    canonical_headers = 'host:{0}\nx-amz-date:{1}'.format(
         endpoint,
         amzdate,
     )
 
     signed_headers = 'host;x-amz-date'
+
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            canonical_headers += '\n{0}:{1}'.format(header, headers[header])
+            signed_headers += ';{0}'.format(header)
+    canonical_headers += '\n'
 
     if token != '':
         canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
@@ -298,18 +304,21 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    headers = {
+    new_headers = {
         'x-amz-date': amzdate,
         'x-amz-content-sha256': payload_hash,
         'Authorization': authorization_header,
     }
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            new_headers[header] = headers[header]
 
     # Add in security token if we have one
     if token != '':
-        headers['X-Amz-Security-Token'] = token
+        new_headers['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
-    return headers, requesturl
+    return new_headers, requesturl
 
 
 def _sign(key, msg):
@@ -421,6 +430,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             DEFAULT_AWS_API_VERSION
         )
     )
+
+    # Fallback to ec2's id & key if none is found, for this component
+    if not prov_dict.get('id', None):
+        prov_dict['id'] = providers.get(provider, {}).get('ec2', {}).get('id', {})
+        prov_dict['key'] = providers.get(provider, {}).get('ec2', {}).get('key', {})
 
     if sigver == '4':
         headers, requesturl = sig4(

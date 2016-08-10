@@ -10,11 +10,12 @@ Options passed into opts will overwrite options passed into pillar.
 from __future__ import absolute_import
 
 # Import python libs
+import errno
 import logging
-import os
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
+import salt.utils
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -32,15 +33,14 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
     if update:
         options.append('--update')
     if passwordfile:
-        options.append('--password-file={0}'.format(passwordfile))
+        options.extend(['--password-file', passwordfile])
     if excludefrom:
-        options.append('--exclude-from={0}'.format(excludefrom))
+        options.extend(['--exclude-from', excludefrom])
         if exclude:
-            exclude = None
+            exclude = False
     if exclude:
-        options.append('--exclude={0}'.format(exclude))
-
-    return ' '.join(options)
+        options.extend(['--exclude', exclude])
+    return options
 
 
 def rsync(src,
@@ -50,9 +50,13 @@ def rsync(src,
           update=False,
           passwordfile=None,
           exclude=None,
-          excludefrom=None,
-          ):
+          excludefrom=None):
     '''
+    .. versionchanged:: 2016.3.0
+        Return data now contains just the output of the rsync command, instead
+        of a dictionary as returned from :py:func:`cmd.run_all
+        <salt.modules.cmdmod.run_all>`.
+
     Rsync files from src to dst
 
     CLI Example:
@@ -79,29 +83,24 @@ def rsync(src,
     if not excludefrom:
         excludefrom = __salt__['config.option']('rsync.excludefrom')
     if not src or not dst:
-        raise CommandExecutionError('ERROR: src and dst cannot be empty.')
+        raise SaltInvocationError('src and dst cannot be empty')
 
     option = _check(delete, force, update, passwordfile, exclude, excludefrom)
-    cmd = (
-        r'''rsync {option} {src} {dst}'''
-        .format(
-            option=option,
-            src=src,
-            dst=dst,
-        )
-    )
-
+    cmd = ['rsync'] + option + [src, dst]
     try:
-        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        return __salt__['cmd.run'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
-
-    return ret
 
 
 def version():
     '''
-    Return rsync version
+    .. versionchanged:: 2016.3.0
+        Return data now contains just the version number as a string, instead
+        of a dictionary as returned from :py:func:`cmd.run_all
+        <salt.modules.cmdmod.run_all>`.
+
+    Returns rsync version
 
     CLI Example:
 
@@ -109,21 +108,29 @@ def version():
 
         salt '*' rsync.version
     '''
-
-    cmd = (r'''rsync --version''')
-
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_stdout'](
+            ['rsync', '--version'],
+            python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
+    try:
+        return out.split('\n')[0].split()[2]
+    except IndexError:
+        raise CommandExecutionError('Unable to determine rsync version')
 
-    ret['stdout'] = ret['stdout'].split('\n')[0].split()[2]
-    return ret
 
-
-def config(confile='/etc/rsyncd.conf'):
+def config(conf_path='/etc/rsyncd.conf'):
     '''
-    Return rsync config
+    .. versionchanged:: 2016.3.0
+        Return data now contains just the contents of the rsyncd.conf as a
+        string, instead of a dictionary as returned from :py:func:`cmd.run_all
+        <salt.modules.cmdmod.run_all>`.
+
+    Returns the contents of the rsync config file
+
+    conf_path : /etc/rsyncd.conf
+        Path to the config file
 
     CLI Example:
 
@@ -131,20 +138,25 @@ def config(confile='/etc/rsyncd.conf'):
 
         salt '*' rsync.config
     '''
-
-    if not os.path.isfile(confile):
-        raise CommandExecutionError('{0!r} does not exit'.format(confile))
-
-    cmd = (
-          r'''cat {confile}'''
-              .format(
-                   confile=confile
-               )
-          )
-
+    ret = ''
     try:
-        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    except (IOError, OSError) as exc:
-        raise CommandExecutionError(exc.strerror)
-
-    return ret
+        with salt.utils.fopen(conf_path, 'r') as fp_:
+            for line in fp_:
+                ret += line
+    except IOError as exc:
+        if exc.errno == errno.ENOENT:
+            raise CommandExecutionError('{0} does not exist'.format(conf_path))
+        elif exc.errno == errno.EACCES:
+            raise CommandExecutionError(
+                'Unable to read {0}, access denied'.format(conf_path)
+            )
+        elif exc.errno == errno.EISDIR:
+            raise CommandExecutionError(
+                'Unable to read {0}, path is a directory'.format(conf_path)
+            )
+        else:
+            raise CommandExecutionError(
+                'Error {0}: {1}'.format(exc.errno, exc.strerror)
+            )
+    else:
+        return ret

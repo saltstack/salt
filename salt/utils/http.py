@@ -15,6 +15,7 @@ import pprint
 import socket
 import urllib
 import inspect
+import yaml
 
 import ssl
 try:
@@ -131,6 +132,7 @@ def query(url,
           handle=False,
           agent=USERAGENT,
           hide_fields=None,
+          raise_error=True,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -229,12 +231,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'r') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -324,7 +326,7 @@ def query(url,
 
         result_status_code = result.status_code
         result_headers = result.headers
-        result_text = result.text
+        result_text = result.content
         result_cookies = result.cookies
         ret['body'] = result.content
     elif backend == 'urllib2':
@@ -429,6 +431,9 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        if isinstance(data, dict):
+            data = urllib.urlencode(data)
+
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle
 
@@ -475,6 +480,7 @@ def query(url,
                     proxy_port=proxy_port,
                     proxy_username=proxy_username,
                     proxy_password=proxy_password,
+                    raise_error=raise_error,
                     **req_kwargs
                 )
             else:
@@ -494,6 +500,7 @@ def query(url,
                     proxy_port=proxy_port,
                     proxy_username=proxy_username,
                     proxy_password=proxy_password,
+                    raise_error=raise_error,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
@@ -553,7 +560,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)
@@ -575,10 +582,12 @@ def query(url,
                 decode_type = 'xml'
             elif 'json' in content_type:
                 decode_type = 'json'
+            elif 'yaml' in content_type:
+                decode_type = 'yaml'
             else:
                 decode_type = 'plain'
 
-        valid_decodes = ('json', 'xml', 'plain')
+        valid_decodes = ('json', 'xml', 'yaml', 'plain')
         if decode_type not in valid_decodes:
             ret['error'] = (
                 'Invalid decode_type specified. '
@@ -596,6 +605,8 @@ def query(url,
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
+        elif decode_type == 'yaml':
+            ret['dict'] = yaml.safe_load(result_text)
         else:
             text = True
 

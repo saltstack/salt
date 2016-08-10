@@ -23,7 +23,7 @@ def __virtual__():
     if salt.utils.which('hponcfg'):
         return True
 
-    return False
+    return (False, 'ilo execution module not loaded: the hponcfg binary is not in the path.')
 
 
 def __execute_cmd(name, xml):

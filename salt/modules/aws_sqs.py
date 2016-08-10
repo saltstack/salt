@@ -21,7 +21,7 @@ def __virtual__():
     if salt.utils.which('aws'):
         # awscli is installed, load the module
         return True
-    return False
+    return (False, 'The module aws_sqs could not be loaded: aws command not found')
 
 
 def _region(region):

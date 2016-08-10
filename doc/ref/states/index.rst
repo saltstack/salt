@@ -1,8 +1,8 @@
-=================
-State Enforcement
-=================
+======================
+State System Reference
+======================
 
-Salt offers an optional interface to manage the configuration or "state" of the
+Salt offers an interface to manage the configuration or "state" of the
 Salt minions. This interface is a fully capable mechanism used to enforce the
 state of systems from a central manager.
 

@@ -4,10 +4,11 @@
 Beacons
 =======
 
-The beacon system allows the minion to hook into a variety of system processes
-and continually monitor these processes. When monitored activity occurs in
-a system process, an event is sent on the Salt event bus that can
-be used to trigger a :ref:`reactor <reactor>`.
+Beacons let you use the Salt event system to monitor non-Salt processes. The
+beacon system allows the minion to hook into a variety of system processes and
+continually monitor these processes. When monitored activity occurs in a system
+process, an event is sent on the Salt event bus that can be used to trigger
+a :ref:`reactor <reactor>`.
 
 Salt beacons can currently monitor and send Salt events for many system
 activities, including:

@@ -22,8 +22,8 @@ import logging
 
 # Import Salt Libs
 import salt.utils.network
-from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
+from salt.modules.inspectlib import EnvLoader
 
 log = logging.getLogger(__name__)
 
@@ -53,8 +53,8 @@ class SysInfo(object):
             log.error(msg)
             raise SIException(msg)
 
-        devpath, blocks, used, available, used_p, mountpoint = [elm for elm in out['stdout'].split(os.linesep)[-1].split(" ") if elm]
-
+        devpath, blocks, used, available, used_p, mountpoint = [elm for elm in
+                                                                out['stdout'].split(os.linesep)[-1].split(" ") if elm]
         return {
             'device': devpath, 'blocks': blocks, 'used': used,
             'available': available, 'used (%)': used_p, 'mounted': mountpoint,
@@ -65,11 +65,8 @@ class SysInfo(object):
         Get available file systems and their types.
         '''
 
-        out = __salt__['cmd.run_all']("blkid -o export")
-        salt.utils.fsutils._verify_run(out)
-
         data = dict()
-        for dev, dev_data in salt.utils.fsutils._blkid_output(out['stdout']).items():
+        for dev, dev_data in salt.utils.fsutils._blkid().items():
             dev = self._get_disk_size(dev)
             device = dev.pop('device')
             dev['type'] = dev_data['type']
@@ -138,7 +135,7 @@ class SysInfo(object):
         }
 
 
-class Query(object):
+class Query(EnvLoader):
     '''
     Query the system.
     This class is actually puts all Salt features together,
@@ -156,7 +153,7 @@ class Query(object):
 
     SCOPES = ["changes", "configuration", "identity", "system", "software", "services", "payload", "all"]
 
-    def __init__(self, scope):
+    def __init__(self, scope, cachedir=None):
         '''
         Constructor.
 
@@ -166,8 +163,8 @@ class Query(object):
         if scope not in self.SCOPES:
             raise InspectorQueryException(
                 "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
+        EnvLoader.__init__(self, cachedir=cachedir)
         self.scope = '_' + scope
-        self.db = DBHandle(globals()['__salt__']['config.get']('inspector.db', ''))
         self.local_identity = dict()
 
     def __call__(self, *args, **kwargs):

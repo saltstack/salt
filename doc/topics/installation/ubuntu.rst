@@ -9,10 +9,10 @@ Ubuntu
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
-available in the SaltStack repository.
+Packages for Ubuntu 16 (Xenial), Ubuntu 14 (Trusty), and Ubuntu 12 (Precise)
+are available in the SaltStack repository.
 
-Instructions are at http://repo.saltstack.com/#ubuntu.
+Instructions are at https://repo.saltstack.com/#ubuntu.
 
 Installation from the Community-Maintained Repository
 =====================================================

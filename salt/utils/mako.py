@@ -44,21 +44,31 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     """
 
-    def __init__(self, opts, saltenv='base', env=None):
+    def __init__(self, opts, saltenv='base', env=None, pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
         self.opts = opts
         self.saltenv = saltenv
-        self.file_client = salt.fileclient.get_file_client(self.opts)
+        self._file_client = None
+        self.pillar_rend = pillar_rend
         self.lookup = TemplateLookup(directories='/')
         self.cache = {}
+
+    def file_client(self):
+        '''
+        Setup and return file_client
+        '''
+        if not self._file_client:
+            self._file_client = salt.fileclient.get_file_client(
+                self.opts, self.pillar_rend)
+        return self._file_client
 
     def adjust_uri(self, uri, filename):
         scheme = urlparse(uri).scheme
@@ -93,7 +103,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def cache_file(self, fpath):
         if fpath not in self.cache:
-            self.cache[fpath] = self.file_client.get_file(fpath,
+            self.cache[fpath] = self.file_client().get_file(fpath,
                                                           '',
                                                           True,
                                                           self.saltenv)

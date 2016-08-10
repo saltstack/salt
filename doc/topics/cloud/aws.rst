@@ -559,17 +559,6 @@ function exists which renames both the instance, and the salt keys.
     salt-cloud -a rename mymachine newname=yourmachine
 
 
-EC2 Termination Protection
-==========================
-EC2 allows the user to enable and disable termination protection on a specific
-instance. An instance with this protection enabled cannot be destroyed.
-
-.. code-block:: bash
-
-    salt-cloud -a enable_term_protect mymachine
-    salt-cloud -a disable_term_protect mymachine
-
-
 Rename on Destroy
 =================
 When instances on EC2 are destroyed, there will be a lag between the time that

@@ -1,8 +1,8 @@
 .. _all-salt.queues:
 
-===========================
-Full list of builtin queues
-===========================
+=============
+queue modules
+=============
 
 .. currentmodule:: salt.queues
 
@@ -10,4 +10,5 @@ Full list of builtin queues
     :toctree:
     :template: autosummary.rst.tmpl
 
+    pgjsonb_queue
     sqlite_queue

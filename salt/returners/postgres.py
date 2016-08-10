@@ -85,6 +85,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return postgres --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return postgres --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -100,7 +109,6 @@ import salt.returners
 # Import third party libs
 try:
     import psycopg2
-    #import psycopg2.extras
     HAS_POSTGRES = True
 except ImportError:
     HAS_POSTGRES = False
@@ -141,14 +149,14 @@ def _get_conn(ret=None):
     host = _options.get('host')
     user = _options.get('user')
     passwd = _options.get('passwd')
-    db = _options.get('db')
+    datab = _options.get('db')
     port = _options.get('port')
 
     return psycopg2.connect(
             host=host,
             user=user,
             password=passwd,
-            database=db,
+            database=datab,
             port=port)
 
 
@@ -264,13 +272,13 @@ def get_jids():
     '''
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT jid FROM jids'''
+    sql = '''SELECT jid, load FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
-    ret = []
-    for jid in data:
-        ret.append(jid[0])
+    ret = {}
+    for jid, load in data:
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     _close_conn(conn)
     return ret
 

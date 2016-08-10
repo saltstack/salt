@@ -254,7 +254,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertIn('minion', '\n'.join(ret))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

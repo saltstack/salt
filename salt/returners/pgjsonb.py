@@ -55,8 +55,8 @@ Use the following Pg database schema:
     -- Table structure for table `jids`
     --
     DROP TABLE IF EXISTS jids;
-    CREATE OR REPLACE TABLE jids (
-       jid varchar(255) NOT NULL primary key
+    CREATE TABLE jids (
+       jid varchar(255) NOT NULL primary key,
        load jsonb NOT NULL
     );
     CREATE INDEX idx_jids_jsonb on jids
@@ -119,6 +119,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return pgjsonb --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return pgjsonb --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -351,14 +360,14 @@ def get_jids():
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT jid
+        sql = '''SELECT jid, load
                 FROM jids'''
 
         cur.execute(sql)
         data = cur.fetchall()
-        ret = []
-        for jid in data:
-            ret.append(jid[0])
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
         return ret
 
 

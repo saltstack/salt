@@ -30,8 +30,8 @@ class S3TestCase(TestCase):
     def test__get_key_defaults(self):
         mock = MagicMock(return_value='')
         with patch.dict(s3.__salt__, {'config.option': mock}):
-            key, keyid, service_url, verify_ssl, location, role_arn = (
-                s3._get_key(None, None, None, None, None, None))
+            key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn = (
+                s3._get_key(None, None, None, None, None, None, None))
             self.assertEqual(None, role_arn)
             self.assertEqual(None, key)
             self.assertEqual(None, keyid)
@@ -45,7 +45,8 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl', 'location', 'role_arn')):
+                                        'verify_ssl', 'kms_keyid', 'location',
+                                        'role_arn')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.delete('bucket'), 'A')
 
@@ -56,7 +57,8 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl', 'location', 'role_arn')):
+                                        'verify_ssl', 'kms_keyid', 'location',
+                                        'role_arn')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.get(), 'A')
 
@@ -66,7 +68,8 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl', 'location', 'role_arn')):
+                                        'verify_ssl', 'kms_keyid', 'location',
+                                        'role_arn')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.head('bucket'), 'A')
 
@@ -76,7 +79,8 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl', 'location', 'role_arn')):
+                                        'verify_ssl', 'kms_keyid', 'location',
+                                        'role_arn')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.put('bucket'), 'A')
 

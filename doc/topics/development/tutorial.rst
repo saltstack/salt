@@ -1,3 +1,5 @@
+.. _developing-tutorial:
+
 ========================
 Developing Salt Tutorial
 ========================

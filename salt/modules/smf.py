@@ -28,9 +28,9 @@ def __virtual__():
     if 'Solaris' in __grains__['os_family']:
         # Don't let this work on Solaris 9 since SMF doesn't exist on it.
         if __grains__['kernelrelease'] == "5.9":
-            return False
+            return (False, 'The smf execution module failed to load: SMF not available on Solaris 9.')
         return __virtualname__
-    return False
+    return (False, 'The smf execution module failed to load: only available on Solaris.')
 
 
 def _get_enabled_disabled(enabled_prop="true"):

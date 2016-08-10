@@ -55,7 +55,8 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, 'The splunk_search execution module failed to load: '
+        'requires both the requests and the splunk-sdk python library to be installed.')
 
 
 def _get_splunk(profile):

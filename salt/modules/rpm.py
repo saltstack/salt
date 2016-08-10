@@ -12,10 +12,10 @@ import datetime
 
 # Import Salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves import zip
 
 try:
@@ -44,18 +44,19 @@ def __virtual__():
     Confine this module to rpm based systems
     '''
     if not salt.utils.which('rpm'):
-        return False
+        return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
     except Exception:
-        return False
+        return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
-    enabled = ('amazon', 'xcp', 'xenserver')
+    enabled = ('amazon', 'xcp', 'xenserver', 'VirtuozzoLinux')
 
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
-    return False
+    return (False, 'The rpm execution module failed to load: only available on redhat/suse type systems '
+        'or amazon, xcp or xenserver.')
 
 
 def bin_pkg_info(path, saltenv='base'):
@@ -105,9 +106,10 @@ def bin_pkg_info(path, saltenv='base'):
     # with 'none'
     queryformat = salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
-        'rpm -qp --queryformat {0} {1}'.format(_cmd_quote(queryformat), path),
+        ['rpm', '-qp', '--queryformat', queryformat, path],
         output_loglevel='trace',
-        ignore_retcode=True
+        ignore_retcode=True,
+        python_shell=False
     )
     ret = {}
     pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
@@ -132,14 +134,12 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
     '''
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             continue
         comps = line.split()
@@ -147,7 +147,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def verify(*package, **kwargs):
+def verify(*packages, **kwargs):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -160,8 +160,8 @@ def verify(*package, **kwargs):
 
         salt '*' lowpkg.verify
         salt '*' lowpkg.verify httpd
-        salt '*' lowpkg.verify 'httpd postfix'
-        salt '*' lowpkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' lowpkg.verify httpd postfix
+        salt '*' lowpkg.verify httpd postfix ignore_types=['config','doc']
     '''
     ftypes = {'c': 'config',
               'd': 'doc',
@@ -170,17 +170,17 @@ def verify(*package, **kwargs):
               'r': 'readme'}
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
-    if package:
-        packages = ' '.join(package)
-        cmd = 'rpm -V {0}'.format(packages)
+    if packages:
+        cmd = ['rpm', '-V']
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     else:
-        cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace',
-            ignore_retcode=True)
-    for line in out.splitlines():
+        cmd = ['rpm', '-Va']
+    out = __salt__['cmd.run'](cmd,
+                              output_loglevel='trace',
+                              ignore_retcode=True,
+                              python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
@@ -229,8 +229,8 @@ def modified(*packages, **flags):
     '''
     ret = __salt__['cmd.run_all'](
         ['rpm', '-Va'] + list(packages),
-        python_shell=False,
-        output_loglevel='trace')
+        output_loglevel='trace',
+        python_shell=False)
 
     data = {}
 
@@ -245,7 +245,7 @@ def modified(*packages, **flags):
 
     ptrn = re.compile(r"\s+")
     changes = cfg = f_name = None
-    for f_info in ret['stdout'].splitlines():
+    for f_info in salt.utils.itertools.split(ret['stdout'], '\n'):
         f_info = ptrn.split(f_info)
         if len(f_info) == 3:  # Config file
             changes, cfg, f_name = f_info
@@ -256,7 +256,7 @@ def modified(*packages, **flags):
                 'owner', 'group', 'time', 'capabilities']
         changes = list(changes)
         if len(changes) == 8:  # Older RPMs do not support capabilities
-            changes.append(".")
+            changes.append('.')
         stats = []
         for k, v in zip(keys, changes):
             if v != '.':
@@ -300,13 +300,15 @@ def file_list(*packages):
         salt '*' lowpkg.file_list
     '''
     if not packages:
-        cmd = 'rpm -qla'
+        cmd = ['rpm', '-qla']
     else:
-        cmd = 'rpm -ql {0}'.format(' '.join(packages))
+        cmd = ['rpm', '-ql']
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     ret = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace').splitlines()
+        cmd,
+        output_loglevel='trace',
+        python_shell=False).splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -327,14 +329,12 @@ def file_dict(*packages):
     errors = []
     ret = {}
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -342,11 +342,12 @@ def file_dict(*packages):
         pkgs[comps[0]] = {'version': comps[1]}
     for pkg in pkgs:
         files = []
-        cmd = 'rpm -ql {0}'.format(pkg)
-        out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-        for line in out.splitlines():
-            files.append(line)
-        ret[pkg] = files
+        cmd = ['rpm', '-ql', pkg]
+        out = __salt__['cmd.run'](
+            ['rpm', '-ql', pkg],
+            output_loglevel='trace',
+            python_shell=False)
+        ret[pkg] = out.splitlines()
     return {'errors': errors, 'packages': ret}
 
 
@@ -370,10 +371,11 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='trace')
+        cmd = ['rpm', '-qf', '--queryformat', '%{name}', path]
+        ret[path] = __salt__['cmd.run_stdout'](cmd,
+                                               output_loglevel='trace',
+                                               python_shell=False)
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
@@ -404,9 +406,11 @@ def diff(package, path):
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \
           "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
-    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    res = __salt__['cmd.shell'](cmd.format(package, path),
+                                output_loglevel='trace')
     if res and res.startswith('Binary file'):
-        return 'File "{0}" is binary and its content has been modified.'.format(path)
+        return 'File \'{0}\' is binary and its content has been ' \
+               'modified.'.format(path)
 
     return res
 

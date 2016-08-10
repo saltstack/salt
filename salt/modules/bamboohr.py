@@ -32,7 +32,7 @@ def __virtual__():
     '''
     if _apikey():
         return True
-    return False
+    return (False, 'The API key was not specified. Please specify it using the "apikey" config.')
 
 
 def _apikey():

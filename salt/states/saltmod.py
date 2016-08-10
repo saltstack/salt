@@ -57,6 +57,7 @@ def state(
         allow_fail=0,
         concurrent=False,
         timeout=None,
+        batch=None,
         queue=False):
     '''
     Invoke a state run on a given target
@@ -121,6 +122,11 @@ def state(
     queue
         Pass ``queue=true`` through to the state function
 
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+        .. versionadded:: 2016.3.0
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -165,11 +171,11 @@ def state(
     if env is not None:
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         state_ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
@@ -217,6 +223,9 @@ def state(
         state_ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
         state_ret['result'] = False
         return state_ret
+
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
 
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
@@ -314,7 +323,8 @@ def function(
         fail_function=None,
         arg=None,
         kwarg=None,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -331,7 +341,7 @@ def function(
         The list of arguments to pass into the function
 
     kwarg
-        The list of keyword arguments to pass into the function
+        The dict (not a list) of keyword arguments to pass into the function
 
     ret
         Optionally set a single or a list of returners to use
@@ -349,14 +359,14 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
     '''
-    state_ret = {'name': name,
+    func_ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, str):
-        state_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']
         arg = arg.split()
@@ -364,7 +374,7 @@ def function(
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
-        state_ret['warnings'] = [
+        func_ret['warnings'] = [
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         ]
@@ -374,23 +384,26 @@ def function(
     elif not tgt_type and not expr_form:
         tgt_type = 'glob'
 
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
-        state_ret['comment'] = (
+        func_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
                 ).format(fun, tgt, str(False))
-        state_ret['result'] = None
-        return state_ret
+        func_ret['result'] = None
+        return func_ret
     try:
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
-        state_ret['result'] = False
-        state_ret['comment'] = str(exc)
-        return state_ret
+        func_ret['result'] = False
+        func_ret['comment'] = str(exc)
+        return func_ret
 
     changes = {}
     fail = set()
@@ -401,7 +414,7 @@ def function(
     elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
-        state_ret.setdefault('warnings', []).append(
+        func_ret.setdefault('warnings', []).append(
             '\'fail_minions\' needs to be a list or a comma separated '
             'string. Ignored.'
         )
@@ -409,7 +422,7 @@ def function(
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
         if mdata.get('retcode'):
-            state_ret['result'] = False
+            func_ret['result'] = False
             fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
@@ -426,22 +439,22 @@ def function(
             continue
         changes[minion] = m_ret
     if not cmd_ret:
-        state_ret['result'] = False
-        state_ret['command'] = 'No minions responded'
+        func_ret['result'] = False
+        func_ret['command'] = 'No minions responded'
     else:
         if changes:
-            state_ret['changes'] = {'out': 'highstate', 'ret': changes}
+            func_ret['changes'] = {'out': 'highstate', 'ret': changes}
         if fail:
-            state_ret['result'] = False
-            state_ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+            func_ret['result'] = False
+            func_ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
         else:
-            state_ret['comment'] = 'Function ran successfully.'
+            func_ret['comment'] = 'Function ran successfully.'
         if changes:
-            state_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+            func_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
         if failures:
-            state_ret['comment'] += '\nFailures:\n'
+            func_ret['comment'] += '\nFailures:\n'
             for minion, failure in six.iteritems(failures):
-                state_ret['comment'] += '\n'.join(
+                func_ret['comment'] += '\n'.join(
                         (' ' * 4 + l)
                         for l in salt.output.out_format(
                             {minion: failure},
@@ -449,15 +462,16 @@ def function(
                             __opts__,
                             ).splitlines()
                         )
-                state_ret['comment'] += '\n'
-    return state_ret
+                func_ret['comment'] += '\n'
+    return func_ret
 
 
 def wait_for_event(
         name,
         id_list,
         event_id='id',
-        timeout=300):
+        timeout=300,
+        node='master'):
     '''
     Watch Salt's event bus and block until a condition is met
 
@@ -503,7 +517,7 @@ def wait_for_event(
     ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
 
     sevent = salt.utils.event.get_event(
-            'master',
+            node,
             __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,

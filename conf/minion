@@ -46,6 +46,16 @@
 # of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
+# If the minion is in multi-master mode and the master_type configuration option
+# is set to "failover", this setting can be set to "True" to force the minion
+# to fail back to the first master in the list if the first master is back online.
+#master_failback: False
+
+# If the minion is in multi-master mode, the "master_type" configuration is set to
+# "failover", and the "master_failback" option is enabled, the master failback
+# interval can be set to ping the top master with this interval, in seconds.
+#master_failback_interval: 0
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
@@ -117,6 +127,13 @@
 # This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
+# Append minion_id to these directories.  Helps with
+# multiple proxies and minions running on the same machine.
+# Allowed elements in the list: pki_dir, cachedir, extension_modules
+# Normally not needed unless running several proxies and/or minions on the same machine
+# Defaults to ['cachedir'] for proxies, [] (empty list) for regular minions
+#append_minionid_config_dirs:
+
 # Verify and set permissions on configuration directories at startup.
 #verify_env: True
 
@@ -184,6 +201,20 @@
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to
 # authenticate.
 #auth_tries: 7
+
+# The number of attempts to connect to a master before giving up.
+# Set this to -1 for unlimited attempts. This allows for a master to have
+# downtime and the minion to reconnect to it later when it comes back up.
+# In 'failover' mode, it is the number of attempts for each set of masters.
+# In this mode, it will cycle through the list of masters for each attempt.
+#
+# This is different than auth_tries because auth_tries attempts to
+# retry auth attempts with a single master. auth_tries is under the
+# assumption that you can connect to the master but not gain
+# authorization from it. master_tries will still cycle through all
+# the masters in a given try, so it is appropriate if you expect
+# occasional downtime from the master(s).
+#master_tries: 1
 
 # If authentication fails due to SaltReqTimeoutError during a ping_interval,
 # cause sub minion process to restart.
@@ -268,6 +299,12 @@
 # often lower this value
 #loop_interval: 60
 
+# The grains can be merged, instead of overridden, using this option.
+# This allows custom grains to defined different subvalues of a dictionary
+# grain. By default this feature is disabled, to enable set grains_deep_merge
+# to ``True``.
+#grains_deep_merge: False
+
 # The grains_refresh_every setting allows for a minion to periodically check
 # its grains to see if they have changed and, if so, to inform the master
 # of the new grains. This operation is moderately expensive, therefore
@@ -283,6 +320,11 @@
 # Cache grains on the minion. Default is False.
 #grains_cache: False
 
+# Cache rendered pillar data on the minion. Default is False.
+# This may cause 'cachedir'/pillar to contain sensitive data that should be
+# protected accordingly.
+#minion_pillar_cache: False
+
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
 # with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache' 
@@ -290,7 +332,9 @@
 # grains_cache_expiration: 300
 
 # Determines whether or not the salt minion should run scheduled mine updates.
-# Defaults to "True". Set to "False" to disable the scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates
+# (this essentially just does not add the mine update function to the minion's
+# scheduler).
 #mine_enabled: True
 
 # Determines whether or not scheduled mine updates should be accompanied by a job

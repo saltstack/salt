@@ -18,6 +18,11 @@ Manage the available locales and the system default:
           - locale: us_locale
 '''
 
+from __future__ import absolute_import
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
 
 def __virtual__():
     '''
@@ -40,21 +45,26 @@ def system(name):
            'changes': {},
            'result': None,
            'comment': ''}
-    if __salt__['locale.get_locale']() == name:
-        ret['result'] = True
-        ret['comment'] = 'System locale {0} already set'.format(name)
-        return ret
-    if __opts__['test']:
-        ret['comment'] = 'System locale {0} needs to be set'.format(name)
-        return ret
-    if __salt__['locale.set_locale'](name):
-        ret['changes'] = {'locale': name}
-        ret['result'] = True
-        ret['comment'] = 'Set system locale {0}'.format(name)
-        return ret
-    else:
+    try:
+        if __salt__['locale.get_locale']() == name:
+            ret['result'] = True
+            ret['comment'] = 'System locale {0} already set'.format(name)
+            return ret
+        if __opts__['test']:
+            ret['comment'] = 'System locale {0} needs to be set'.format(name)
+            return ret
+        if __salt__['locale.set_locale'](name):
+            ret['changes'] = {'locale': name}
+            ret['result'] = True
+            ret['comment'] = 'Set system locale {0}'.format(name)
+            return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to set system locale to {0}'.format(name)
+            return ret
+    except CommandExecutionError as err:
         ret['result'] = False
-        ret['comment'] = 'Failed to set system locale to {0}'.format(name)
+        ret['comment'] = 'Failed to set system locale: {0}'.format(err)
         return ret
 
 

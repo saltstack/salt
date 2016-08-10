@@ -3,8 +3,7 @@
 The EC2 Cloud Module
 ====================
 
-The EC2 cloud module is used to interact with the Amazon Elastic Cloud
-Computing.
+The EC2 cloud module is used to interact with the Amazon Elastic Compute Cloud.
 
 To use the EC2 cloud module, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
@@ -136,28 +135,17 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
-SIZE_MAP = {
-    'Micro Instance': 't2.micro',
-    'Small Instance': 't2.small',
-    'Medium Instance': 'm3.medium',
-    'Large Instance': 'm4.large',
-    'Extra Large Instance': 'm4.xlarge',
-    'High-CPU Medium Instance': 'c4.large',
-    'High-CPU Extra Large Instance': 'c4.xlarge',
-    'High-Memory Extra Large Instance': 'r3.xlarge',
-    'High-Memory Double Extra Large Instance': 'r3.2xlarge',
-    'High-Memory Quadruple Extra Large Instance': 'r3.4xlarge',
-    'Cluster GPU Quadruple Extra Large Instance': 'g2.8xlarge'
-}
-
 
 EC2_LOCATIONS = {
     'ap-northeast-1': 'ec2_ap_northeast',
+    'ap-northeast-2': 'ec2_ap_northeast_2',
     'ap-southeast-1': 'ec2_ap_southeast',
     'ap-southeast-2': 'ec2_ap_southeast_2',
     'eu-west-1': 'ec2_eu_west',
+    'eu-central-1': 'ec2_eu_central',
     'sa-east-1': 'ec2_sa_east',
     'us-east-1': 'ec2_us_east',
+    'us-gov-west-1': 'ec2_us_gov_west_1',
     'us-west-1': 'ec2_us_west',
     'us-west-2': 'ec2_us_west_oregon',
 }
@@ -791,6 +779,12 @@ def avail_sizes(call=None):
             },
         },
         'General Purpose': {
+            't2.nano': {
+                'id': 't2.nano',
+                'cores': '1',
+                'disk': 'EBS',
+                'ram': '512 MiB'
+            },
             't2.micro': {
                 'id': 't2.micro',
                 'cores': '1',
@@ -1023,9 +1017,8 @@ def get_ssh_gateway_config(vm_):
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
-                key_filename
-            )
+            'The defined ssh_gateway_private_key \'{0}\' does not exist'
+            .format(key_filename)
         )
     elif (
         key_filename is None and
@@ -1255,27 +1248,13 @@ def _create_eni_if_necessary(interface, vm_):
                              provider=get_provider(),
                              opts=__opts__,
                              sigver='4')
-    found = False
 
-    for subnet_query_result in subnet_query:
-        if 'item' in subnet_query_result:
-            if isinstance(subnet_query_result['item'], dict):
-                for key, value in subnet_query_result['item'].iteritems():
-                    if key == "subnetId" and value == interface['SubnetId']:
-                        found = True
-                        break
-            else:
-                for subnet in subnet_query_result['item']:
-                    if 'subnetId' in subnet and subnet['subnetId'] == interface['SubnetId']:
-                        found = True
-                        break
-
-    if not found:
+    subnet_id = _get_subnet_id_for_interface(subnet_query, interface)
+    if not subnet_id:
         raise SaltCloudConfigError(
-            'No such subnet <{0}>'.format(interface['SubnetId'])
+            'No such subnet <{0}>'.format(interface.get('SubnetId'))
         )
-
-    params = {'SubnetId': interface['SubnetId']}
+    params = {'SubnetId': subnet_id}
 
     for k in 'Description', 'PrivateIpAddress', 'SecondaryPrivateIpAddressCount':
         if k in interface:
@@ -1350,6 +1329,31 @@ def _create_eni_if_necessary(interface, vm_):
             'NetworkInterfaceId': eni_id}
 
 
+def _get_subnet_id_for_interface(subnet_query, interface):
+    for subnet_query_result in subnet_query:
+        if 'item' in subnet_query_result:
+            if isinstance(subnet_query_result['item'], dict):
+                subnet_id = _get_subnet_from_subnet_query(subnet_query_result['item'],
+                                                          interface)
+                if subnet_id is not None:
+                    return subnet_id
+
+            else:
+                for subnet in subnet_query_result['item']:
+                    subnet_id = _get_subnet_from_subnet_query(subnet, interface)
+                    if subnet_id is not None:
+                        return subnet_id
+
+
+def _get_subnet_from_subnet_query(subnet_query, interface):
+    if 'subnetId' in subnet_query:
+        if interface.get('SubnetId'):
+            if subnet_query['subnetId'] == interface['SubnetId']:
+                return subnet_query['subnetId']
+        else:
+            return subnet_query['subnetId']
+
+
 def _list_interface_private_addrs(eni_desc):
     '''
     Returns a list of all of the private IP addresses attached to a
@@ -1408,7 +1412,7 @@ def _modify_eni_properties(eni_id, properties=None, vm_=None):
 
     raise SaltCloudException(
         'Could not change interface <{0}> attributes '
-        '<{1!r}> after 5 retries'.format(
+        '<\'{1}\'> after 5 retries'.format(
             eni_id, properties
         )
     )
@@ -1776,7 +1780,7 @@ def request_instance(vm_=None, call=None):
                                 sigver='4')
             if 'error' in rd_data:
                 return rd_data['error']
-            log.debug('EC2 Response: {0!r}'.format(rd_data))
+            log.debug('EC2 Response: \'{0}\''.format(rd_data))
         except Exception as exc:
             log.error(
                 'Error getting root device name for image id {0} for '
@@ -2423,7 +2427,7 @@ def create(vm_=None, call=None):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -2574,12 +2578,30 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    # Associate instance with a ssm document, if present
+    ssm_document = config.get_cloud_config_value(
+        'ssm_document', vm_, __opts__, None, search_global=False
+    )
+    if ssm_document:
+        log.debug('Associating with ssm document: {0}'.format(ssm_document))
+        assoc = ssm_create_association(
+            vm_['name'],
+            {'ssm_document': ssm_document},
+            instance_id=vm_['instance_id'],
+            call='action'
+        )
+        if isinstance(assoc, dict) and assoc.get('error', None):
+            log.error('Failed to associate instance {0} with ssm document {1}'.format(
+                vm_['instance_id'], ssm_document
+            ))
+            return {}
+
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(instance)
         )
     )
@@ -2592,6 +2614,8 @@ def create(vm_=None, call=None):
     }
     if volumes:
         event_data['volumes'] = volumes
+    if ssm_document:
+        event_data['ssm_document'] = ssm_document
 
     salt.utils.cloud.fire_event(
         'event',
@@ -2640,7 +2664,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         )
 
     if 'instance_id' not in kwargs:
-        kwargs['instance_id'] = _get_node(name)[name]['instanceId']
+        kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -2724,7 +2748,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -2748,7 +2772,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -2797,7 +2821,7 @@ def set_tags(name=None,
 
         if resource_id is None:
             if instance_id is None:
-                instance_id = _get_node(name=name, instance_id=None, location=location)[name]['instanceId']
+                instance_id = _get_node(name=name, instance_id=None, location=location)['instanceId']
         else:
             instance_id = resource_id
 
@@ -2841,8 +2865,13 @@ def set_tags(name=None,
                 # We were not setting this tag
                 continue
 
+            if tag.get('value') is None and tags.get(tag['key']) == '':
+                # This is a correctly set tag with no value
+                continue
+
             if str(tags.get(tag['key'])) != str(tag['value']):
                 # Not set to the proper value!?
+                log.debug('Setting the tag {0} returned {1} instead of {2}'.format(tag['key'], tags.get(tag['key']), tag['value']))
                 failed_to_set_tags = True
                 break
 
@@ -2888,9 +2917,7 @@ def get_tags(name=None,
     if instance_id is None:
         if resource_id is None:
             if name:
-                instances = list_nodes_full(location)
-                if name in instances:
-                    instance_id = instances[name]['instanceId']
+                instance_id = _get_node(name)['instanceId']
             elif 'instance_id' in kwargs:
                 instance_id = kwargs['instance_id']
             elif 'resource_id' in kwargs:
@@ -2941,7 +2968,7 @@ def del_tags(name=None,
         del kwargs['resource_id']
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
@@ -3003,7 +3030,7 @@ def destroy(name, call=None):
         )
 
     node_metadata = _get_node(name)
-    instance_id = node_metadata[name]['instanceId']
+    instance_id = node_metadata['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
         name=name,
@@ -3100,7 +3127,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
 
@@ -3206,13 +3233,13 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances)
-        except KeyError:
+            return _extract_instance_info(instances).values()[0]
+        except IndexError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
-                    name, attempts
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
+                    instance_id or name, attempts
                 )
             )
             # Just a little delay between attempts...
@@ -3375,11 +3402,13 @@ def list_nodes_min(location=None, call=None):
             for item in instance['instancesSet']['item']:
                 state = item['instanceState']['name']
                 name = _extract_name_tag(item)
+                id = item['instanceId']
         else:
             item = instance['instancesSet']['item']
             state = item['instanceState']['name']
             name = _extract_name_tag(item)
-        ret[name] = {'state': state}
+            id = item['instanceId']
+        ret[name] = {'state': state, 'id': id}
     return ret
 
 
@@ -3432,8 +3461,7 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
         )
 
     if not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
     params = {'Action': 'DescribeInstanceAttribute',
               'InstanceId': instance_id,
               'Attribute': 'disableApiTermination'}
@@ -3509,8 +3537,7 @@ def _toggle_term_protect(name, value):
 
         salt-cloud -a disable_term_protect mymachine
     '''
-    instances = list_nodes_full(get_location())
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id,
               'DisableApiTermination.Value': value}
@@ -3550,8 +3577,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     volume_id = kwargs.get('volume_id', None)
 
     if instance_id is None:
-        instances = list_nodes_full()
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
@@ -3643,8 +3669,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                    value=None, requesturl=None):
 
     if not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if requesturl:
         data = aws.query(requesturl=requesturl,
@@ -3692,6 +3717,81 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
               'device': device,
               'volume_id': volume_id}
     return show_delvol_on_destroy(name, kwargs, call='action')
+
+
+def register_image(kwargs=None, call=None):
+    '''
+    Create an ami from a snapshot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f register_image my-ec2-config ami_name=my_ami description="my description" root_device_name=/dev/xvda snapshot_id=snap-xxxxxxxx
+    '''
+
+    if call != 'function':
+        log.error(
+            'The create_volume function must be called with -f or --function.'
+        )
+        return False
+
+    if 'ami_name' not in kwargs:
+        log.error('ami_name must be specified to register an image.')
+        return False
+
+    block_device_mapping = kwargs.get('block_device_mapping', None)
+    if not block_device_mapping:
+        if 'snapshot_id' not in kwargs:
+            log.error('snapshot_id or block_device_mapping must be specified to register an image.')
+            return False
+        if 'root_device_name' not in kwargs:
+            log.error('root_device_name or block_device_mapping must be specified to register an image.')
+            return False
+        block_device_mapping = [{
+            'DeviceName': kwargs['root_device_name'],
+            'Ebs': {
+                'VolumeType': kwargs.get('volume_type', 'gp2'),
+                'SnapshotId': kwargs['snapshot_id'],
+             }
+        }]
+
+    if not isinstance(block_device_mapping, list):
+        block_device_mapping = [block_device_mapping]
+
+    params = {'Action': 'RegisterImage',
+              'Name': kwargs['ami_name']}
+
+    params.update(_param_from_config('BlockDeviceMapping', block_device_mapping))
+
+    if 'root_device_name' in kwargs:
+        params['RootDeviceName'] = kwargs['root_device_name']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    if 'virtualization_type' in kwargs:
+        params['VirtualizationType'] = kwargs['virtualization_type']
+
+    if 'architecture' in kwargs:
+        params['Architecture'] = kwargs['architecture']
+
+    log.debug(params)
+
+    data = aws.query(params,
+                     return_url=True,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
+    r_data = {}
+    for d in data[0]:
+        for k, v in d.items():
+            r_data[k] = v
+
+    return r_data
 
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
@@ -3812,8 +3912,7 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
         instance_id = kwargs['instance_id']
 
     if name and not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if not name and not instance_id:
         log.error('Either a name or an instance_id is required.')
@@ -3981,7 +4080,9 @@ def create_keypair(kwargs=None, call=None):
 
 def import_keypair(kwargs=None, call=None):
     '''
-    Import an SSH public key
+    Import an SSH public key.
+
+    .. versionadded:: 2015.8.3
     '''
     if call != 'function':
         log.error(
@@ -4303,7 +4404,7 @@ def get_console_output(
         location = get_location()
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if kwargs is None:
         kwargs = {}
@@ -4366,7 +4467,7 @@ def get_password_data(
         )
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if kwargs is None:
         kwargs = {}
@@ -4592,3 +4693,104 @@ def show_pricing(kwargs=None, call=None):
     ret['per_year'] = ret['per_week'] * 52
 
     return {profile['profile']: ret}
+
+
+def ssm_create_association(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Associates the specified SSM document with the specified instance
+
+    http://docs.aws.amazon.com/ssm/latest/APIReference/API_CreateAssociation.html
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -a ssm_create_association ec2-instance-name ssm_document=ssm-document-name
+    '''
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The ssm_create_association action must be called with '
+            '-a or --action.'
+        )
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if 'ssm_document' not in kwargs:
+        log.error('A ssm_document is required.')
+        return False
+
+    params = {'Action': 'CreateAssociation',
+              'InstanceId': instance_id,
+              'Name': kwargs['ssm_document']}
+
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(),
+                       provider=get_provider(),
+                       product='ssm',
+                       opts=__opts__,
+                       sigver='4')
+    log.info(result)
+    return result
+
+
+def ssm_describe_association(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Describes the associations for the specified SSM document or instance.
+
+    http://docs.aws.amazon.com/ssm/latest/APIReference/API_DescribeAssociation.html
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -a ssm_describe_association ec2-instance-name ssm_document=ssm-document-name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The ssm_describe_association action must be called with '
+            '-a or --action.'
+        )
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if 'ssm_document' not in kwargs:
+        log.error('A ssm_document is required.')
+        return False
+
+    params = {'Action': 'DescribeAssociation',
+              'InstanceId': instance_id,
+              'Name': kwargs['ssm_document']}
+
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(),
+                       provider=get_provider(),
+                       product='ssm',
+                       opts=__opts__,
+                       sigver='4')
+    log.info(result)
+    return result

@@ -65,6 +65,19 @@ class Client(object):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
 
+    # Add __setstate__ and __getstate__ so that the object may be
+    # deep copied. It normally can't be deep copied because its
+    # constructor requires an 'opts' parameter.
+    # The TCP transport needs to be able to deep copy this class
+    # due to 'salt.utils.context.ContextDict.clone'.
+    def __setstate__(self, state):
+        # This will polymorphically call __init__
+        # in the derived class.
+        self.__init__(state['opts'])
+
+    def __getstate__(self):
+        return {'opts': self.opts}
+
     def _check_proto(self, path):
         '''
         Make sure that this path is intended for the salt master and trim it
@@ -99,10 +112,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -154,10 +167,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -171,10 +184,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -192,10 +205,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -215,10 +228,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -233,13 +246,14 @@ class Client(object):
             path = path + '/'
 
         log.info(
-            'Caching directory {0!r} for environment {1!r}'.format(
+            'Caching directory \'{0}\' for environment \'{1}\''.format(
                 path, saltenv
             )
         )
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
+            fn_ = sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
@@ -265,6 +279,7 @@ class Client(object):
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
+                fn_ = sdecode(fn_)
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
@@ -292,10 +307,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -313,10 +328,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -329,10 +344,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -345,10 +360,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -362,10 +377,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -407,7 +422,7 @@ class Client(object):
         if limit_traversal:
             if saltenv not in self.opts['file_roots']:
                 log.warning(
-                    'During an attempt to list states for saltenv {0!r}, '
+                    'During an attempt to list states for saltenv \'{0}\', '
                     'the environment could not be found in the configured '
                     'file roots'.format(saltenv)
                 )
@@ -469,10 +484,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -537,10 +552,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -551,7 +566,7 @@ class Client(object):
             # Local filesystem
             if not os.path.isabs(url_data.path):
                 raise CommandExecutionError(
-                    'Path {0!r} is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_data.path)
                 )
             return url_data.path
 
@@ -609,10 +624,20 @@ class Client(object):
 
         if url_data.scheme == 'swift':
             try:
-                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
-                                       self.opts.get('keystone.tenant', None),
-                                       self.opts.get('keystone.auth_url', None),
-                                       self.opts.get('keystone.password', None))
+                def swift_opt(key, default):
+                    '''Get value of <key> from Minion config or from Pillar'''
+                    if key in self.opts:
+                        return self.opts[key]
+                    try:
+                        return self.opts['pillar'][key]
+                    except (KeyError, TypeError):
+                        return default
+
+                swift_conn = SaltSwift(swift_opt('keystone.user', None),
+                                       swift_opt('keystone.tenant', None),
+                                       swift_opt('keystone.auth_url', None),
+                                       swift_opt('keystone.password', None))
+
                 swift_conn.get_object(url_data.netloc,
                                       url_data.path[1:],
                                       dest)
@@ -623,7 +648,10 @@ class Client(object):
         get_kwargs = {}
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
-            _, netloc = url_data.netloc.split('@', 1)
+            netloc = url_data.netloc
+            at_sign_pos = netloc.rfind('@')
+            if at_sign_pos != -1:
+                netloc = netloc[at_sign_pos + 1:]
             fixed_url = urlunparse(
                 (url_data.scheme, netloc, url_data.path,
                  url_data.params, url_data.query, url_data.fragment))
@@ -712,10 +740,10 @@ class Client(object):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -823,10 +851,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -844,10 +872,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -872,10 +900,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -899,10 +927,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -926,10 +954,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -963,10 +991,10 @@ class LocalClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1046,7 +1074,7 @@ class RemoteClient(Client):
         hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv {0!r}, {1!r}'.format(
+                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
                     saltenv, path
                 )
             )
@@ -1054,10 +1082,10 @@ class RemoteClient(Client):
 
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1069,35 +1097,32 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv {0!r}, looking at rel_path {1!r} to resolve {2!r}'.format(
-                    saltenv, rel_path, path
-                )
+                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
+                '\'{2}\''.format(saltenv, rel_path, path)
             )
             with self._cache_loc(
                     rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv {0!r}, ** considering ** path {1!r} to resolve {2!r}'.format(
-                saltenv, dest2check, path
-            )
+            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
+            '\'{2}\''.format(saltenv, dest2check, path)
         )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file from saltenv {0!r}, ** skipped ** '
-                    'latest already in cache {1!r}'.format(
+                    'Fetching file from saltenv \'{0}\', ** skipped ** '
+                    'latest already in cache \'{1}\''.format(
                         saltenv, path
                     )
                 )
                 return dest2check
 
         log.debug(
-            'Fetching file from saltenv {0!r}, ** attempting ** {1!r}'.format(
-                saltenv, path
-            )
+            'Fetching file from saltenv \'{0}\', ** attempting ** '
+            '\'{1}\''.format(saltenv, path)
         )
         d_tries = 0
         transport_tries = 0
@@ -1182,15 +1207,13 @@ class RemoteClient(Client):
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv {0!r}, ** done ** {1!r}'.format(
-                    saltenv, path
-                )
+                'Fetching file from saltenv \'{0}\', ** done ** '
+                '\'{1}\''.format(saltenv, path)
             )
         else:
             log.debug(
-                'In saltenv {0!r}, we are ** missing ** the file {1!r}'.format(
-                    saltenv, path
-                )
+                'In saltenv \'{0}\', we are ** missing ** the file '
+                '\'{1}\''.format(saltenv, path)
             )
 
         return dest
@@ -1201,10 +1224,10 @@ class RemoteClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1221,10 +1244,10 @@ class RemoteClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1240,10 +1263,10 @@ class RemoteClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1270,10 +1293,10 @@ class RemoteClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -1303,10 +1326,10 @@ class RemoteClient(Client):
         '''
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env

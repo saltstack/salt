@@ -71,6 +71,41 @@ class WinSystemTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(win_system.__salt__, {'cmd.run': mock}):
             self.assertEqual(win_system.reboot(), 'salt')
+            mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
+
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    def test_reboot_with_timeout_in_minutes(self):
+        '''
+            Test to reboot the system with a timeout
+        '''
+        mock = MagicMock(return_value='salt')
+        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+            self.assertEqual(win_system.reboot(5, in_seconds=False), 'salt')
+            mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
+
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    def test_reboot_with_timeout_in_seconds(self):
+        '''
+            Test to reboot the system with a timeout
+        '''
+        mock = MagicMock(return_value='salt')
+        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+            self.assertEqual(win_system.reboot(5, in_seconds=True), 'salt')
+            mock.assert_called_once_with(['shutdown', '/r', '/t', '5'], python_shell=False)
+
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    def test_reboot_with_wait(self):
+        '''
+            Test to reboot the system with a timeout and
+            wait for it to finish
+        '''
+        mock = MagicMock(return_value='salt')
+        sleep_mock = MagicMock(return_value='salt')
+        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+            with patch('time.sleep', sleep_mock):
+                self.assertEqual(win_system.reboot(wait_for_reboot=True), 'salt')
+                mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
+                sleep_mock.assert_called_once_with(330)
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_shutdown(self):
@@ -239,6 +274,28 @@ class WinSystemTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.dict(win_system.__salt__, {'service.stop': mock}):
             self.assertTrue(win_system.stop_time_service())
+
+    def test_set_hostname(self):
+        '''
+            Test setting a new hostname
+        '''
+        cmd_run_mock = MagicMock(return_value="Method execution successful.")
+        get_hostname = MagicMock(return_value="MINION")
+        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
+            with patch.object(win_system, 'get_hostname', get_hostname):
+                win_system.set_hostname("NEW")
+
+        cmd_run_mock.assert_called_once_with(cmd="wmic computersystem where name='MINION' call rename name='NEW'")
+
+    def test_get_hostname(self):
+        '''
+            Test setting a new hostname
+        '''
+        cmd_run_mock = MagicMock(return_value="Name\nMINION")
+        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
+            ret = win_system.get_hostname()
+            self.assertEqual(ret, "MINION")
+        cmd_run_mock.assert_called_once_with(cmd="wmic computersystem get name")
 
 
 if __name__ == '__main__':

@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 import os
 import logging
-import multiprocessing
 import signal
 import tempfile
 from threading import Thread, Event
@@ -27,6 +26,7 @@ import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
+from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 import salt.ext.six as six
@@ -76,10 +76,10 @@ class MasterPillarUtil(object):
                  env=None):
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -102,7 +102,7 @@ class MasterPillarUtil(object):
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
         log.debug(
-            'Init settings: tgt: {0!r}, expr_form: {1!r}, saltenv: {2!r}, '
+            'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
             'grains_fallback: {5}, pillar_fallback: {6}'.format(
                 tgt, expr_form, saltenv, use_cached_grains, use_cached_pillar,
@@ -343,7 +343,7 @@ class MasterPillarUtil(object):
         if clear_mine:
             clear_what.append('mine')
         if clear_mine_func is not None:
-            clear_what.append('mine_func: {0!r}'.format(clear_mine_func))
+            clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
         if not len(clear_what):
             log.debug('No cached data types specified for clearing.')
             return False
@@ -445,19 +445,30 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(multiprocessing.Process):
+class CacheWorker(MultiprocessingProcess):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts):
+    def __init__(self, opts, log_queue=None):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__()
+        super(CacheWorker, self).__init__(log_queue=log_queue)
         self.opts = opts
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def run(self):
         '''
@@ -470,7 +481,7 @@ class CacheWorker(multiprocessing.Process):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(multiprocessing.Process):
+class ConnectedCache(MultiprocessingProcess):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by
@@ -478,11 +489,11 @@ class ConnectedCache(multiprocessing.Process):
     the master publisher port.
     '''
 
-    def __init__(self, opts):
+    def __init__(self, opts, log_queue=None):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__()
+        super(ConnectedCache, self).__init__(log_queue=log_queue)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -503,6 +514,17 @@ class ConnectedCache(multiprocessing.Process):
         self.timer = CacheTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def signal_handler(self, sig, frame):
         '''

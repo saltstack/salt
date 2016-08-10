@@ -11,27 +11,49 @@ Module for the management of MacOS systems that use launchd/launchctl
 :depends:   - plistlib Python module
 '''
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 
 # Import python libs
+import logging
 import os
 import plistlib
+import re
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 import salt.ext.six as six
 
+# Set up logging
+log = logging.getLogger(__name__)
+
 # Define the module's virtual name
 __virtualname__ = 'service'
+
+BEFORE_YOSEMITE = True
 
 
 def __virtual__():
     '''
     Only work on MacOS
     '''
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return False
+    if not salt.utils.is_darwin():
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Only available on Mac OS X systems.')
+
+    if not os.path.exists('/bin/launchctl'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Required binary not found: "/bin/launchctl"')
+
+    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.11'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Not available on El Capitan, uses mac_service.py')
+
+    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.10'):
+        global BEFORE_YOSEMITE
+        BEFORE_YOSEMITE = False
+
+    return __virtualname__
 
 
 def _launchd_paths():
@@ -63,19 +85,23 @@ def _available_services():
                     continue
 
                 try:
-                    # This assumes most of the plist files will be already in XML format
+                    # This assumes most of the plist files
+                    # will be already in XML format
                     with salt.utils.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
-                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(true_path)
-                    plist_xml = __salt__['cmd.run_all'](cmd, python_shell=False)['stdout']
+                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
+                        true_path)
+                    plist_xml = __salt__['cmd.run_all'](
+                        cmd, python_shell=False)['stdout']
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
-                        plist = plistlib.readPlistFromBytes(salt.utils.to_bytes(plist_xml))
+                        plist = plistlib.readPlistFromBytes(
+                            salt.utils.to_bytes(plist_xml))
 
                 available_services[plist.Label.lower()] = {
                     'filename': filename,
@@ -135,17 +161,22 @@ def get_all():
 
 
 def _get_launchctl_data(job_label, runas=None):
-    cmd = 'launchctl list -x {0}'.format(job_label)
+    if BEFORE_YOSEMITE:
+        cmd = 'launchctl list -x {0}'.format(job_label)
+    else:
+        cmd = 'launchctl list {0}'.format(job_label)
 
-    launchctl_xml = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    launchctl_data = __salt__['cmd.run_all'](cmd,
+                                             python_shell=False,
+                                             runas=runas)
 
-    if launchctl_xml['stderr'] == 'launchctl list returned unknown response':
+    if launchctl_data['stderr']:
         # The service is not loaded, further, it might not even exist
         # in either case we didn't get XML to parse, so return an empty
         # dict
-        return dict()
+        return None
 
-    return dict(plistlib.readPlistFromString(launchctl_xml['stdout']))
+    return launchctl_data['stdout']
 
 
 def available(job_label):
@@ -191,7 +222,14 @@ def status(job_label, runas=None):
     lookup_name = service['plist']['Label'] if service else job_label
     launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
 
-    return 'PID' in launchctl_data
+    if launchctl_data:
+        if BEFORE_YOSEMITE:
+            return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+        else:
+            pattern = '"PID" = [0-9]+;'
+            return True if re.search(pattern, launchctl_data) else False
+    else:
+        return False
 
 
 def stop(job_label, runas=None):
@@ -208,7 +246,8 @@ def stop(job_label, runas=None):
     '''
     service = _service_by_name(job_label)
     if service:
-        cmd = 'launchctl unload -w {0}'.format(service['file_path'], runas=runas)
+        cmd = 'launchctl unload -w {0}'.format(service['file_path'],
+                                               runas=runas)
         return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
 
     return False
@@ -246,3 +285,47 @@ def restart(job_label, runas=None):
     '''
     stop(job_label, runas=runas)
     return start(job_label, runas=runas)
+
+
+def enabled(job_label, runas=None):
+    '''
+    Return True if the named service is enabled, false otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.enabled <service label>
+    '''
+    overrides_data = dict(plistlib.readPlist(
+        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
+    ))
+    if overrides_data.get(job_label, False):
+        if overrides_data[job_label]['Disabled']:
+            return False
+        else:
+            return True
+    else:
+        return False
+
+
+def disabled(job_label, runas=None):
+    '''
+    Return True if the named service is disabled, false otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.disabled <service label>
+    '''
+    overrides_data = dict(plistlib.readPlist(
+        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
+    ))
+    if overrides_data.get(job_label, False):
+        if overrides_data[job_label]['Disabled']:
+            return True
+        else:
+            return False
+    else:
+        return True

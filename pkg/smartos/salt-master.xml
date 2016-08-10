@@ -31,7 +31,11 @@
         <service_fmri value="svc:/system/filesystem/local"/>
       </dependency>
 
-      <method_context/>
+      <method_context>
+        <method_environment>
+          <envvar name='PATH' value='/usr/local/sbin:/usr/local/bin:/opt/local/sbin:/opt/local/bin:/usr/sbin:/usr/bin:/sbin'/>
+        </method_environment>
+      </method_context>
 
       <exec_method type="method"
                    name="start"

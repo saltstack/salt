@@ -16,6 +16,8 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+import salt.auth.ldap
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -632,11 +634,7 @@ class CkMinions(object):
             minions = []
         return minions
 
-    def validate_tgt(self, valid, expr, expr_form, minions=None):
-        '''
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
-        '''
+    def _expand_matching(self, auth_entry):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
@@ -647,14 +645,21 @@ class CkMinions(object):
                'N': 'node',
                None: 'glob'}
 
-        target_info = parse_target(valid)
+        target_info = parse_target(auth_entry)
         if not target_info:
-            log.error('Failed to parse valid target "{0}"'.format(valid))
+            log.error('Failed to parse valid target "{0}"'.format(auth_entry))
 
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
 
-        v_minions = set(self.check_minions(v_expr, v_matcher))
+        return set(self.check_minions(v_expr, v_matcher))
+
+    def validate_tgt(self, valid, expr, expr_form, minions=None):
+        '''
+        Return a Bool. This function returns if the expression sent in is
+        within the scope of the valid expression
+        '''
+        v_minions = self._expand_matching(valid)
         if minions is None:
             minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
@@ -679,9 +684,9 @@ class CkMinions(object):
                     vals.append(False)
             except Exception:
                 log.error('Invalid regular expression: {0}'.format(regex))
-        return all(vals)
+        return vals and all(vals)
 
-    def any_auth(self, form, auth_list, fun, tgt=None, tgt_type='glob'):
+    def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
         '''
         Read in the form and determine which auth check routine to execute
         '''
@@ -689,6 +694,7 @@ class CkMinions(object):
             return self.auth_check(
                     auth_list,
                     fun,
+                    arg,
                     tgt,
                     tgt_type)
         return self.spec_check(
@@ -696,9 +702,120 @@ class CkMinions(object):
                 fun,
                 form)
 
+    def auth_check_expanded(self,
+                            auth_list,
+                            funs,
+                            args,
+                            tgt,
+                            tgt_type='glob',
+                            groups=None,
+                            publish_validate=False):
+
+        # Here's my thinking
+        # 1. Retrieve anticipated targeted minions
+        # 2. Iterate through each entry in the auth_list
+        # 3. If it is a minion_id, check to see if any targeted minions match.
+        #    If there is a match, check to make sure funs are permitted
+        #    (if it's not a match we don't care about this auth entry and can
+        #     move on)
+        #    a. If funs are permitted, Add this minion_id to a new set of allowed minion_ids
+        #       If funs are NOT permitted, can short-circuit and return FALSE
+        #    b. At the end of the auth_list loop, make sure all targeted IDs
+        #       are in the set of allowed minion_ids.  If not, return FALSE
+        # 4. If it is a target (glob, pillar, etc), retrieve matching minions
+        #    and make sure that ALL targeted minions are in the set.
+        #    then check to see if the funs are permitted
+        #    a. If ALL targeted minions are not in the set, then return FALSE
+        #    b. If the desired fun doesn't mass the auth check with any
+        #       auth_entry's fun, then return FALSE
+
+        # NOTE we are not going to try to allow functions to run on partial
+        # sets of minions.  If a user targets a group of minions and does not
+        # have access to run a job on ALL of these minions then the job will
+        # fail with 'Eauth Failed'.
+
+        # The recommended workflow in that case will be for the user to narrow
+        # his target.
+
+        # This should cover adding the AD LDAP lookup functionality while
+        # preserving the existing auth behavior.
+
+        # Recommend we config-get this behind an entry called
+        # auth.enable_expanded_auth_matching
+        # and default to False
+        v_tgt_type = tgt_type
+        if tgt_type.lower() in ('pillar', 'pillar_pcre'):
+            v_tgt_type = 'pillar_exact'
+        elif tgt_type.lower() == 'compound':
+            v_tgt_type = 'compound_pillar_exact'
+        v_minions = set(self.check_minions(tgt, v_tgt_type))
+        minions = set(self.check_minions(tgt, tgt_type))
+        mismatch = bool(minions.difference(v_minions))
+        # If the non-exact match gets more minions than the exact match
+        # then pillar globbing or PCRE is being used, and we have a
+        # problem
+        if publish_validate:
+            if mismatch:
+                return False
+        # compound commands will come in a list so treat everything as a list
+        if not isinstance(funs, list):
+            funs = [funs]
+            args = [args]
+
+        # Take the auth list and get all the minion names inside it
+        allowed_minions = set()
+
+        auth_dictionary = {}
+
+        # Make a set, so we are guaranteed to have only one of each minion
+        # Also iterate through the entire auth_list and create a dictionary
+        # so it's easy to look up what functions are permitted
+        for auth_list_entry in auth_list:
+            if isinstance(auth_list_entry, six.string_types):
+                for fun in funs:
+                    # represents toplevel auth entry is a function.
+                    # so this fn is permitted by all minions
+                    if self.match_check(auth_list_entry, fun):
+                        return True
+            if isinstance(auth_list_entry, dict):
+                if len(auth_list_entry) != 1:
+                    log.info('Malformed ACL: {0}'.format(auth_list_entry))
+                    continue
+            allowed_minions.update(set(auth_list_entry.keys()))
+            for key in auth_list_entry.keys():
+                for match in self._expand_matching(key):
+                    if match in auth_dictionary:
+                        auth_dictionary[match].extend(auth_list_entry[key])
+                    else:
+                        auth_dictionary[match] = auth_list_entry[key]
+
+        allowed_minions_from_auth_list = set()
+        for next_entry in allowed_minions:
+            allowed_minions_from_auth_list.update(self._expand_matching(next_entry))
+        # 'minions' here are all the names of minions matched by the target
+        # if we take out all the allowed minions, and there are any left, then
+        # the target includes minions that are not allowed by eauth
+        # so we can give up here.
+        if len(minions - allowed_minions_from_auth_list) > 0:
+            return False
+
+        try:
+            for minion in minions:
+                results = []
+                for num, fun in enumerate(auth_dictionary[minion]):
+                    results.append(self.match_check(fun, funs))
+                if not any(results):
+                    return False
+            return True
+
+        except TypeError:
+            return False
+        return False
+
     def auth_check(self,
                    auth_list,
                    funs,
+                   args,
                    tgt,
                    tgt_type='glob',
                    groups=None,
@@ -709,6 +826,8 @@ class CkMinions(object):
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        if self.opts.get('auth.enable_expanded_auth_matching', False):
+            return self.auth_check_expanded(auth_list, funs, args, tgt, tgt_type, groups, publish_validate)
         if publish_validate:
             v_tgt_type = tgt_type
             if tgt_type.lower() in ('pillar', 'pillar_pcre'):
@@ -726,8 +845,9 @@ class CkMinions(object):
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
+            args = [args]
         try:
-            for fun in funs:
+            for num, fun in enumerate(funs):
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -740,18 +860,78 @@ class CkMinions(object):
                         valid = next(six.iterkeys(ind))
                         # Check if minions are allowed
                         if self.validate_tgt(
-                                valid,
-                                tgt,
-                                tgt_type,
-                                minions=minions):
+                            valid,
+                            tgt,
+                            tgt_type,
+                            minions=minions):
                             # Minions are allowed, verify function in allowed list
                             if isinstance(ind[valid], six.string_types):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
-                                for regex in ind[valid]:
-                                    if self.match_check(regex, fun):
-                                        return True
+                                for cond in ind[valid]:
+                                    # Function name match
+                                    if isinstance(cond, six.string_types):
+                                        if self.match_check(cond, fun):
+                                            return True
+                                    # Function and args match
+                                    elif isinstance(cond, dict):
+                                        if len(cond) != 1:
+                                            # Invalid argument
+                                            continue
+                                        fcond = next(six.iterkeys(cond))
+                                        # cond: {
+                                        #   'mod.func': {
+                                        #       'args': [
+                                        #           'one.*', 'two\\|three'],
+                                        #       'kwargs': {
+                                        #           'functioin': 'teach\\|feed',
+                                        #           'user': 'mother\\|father'
+                                        #           }
+                                        #       }
+                                        #   }
+                                        if self.match_check(fcond,
+                                                            fun):  # check key that is function name match
+                                            acond = cond[fcond]
+                                            if not isinstance(acond, dict):
+                                                # Invalid argument
+                                                continue
+                                            # whitelist args, kwargs
+                                            arg_list = args[num]
+                                            cond_args = acond.get('args', [])
+                                            good = True
+                                            for i, cond_arg in enumerate(cond_args):
+                                                if len(arg_list) <= i:
+                                                    good = False
+                                                    break
+                                                if cond_arg is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(cond_arg,
+                                                                        arg_list[i]):
+                                                    good = False
+                                                    break
+                                            if not good:
+                                                continue
+                                            # Check kwargs
+                                            cond_kwargs = acond.get('kwargs', {})
+                                            arg_kwargs = {}
+                                            for a in arg_list:
+                                                if isinstance(a,
+                                                              dict) and '__kwarg__' in a:
+                                                    arg_kwargs = a
+                                                    break
+                                            for k, v in six.iteritems(cond_kwargs):
+                                                if k not in arg_kwargs:
+                                                    good = False
+                                                    break
+                                                if v is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(v,
+                                                                        arg_kwargs[k]):
+                                                    good = False
+                                                    break
+                                            if good:
+                                                return True
         except TypeError:
             return False
         return False
@@ -768,6 +948,24 @@ class CkMinions(object):
                 if group_name.rstrip("%") in user_groups:
                     for matcher in auth_provider[group_name]:
                         auth_list.append(matcher)
+        return auth_list
+
+    def fill_auth_list_from_ou(self, auth_list, opts=None):
+        '''
+        Query LDAP, retrieve list of minion_ids from an OU or other search.
+        For each minion_id returned from the LDAP search, copy the perms
+        matchers into the auth dictionary
+        :param auth_list:
+        :param opts: __opts__ for when __opts__ is not injected
+        :return: Modified auth list.
+        '''
+        ou_names = []
+        for item in auth_list:
+            if isinstance(item, six.string_types):
+                continue
+            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+        if ou_names:
+            auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
 
     def wheel_check(self, auth_list, fun):

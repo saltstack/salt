@@ -43,7 +43,7 @@ import logging
 
 # Import third party libs
 try:
-    import salt.utils.etcd_util
+    import salt.utils.etcd_util  # pylint: disable=W0611
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -67,14 +67,17 @@ def __virtual__():
     '''
     Only return if python-etcd is installed
     '''
-    return __virtualname__ if HAS_LIBS else False
+    if HAS_LIBS:
+        return __virtualname__
+    return (False, 'The etcd_mod execution module cannot be loaded: '
+            'python etcd library not available.')
 
 
 def get_(key, recurse=False, profile=None):
     '''
     .. versionadded:: 2014.7.0
 
-    Get a value from etcd, by direct path
+    Get a value from etcd, by direct path.  Returns None on failure.
 
     CLI Examples:
 
@@ -84,26 +87,19 @@ def get_(key, recurse=False, profile=None):
         salt myminion etcd.get /path/to/key profile=my_etcd_config
         salt myminion etcd.get /path/to/key recurse=True profile=my_etcd_config
     '''
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
-    try:
-        result = client.get(key)
-    except KeyError as err:
-        log.error('etcd: {0}'.format(err))
-        return ''
-    except Exception:
-        raise
-
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
     if recurse:
-        return salt.utils.etcd_util.tree(client, key)
+        return client.tree(key)
     else:
-        return getattr(result, 'value')
+        return client.get(key, recurse=recurse)
 
 
-def set_(key, value, profile=None):
+def set_(key, value, profile=None, ttl=None, directory=False):
     '''
     .. versionadded:: 2014.7.0
 
-    Set a value in etcd, by direct path
+    Set a key in etcd by direct path. Optionally, create a directory
+    or set a TTL on the key.  Returns None on failure.
 
     CLI Example:
 
@@ -111,24 +107,97 @@ def set_(key, value, profile=None):
 
         salt myminion etcd.set /path/to/key value
         salt myminion etcd.set /path/to/key value profile=my_etcd_config
+        salt myminion etcd.set /path/to/dir '' directory=True
+        salt myminion etcd.set /path/to/key value ttl=5
     '''
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
-    try:
-        result = client.write(key, value)
-    except KeyError as err:
-        log.error('etcd: {0}'.format(err))
-        return ''
-    except Exception:
-        raise
 
-    return getattr(result, 'value')
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.set(key, value, ttl=ttl, directory=directory)
+
+
+def update(fields, path='', profile=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Sets a dictionary of values in one call.  Useful for large updates
+    in syndic environments.  The dictionary can contain a mix of formats
+    such as:
+
+    .. code-block:: python
+
+        {
+          '/some/example/key': 'bar',
+          '/another/example/key': 'baz'
+        }
+
+    Or it may be a straight dictionary, which will be flattened to look
+    like the above format:
+
+    .. code-block:: python
+
+        {
+            'some': {
+                'example': {
+                    'key': 'bar'
+                }
+            },
+            'another': {
+                'example': {
+                    'key': 'baz'
+                }
+            }
+        }
+
+    You can even mix the two formats and it will be flattened to the first
+    format.  Leading and trailing '/' will be removed.
+
+    Empty directories can be created by setting the value of the key to an
+    empty dictionary.
+
+    The 'path' parameter will optionally set the root of the path to use.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}"
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" profile=my_etcd_config
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" path='/some/root'
+    '''
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.update(fields, path)
+
+
+def watch(key, recurse=False, profile=None, timeout=0, index=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Makes a best effort to watch for a key or tree change in etcd.
+    Returns a dict containing the new key value ( or None if the key was
+    deleted ), the modifiedIndex of the key, whether the key changed or
+    not, the path to the key that changed and whether it is a directory or not.
+
+    If something catastrophic happens, returns {}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion etcd.watch /path/to/key
+        salt myminion etcd.watch /path/to/key timeout=10
+        salt myminion etcd.watch /patch/to/key profile=my_etcd_config index=10
+    '''
+
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.watch(key, recurse=recurse, timeout=timeout, index=index)
 
 
 def ls_(path='/', profile=None):
     '''
     .. versionadded:: 2014.7.0
 
-    Return all keys and dirs inside a specific path
+    Return all keys and dirs inside a specific path. Returns an empty dict on
+    failure.
 
     CLI Example:
 
@@ -138,30 +207,16 @@ def ls_(path='/', profile=None):
         salt myminion etcd.ls /path/to/dir/
         salt myminion etcd.ls /path/to/dir/ profile=my_etcd_config
     '''
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
-    try:
-        items = client.get(path)
-    except KeyError as err:
-        log.error('etcd: {0}'.format(err))
-        return {}
-    except Exception:
-        raise
-
-    ret = {}
-    for item in items.children:
-        if item.dir is True:
-            dir_name = '{0}/'.format(item.key)
-            ret[dir_name] = {}
-        else:
-            ret[item.key] = item.value
-    return {path: ret}
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.ls(path)
 
 
 def rm_(key, recurse=False, profile=None):
     '''
     .. versionadded:: 2014.7.0
 
-    Delete a key from etcd
+    Delete a key from etcd.  Returns True if the key was deleted, False if it wasn
+    not and None if there was a failure.
 
     CLI Example:
 
@@ -172,24 +227,15 @@ def rm_(key, recurse=False, profile=None):
         salt myminion etcd.rm /path/to/key profile=my_etcd_config
         salt myminion etcd.rm /path/to/dir recurse=True profile=my_etcd_config
     '''
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
-    try:
-        if client.delete(key, recursive=recurse):
-            return True
-        else:
-            return False
-    except KeyError as err:
-        log.error('etcd: {0}'.format(err))
-        return False
-    except Exception:
-        raise
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.rm(key, recurse=recurse)
 
 
 def tree(path='/', profile=None):
     '''
     .. versionadded:: 2014.7.0
 
-    Recurse through etcd and return all values
+    Recurse through etcd and return all values.  Returns None on failure.
 
     CLI Example:
 
@@ -200,11 +246,5 @@ def tree(path='/', profile=None):
         salt myminion etcd.tree profile=my_etcd_config
         salt myminion etcd.tree /path/to/keys profile=my_etcd_config
     '''
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
-    try:
-        return salt.utils.etcd_util.tree(client, path)
-    except KeyError as err:
-        log.error('etcd: {0}'.format(err))
-        return {}
-    except Exception:
-        raise
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.tree(path)

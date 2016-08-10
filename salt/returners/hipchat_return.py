@@ -13,6 +13,7 @@ The following fields can be set in the minion conf file::
     hipchat.color (optional)
     hipchat.notify (optional)
     hipchat.profile (optional)
+    hipchat.url (optional)
 
 .. note::
 
@@ -47,9 +48,9 @@ Hipchat settings may also be configured as:
       from_name: user@email.com
 
     hipchat_profile:
-      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-      api_version: v1
-      from_name: user@email.com
+      hipchat.api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      hipchat.api_version: v1
+      hipchat.from_name: user@email.com
 
     hipchat:
       profile: hipchat_profile
@@ -58,6 +59,13 @@ Hipchat settings may also be configured as:
     alternative.hipchat:
       profile: hipchat_profile
       room_id: RoomName
+
+    hipchat:
+      room_id: RoomName
+      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      api_version: v1
+      api_url: api.hipchat.com
+      from_name: user@email.com
 
 To use the HipChat returner, append '--return hipchat' to the salt command.
 
@@ -72,6 +80,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return hipchat --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return hipchat --return_kwargs '{"room_id": "another-room"}'
+
 '''
 from __future__ import absolute_import
 
@@ -100,7 +117,8 @@ def _get_options(ret=None):
     '''
 
     defaults = {'color': 'yellow',
-                'notify': False}
+                'notify': False,
+                'api_url': 'api.hipchat.com'}
 
     attrs = {'hipchat_profile': 'profile',
              'room_id': 'room_id',
@@ -109,13 +127,15 @@ def _get_options(ret=None):
              'api_version': 'api_version',
              'color': 'color',
              'notify': 'notify',
+             'api_url': 'api_url',
              }
 
     profile_attr = 'hipchat_profile'
 
     profile_attrs = {'from_jid': 'from_jid',
                      'api_key': 'api_key',
-                     'api_version': 'api_key'
+                     'api_version': 'api_key',
+                     'api_url': 'api_url',
                      }
 
     _options = salt.returners.get_returner_options(__virtualname__,
@@ -142,6 +162,7 @@ def _query(function,
            api_key=None,
            api_version=None,
            room_id=None,
+           api_url=None,
            method='GET',
            data=None):
     '''
@@ -193,7 +214,7 @@ def _query(function,
         },
     }
 
-    api_url = 'https://api.hipchat.com'
+    api_url = 'https://{0}'.format(api_url)
     base_url = _urljoin(api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
     url = _urljoin(base_url, path, False)
@@ -212,6 +233,7 @@ def _query(function,
                 data['notify'] = 0
             data = _urlencode(data)
     elif api_version == 'v2':
+        headers['Content-Type'] = 'application/json'
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
             data = json.dumps(data)
@@ -250,7 +272,8 @@ def _send_message(room_id,
                   from_name,
                   api_key=None,
                   api_version=None,
-                  color='yellow',
+                  api_url=None,
+                  color=None,
                   notify=False):
     '''
     Send a message to a HipChat room.
@@ -276,6 +299,7 @@ def _send_message(room_id,
                     api_key=api_key,
                     api_version=api_version,
                     room_id=room_id,
+                    api_url=api_url,
                     method='POST',
                     data=parameters)
 
@@ -332,13 +356,20 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
 
+    if ret.get('retcode') == 0:
+        color = _options.get('color')
+    else:
+        color = 'red'
+
     hipchat = _send_message(_options.get('room_id'),
                             message,
                             _options.get('from_name'),
                             _options.get('api_key'),
                             _options.get('api_version'),
-                            _options.get('color'),
+                            _options.get('api_url'),
+                            color,
                             _options.get('notify'))
+
     return hipchat
 
 
@@ -358,5 +389,6 @@ def event_return(events):
                       _options.get('from_name'),
                       _options.get('api_key'),
                       _options.get('api_version'),
+                      _options.get('api_url'),
                       _options.get('color'),
                       _options.get('notify'))

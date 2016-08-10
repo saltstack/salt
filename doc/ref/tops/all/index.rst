@@ -1,8 +1,8 @@
 .. _all-salt.tops:
 
-========================================
-Full list of builtin master tops modules
-========================================
+===================
+master tops modules
+===================
 
 .. currentmodule:: salt.tops
 

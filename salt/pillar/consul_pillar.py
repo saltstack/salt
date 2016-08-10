@@ -131,6 +131,8 @@ def fetch_tree(client, path):
 
     log.debug('Fetched items: %r', format(items))
 
+    if items is None:
+        return ret
     for item in reversed(items):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
         if key != "":

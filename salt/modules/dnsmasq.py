@@ -19,7 +19,7 @@ def __virtual__():
     Only work on POSIX-like systems.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'dnsmasq execution module cannot be loaded: only works on non-Windows systems.')
     return True
 
 

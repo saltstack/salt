@@ -31,6 +31,14 @@ To use the alternative configuration, append ``--return_config alternative`` to 
 
     salt '*' test.ping --return couchdb --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return couchdb --return_kwargs '{"db": "another-salt"}'
+
 On concurrent database access
 ==============================
 
@@ -78,26 +86,23 @@ def _get_options(ret=None):
     '''
     Get the couchdb options from salt.
     '''
-    attrs = {'url': 'server_url',
-             'db': 'db_name'}
+    attrs = {'url': 'url',
+             'db': 'db'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
                                                    attrs,
                                                    __salt__=__salt__,
                                                    __opts__=__opts__)
-    server_url = _options.get('server_url')
-    db_name = _options.get('db_name')
-
-    if not server_url:
+    if 'url' not in _options:
         log.debug("Using default url.")
-        server_url = "http://salt:5984/"
+        _options['url'] = "http://salt:5984/"
 
-    if not db_name:
+    if 'db' not in _options:
         log.debug("Using default database.")
-        db_name = "salt"
+        _options['db'] = "salt"
 
-    return {"url": server_url, "db": db_name}
+    return _options
 
 
 def _generate_doc(ret):
@@ -189,31 +194,24 @@ def get_jids():
     List all the jobs that we have..
     '''
     options = _get_options(ret=None)
-    _response = _request("GET", options['url'] + options['db'] + "/_all_docs")
+    _response = _request("GET", options['url'] + options['db'] + "/_all_docs?include_docs=true")
 
     # Make sure the 'total_rows' is returned.. if not error out.
     if 'total_rows' not in _response:
         log.error('Didn\'t get valid response from requesting all docs: {0}'
                   .format(_response))
-        return []
+        return {}
 
     # Return the rows.
-    ret = []
+    ret = {}
     for row in _response['rows']:
         # Because this shows all the documents in the database, including the
-        # design documents, whitelist the matching salt jid's which is a 20
-        # digit int.
-
-        # See if the identifier is an int..
-        try:
-            int(row['id'])
-        except ValueError:
+        # design documents, verify the id is salt jid
+        jid = row['id']
+        if not salt.utils.jid.is_jid(jid):
             continue
 
-        # Check the correct number of digits by simply casting to str and
-        # splitting.
-        if len(str(row['id'])) == 20:
-            ret.append(row['id'])
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, row['doc'])
 
     return ret
 

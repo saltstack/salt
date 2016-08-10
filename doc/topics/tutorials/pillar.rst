@@ -305,6 +305,12 @@ Pillar data can be set on the command line when running :py:func:`state.apply
     salt '*' state.apply pillar='{"foo": "bar"}'
     salt '*' state.apply my_sls_file pillar='{"hello": "world"}'
 
+Nested pillar values can also be set via the command line:
+
+.. code-block:: bash
+
+   salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+
 .. note::
 
     If a key is passed on the command line that already exists on the minion,
@@ -318,11 +324,14 @@ specified list, notice the nested pillar dict:
 
     salt '*' state.apply edit.vim pillar='{"pkgs": {"vim": "telnet"}}'
 
+This will attempt to install telnet on your minions, feel free to
+uninstall the package or replace telnet value with anything else.
+
 .. note::
-
-    This will attempt to install telnet on your minions, feel free to
-    uninstall the package or replace telnet value with anything else.
-
+   Be aware that when sending sensitive data via pillar on the command-line
+   that the publication containing that data will be received by all minions
+   and will not be restricted to the targeted minions. This may represent
+   a security concern in some cases.
 
 More On Pillar
 ==============

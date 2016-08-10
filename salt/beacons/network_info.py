@@ -98,7 +98,7 @@ def beacon(config):
                 - dropout: 100
 
     Emit beacon when any values are greater
-    than to configured values.
+    than configured values.
 
     .. code-block:: yaml
 

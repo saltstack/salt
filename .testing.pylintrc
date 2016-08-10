@@ -245,7 +245,10 @@ additional-builtins=__opts__,
   __jid_event__,
   __instance_id__,
   __salt_system_encoding__,
-  __proxy__
+  __proxy__,
+  __serializers__,
+  __reg__,
+  __events__
 
 
 # List of strings which can identify a callback function by name. A callback

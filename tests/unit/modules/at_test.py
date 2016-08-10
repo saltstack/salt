@@ -193,7 +193,8 @@ class AtTestCase(TestCase):
             self.assertEqual(at.atc(101), '\'at.atc\' is not available.')
 
         with patch.object(at, '_cmd', return_value=''):
-            self.assertDictEqual(at.atc(101), {'error': 'invalid job id 101'})
+            self.assertDictEqual(at.atc(101),
+                                 {'error': 'invalid job id \'101\''})
 
         with patch.object(at, '_cmd',
                           return_value='101\tThu Dec 11 19:48:47 2014 A B'):

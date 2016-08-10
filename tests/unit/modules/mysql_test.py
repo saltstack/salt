@@ -88,7 +88,7 @@ class MySQLTestCase(TestCase):
             mysql.user_chpass('testuser', password='BLUECOW')
             calls = (
                 call().cursor().execute(
-                    'UPDATE mysql.user SET password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                    'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
                     {'password': 'BLUECOW',
                      'user': 'testuser',
                      'host': 'localhost',
@@ -149,9 +149,9 @@ class MySQLTestCase(TestCase):
         self._test_call(
             mysql.db_exists,
             {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
-             'sql_args': {'dbname': r'''test\%\_`'" db'''}
+             'sql_args': {'dbname': r'''test%_`" db'''}
              },
-            'test%_`\'" db'
+            'test%_`" db'
         )
 
     def test_db_create(self):
@@ -293,10 +293,10 @@ class MySQLTestCase(TestCase):
         with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
             function(*args, **kwargs)
             if isinstance(expected_sql, dict):
-                calls = (call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args']))
+                calls = call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args'])
             else:
-                calls = (call().cursor().execute('{0}'.format(expected_sql)))
-            connect_mock.assert_has_calls(calls)
+                calls = call().cursor().execute('{0}'.format(expected_sql))
+            connect_mock.assert_has_calls((calls,), True)
 
 
 if __name__ == '__main__':

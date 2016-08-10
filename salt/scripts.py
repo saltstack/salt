@@ -14,7 +14,7 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError, get_error_message
+from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
@@ -47,19 +47,22 @@ def salt_master():
     master.start()
 
 
-def minion_process(queue):
+def minion_process():
     '''
     Start a minion process
     '''
+    import salt.utils
     import salt.cli.daemons
     # salt_minion spawns this function in a new process
+
+    salt.utils.appendproctitle('KeepAlive')
 
     def suicide_when_without_parent(parent_pid):
         '''
         Have the minion suicide if the parent process is gone
 
-        NOTE: there is a small race issue where the parent PID could be replace
-        with another process with the same PID!
+        NOTE: small race issue where the parent PID could be replace
+        with another process with same PID!
         '''
         while True:
             time.sleep(5)
@@ -71,52 +74,43 @@ def minion_process(queue):
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
                 log.error('Minion process encountered exception: {0}'.format(exc))
-                os._exit(999)
+                os._exit(salt.defaults.exitcodes.EX_GENERIC)
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
 
-    restart = False
-    minion = None
-    try:
-        minion = salt.cli.daemons.Minion()
-        minion.start()
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(
-            'Minion failed to start: {0}'.format(get_error_message(exc)),
-            exc_info=True
-        )
-        restart = True
-    except SystemExit as exc:
-        restart = False
+    minion = salt.cli.daemons.Minion()
 
-    if restart is True:
+    try:
+        minion.start()
+    except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warn('** Restarting minion **')
         delay = 60
-        if minion is not None:
-            if hasattr(minion, 'config'):
-                delay = minion.config.get('random_reauth_delay', 60)
-        random_delay = randint(1, delay)
-        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
-        # preform delay after minion resources have been cleaned
-        if minion.options.daemon:
-            time.sleep(random_delay)
-            salt_minion()
-        else:
-            queue.put(random_delay)
-    else:
-        queue.put(0)
+        if minion is not None and hasattr(minion, 'config'):
+            delay = minion.config.get('random_reauth_delay', 60)
+        delay = randint(1, delay)
+        log.info('waiting random_reauth_delay {0}s'.format(delay))
+        time.sleep(delay)
+        sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
 
 
 def salt_minion():
     '''
-    Start the salt minion.
+    Start the salt minion in a subprocess.
+    Auto restart minion on error.
     '''
+    import signal
+    import functools
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
+
+    if salt.utils.is_windows():
+        minion = salt.cli.daemons.Minion()
+        minion.start()
+        return
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
@@ -124,33 +118,46 @@ def salt_minion():
         minion.start()
         return
 
+    def escalate_signal_to_process(pid, signum, sigframe):  # pylint: disable=unused-argument
+        '''
+        Escalate the signal received to the multiprocessing process that
+        is actually running the minion
+        '''
+        # escalate signal
+        os.kill(pid, signum)
+
     # keep one minion subprocess running
+    prev_sigint_handler = signal.getsignal(signal.SIGINT)
+    prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            queue = multiprocessing.Queue()
-        except Exception:
-            # This breaks in containers
+            process = multiprocessing.Process(target=minion_process)
+            process.start()
+            signal.signal(signal.SIGTERM,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+        except Exception:  # pylint: disable=broad-except
+            # if multiprocessing does not work
             minion = salt.cli.daemons.Minion()
             minion.start()
-            return
-        process = multiprocessing.Process(target=minion_process, args=(queue,))
-        process.start()
-        try:
-            process.join()
-            try:
-                restart_delay = queue.get(block=False)
-            except Exception:
-                if process.exitcode == 0:
-                    # Minion process ended naturally, Ctrl+C or --version
-                    break
-                restart_delay = 60
-            if restart_delay == 0:
-                # Minion process ended naturally, Ctrl+C, --version, etc.
-                break
-            # delay restart to reduce flooding and allow network resources to close
-            time.sleep(restart_delay)
-        except KeyboardInterrupt:
             break
+
+        process.join()
+
+        # Process exited or was terminated. Since we're going to try to restart
+        # it, we MUST, reset signal handling to the previous handlers
+        signal.signal(signal.SIGINT, prev_sigint_handler)
+        signal.signal(signal.SIGTERM, prev_sigterm_handler)
+
+        if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
+            break
+        # ontop of the random_reauth_delay already preformed
+        # delay extra to reduce flooding and free resources
+        # NOTE: values are static but should be fine.
+        time.sleep(2 + randint(1, 10))
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
         rlogger = logging.getLogger()
@@ -444,7 +451,7 @@ def salt_api():
     '''
     import salt.cli.api
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
-    sapi.run()
+    sapi.start()
 
 
 def salt_main():

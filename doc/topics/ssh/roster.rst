@@ -1,3 +1,5 @@
+.. _ssh-roster:
+
 ============
 Salt Rosters
 ============

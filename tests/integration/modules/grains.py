@@ -47,11 +47,13 @@ class TestModulesGrains(integration.ModuleCase):
         grains.ls
         '''
         check_for = (
-            'cpuarch',
             'cpu_flags',
             'cpu_model',
+            'cpuarch',
             'domain',
             'fqdn',
+            'gid',
+            'groupname',
             'host',
             'kernel',
             'kernelrelease',
@@ -61,11 +63,14 @@ class TestModulesGrains(integration.ModuleCase):
             'os',
             'os_family',
             'path',
+            'pid',
             'ps',
             'pythonpath',
             'pythonversion',
             'saltpath',
             'saltversion',
+            'uid',
+            'username',
             'virtual',
         )
         lsgrains = self.run_function('grains.ls')
@@ -100,6 +105,32 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
+
+    def test_get_core_grains(self):
+        '''
+        test to ensure some core grains are returned
+        '''
+        grains = ['os', 'os_family', 'osmajorrelease', 'osrelease', 'osfullname', 'id']
+        os = self.run_function('grains.get', ['os'])
+
+        for grain in grains:
+            get_grain = self.run_function('grains.get', [grain])
+            if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
+                self.assertEqual(get_grain, '')
+                continue
+            self.assertTrue(get_grain)
+
+    def test_get_grains_int(self):
+        '''
+        test to ensure int grains
+        are returned as integers
+        '''
+        grains = ['num_cpus', 'mem_total', 'num_gpus', 'uid']
+        for grain in grains:
+            get_grain = self.run_function('grains.get', [grain])
+
+            self.assertIsInstance(get_grain, int,
+                                  msg='grain: {0} is not an int or empty'.format(grain))
 
 
 class GrainsAppendTestCase(integration.ModuleCase):

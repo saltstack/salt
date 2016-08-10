@@ -118,6 +118,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result['success'] = False
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
+            cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
                 raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
@@ -297,6 +298,9 @@ def __process_tokens_internal(tokens, start_at=0):
         elif __is_assignment(token):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
+        elif __is_expression(token):
+            log.debug("    TYPE: EXPRESSION")
+            is_expression = True
         else:
             raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
 
@@ -348,7 +352,7 @@ def __get_long(token):
 
 
 def __is_datatype(token):
-    return token in ("INT", "BOOLEAN", "STRING", "OBJECT")
+    return token in ("INT", "BOOLEAN", "STRING", "OBJECT", "LONG")
 
 
 def __get_datatype(token):
@@ -371,3 +375,7 @@ def __get_quoted_string(token):
 
 def __is_assignment(token):
     return token == '=>'
+
+
+def __is_expression(token):
+    return token == 'expression'

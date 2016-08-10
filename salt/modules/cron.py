@@ -27,7 +27,7 @@ def __virtual__():
     if salt.utils.which('crontab'):
         return True
     else:
-        return False
+        return (False, 'Cannot load cron module: crontab command not found')
 
 
 def _encode(string):
@@ -136,13 +136,15 @@ def _render_tab(lst):
 
             comment += '\n'
             ret.append(comment)
-        ret.append('{0} {1} {2} {3} {4} {5}\n'.format(cron['minute'],
-                                                      cron['hour'],
-                                                      cron['daymonth'],
-                                                      cron['month'],
-                                                      cron['dayweek'],
-                                                      cron['cmd']
-                                                      )
+        ret.append('{0}{1} {2} {3} {4} {5} {6}\n'.format(
+                            cron['commented'] is True and '#DISABLED#' or '',
+                            cron['minute'],
+                            cron['hour'],
+                            cron['daymonth'],
+                            cron['month'],
+                            cron['dayweek'],
+                            cron['cmd']
+                            )
                    )
     for spec in lst['special']:
         ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
@@ -303,6 +305,11 @@ def list_tab(user):
             flag = True
             continue
         if flag:
+            commented_cron_job = False
+            if line.startswith('#DISABLED#'):
+                # It's a commented cron job
+                line = line[10:]
+                commented_cron_job = True
             if line.startswith('@'):
                 # Its a "special" line
                 dat = {}
@@ -339,10 +346,14 @@ def list_tab(user):
                        'dayweek': comps[4],
                        'identifier': identifier,
                        'cmd': ' '.join(comps[5:]),
-                       'comment': comment}
+                       'comment': comment,
+                       'commented': False}
+                if commented_cron_job:
+                    dat['commented'] = True
                 ret['crons'].append(dat)
                 identifier = None
                 comment = None
+                commented_cron_job = False
             elif line.find('=') > 0:
                 # Appears to be a ENV setup line
                 comps = line.split('=')
@@ -427,6 +438,7 @@ def set_job(user,
             month,
             dayweek,
             cmd,
+            commented=False,
             comment=None,
             identifier=None):
     '''
@@ -453,6 +465,7 @@ def set_job(user,
                 and SALT_CRON_NO_IDENTIFIER
                 or cron['identifier'])
             tests = [(cron['comment'], comment),
+                     (cron['commented'], commented),
                      (identifier, test_setted_id),
                      (cron['minute'], minute),
                      (cron['hour'], hour),
@@ -476,6 +489,8 @@ def set_job(user,
                     month = cron['month']
                 if not _needs_change(cron['dayweek'], dayweek):
                     dayweek = cron['dayweek']
+                if not _needs_change(cron['commented'], commented):
+                    commented = cron['commented']
                 if not _needs_change(cron['comment'], comment):
                     comment = cron['comment']
                 if not _needs_change(cron['cmd'], cmd):
@@ -496,8 +511,8 @@ def set_job(user,
                 ):
                     identifier = cid
                 jret = set_job(user, minute, hour, daymonth,
-                               month, dayweek, cmd, comment,
-                               identifier=identifier)
+                               month, dayweek, cmd, commented=commented,
+                               comment=comment, identifier=identifier)
                 if jret == 'new':
                     return 'updated'
                 else:
@@ -505,7 +520,8 @@ def set_job(user,
             return 'present'
     cron = {'cmd': cmd,
             'identifier': identifier,
-            'comment': comment}
+            'comment': comment,
+            'commented': commented}
     cron.update(_get_cron_date_time(minute=minute, hour=hour,
                                     daymonth=daymonth, month=month,
                                     dayweek=dayweek))

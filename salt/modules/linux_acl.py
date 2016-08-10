@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if salt.utils.which('getfacl'):
         return __virtualname__
-    return False
+    return (False, 'The linux_acl execution module cannot be loaded: the getfacl binary is not in the path.')
 
 
 def version():

@@ -140,9 +140,9 @@ def enter_mainloop(target,
 
     if mapped_args is not None and not mapped_args:
         msg = (
-            six.u('We are called to asynchronously execute {0} '
-                  'but we do no have anything to execute, weird, '
-                  'we bail out').format(target))
+            'We are called to asynchronously execute {0}'
+            ' but we do no have anything to execute, weird,'
+            ' we bail out'.format(target))
         log.error(msg)
         raise SaltCloudSystemExit('Exception caught\n{0}'.format(msg))
     elif mapped_args is not None:
@@ -155,11 +155,8 @@ def enter_mainloop(target,
         if test in ['ERROR', 'KEYBOARDINT']:
             type_ = queue.get()
             trace = queue.get()
-            msg = six.u('Caught {0}, terminating workers\n'
-                        'TRACE: {1}\n').format(
-                type_,
-                trace
-            )
+            msg = 'Caught {0}, terminating workers\n'.format(type_)
+            msg += 'TRACE: {0}\n'.format(trace)
             log.error(msg)
             pool.terminate()
             pool.join()
@@ -541,7 +538,7 @@ class Cloud(object):
             if alias not in self.opts['providers'] or \
                     driver not in self.opts['providers'][alias]:
                 raise SaltCloudSystemExit(
-                    'No cloud providers matched {0!r}. Available: {1}'.format(
+                    'No cloud providers matched \'{0}\'. Available: {1}'.format(
                         lookup, ', '.join(self.get_configured_providers())
                     )
                 )
@@ -554,7 +551,7 @@ class Cloud(object):
 
         if not providers:
             raise SaltCloudSystemExit(
-                'No cloud providers matched {0!r}. '
+                'No cloud providers matched \'{0}\'. '
                 'Available selections: {1}'.format(
                     lookup, ', '.join(self.get_configured_providers())
                 )
@@ -609,7 +606,7 @@ class Cloud(object):
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
                     log.error(
-                        six.u('Public cloud provider {0} is not available').format(
+                        'Public cloud provider {0} is not available'.format(
                             driver
                         )
                     )
@@ -624,9 +621,9 @@ class Cloud(object):
                     ):
                         pmap[alias][driver] = self.clouds[fun]()
                 except Exception as err:
-                    log.debug(six.u(
+                    log.debug(
                         'Failed to execute \'{0}()\' while querying for '
-                        'running nodes: {1}').format(fun, err),
+                        'running nodes: {1}'.format(fun, err),
                         # Show the traceback if the debug logging level is
                         # enabled
                         exc_info_on_loglevel=logging.DEBUG
@@ -665,7 +662,7 @@ class Cloud(object):
                 fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
-                        six.u('Public cloud provider {0} is not available').format(
+                        'Public cloud provider {0} is not available'.format(
                             driver
                         )
                     )
@@ -723,9 +720,18 @@ class Cloud(object):
                     continue
 
                 for vm_name, details in six.iteritems(vms):
+                    # If VM was created with use_fqdn with either of the softlayer drivers,
+                    # we need to strip the VM name and only search for the short hostname.
+                    if driver == 'softlayer' or driver == 'softlayer_hw':
+                        ret = []
+                        for name in names:
+                            name = name.split('.')[0]
+                            ret.append(name)
+                        if vm_name not in ret:
+                            continue
                     # XXX: The logic below can be removed once the aws driver
                     # is removed
-                    if vm_name not in names:
+                    elif vm_name not in names:
                         continue
 
                     elif driver == 'ec2' and 'aws' in handled_drivers and \
@@ -763,7 +769,7 @@ class Cloud(object):
             fun = '{0}.optimize_providers'.format(driver)
             if fun not in self.clouds:
                 log.debug(
-                    six.u('The {0!r} cloud driver is unable to be optimized.').format(
+                    'The \'{0}\' cloud driver is unable to be optimized.'.format(
                         driver
                     )
                 )
@@ -799,8 +805,8 @@ class Cloud(object):
                 # The capability to gather locations is not supported by this
                 # cloud module
                 log.debug(
-                    six.u('The {0!r} cloud driver defined under {1!r} provider '
-                          'alias is unable to get the locations information').format(
+                    'The \'{0}\' cloud driver defined under \'{1}\' provider '
+                    'alias is unable to get the locations information'.format(
                         driver, alias
                     )
                 )
@@ -818,7 +824,7 @@ class Cloud(object):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
-                    six.u('Failed to get the output of \'{0}()\': {1}').format(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
@@ -842,8 +848,8 @@ class Cloud(object):
                 # The capability to gather images is not supported by this
                 # cloud module
                 log.debug(
-                    six.u('The {0!r} cloud driver defined under {1!r} provider '
-                          'alias is unable to get the images information').format(
+                    'The \'{0}\' cloud driver defined under \'{1}\' provider '
+                    'alias is unable to get the images information'.format(
                         driver,
                         alias
                     )
@@ -861,7 +867,7 @@ class Cloud(object):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
-                    six.u('Failed to get the output of \'{0}()\': {1}').format(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
@@ -885,8 +891,8 @@ class Cloud(object):
                 # The capability to gather sizes is not supported by this
                 # cloud module
                 log.debug(
-                    six.u('The {0!r} cloud driver defined under {1!r} provider '
-                          'alias is unable to get the sizes information').format(
+                    'The \'{0}\' cloud driver defined under \'{1}\' provider '
+                    'alias is unable to get the sizes information'.format(
                         driver,
                         alias
                     )
@@ -904,7 +910,7 @@ class Cloud(object):
                     data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
-                    six.u('Failed to get the output of \'{0}()\': {1}').format(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
@@ -988,10 +994,8 @@ class Cloud(object):
                 pool_size = self.opts['pool_size']
             else:
                 pool_size = len(parallel_data)
-            log.info(
-                six.u('Destroying in parallel mode; '
-                      'Cloud pool size: {0}').format(pool_size)
-            )
+            log.info('Destroying in parallel mode; '
+                     'Cloud pool size: {0}'.format(pool_size))
 
             # kick off the parallel destroy
             output_multip = enter_mainloop(
@@ -1085,7 +1089,7 @@ class Cloud(object):
             # We need to ask one by one!?
             print(
                 'There are several minion keys who\'s name starts '
-                'with {0!r}. We need to ask you which one should be '
+                'with \'{0}\'. We need to ask you which one should be '
                 'deleted:'.format(
                     name
                 )
@@ -1102,7 +1106,7 @@ class Cloud(object):
                     selection = int(selection)
                 except ValueError:
                     print(
-                        '{0!r} is not a valid selection.'.format(selection)
+                        '\'{0}\' is not a valid selection.'.format(selection)
                     )
 
                 try:
@@ -1113,16 +1117,16 @@ class Cloud(object):
                     continue
 
                 delete = input(
-                    'Delete {0!r}? [Y/n]? '.format(filename)
+                    'Delete \'{0}\'? [Y/n]? '.format(filename)
                 )
                 if delete == '' or delete.lower().startswith('y'):
                     salt.utils.cloud.remove_key(
                         self.opts['pki_dir'], filename
                     )
-                    print('Deleted {0!r}'.format(filename))
+                    print('Deleted \'{0}\''.format(filename))
                     break
 
-                print('Did not delete {0!r}'.format(filename))
+                print('Did not delete \'{0}\''.format(filename))
                 break
 
         if names and not processed:
@@ -1181,8 +1185,8 @@ class Cloud(object):
         fun = '{0}.create'.format(driver)
         if fun not in self.clouds:
             log.error(
-                six.u('Creating {0[name]!r} using {0[provider]!r} as the provider '
-                      'cannot complete since {1!r} is not available').format(
+                'Creating \'{0[name]}\' using \'{0[provider]}\' as the provider '
+                'cannot complete since \'{1}\' is not available'.format(
                     vm_,
                     driver
                 )
@@ -1199,15 +1203,13 @@ class Cloud(object):
         if deploy:
             if not make_master and 'master' not in minion_dict:
                 log.warn(
-                    six.u('There\'s no master defined on the {0!r} VM settings.').format(
+                    'There\'s no master defined on the {0!r} VM settings.'.format(
                         vm_['name']
                     )
                 )
 
             if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-                log.debug(
-                    six.u('Generating minion keys for {0[name]!r}').format(vm_)
-                )
+                log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
                 priv, pub = salt.utils.cloud.gen_keys(
                     salt.config.get_cloud_config_value(
                         'keysize',
@@ -1225,12 +1227,16 @@ class Cloud(object):
 
         key_id = minion_dict.get('id', vm_['name'])
 
+        domain = vm_.get('domain')
+        if vm_.get('use_fqdn') and domain:
+            minion_dict['append_domain'] = domain
+
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
 
         if make_master is True and 'master_pub' not in vm_ and 'master_pem' not in vm_:
             log.debug(
-                six.u('Generating the master keys for {0[name]!r}').format(
+                'Generating the master keys for \'{0[name]}\''.format(
                     vm_
                 )
             )
@@ -1309,8 +1315,8 @@ class Cloud(object):
                         break
         except KeyError as exc:
             log.exception(
-                six.u('Failed to create VM {0}. Configuration value {1} needs '
-                      'to be set').format(
+                'Failed to create VM {0}. Configuration value {1} needs '
+                'to be set'.format(
                     vm_['name'], exc
                 )
             )
@@ -1322,7 +1328,7 @@ class Cloud(object):
             opt_map = False
         if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
             log.info(
-                six.u('Running {0} on {1}').format(
+                'Running {0} on {1}'.format(
                     self.opts['start_action'], vm_['name']
                 )
             )
@@ -1345,8 +1351,8 @@ class Cloud(object):
         fun = '{0}.{1}'.format(driver, extra_['action'])
         if fun not in self.clouds:
             log.error(
-                six.u('Creating {0[name]!r} using {0[provider]!r} as the provider '
-                      'cannot complete since {1!r} is not available').format(
+                'Creating \'{0[name]}\' using \'{0[provider]}\' as the provider '
+                'cannot complete since \'{1}\' is not available'.format(
                     extra_,
                     driver
                 )
@@ -1361,7 +1367,7 @@ class Cloud(object):
                 output = self.clouds[fun](**extra_)
         except KeyError as exc:
             log.exception(
-                six.u(
+                (
                     'Failed to perform {0[provider]}.{0[action]} '
                     'on {0[name]}. '
                     'Configuration value {1} needs to be set'
@@ -1375,7 +1381,7 @@ class Cloud(object):
         handle them
         '''
         if profile not in self.opts['profiles']:
-            msg = six.u('Profile {0} is not defined').format(profile)
+            msg = 'Profile {0} is not defined'.format(profile)
             log.error(msg)
             return {'Error': msg}
 
@@ -1475,7 +1481,7 @@ class Cloud(object):
                 fun = '{0}.{1}'.format(driver, self.opts['action'])
                 if fun not in self.clouds:
                     log.info(
-                        six.u('\'{0}()\' is not available. Not actioning...').format(
+                        '\'{0}()\' is not available. Not actioning...'.format(
                             fun
                         )
                     )
@@ -1484,12 +1490,16 @@ class Cloud(object):
                     if not names:
                         break
                     if vm_name not in names:
-                        log.debug(
-                            six.u('vm:{0} in provider:{1} is not in name list:{2!r}').format(
-                                vm_name, driver, names
+                        if not isinstance(vm_details, dict):
+                            vm_details = {}
+                        if 'id' in vm_details and vm_details['id'] in names:
+                            vm_name = vm_details['id']
+                        else:
+                            log.debug(
+                                'vm:{0} in provider:{1} is not in name '
+                                'list:\'{2}\''.format(vm_name, driver, names)
                             )
-                        )
-                        continue
+                            continue
 
                     # Build the dictionary of invalid functions with their associated VMs.
                     if valid_function is False:
@@ -1553,7 +1563,7 @@ class Cloud(object):
         matches = self.lookup_providers(prov)
         if len(matches) > 1:
             raise SaltCloudSystemExit(
-                'More than one results matched {0!r}. Please specify '
+                'More than one results matched \'{0}\'. Please specify '
                 'one of: {1}'.format(
                     prov,
                     ', '.join([
@@ -1567,12 +1577,12 @@ class Cloud(object):
         fun = '{0}.{1}'.format(driver, func)
         if fun not in self.clouds:
             raise SaltCloudSystemExit(
-                'The {0!r} cloud provider alias, for the {1!r} driver, does '
-                'not define the function {2!r}'.format(alias, driver, func)
+                'The \'{0}\' cloud provider alias, for the \'{1}\' driver, does '
+                'not define the function \'{2}\''.format(alias, driver, func)
             )
 
         log.debug(
-            six.u('Trying to execute {0!r} with the following kwargs: {1}').format(
+            'Trying to execute \'{0}\' with the following kwargs: {1}'.format(
                 fun, kwargs
             )
         )
@@ -1604,16 +1614,17 @@ class Cloud(object):
                 fun = '{0}.get_configured_provider'.format(driver)
                 if fun not in self.clouds:
                     # Mis-configured provider that got removed?
-                    log.warn(six.u(
-                        'The cloud driver, {0!r}, configured under the '
-                        '{1!r} cloud provider alias, could not be loaded. '
+                    log.warn(
+                        'The cloud driver, \'{0}\', configured under the '
+                        '\'{1}\' cloud provider alias, could not be loaded. '
                         'Please check your provider configuration files and '
                         'ensure all required dependencies are installed '
-                        'for the {0!r} driver.\n'
+                        'for the \'{0}\' driver.\n'
                         'In rare cases, this could indicate the \'{2}()\' '
-                        'function could not be found.\nRemoving {0!r} from '
-                        'the available providers list').format(
-                            driver, alias, fun)
+                        'function could not be found.\nRemoving \'{0}\' from '
+                        'the available providers list'.format(
+                            driver, alias, fun
+                        )
                     )
                     self.opts['providers'][alias].pop(driver)
 
@@ -1629,11 +1640,11 @@ class Cloud(object):
                     __active_provider_name__=':'.join([alias, driver])
                 ):
                     if self.clouds[fun]() is False:
-                        log.warn(six.u(
-                            'The cloud driver, {0!r}, configured under the '
-                            '{1!r} cloud provider alias is not properly '
+                        log.warn(
+                            'The cloud driver, \'{0}\', configured under the '
+                            '\'{1}\' cloud provider alias is not properly '
                             'configured. Removing it from the available '
-                            'providers list.').format(driver, alias)
+                            'providers list.'.format(driver, alias)
                         )
                         self.opts['providers'][alias].pop(driver)
 
@@ -1662,8 +1673,8 @@ class Map(Cloud):
                 if 'Errors' not in interpolated_map:
                     interpolated_map['Errors'] = {}
                 msg = (
-                    six.u('No provider for the mapped {0!r} profile was found. '
-                          'Skipped VMS: {1}').format(
+                    'No provider for the mapped \'{0}\' profile was found. '
+                    'Skipped VMS: {1}'.format(
                         profile, ', '.join(names)
                     )
                 )
@@ -1730,9 +1741,9 @@ class Map(Cloud):
                     try:
                         state_action = matching_states[action]
                     except KeyError:
-                        log.error(six.u(
+                        log.error(
                             'The use of \'{0}\' as an action is not supported in this context. '
-                            'Only \'start\', \'stop\', and \'reboot\' are supported options.').format(action)
+                            'Only \'start\', \'stop\', and \'reboot\' are supported options.'.format(action)
                         )
                         raise SaltCloudException()
                     if vm_details != 'Absent' and vm_details['state'].lower() in state_action:
@@ -1748,7 +1759,7 @@ class Map(Cloud):
 
         if not os.path.isfile(self.opts['map']):
             log.error(
-                six.u('The specified map file does not exist: \'{0}\'').format(
+                'The specified map file does not exist: \'{0}\''.format(
                     self.opts['map'])
             )
             raise SaltCloudNotFound()
@@ -1760,7 +1771,7 @@ class Map(Cloud):
             )
         except Exception as exc:
             log.error(
-                six.u('Rendering map {0} failed, render error:\n{1}').format(
+                'Rendering map {0} failed, render error:\n{1}'.format(
                     self.opts['map'], exc
                 ),
                 exc_info_on_loglevel=logging.DEBUG
@@ -1883,12 +1894,13 @@ class Map(Cloud):
         defined = set()
         for profile_name, nodes in six.iteritems(self.rendered_map):
             if profile_name not in self.opts['profiles']:
-                msg = (six.u(
-                    'The required profile, {0!r}, defined in the map '
+                msg = (
+                    'The required profile, \'{0}\', defined in the map '
                     'does not exist. The defined nodes, {1}, will not '
-                    'be created.').format(
+                    'be created.'.format(
                         profile_name,
-                        ', '.join('{0!r}'.format(node) for node in nodes))
+                        ', '.join('\'{0}\''.format(node) for node in nodes)
+                    )
                 )
                 log.error(msg)
                 if 'errors' not in ret:
@@ -1918,12 +1930,12 @@ class Map(Cloud):
                                 'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
-                        log.warn(six.u(
-                            'The use of {0!r} on the {1!r} mapping has '
+                        log.warn(
+                            'The use of \'{0}\' on the \'{1}\' mapping has '
                             'been deprecated. The preferred way now is to '
-                            'just define {2!r}. For now, salt-cloud will do '
+                            'just define \'{2}\'. For now, salt-cloud will do '
                             'the proper thing and convert the deprecated '
-                            'mapping into the preferred one.').format(
+                            'mapping into the preferred one.'.format(
                                 deprecated, nodename, setting
                             )
                         )
@@ -1976,9 +1988,8 @@ class Map(Cloud):
                             # Machine already removed
                             break
 
-                        log.warn(
-                            six.u('{0!r} already exists, removing from '
-                                  'the create map.').format(name))
+                        log.warn('\'{0}\' already exists, removing from '
+                                 'the create map.'.format(name))
 
                         if 'existing' not in ret:
                             ret['existing'] = {}
@@ -2007,14 +2018,10 @@ class Map(Cloud):
             raise SaltCloudException(msg)
         # Go through the create list and calc dependencies
         for key, val in six.iteritems(dmap['create']):
-            log.info(
-                six.u('Calculating dependencies for {0}').format(key)
-            )
+            log.info('Calculating dependencies for {0}'.format(key))
             level = 0
             level = self._calcdep(dmap, key, val, level)
-            log.debug(
-                six.u('Got execution order {0} for {1}').format(level, key)
-            )
+            log.debug('Got execution order {0} for {1}'.format(level, key))
             dmap['create'][key]['level'] = level
 
         try:
@@ -2023,14 +2030,10 @@ class Map(Cloud):
             existing_list = six.iteritems({})
 
         for key, val in existing_list:
-            log.info(
-                six.u('Calculating dependencies for {0}').format(key)
-            )
+            log.info('Calculating dependencies for {0}'.format(key))
             level = 0
             level = self._calcdep(dmap, key, val, level)
-            log.debug(
-                six.u('Got execution order {0} for {1}').format(level, key)
-            )
+            log.debug('Got execution order {0} for {1}'.format(level, key))
             dmap['existing'][key]['level'] = level
 
         # Now sort the create list based on dependencies
@@ -2048,9 +2051,7 @@ class Map(Cloud):
                 if profile.get('make_master', False) is True
             ))
             master_minion_name = master_name
-            log.debug(
-                six.u('Creating new master {0!r}').format(master_name)
-            )
+            log.debug('Creating new master \'{0}\''.format(master_name))
             if salt.config.get_cloud_config_value(
                 'deploy',
                 master_profile,
@@ -2063,7 +2064,7 @@ class Map(Cloud):
 
             # Generate the master keys
             log.debug(
-                six.u('Generating master keys for {0[name]!r}').format(master_profile)
+                'Generating master keys for \'{0[name]}\''.format(master_profile)
             )
             priv, pub = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
@@ -2102,7 +2103,7 @@ class Map(Cloud):
                     continue
 
                 log.debug(
-                    six.u('Generating minion keys for {0[name]!r}').format(profile)
+                    'Generating minion keys for \'{0[name]}\''.format(profile)
                 )
                 priv, pub = salt.utils.cloud.gen_keys(
                     salt.config.get_cloud_config_value(
@@ -2129,7 +2130,7 @@ class Map(Cloud):
 
             if not isinstance(out, dict):
                 log.debug(
-                    six.u('Master creation details is not a dictionary: {0}').format(
+                    'Master creation details is not a dictionary: {0}'.format(
                         out
                     )
                 )
@@ -2217,7 +2218,7 @@ class Map(Cloud):
                     output[name].pop('deploy_kwargs', None)
             except SaltCloudException as exc:
                 log.error(
-                    six.u('Failed to deploy {0!r}. Error: {1}').format(
+                    'Failed to deploy \'{0}\'. Error: {1}'.format(
                         name, exc
                     ),
                     # Show the traceback if the debug logging level is enabled
@@ -2233,9 +2234,7 @@ class Map(Cloud):
                 pool_size = self.opts['pool_size']
             else:
                 pool_size = len(parallel_data)
-            log.info(
-                six.u('Cloud pool size: {0}').format(pool_size)
-            )
+            log.info('Cloud pool size: {0}'.format(pool_size))
             output_multip = enter_mainloop(
                 _create_multiprocessing, parallel_data, pool_size=pool_size)
             # We have deployed in parallel, now do start action in
@@ -2252,7 +2251,7 @@ class Map(Cloud):
                 out = {}
                 for group in actionlist:
                     log.info(
-                        six.u('Running {0} on {1}').format(
+                        'Running {0} on {1}'.format(
                             self.opts['start_action'], ', '.join(group)
                         )
                     )
@@ -2295,7 +2294,7 @@ def create_multiprocessing(parallel_data, queue=None):
         )
     except SaltCloudException as exc:
         log.error(
-            six.u('Failed to deploy {0[name]!r}. Error: {1}').format(
+            'Failed to deploy \'{0[name]}\'. Error: {1}'.format(
                 parallel_data, exc
             ),
             # Show the traceback if the debug logging level is enabled
@@ -2334,7 +2333,7 @@ def destroy_multiprocessing(parallel_data, queue=None):
 
     except SaltCloudException as exc:
         log.error(
-            six.u('Failed to destroy {0}. Error: {1}').format(
+            'Failed to destroy {0}. Error: {1}'.format(
                 parallel_data['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
@@ -2371,9 +2370,9 @@ def run_parallel_map_providers_query(data, queue=None):
                 )
             )
     except Exception as err:
-        log.debug(six.u(
+        log.debug(
             'Failed to execute \'{0}()\' while querying for running '
-            'nodes: {1}').format(data['fun'], err),
+            'nodes: {1}'.format(data['fun'], err),
             # Show the traceback if the debug logging level is
             # enabled
             exc_info_on_loglevel=logging.DEBUG

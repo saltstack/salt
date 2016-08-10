@@ -38,7 +38,7 @@ def __virtual__():
     if salt.utils.which('racadm'):
         return True
 
-    return False
+    return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
 
 
 def __parse_drac(output):
@@ -1371,20 +1371,6 @@ def idrac_general(blade_name, command, idrac_password=None,
         return ret
 
 
-def bare_rac_cmd(cmd, host=None,
-                admin_username=None, admin_password=None):
-
-    ret = __execute_ret('{0}'.format(cmd),
-                        host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)
-
-    if ret['retcode'] == 0:
-        return ret['stdout']
-    else:
-        return ret
-
-
 def _update_firmware(cmd,
                      host=None,
                      admin_username=None,
@@ -1396,6 +1382,19 @@ def _update_firmware(cmd,
         admin_password = __pillar__['proxy']['admin_password']
 
     ret = __execute_ret(cmd,
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else:
+        return ret
+
+
+def bare_rac_cmd(cmd, host=None,
+                admin_username=None, admin_password=None):
+    ret = __execute_ret('{0}'.format(cmd),
                         host=host,
                         admin_username=admin_username,
                         admin_password=admin_password)

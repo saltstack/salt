@@ -71,7 +71,7 @@ def __get_yubico_users(username):
 
 def auth(username, password):
     '''
-    Authentcate against yubico server
+    Authenticate against yubico server
     '''
     _cred = __get_yubico_users(username)
 

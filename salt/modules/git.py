@@ -9,7 +9,6 @@ import copy
 import logging
 import os
 import re
-import shlex
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
@@ -31,7 +30,11 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return True if salt.utils.which('git') else False
+    if salt.utils.which('git') is None:
+        return (False,
+                'The git execution module cannot be loaded: git unavailable.')
+    else:
+        return True
 
 
 def _check_worktree_support(failhard=True):
@@ -128,7 +131,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = shlex.split(opts)
+            opts = salt.utils.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -143,7 +146,7 @@ def _format_opts(opts):
 
 def _git_run(command, cwd=None, runas=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
-             **kwargs):
+             saltenv='base', **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -166,10 +169,17 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
         # try each of the identities, independently
         for id_file in identity:
-            if not os.path.isfile(id_file):
-                missing_keys.append(id_file)
-                log.warning('Identity file {0} does not exist'.format(id_file))
-                continue
+            if 'salt://' in id_file:
+                _id_file = id_file
+                id_file = __salt__['cp.cache_file'](id_file, saltenv)
+                if not id_file:
+                    log.error('identity {0} does not exist.'.format(_id_file))
+                    continue
+            else:
+                if not __salt__['file.file_exists'](id_file):
+                    missing_keys.append(id_file)
+                    log.error('identity {0} does not exist.'.format(id_file))
+                    continue
 
             env = {
                 'GIT_IDENTITY': id_file
@@ -674,7 +684,8 @@ def clone(cwd,
           https_user=None,
           https_pass=None,
           ignore_retcode=False,
-          repository=None):
+          repository=None,
+          saltenv='base'):
     '''
     Interface to `git-clone(1)`_
 
@@ -720,9 +731,14 @@ def clone(cwd,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -739,6 +755,11 @@ def clone(cwd,
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-clone(1)`: http://git-scm.com/docs/git-clone
 
@@ -791,7 +812,8 @@ def clone(cwd,
              cwd=clone_cwd,
              runas=user,
              identity=identity,
-             ignore_retcode=ignore_retcode)
+             ignore_retcode=ignore_retcode,
+             saltenv=saltenv)
     return True
 
 
@@ -1506,7 +1528,8 @@ def fetch(cwd,
           opts='',
           user=None,
           identity=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          saltenv='base'):
     '''
     .. versionchanged:: 2015.8.2
         Return data is now a dictionary containing information on branches and
@@ -1560,15 +1583,25 @@ def fetch(cwd,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
@@ -1609,7 +1642,8 @@ def fetch(cwd,
                       runas=user,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
-                      redirect_stderr=True)['stdout']
+                      redirect_stderr=True,
+                      saltenv=saltenv)['stdout']
 
     update_re = re.compile(
         r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
@@ -2142,7 +2176,8 @@ def ls_remote(cwd=None,
               identity=None,
               https_user=None,
               https_pass=None,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              saltenv='base'):
     '''
     Interface to `git-ls-remote(1)`_. Returns the upstream hash for a remote
     reference.
@@ -2194,9 +2229,14 @@ def ls_remote(cwd=None,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -2213,6 +2253,11 @@ def ls_remote(cwd=None,
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-ls-remote(1)`: http://git-scm.com/docs/git-ls-remote
 
@@ -2246,7 +2291,8 @@ def ls_remote(cwd=None,
                       cwd=cwd,
                       runas=user,
                       identity=identity,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      saltenv=saltenv)['stdout']
     ret = {}
     for line in output.splitlines():
         try:
@@ -2585,7 +2631,7 @@ def merge_tree(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
+def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False, saltenv='base'):
     '''
     Interface to `git-pull(1)`_
 
@@ -2618,15 +2664,25 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-pull(1)`: http://git-scm.com/docs/git-pull
 
@@ -2643,7 +2699,8 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def push(cwd,
@@ -2653,6 +2710,7 @@ def push(cwd,
          user=None,
          identity=None,
          ignore_retcode=False,
+         saltenv='base',
          **kwargs):
     '''
     Interface to `git-push(1)`_
@@ -2704,15 +2762,25 @@ def push(cwd,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-push(1)`: http://git-scm.com/docs/git-push
     .. _refspec: http://git-scm.com/book/en/v2/Git-Internals-The-Refspec
@@ -2752,7 +2820,8 @@ def push(cwd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
@@ -2802,7 +2871,7 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
+    command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -2873,7 +2942,8 @@ def remote_refs(url,
                 identity=None,
                 https_user=None,
                 https_pass=None,
-                ignore_retcode=False):
+                ignore_retcode=False,
+                saltenv='base'):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2906,9 +2976,14 @@ def remote_refs(url,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -2919,6 +2994,11 @@ def remote_refs(url,
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     CLI Example:
 
@@ -2941,7 +3021,8 @@ def remote_refs(url,
     output = _git_run(command,
                       runas=user,
                       identity=identity,
-                      ignore_retcode=ignore_retcode)['stdout']
+                      ignore_retcode=ignore_retcode,
+                      saltenv=saltenv)['stdout']
     ret = {}
     for line in salt.utils.itertools.split(output, '\n'):
         try:
@@ -3430,6 +3511,7 @@ def submodule(cwd,
               user=None,
               identity=None,
               ignore_retcode=False,
+              saltenv='base',
               **kwargs):
     '''
     .. versionchanged:: 2015.8.0
@@ -3484,15 +3566,25 @@ def submodule(cwd,
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
         .. versionchanged:: 2015.8.7
+
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        The default salt environment to pull sls files from
+
+        .. versionadded:: 2016.3.1
 
     .. _`git-submodule(1)`: http://git-scm.com/docs/git-submodule
 
@@ -3534,7 +3626,8 @@ def submodule(cwd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    saltenv=saltenv)['stdout']
 
 
 def symbolic_ref(cwd,

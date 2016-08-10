@@ -58,6 +58,14 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return smtp --return_kwargs '{"to": "user@domain.com"}'
+
 An easy way to test the SMTP returner is to use the development SMTP server
 built into Python. The command below will start a single-threaded SMTP server
 that prints any email it receives to the console.

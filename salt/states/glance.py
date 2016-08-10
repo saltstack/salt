@@ -46,7 +46,7 @@ def _find_image(name):
         return False, 'glanceclient: Unauthorized'
     log.debug('Got images_dict: {0}'.format(images_dict))
 
-    warn_until('Boron', 'Starting with Boron '
+    warn_until('Carbon', 'Starting with Carbon '
         '\'glance.image_list\' is not supposed to return '
         'the images wrapped in a separate dict anymore.')
     if len(images_dict) == 1 and 'images' in images_dict:
@@ -124,7 +124,7 @@ def image_present(name, visibility='public', protected=None,
             protected=protected, visibility=visibility,
             location=location)
         # See Salt issue #24568
-        warn_until('Boron', 'Starting with Boron '
+        warn_until('Carbon', 'Starting with Carbon '
             '\'glance.image_create\' is not supposed to return '
             'the image wrapped in a dict anymore.')
         if len(image.keys()) == 1:
@@ -160,7 +160,7 @@ def image_present(name, visibility='public', protected=None,
                     return ret
                 elif len(image.keys()) == 1:
                     # See Salt issue #24568
-                    warn_until('Boron', 'Starting with Boron '
+                    warn_until('Carbon', 'Starting with Carbon '
                         '\'_find_image()\' is not supposed to return '
                         'the image wrapped in a dict anymore.')
                     image = image.values()[0]
@@ -171,7 +171,7 @@ def image_present(name, visibility='public', protected=None,
                     '\tLast status was "{0}".\n'.format(image['status'])
 
         # See Salt issue #24568
-        warn_until('Boron', 'Starting with Boron '
+        warn_until('Carbon', 'Starting with Carbon '
             '\'_find_image()\' is not supposed to return '
             'the image wrapped in a dict anymore.')
         if len(image.keys()) == 1:
@@ -201,7 +201,7 @@ def image_present(name, visibility='public', protected=None,
                 image = __salt__['glance.image_update'](
                     id=image['id'], visibility=visibility)
             # See Salt issue #24568
-            warn_until('Boron', 'Starting with Boron '
+            warn_until('Carbon', 'Starting with Carbon '
                 '\'glance.image_update\' is not supposed to return '
                 'the image wrapped in a dict anymore.')
             if len(image.keys()) == 1:
@@ -243,7 +243,7 @@ def image_present(name, visibility='public', protected=None,
             if 'checksum' not in image:
                 # Refresh our info about the image
                 image = __salt__['glance.image_show'](image['id'])
-                warn_until('Boron', 'Starting with Boron '
+                warn_until('Carbon', 'Starting with Carbon '
                     '\'glance.image_show\' is not supposed to return '
                     'the image wrapped in a dict anymore.')
                 if len(image.keys()) == 1:

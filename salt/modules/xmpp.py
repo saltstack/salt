@@ -64,7 +64,7 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, "Module xmpp: required libraries failed to load")
 
 
 class SleekXMPPMUC(logging.Filter):

@@ -62,60 +62,7 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
-
-
-def _get_date_time_format(dt_string):
-    '''
-    Copied from win_system.py (_get_date_time_format)
-
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%Y-%m-%d %I:%M:%S %p',
-        '%m-%d-%y %I:%M:%S %p',
-        '%m-%d-%Y %I:%M:%S %p',
-        '%m/%d/%y %I:%M:%S %p',
-        '%m/%d/%Y %I:%M:%S %p',
-        '%Y/%m/%d %I:%M:%S %p',
-        '%Y-%m-%d %I:%M:%S',
-        '%m-%d-%y %I:%M:%S',
-        '%m-%d-%Y %I:%M:%S',
-        '%m/%d/%y %I:%M:%S',
-        '%m/%d/%Y %I:%M:%S',
-        '%Y/%m/%d %I:%M:%S',
-        '%Y-%m-%d %I:%M %p',
-        '%m-%d-%y %I:%M %p',
-        '%m-%d-%Y %I:%M %p',
-        '%m/%d/%y %I:%M %p',
-        '%m/%d/%Y %I:%M %p',
-        '%Y/%m/%d %I:%M %p',
-        '%Y-%m-%d %I:%M',
-        '%m-%d-%y %I:%M',
-        '%m-%d-%Y %I:%M',
-        '%m/%d/%y %I:%M',
-        '%m/%d/%Y %I:%M',
-        '%Y/%m/%d %I:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d',
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
+    return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
 
 
 def add(name,
@@ -247,28 +194,28 @@ def update(name,
         The path to the user's profile directory.
 
     :param date expiration_date: The date and time when the account expires. Can
-    be a valid date/time string. To set to never expire pass the string 'Never'.
+        be a valid date/time string. To set to never expire pass the string 'Never'.
 
     :param bool expired: Pass `True` to expire the account. The user will be
-    prompted to change their password at the next logon. Pass `False` to mark
-    the account as 'not expired'. You can't use this to negate the expiration if
-    the expiration was caused by the account expiring. You'll have to change
-    the `expiration_date` as well.
+        prompted to change their password at the next logon. Pass `False` to mark
+        the account as 'not expired'. You can't use this to negate the expiration if
+        the expiration was caused by the account expiring. You'll have to change
+        the `expiration_date` as well.
 
     :param bool account_disabled: True disables the account. False enables the
-    account.
+        account.
 
     :param bool unlock_account: True unlocks a locked user account. False is
-    ignored.
+        ignored.
 
     :param bool password_never_expires: True sets the password to never expire.
-    False allows the password to expire.
+        False allows the password to expire.
 
     :param bool disallow_change_password: True blocks the user from changing
-    the password. False allows the user to change the password.
+        the password. False allows the user to change the password.
 
-    :return:
-        True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
@@ -311,11 +258,10 @@ def update(name,
         if expiration_date == 'Never':
             user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
         else:
-            date_format = _get_date_time_format(expiration_date)
-            if date_format:
-                dt_obj = datetime.strptime(expiration_date, date_format)
-            else:
-                return 'Invalid start_date'
+            try:
+                dt_obj = salt.utils.date_cast(expiration_date)
+            except (ValueError, RuntimeError):
+                return 'Invalid Date/Time Format: {0}'.format(expiration_date)
             user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
@@ -636,8 +582,8 @@ def chprofile(name, profile):
     :param str profile:
         new location of the profile
 
-    :return:
-    True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
@@ -973,12 +919,14 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+        raise CommandExecutionError(
+            'User \'{0}\' already exists'.format(new_name)
+        )
 
     # Rename the user account
     # Connect to WMI
@@ -989,7 +937,7 @@ def rename(name, new_name):
     try:
         user = c.Win32_UserAccount(Name=name)[0]
     except IndexError:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Rename the user
     result = user.Rename(new_name)[0]
@@ -1008,16 +956,12 @@ def rename(name, new_name):
                       8: 'Operation is not allowed on specified special groups: user, admin, local, or guest',
                       9: 'Other API error',
                       10: 'Internal error'}
-        raise CommandExecutionError('There was an error renaming {0!r} to {1!r}. Error: {2}'.format(name, new_name, error_dict[result]))
+        raise CommandExecutionError(
+            'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
+            .format(name, new_name, error_dict[result])
+        )
 
-    # Load information for the new name
-    post_info = info(new_name)
-
-    # Verify that the name has changed
-    if post_info['name'] != current_info['name']:
-        return post_info['name'] == new_name
-
-    return False
+    return info(new_name).get('name') == new_name
 
 
 def current(sam=False):

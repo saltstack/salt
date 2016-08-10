@@ -31,8 +31,8 @@ XMPP settings may also be configured as::
         recipient: someone@xmpp.example.com
 
     xmpp_profile:
-        jid: user@xmpp.domain.com/resource
-        password: password
+        xmpp.jid: user@xmpp.domain.com/resource
+        xmpp.password: password
 
     xmpp:
         profile: xmpp_profile
@@ -55,6 +55,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return xmpp --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return xmpp --return_kwargs '{"recipient": "someone-else@xmpp.example.com"}'
+
 '''
 from __future__ import absolute_import
 

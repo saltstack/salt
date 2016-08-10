@@ -51,6 +51,10 @@ def mounted(name,
             mount=True,
             user=None,
             match_on='auto',
+            extra_mount_invisible_options=None,
+            extra_mount_invisible_keys=None,
+            extra_mount_ignore_fs_keys=None,
+            extra_mount_translate_options=None,
             hidden_opts=None):
     '''
     Verify that a device is mounted
@@ -97,6 +101,34 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    extra_mount_invisible_options
+        A list of extra options that are not visible through the /proc/self/mountinfo
+        interface. If a option is not visible through this interface it will always
+        remount the device. This Option extends the builtin mount_invisible_options list.
+
+    extra_mount_invisible_keys
+        A list of extra key options that are not visible through the /proc/self/mountinfo
+        interface. If a key option is not visible through this interface it will always
+        remount the device. This Option extends the builtin mount_invisible_keys list.
+        A good example for a key Option is the password Option:
+            password=badsecret
+
+    extra_ignore_fs_keys
+        A dict of filesystem options which should not force a remount. This will update
+        the internal dictionary. The dict should look like this:
+            {
+                'ramfs': ['size']
+            }
+
+    extra_mount_translate_options
+        A dict of mount options that gets translated when mounted. To prevent a remount
+        add additional Options to the default dictionary. This will update the internal
+        dictionary. The dictionary should look like this:
+            {
+                'tcp': 'proto=tcp',
+                'udp': 'proto=udp'
+            }
 
     hidden_opts
         A list of mount options that will be ignored when considering a remount
@@ -237,8 +269,13 @@ def mounted(name,
                     'port',
                     'backup-volfile-servers',
                 ]
+
+                if extra_mount_invisible_options:
+                    mount_invisible_options.extend(extra_mount_invisible_options)
+
                 if hidden_opts:
                     mount_invisible_options = list(set(mount_invisible_options) | set(hidden_opts))
+
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
                     'actimeo',
@@ -248,16 +285,26 @@ def mounted(name,
                     'retry',
                     'port',
                 ]
+
+                if extra_mount_invisible_keys:
+                    mount_invisible_keys.extend(extra_mount_invisible_keys)
+
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
                     'ramfs': ['size']
                 }
+
+                if extra_mount_ignore_fs_keys:
+                    mount_ignore_fs_keys.update(extra_mount_ignore_fs_keys)
 
                 # Some options are translated once mounted
                 mount_translate_options = {
                     'tcp': 'proto=tcp',
                     'udp': 'proto=udp',
                 }
+
+                if extra_mount_translate_options:
+                    mount_translate_options.update(extra_mount_translate_options)
 
                 for opt in opts:
                     if opt in mount_translate_options:
@@ -279,10 +326,24 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
+                    # convert uid/gid to numeric value from user/group name
+                    name_id_opts = {'uid': 'user.info',
+                                    'gid': 'group.info'}
+                    if opt.split('=')[0] in name_id_opts and len(opt.split('=')) > 1:
+                        _givenid = opt.split('=')[1]
+                        _param = opt.split('=')[0]
+                        _id = _givenid
+                        if not re.match('[0-9]+$', _givenid):
+                            _info = __salt__[name_id_opts[_param]](_givenid)
+                            if _info and _param in _info:
+                                _id = _info[_param]
+                        opt = _param + '=' + str(_id)
+
                     if opt not in active[real_name]['opts'] \
                     and opt not in active[real_name].get('superopts', []) \
                     and opt not in mount_invisible_options \
-                    and opt not in mount_ignore_fs_keys.get(fstype, []):
+                    and opt not in mount_ignore_fs_keys.get(fstype, []) \
+                    and opt not in mount_invisible_keys:
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)

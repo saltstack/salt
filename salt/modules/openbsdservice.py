@@ -45,7 +45,8 @@ def __virtual__():
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
             if not os.path.exists('/usr/sbin/rcctl'):
                 return __virtualname__
-    return False
+    return (False, 'The openbsdservice execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 def start(name):

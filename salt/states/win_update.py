@@ -351,7 +351,7 @@ def _search(win_updater, retries=5):
                 return (comment, True, retries)
             passed = False
     if clean:
-        comment += 'Search was done with out an error.\n'
+        comment += 'Search was done without error.\n'
     return (comment, True, retries)
 
 

@@ -110,7 +110,8 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.
+of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, for example '"false"'.
 
 The '%' Sign
 ============

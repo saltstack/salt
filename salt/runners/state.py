@@ -4,13 +4,10 @@ Execute orchestration functions
 '''
 # Import pytohn libs
 from __future__ import absolute_import, print_function
-import fnmatch
-import json
 import logging
-import sys
 
 # Import salt libs
-import salt.syspaths
+import salt.loader
 import salt.utils
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
@@ -58,6 +55,11 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
+    res = salt.utils.check_state_result(ret['data'])
+    if res:
+        ret['data']['retcode'] = 0
+    else:
+        ret['data']['retcode'] = 1
     return ret
 
 # Aliases for orchestrate runner
@@ -131,7 +133,12 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     return ret
 
 
-def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
+def event(tagmatch='*',
+        count=-1,
+        quiet=False,
+        sock_dir=None,
+        pretty=False,
+        node='master'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
@@ -150,6 +157,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     :param sock_dir: path to the Salt master's event socket file.
     :param pretty: Output the JSON all on a single line if ``False`` (useful
         for shell tools); pretty-print the JSON output if ``True``.
+    :param node: Watch the minion-side or master-side event bus.
+        .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -176,33 +185,12 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
         See :blob:`tests/eventlisten.sh` for an example of usage within a shell
         script.
     '''
-    sevent = salt.utils.event.get_event(
-            'master',
-            sock_dir or __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+    statemod = salt.loader.raw_mod(__opts__, 'state', None)
 
-    while True:
-        ret = sevent.get_event(full=True)
-        if ret is None:
-            continue
-
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
-            if not quiet:
-                print('{0}\t{1}'.format(
-                    ret['tag'],
-                    json.dumps(
-                        ret['data'],
-                        sort_keys=pretty,
-                        indent=None if not pretty else 4)))
-                sys.stdout.flush()
-
-            count -= 1
-            LOGGER.debug('Remaining event matches: {0}'.format(count))
-
-            if count == 0:
-                break
-        else:
-            LOGGER.debug('Skipping event tag: {0}'.format(ret['tag']))
-            continue
+    return statemod['state.event'](
+            tagmatch=tagmatch,
+            count=count,
+            quiet=quiet,
+            sock_dir=sock_dir,
+            pretty=pretty,
+            node=node)

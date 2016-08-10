@@ -7,7 +7,6 @@ Edit ini files
 :depends: re
 :platform: all
 
-Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 (for example /etc/sysctl.conf)
 '''
 
@@ -15,9 +14,10 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 from __future__ import print_function
 from __future__ import absolute_import
 import re
+import json
+from salt.utils.odict import OrderedDict
+from salt.utils import fopen as _fopen
 
-# Import Salt libs
-import salt.utils
 
 __virtualname__ = 'ini'
 
@@ -28,13 +28,14 @@ def __virtual__():
     '''
     return __virtualname__
 
-comment_regexp = re.compile(r'^\s*#\s*(.*)')
-section_regexp = re.compile(r'\s*\[(.+)\]\s*')
-option_regexp1 = re.compile(r'\s*(.+?)\s*(=)(.*)')
-option_regexp2 = re.compile(r'\s*(.+?)\s*(:)(.*)')
+
+ini_regx = re.compile(r'^\s*\[(.+?)\]\s*$', flags=re.M)
+com_regx = re.compile(r'^\s*(#|;)\s*(.*)')
+indented_regx = re.compile(r'(\s+)(.*)')
+opt_regx = re.compile(r'(\s*)(.+?)\s*(\=|\:)\s*(.*)\s*')
 
 
-def set_option(file_name, sections=None, summary=True):
+def set_option(file_name, sections=None):
     '''
     Edit an ini file, replacing one or more sections. Returns a dictionary
     containing the changes made.
@@ -44,8 +45,10 @@ def set_option(file_name, sections=None, summary=True):
 
     sections : None
         A dictionary representing the sections to be edited ini file
-
-    Set ``summary=False`` if return data need not have previous option value
+        The keys are the section names and the values are the dictionary
+        containing the options
+        If the Ini does not contain sections the keys and values represent the
+        options
 
     API Example:
 
@@ -62,44 +65,15 @@ def set_option(file_name, sections=None, summary=True):
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
-    if sections is None:
-        sections = {}
-    ret = {'file_name': file_name}
+    sections = sections or {}
+    changes = {}
     inifile = _Ini.get_ini_file(file_name)
     if not inifile:
-        ret.update({'error': 'ini file not found'})
-        return ret
-    changes = {}
-    err_flag = False
-    for section in sections:
-        changes.update({section: {}})
-        for option in sections[section]:
-            try:
-                current_value = get_option(file_name, section, option)
-                if not current_value == sections[section][option]:
-                    inifile.update_section(section,
-                                           option,
-                                           sections[section][option])
-                    changes[section].update(
-                        {
-                            option: {
-                                'before': current_value,
-                                'after': sections[section][option]
-                            }
-                        })
-                    if not summary:
-                        changes[section].update({option:
-                                                 sections[section][option]})
-            except Exception:
-                ret.update({'error':
-                            'while setting option {0} in section {1}'.
-                            format(option, section)})
-                err_flag = True
-                break
-    if not err_flag:
-        inifile.flush()
-    ret.update({'changes': changes})
-    return ret
+        changes.update({'error': 'ini file not found'})
+        return changes
+    changes = inifile.update(sections)
+    inifile.flush()
+    return changes
 
 
 def get_option(file_name, section, option):
@@ -123,10 +97,7 @@ def get_option(file_name, section, option):
         salt '*' ini.get_option /path/to/ini section_name option_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    if inifile:
-        opt = inifile.get_option(section, option)
-        if opt:
-            return opt.value
+    return inifile.get(section, {}).get(option, None)
 
 
 def remove_option(file_name, section, option):
@@ -150,11 +121,9 @@ def remove_option(file_name, section, option):
         salt '*' ini.remove_option /path/to/ini section_name option_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    if inifile:
-        opt = inifile.remove_option(section, option)
-        if opt:
-            inifile.flush()
-            return opt.value
+    value = inifile.get(section, {}).pop(option, None)
+    inifile.flush()
+    return value
 
 
 def get_section(file_name, section):
@@ -178,11 +147,11 @@ def get_section(file_name, section):
         salt '*' ini.get_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    if inifile:
-        sect = inifile.get_section(section)
-        if sect:
-            return sect.contents()
-    return {}
+    ret = {}
+    for key, value in inifile.get(section, {}).iteritems():
+        if key[0] != '#':
+            ret.update({key: value})
+    return ret
 
 
 def remove_section(file_name, section):
@@ -206,63 +175,141 @@ def remove_section(file_name, section):
         salt '*' ini.remove_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    if inifile:
-        sect = inifile.remove_section(section)
-        if sect:
-            inifile.flush()
-            return sect.contents()
+    section = inifile.pop(section, {})
+    inifile.flush()
+    ret = {}
+    for key, value in section.iteritems():
+        if key[0] != '#':
+            ret.update({key: value})
+    return ret
 
 
-class _Section(list):
-    def __init__(self, name):
-        super(_Section, self).__init__()
-        self.section_name = name
-
-    def get_option(self, option_name):
-        for item in self:
-            if isinstance(item, _Option) and (item.name == option_name):
-                return item
-
-    def update_option(self, option_name, option_value=None, separator="="):
-        option_to_update = self.get_option(option_name)
-        if not option_to_update:
-            option_to_update = _Option(option_name)
-            self.append(option_to_update)
-        option_to_update.value = option_value
-        option_to_update.separator = separator
-
-    def remove_option(self, option_name):
-        option_to_remove = self.get_option(option_name)
-        if option_to_remove:
-            return self.pop(self.index(option_to_remove))
-
-    def contents(self):
-        contents = {}
-        for item in self:
-            try:
-                contents.update({item.name: item.value})
-            except Exception:
-                pass  # item was a comment
-        return contents
-
-    def __nonzero__(self):
-        return True
-
-    def __eq__(self, item):
-        return (isinstance(item, self.__class__) and
-                self.section_name == item.section_name)
-
-    def __ne__(self, item):
-        return not (isinstance(item, self.__class__) and
-                    self.section_name == item.section_name)
-
-
-class _Option(object):
-    def __init__(self, name, value=None, separator="="):
-        super(_Option, self).__init__()
+class _Section(OrderedDict):
+    def __init__(self, name, inicontents='', seperator='=', commenter='#'):
+        super(_Section, self).__init__(self)
         self.name = name
-        self.value = value
-        self.separator = separator
+        self.inicontents = inicontents
+        self.sep = seperator
+        self.com = commenter
+
+    def refresh(self, inicontents=None):
+        comment_count = 1
+        unknown_count = 1
+        curr_indent = ''
+        inicontents = inicontents or self.inicontents
+        inicontents = inicontents.strip('\n')
+        if not inicontents:
+            return
+        for opt in self:
+            self.pop(opt)
+        for opt_str in inicontents.split('\n'):
+            com_match = com_regx.match(opt_str)
+            if com_match:
+                name = '#comment{0}'.format(comment_count)
+                self.com = com_match.group(1)
+                comment_count += 1
+                self.update({name: opt_str})
+                continue
+            indented_match = indented_regx.match(opt_str)
+            if indented_match:
+                indent = indented_match.group(1).replace('\t', '    ')
+                if indent > curr_indent:
+                    options = self.keys()
+                    if options:
+                        prev_opt = options[-1]
+                        value = self.get(prev_opt)
+                        self.update({prev_opt: '\n'.join((value, opt_str))})
+                    continue
+            opt_match = opt_regx.match(opt_str)
+            if opt_match:
+                curr_indent, name, self.sep, value = opt_match.groups()
+                curr_indent = curr_indent.replace('\t', '    ')
+                self.update({name: value})
+                continue
+            name = '#unknown{0}'.format(unknown_count)
+            self.update({name: opt_str})
+            unknown_count += 1
+
+    def _uncomment_if_commented(self, opt_key):
+        # should be called only if opt_key is not already present
+        # will uncomment the key if commented and create a place holder
+        # for the key where the correct value can be update later
+        # used to preserve the ordering of comments and commented options
+        # and to make sure options without sectons go above any section
+        options_backup = OrderedDict()
+        comment_index = None
+        for key, value in self.iteritems():
+            if comment_index is not None:
+                options_backup.update({key: value})
+                continue
+            if '#comment' not in key:
+                continue
+            opt_match = opt_regx.match(value.lstrip('#'))
+            if opt_match and opt_match.group(2) == opt_key:
+                comment_index = key
+        for key in options_backup:
+            self.pop(key)
+        self.pop(comment_index, None)
+        super(_Section, self).update({opt_key: None})
+        for key, value in options_backup.iteritems():
+            super(_Section, self).update({key: value})
+
+    def update(self, update_dict):
+        changes = {}
+        for key, value in update_dict.iteritems():
+            if key not in self:
+                changes.update({key: {'before': None,
+                                      'after': value}})
+                if hasattr(value, 'iteritems'):
+                    sect = _Section(key, '', self.sep, self.com)
+                    sect.update(value)
+                    super(_Section, self).update({key: sect})
+                else:
+                    self._uncomment_if_commented(key)
+                    super(_Section, self).update({key: value})
+            else:
+                curr_value = self.get(key, None)
+                if isinstance(curr_value, _Section):
+                    sub_changes = curr_value.update(value)
+                    if sub_changes:
+                        changes.update({key: sub_changes})
+                else:
+                    if not curr_value == value:
+                        changes.update({key: {'before': curr_value,
+                                              'after': value}})
+                        super(_Section, self).update({key: value})
+        return changes
+
+    def gen_ini(self):
+        yield '\n[{0}]\n'.format(self.name)
+        sections_dict = OrderedDict()
+        for name, value in self.iteritems():
+            if com_regx.match(name):
+                yield '{0}\n'.format(value)
+            elif isinstance(value, _Section):
+                sections_dict.update({name: value})
+            else:
+                yield '{0} {1} {2}\n'.format(name, self.sep, value)
+        for name, value in sections_dict.iteritems():
+            for line in value.gen_ini():
+                yield line
+
+    def as_ini(self):
+        return ''.join(self.gen_ini())
+
+    def as_dict(self):
+        return dict(self)
+
+    def dump(self):
+        print(str(self))
+
+    def __repr__(self, _repr_running=None):
+        _repr_running = _repr_running or {}
+        super_repr = super(_Section, self).__repr__(_repr_running)
+        return '\n'.join((super_repr, json.dumps(self, indent=4)))
+
+    def __str__(self):
+        return json.dumps(self, indent=4)
 
     def __eq__(self, item):
         return (isinstance(item, self.__class__) and
@@ -273,125 +320,43 @@ class _Option(object):
                     self.name == item.name)
 
 
-class _Ini(object):
-    def __init__(self, file_name):
-        super(_Ini, self).__init__()
-        self.file_name = file_name
+class _Ini(_Section):
+    def __init__(self, name, inicontents='', seperator='=', commenter='#'):
+        super(_Ini, self).__init__(name, inicontents, seperator, commenter)
 
-    def refresh(self):
-        self.sections = []
-        current_section = _Section('DEFAULT_IMPLICIT')
-        self.sections.append(current_section)
-        with salt.utils.fopen(self.file_name, 'r') as inifile:
-            previous_line = None
-            for line in inifile.readlines():
-                # Make sure the empty lines between options are preserved
-                if _Ini.isempty(previous_line) and not _Ini.isnewsection(line):
-                    current_section.append('\n')
-                if _Ini.iscomment(line):
-                    current_section.append(_Ini.decrypt_comment(line))
-                elif _Ini.isnewsection(line):
-                    self.sections.append(_Ini.decrypt_section(line))
-                    current_section = self.sections[-1]
-                elif _Ini.isoption(line):
-                    current_section.append(_Ini.decrypt_option(line))
-                previous_line = line
+    def refresh(self, inicontents=None):
+        inicontents = inicontents or _fopen(self.name).read()
+        if not inicontents:
+            return
+        for opt in self:
+            self.pop(opt)
+        inicontents = ini_regx.split(inicontents)
+        inicontents.reverse()
+        super(_Ini, self).refresh(inicontents.pop())
+        for section_name, sect_ini in self._gen_tuples(inicontents):
+            sect_obj = _Section(section_name, sect_ini)
+            sect_obj.refresh()
+            self.update({sect_obj.name: sect_obj})
 
     def flush(self):
-        with salt.utils.fopen(self.file_name, 'w') as outfile:
-            outfile.write(self.current_contents())
-
-    def dump(self):
-        print(self.current_contents())
-
-    def current_contents(self):
-        file_contents = ''
-        for section in self.sections:
-            if not section.section_name == 'DEFAULT_IMPLICIT':
-                file_contents += '[{0}]\n'.format(section.section_name)
-            for item in section:
-                if isinstance(item, _Option):
-                    file_contents += '{0}{1}{2}\n'.format(
-                        item.name, item.separator, item.value
-                    )
-                elif item == '\n':
-                    file_contents += '\n'
-                else:
-                    file_contents += '# {0}\n'.format(item)
-            file_contents += '\n'
-        return file_contents
-
-    def get_section(self, section_name):
-        for section in self.sections:
-            if section.section_name == section_name:
-                return section
-
-    def get_option(self, section_name, option):
-        section_to_get = self.get_section(section_name)
-        if section_to_get:
-            return section_to_get.get_option(option)
-
-    def update_section(self, section_name, option_name=None,
-                       option_value=None, separator="="):
-        section_to_update = self.get_section(section_name)
-        if not section_to_update:
-            section_to_update = _Section(section_name)
-            self.sections.append(section_to_update)
-        if option_name:
-            section_to_update.update_option(option_name, option_value,
-                                            separator)
-
-    def remove_section(self, section_name):
-        section_to_remove = self.get_section(section_name)
-        if section_to_remove:
-            return self.sections.pop(self.sections.index(section_to_remove))
-
-    def remove_option(self, section_name, option_name):
-        section_to_update = self.get_section(section_name)
-        if section_to_update:
-            return section_to_update.remove_option(option_name)
-
-    @staticmethod
-    def decrypt_comment(line):
-        ma = re.match(comment_regexp, line)
-        return ma.group(1).strip()
-
-    @staticmethod
-    def decrypt_section(line):
-        ma = re.match(section_regexp, line)
-        return _Section(ma.group(1).strip())
-
-    @staticmethod
-    def decrypt_option(line):
-        ma = re.match(option_regexp1, line)
-        if not ma:
-            ma = re.match(option_regexp2, line)
-        return _Option(ma.group(1).strip(), ma.group(3).strip(),
-                       ma.group(2).strip())
-
-    @staticmethod
-    def iscomment(line):
-        return re.match(comment_regexp, line)
-
-    @staticmethod
-    def isempty(line):
-        return line == '\n'
-
-    @staticmethod
-    def isnewsection(line):
-        return re.match(section_regexp, line)
-
-    @staticmethod
-    def isoption(line):
-        return re.match(option_regexp1, line) or re.match(option_regexp2, line)
+        with _fopen(self.name, 'w') as outfile:
+            ini_gen = self.gen_ini()
+            next(ini_gen)
+            outfile.writelines(ini_gen)
 
     @staticmethod
     def get_ini_file(file_name):
-        try:
-            inifile = _Ini(file_name)
-            inifile.refresh()
-            return inifile
-        except IOError:
-            return inifile
-        except Exception:
-            return
+        inifile = _Ini(file_name)
+        inifile.refresh()
+        return inifile
+
+    @staticmethod
+    def _gen_tuples(list_object):
+        while True:
+            try:
+                key = list_object.pop()
+                value = list_object.pop()
+            except IndexError:
+                raise StopIteration
+            else:
+                yield key, value

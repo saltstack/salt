@@ -4,25 +4,30 @@
 SUSE
 ====
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
 Packages for SUSE 12 SP1, SUSE 12, SUSE 11, openSUSE 13 and openSUSE Leap 42.1
 are available in the SaltStack Repository.
 
-Instructions are at http://repo.saltstack.com/#suse.
+Instructions are at https://repo.saltstack.com/#suse.
 
 Installation from the SUSE Repository
 =====================================
 
-With openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
-The devel:language:python repo will have more up to date versions of salt,
-all package development will be done there.
+Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
+With the release of SUSE manager 3 a new repository setup has been created.
+The new repo will by systemsmanagement:saltstack, which is the source
+for newer stable packages. For backward compatibility a linkpackage will be
+created to the old devel:language:python repo.
+All development of suse packages will be done in systemsmanagement:saltstack:testing.
+This will ensure that salt will be in mainline suse repo's, a stable release
+repo and a testing repo for further enhancements.
 
 Installation
 ============
 
-Salt can be installed using ``zypper`` and is available in the standard openSUSE
+Salt can be installed using ``zypper`` and is available in the standard openSUSE/SLES
 repositories.
 
 Stable Release
@@ -106,11 +111,20 @@ Unstable Release
 openSUSE
 --------
 
-For openSUSE Factory run the following as root:
+For openSUSE Tumbleweed run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_Factory/devel:languages:python.repo
+    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_Tumbleweed/systemsmanagement:saltstack.repo
+    zypper refresh
+    zypper install salt salt-minion salt-master
+
+
+For openSUSE 42.1 Leap run the following as root:
+
+.. code-block:: bash
+
+    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_Leap_42.1/systemsmanagement:saltstack.repo
     zypper refresh
     zypper install salt salt-minion salt-master
 
@@ -119,24 +133,7 @@ For openSUSE 13.2 run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_13.2/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-
-For openSUSE 13.1 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_13.1/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For bleeding edge python Factory run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/bleeding_edge_python_Factory/devel:languages:python.repo
+    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_13.2/systemsmanagement:saltstack.repo
     zypper refresh
     zypper install salt salt-minion salt-master
 
@@ -147,23 +144,15 @@ For SLE 12 run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/SLE_12/devel:languages:python.repo
+    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/SLE_12/systemsmanagement:saltstack.repo
     zypper refresh
     zypper install salt salt-minion salt-master
 
-For SLE 11 SP3 run the following as root:
+For SLE 11 SP4 run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/SLE_11_SP3/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For SLE 11 SP2 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/SLE_11_SP2/devel:languages:python.repo
+    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/SLE_11_SP4/systemsmanagement:saltstack.repo
     zypper refresh
     zypper install salt salt-minion salt-master
 

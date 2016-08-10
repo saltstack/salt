@@ -1,8 +1,8 @@
 .. _all-salt.runners:
 
-===========================
-Full list of runner modules
-===========================
+==============
+runner modules
+==============
 
 .. currentmodule:: salt.runners
 
@@ -10,8 +10,10 @@ Full list of runner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    asam
     cache
     cloud
+    ddns
     doc
     drac
     error
@@ -30,9 +32,12 @@ Full list of runner modules
     pillar
     pkg
     queue
+    reactor
+    saltutil
     sdb
-    ssh
     search
+    spacewalk
+    ssh
     state
     survey
     test

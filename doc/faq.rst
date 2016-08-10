@@ -304,8 +304,8 @@ process.
 Windows
 *******
 
-For Windows machines, restarting the minion at can be accomplished by
-adding the following state:
+For Windows machines, restarting the minion can be accomplished using the
+following state:
 
 .. code-block:: yaml
 

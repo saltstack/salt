@@ -109,7 +109,7 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
             ret['comment'] += 'Status {0} was not found, as specified.'.format(status)
             ret['result'] = False
 
-    if __opts__['test'] and ret['result'] is True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] += ' (TEST MODE'
         if 'test_url' in kwargs:

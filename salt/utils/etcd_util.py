@@ -15,11 +15,15 @@ may be passed in. The following configurations are both valid:
     # No profile name
     etcd.host: 127.0.0.1
     etcd.port: 4001
+    etcd.username: larry  # Optional; requires etcd.password to be set
+    etcd.password: 123pass  # Optional; requires etcd.username to be set
 
     # One or more profiles defined
     my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
+      etcd.username: larry  # Optional; requires etcd.password to be set
+      etcd.password: 123pass  # Optional; requires etcd.username to be set
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -28,6 +32,13 @@ the name of a profile to be used.
 
     import salt.utils.etcd_utils
     client = salt.utils.etcd_utils.client(__opts__, profile='my_etcd_config')
+
+You may also use the newer syntax and bypass the generator function.
+
+.. code-block:: python
+
+    import salt.utils.etcd_utils
+    client = salt.utils.etcd_utils.EtcdClient(__opts__, profile='my_etcd_config')
 
 It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
@@ -44,6 +55,7 @@ from salt.exceptions import CommandExecutionError
 # Import third party libs
 try:
     import etcd
+    from urllib3.exceptions import ReadTimeoutError, MaxRetryError
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -52,52 +64,266 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+class EtcdUtilWatchTimeout(Exception):
+    """
+    A watch timed out without returning a result
+    """
+    pass
+
+
+class EtcdClient(object):
+    def __init__(self, opts, profile=None):
+        opts_pillar = opts.get('pillar', {})
+        opts_master = opts_pillar.get('master', {})
+
+        opts_merged = {}
+        opts_merged.update(opts_master)
+        opts_merged.update(opts_pillar)
+        opts_merged.update(opts)
+
+        if profile:
+            self.conf = opts_merged.get(profile, {})
+        else:
+            self.conf = opts_merged
+
+        host = self.conf.get('etcd.host', '127.0.0.1')
+        port = self.conf.get('etcd.port', 4001)
+        username = self.conf.get('etcd.username')
+        password = self.conf.get('etcd.password')
+
+        auth = {}
+        if username and password:
+            auth = {
+                'username': str(username),
+                'password': str(password)
+            }
+
+        if HAS_LIBS:
+            self.client = etcd.Client(host, port, **auth)
+        else:
+            raise CommandExecutionError(
+                '(unable to import etcd, '
+                'module most likely not installed)'
+            )
+
+    def watch(self, key, recurse=False, timeout=0, index=None):
+        ret = {
+            'key': key,
+            'value': None,
+            'changed': False,
+            'mIndex': 0,
+            'dir': False
+        }
+        try:
+            result = self.read(key, recursive=recurse, wait=True, timeout=timeout, waitIndex=index)
+        except EtcdUtilWatchTimeout:
+            try:
+                result = self.read(key)
+            except etcd.EtcdKeyNotFound:
+                log.debug("etcd: key was not created while watching")
+                return ret
+            except ValueError:
+                return {}
+            if result and getattr(result, "dir"):
+                ret['dir'] = True
+            ret['value'] = getattr(result, 'value')
+            ret['mIndex'] = getattr(result, 'modifiedIndex')
+            return ret
+        except (etcd.EtcdConnectionFailed, MaxRetryError):
+            # This gets raised when we can't contact etcd at all
+            log.error("etcd: failed to perform 'watch' operation on key {0} due to connection error".format(key))
+            return {}
+        except ValueError:
+            return {}
+
+        if recurse:
+            ret['key'] = getattr(result, 'key', None)
+        ret['value'] = getattr(result, 'value', None)
+        ret['dir'] = getattr(result, 'dir', None)
+        ret['changed'] = True
+        ret['mIndex'] = getattr(result, 'modifiedIndex')
+        return ret
+
+    def get(self, key, recurse=False):
+        try:
+            result = self.read(key, recursive=recurse)
+        except etcd.EtcdKeyNotFound:
+            # etcd already logged that the key wasn't found, no need to do
+            # anything here but return
+            return None
+        except etcd.EtcdConnectionFailed:
+            log.error("etcd: failed to perform 'get' operation on key {0} due to connection error".format(key))
+            return None
+        except ValueError:
+            return None
+
+        return getattr(result, 'value', None)
+
+    def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
+        try:
+            if waitIndex:
+                result = self.client.read(key, recursive=recursive, wait=wait, timeout=timeout, waitIndex=waitIndex)
+            else:
+                result = self.client.read(key, recursive=recursive, wait=wait, timeout=timeout)
+        except (etcd.EtcdConnectionFailed, etcd.EtcdKeyNotFound) as err:
+            log.error("etcd: {0}".format(err))
+            raise
+        except ReadTimeoutError:
+            # For some reason, we have to catch this directly.  It falls through
+            # from python-etcd because it's trying to catch
+            # urllib3.exceptions.ReadTimeoutError and strangely, doesn't catch.
+            # This can occur from a watch timeout that expires, so it may be 'expected'
+            # behavior. See issue #28553
+            if wait:
+                # Wait timeouts will throw ReadTimeoutError, which isn't bad
+                log.debug("etcd: Timed out while executing a wait")
+                raise EtcdUtilWatchTimeout("Watch on {0} timed out".format(key))
+            log.error("etcd: Timed out")
+            raise etcd.EtcdConnectionFailed("Connection failed")
+        except MaxRetryError as err:
+            # Same issue as ReadTimeoutError.  When it 'works', python-etcd
+            # throws EtcdConnectionFailed, so we'll do that for it.
+            log.error("etcd: Could not connect")
+            raise etcd.EtcdConnectionFailed("Could not connect to etcd server")
+        except etcd.EtcdException as err:
+            # EtcdValueError inherits from ValueError, so we don't want to accidentally
+            # catch this below on ValueError and give a bogus error message
+            log.error("etcd: {0}".format(err))
+            raise
+        except ValueError:
+            # python-etcd doesn't fully support python 2.6 and ends up throwing this for *any* exception because
+            # it uses the newer {} format syntax
+            log.error("etcd: error. python-etcd does not fully support python 2.6, no error information available")
+            raise
+        except Exception as err:
+            log.error('etcd: uncaught exception {0}'.format(err))
+            raise
+        return result
+
+    def _flatten(self, data, path=''):
+        if len(data.keys()) == 0:
+            return {path: {}}
+        path = path.strip('/')
+        flat = {}
+        for k, v in data.iteritems():
+            k = k.strip('/')
+            if path:
+                p = '/{0}/{1}'.format(path, k)
+            else:
+                p = '/{0}'.format(k)
+            if isinstance(v, dict):
+                ret = self._flatten(v, p)
+                flat.update(ret)
+            else:
+                flat[p] = v
+        return flat
+
+    def update(self, fields, path=''):
+        if not isinstance(fields, dict):
+            log.error('etcd.update: fields is not type dict')
+            return None
+        fields = self._flatten(fields, path)
+        keys = {}
+        for k, v in fields.iteritems():
+            is_dir = False
+            if isinstance(v, dict):
+                is_dir = True
+            keys[k] = self.write(k, v, directory=is_dir)
+        return keys
+
+    def set(self, key, value, ttl=None, directory=False):
+        return self.write(key, value, ttl=ttl, directory=directory)
+
+    def write(self, key, value, ttl=None, directory=False):
+        # directories can't have values, but have to have it passed
+        if directory:
+            value = None
+        try:
+            result = self.client.write(key, value, ttl=ttl, dir=directory)
+        except (etcd.EtcdNotFile, etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
+            log.error('etcd: {0}'.format(err))
+            return None
+        except MaxRetryError as err:
+            log.error("etcd: Could not connect to etcd server: {0}".format(err))
+            return None
+        except Exception as err:
+            log.error('etcd: uncaught exception {0}'.format(err))
+            raise
+
+        if directory:
+            return getattr(result, 'dir')
+        else:
+            return getattr(result, 'value')
+
+    def ls(self, path):
+        ret = {}
+        try:
+            items = self.read(path)
+        except (etcd.EtcdKeyNotFound, ValueError):
+            return {}
+        except etcd.EtcdConnectionFailed:
+            log.error("etcd: failed to perform 'ls' operation on path {0} due to connection error".format(path))
+            return None
+
+        for item in items.children:
+            if item.dir is True:
+                if item.key == path:
+                    continue
+                dir_name = '{0}/'.format(item.key)
+                ret[dir_name] = {}
+            else:
+                ret[item.key] = item.value
+        return {path: ret}
+
+    def rm(self, key, recurse=False):
+        return self.delete(key, recurse)
+
+    def delete(self, key, recursive=False):
+        try:
+            if self.client.delete(key, recursive=recursive):
+                return True
+            else:
+                return False
+        except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, etcd.EtcdDirNotEmpty, etcd.EtcdKeyNotFound, ValueError) as err:
+            log.error('etcd: {0}'.format(err))
+            return None
+        except MaxRetryError as err:
+            log.error('etcd: Could not connect to etcd server: {0}'.format(err))
+            return None
+        except Exception as err:
+            log.error('etcd: uncaught exception {0}'.format(err))
+            raise
+
+    def tree(self, path):
+        '''
+        .. versionadded:: 2014.7.0
+
+        Recurse through etcd and return all values
+        '''
+        ret = {}
+        try:
+            items = self.read(path)
+        except (etcd.EtcdKeyNotFound, ValueError):
+            return None
+        except etcd.EtcdConnectionFailed:
+            log.error("etcd: failed to perform 'tree' operation on path {0} due to connection error".format(path))
+            return None
+
+        for item in items.children:
+            comps = str(item.key).split('/')
+            if item.dir is True:
+                if item.key == path:
+                    continue
+                ret[comps[-1]] = self.tree(item.key)
+            else:
+                ret[comps[-1]] = item.value
+        return ret
+
+
 def get_conn(opts, profile=None):
-    '''
-    .. versionadded:: 2014.7.0
-
-    Return a client object for accessing etcd
-    '''
-    opts_pillar = opts.get('pillar', {})
-    opts_master = opts_pillar.get('master', {})
-
-    opts_merged = {}
-    opts_merged.update(opts_master)
-    opts_merged.update(opts_pillar)
-    opts_merged.update(opts)
-
-    if profile:
-        conf = opts_merged.get(profile, {})
-    else:
-        conf = opts_merged
-
-    host = conf.get('etcd.host', '127.0.0.1')
-    port = conf.get('etcd.port', 4001)
-
-    if HAS_LIBS:
-        return etcd.Client(host, port)
-    else:
-        raise CommandExecutionError(
-            '(unable to import etcd, '
-            'module most likely not installed)'
-        )
+    client = EtcdClient(opts, profile)
+    return client
 
 
 def tree(client, path):
-    '''
-    .. versionadded:: 2014.7.0
-
-    Recurse through etcd and return all values
-    '''
-    ret = {}
-    items = client.get(path)
-
-    for item in items.children:
-        comps = str(item.key).split('/')
-        if item.dir is True:
-            if item.key == path:
-                continue
-            ret[comps[-1]] = tree(client, item.key)
-        else:
-            ret[comps[-1]] = item.value
-    return ret
+    return client.tree(path)

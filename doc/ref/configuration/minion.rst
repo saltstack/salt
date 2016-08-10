@@ -124,6 +124,41 @@ minion event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_minion:: master_failback
+
+``master_failback``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+If the minion is in multi-master mode and the :conf_minion`master_type`
+configuration option is set to ``failover``, this setting can be set to ``True``
+to force the minion to fail back to the first master in the list if the first
+master is back online.
+
+.. code-block:: yaml
+
+    master_failback: False
+
+.. conf_minion:: master_failback_interval
+
+``master_failback_interval``
+----------------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``0``
+
+If the minion is in multi-master mode, the :conf_minion`master_type` configuration
+is set to ``failover``, and the ``master_failback`` option is enabled, the master
+failback interval can be set to ping the top master with this interval, in seconds.
+
+.. code-block:: yaml
+
+    master_failback_interval: 0
+
 .. conf_minion:: master_alive_interval
 
 ``master_alive_interval``
@@ -360,7 +395,24 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_minion:: verify_env
+.. conf_minion:: append_minionid_config_dirs
+
+``append_minionid_config_dirs``
+-------------------------------
+
+Default: ``[]`` (the empty list) for regular minions, ``['cachedir']`` for proxy minions.
+
+Append minion_id to these configuration directories.  Helps with multiple proxies
+and minions running on the same machine. Allowed elements in the list:
+``pki_dir``, ``cachedir``, ``extension_modules``.
+Normally not needed unless running several proxies and/or minions on the same machine.
+
+.. code-block:: yaml
+
+    append_minionid_config_dirs:
+      - pki_dir
+      - cachedir
+
 
 ``verify_env``
 --------------
@@ -395,6 +447,26 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 .. code-block:: yaml
 
     cache_jobs: False
+
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+-----------------------
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
 
 .. conf_minion:: grains
 
@@ -433,6 +505,48 @@ to enable set grains_cache to ``True``.
 
     grains_cache: False
 
+.. conf_minion:: grains_deep_merge
+
+``grains_deep_merge``
+---------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The grains can be merged, instead of overridden, using this option.
+This allows custom grains to defined different subvalues of a dictionary
+grain. By default this feature is disabled, to enable set grains_deep_merge
+to ``True``.
+
+.. code-block:: yaml
+
+    grains_deep_merge: False
+
+For example, with these custom grains functions:
+
+.. code-block:: python
+
+    def custom1_k1():
+        return {'custom1': {'k1': 'v1'}}
+
+    def custom1_k2():
+        return {'custom1': {'k2': 'v2'}}
+
+Without ``grains_deep_merge``, the result would be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+
+With ``grains_deep_merge``, the result will be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+      k2: v2
 
 .. conf_minion:: mine_enabled
 
@@ -443,7 +557,8 @@ to enable set grains_cache to ``True``.
 
 Default: ``True``
 
-Determines whether or not the salt minion should run scheduled mine updates.
+Determines whether or not the salt minion should run scheduled mine updates.  If this is set to
+False then the mine update function will not get added to the scheduler for the minion.
 
 .. code-block:: yaml
 
@@ -559,6 +674,49 @@ parameter. The wait-time will be a random number of seconds between
     random_reauth_delay: 60
 
 .. conf_minion:: auth_tries
+
+``auth_tries``
+--------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
+
+.. code-block:: yaml
+
+    auth_tries: 7
+
+.. conf_minion:: master_tries
+
+``master_tries``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``1``
+
+The number of attempts to connect to a master before giving up. Set this to
+``-1`` for unlimited attempts. This allows for a master to have downtime and the
+minion to reconnect to it later when it comes back up. In 'failover' mode, which
+is set in the :conf_minion:`master_type` configuration, this value is the number
+of attempts for each set of masters. In this mode, it will cycle through the list
+of masters for each attempt.
+
+``master_tries`` is different than :conf_minion:`auth_tries` because ``auth_tries``
+attempts to retry auth attempts with a single master. ``auth_tries`` is under the
+assumption that you can connect to the master but not gain authorization from it.
+``master_tries`` will still cycle through all of the masters in a given try, so it
+is appropriate if you expect occasional downtime from the master(s).
+
+.. code-block:: yaml
+
+    master_tries: 1
+
+.. conf_minion:: acceptance_wait_time_max
 
 ``auth_tries``
 --------------
@@ -1229,6 +1387,7 @@ sha512 are also supported.
 
     hash_type: md5
 
+
 Pillar Settings
 ===============
 
@@ -1375,6 +1534,7 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+
 Thread Settings
 ===============
 
@@ -1382,14 +1542,15 @@ Thread Settings
 
 Default: ``True``
 
-Disable multiprocessing support by default when a minion receives a
+If `multiprocessing` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
+Conversely, if `multiprocessing` is disabled the new publication will be run
+executed in a thread.
+
 
 .. code-block:: yaml
 
     multiprocessing: True
-
-
 
 
 .. _minion-logging-settings:
@@ -1441,7 +1602,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly

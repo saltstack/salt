@@ -118,7 +118,7 @@ __func_alias__ = {
 
 # Import third party libs
 try:
-    import etcd
+    import salt.utils.etcd_util  # pylint: disable=W0611
     HAS_ETCD = True
 except ImportError:
     HAS_ETCD = False
@@ -154,15 +154,13 @@ def set_(name, value, profile=None):
         'changes': {}
     }
 
-    try:
-        current = __salt__['etcd.get'](name, profile=profile)
-    except etcd.EtcdKeyNotFound:
+    current = __salt__['etcd.get'](name, profile=profile)
+    if not current:
         created = True
-        current = None
 
     result = __salt__['etcd.set'](name, value, profile=profile)
 
-    if result != current:
+    if result and result != current:
         if created:
             rtn['comment'] = 'New key created'
         else:
@@ -215,9 +213,7 @@ def rm_(name, recurse=False, profile=None):
         'changes': {}
     }
 
-    try:
-        __salt__['etcd.get'](name, profile=profile)
-    except etcd.EtcdKeyNotFound:
+    if not __salt__['etcd.get'](name, profile=profile):
         rtn['comment'] = 'Key does not exist'
         return rtn
 

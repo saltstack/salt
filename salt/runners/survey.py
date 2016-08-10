@@ -150,9 +150,13 @@ def _get_pool_results(*args, **kwargs):
     sort = kwargs.get('survey_sort', 'down')
     direction = sort != 'up'
 
+    expr_form = kwargs.get('expr_form', 'compound')
+    if expr_form not in ['compound', 'pcre']:
+        expr_form = 'compound'
+
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
-        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
+        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], expr_form=expr_form)
     except SaltClientError as client_error:
         print(client_error)
         return ret

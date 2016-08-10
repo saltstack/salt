@@ -22,50 +22,23 @@ blockdev.__salt__ = {
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestBlockdevModule(TestCase):
     def test_dump(self):
-        device = '/dev/sdX'
-        cmd = ['blockdev',
-               '--getro',
-               '--getsz',
-               '--getss',
-               '--getpbsz',
-               '--getiomin',
-               '--getioopt',
-               '--getalignoff',
-               '--getmaxsect',
-               '--getsize',
-               '--getsize64',
-               '--getra',
-               '--getfra',
-               device]
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.dump(device)
-            mock.assert_called_once_with(cmd, python_shell=False)
+        with patch.dict(blockdev.__salt__, {'disk.dump': MagicMock(return_value=True)}):
+            self.assertTrue(blockdev.dump('/dev/sda'))
 
     @skipIf(not salt.utils.which('wipefs'), 'Wipefs not found')
     def test_wipe(self):
-        device = '/dev/sdX'
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.wipe(device)
-            mock.assert_called_once_with(
-                'wipefs {0}'.format(device),
-                python_shell=False
-            )
+        with patch.dict(blockdev.__salt__, {'disk.wipe': MagicMock(return_value=True)}):
+            self.assertTrue(blockdev.wipe('/dev/sda'))
 
     def test_tune(self):
-        device = '/dev/sdX'
-        mock = MagicMock(return_value='712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512')
-        with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
-            mock_dump = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch('salt.modules.blockdev.dump', mock_dump):
-                kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
-                blockdev.tune(device, **kwargs)
-                mock.assert_called_once_with(
-                    'blockdev --setra 512 --setfra 512 {0}'.format(device),
-                    python_shell=False
-                )
+        mock_run = MagicMock(return_value='712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512')
+        with patch.dict(blockdev.__salt__, {'disk.tune': MagicMock(return_value=True)}):
+            kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
+            ret = blockdev.tune('/dev/sda', **kwargs)
+            self.assertTrue(ret)
 
+    @skipIf(not salt.utils.which('sync'), 'sync not found')
+    @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
     def test_format(self):
         '''
         unit tests for blockdev.format
@@ -85,16 +58,6 @@ class TestBlockdevModule(TestCase):
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
         with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
             self.assertEqual(blockdev.fstype(device), fs_type)
-
-    def test_resize2fs(self):
-        '''
-        unit tests for blockdev.resize2fs
-        '''
-        device = '/dev/sdX1'
-        mock = MagicMock()
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.resize2fs(device)
-            mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
 
 
 if __name__ == '__main__':

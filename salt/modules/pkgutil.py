@@ -18,14 +18,18 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
+# Define the module's virtual name
+__virtualname__ = 'pkgutil'
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
     if __grains__['os'] == 'Solaris':
-        return 'pkgutil'
-    return False
+        return __virtualname__
+    return (False, 'The pkgutil execution module cannot be loaded: '
+            'only available on Solaris systems.')
 
 
 def refresh_db():

@@ -1,8 +1,8 @@
 .. _all-salt.proxy:
 
-==================================
-Full list of builtin proxy modules
-==================================
+=============
+proxy modules
+=============
 
 .. currentmodule:: salt.proxy
 
@@ -10,8 +10,11 @@ Full list of builtin proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    chronos
     esxi
     fx2
     junos
+    marathon
+    philips_hue
     rest_sample
     ssh_sample

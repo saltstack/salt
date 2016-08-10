@@ -1,32 +1,20 @@
-.. _execution-modules:
+.. _writing-execution-modules:
 
-=================
-Execution Modules
-=================
+=========================
+Writing Execution Modules
+=========================
 
 Salt execution modules are the functions called by the :command:`salt` command.
-
-.. note::
-
-    Salt execution modules are different from state modules and cannot be
-    called directly within state files.  You must use the :mod:`module <salt.states.module>`
-    state module to call execution modules within state runs.
-
-.. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
-
-Salt ships with many modules that cover a wide variety of tasks.
-
-.. _writing-execution-modules:
 
 Modules Are Easy to Write!
 ==========================
 
 Writing Salt execution modules is straightforward.
 
-A Salt execution modules is a Python or `Cython`_ module
+A Salt execution module is a Python or `Cython`_ module
 placed in a directory called ``_modules/``
 within the :conf_master:`file_roots` as specified by the master config file. By
-default this is `/srv/salt/_modules` on Linux systems.
+default this is ``/srv/salt/_modules`` on Linux systems.
 
 
 Modules placed in ``_modules/`` will be synced to the minions when any of the following

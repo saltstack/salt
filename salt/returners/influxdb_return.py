@@ -40,6 +40,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return influxdb --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return influxdb --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 
@@ -53,7 +62,7 @@ import salt.returners
 
 # Import third party libs
 try:
-    import influxdb.influxdb08
+    from influxdb.influxdb08 import InfluxDBClient
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
@@ -99,11 +108,11 @@ def _get_serv(ret=None):
     user = _options.get('user')
     password = _options.get('password')
 
-    return influxdb.influxdb08.InfluxDBClient(host=host,
-                                              port=port,
-                                              username=user,
-                                              password=password,
-                                              database=database)
+    return InfluxDBClient(host=host,
+                          port=port,
+                          username=user,
+                          password=password,
+                          database=database)
 
 
 def returner(ret):
@@ -216,15 +225,17 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
-    sql = "select distinct(jid) from jids"
+    sql = "select distinct(jid) from jids group by load"
 
-    #  [{u'points': [[0, u'saltdev']], u'name': u'returns', u'columns': [u'time', u'distinct']}]
+    # [{u'points': [[0, jid, load],
+    #               [0, jid, load]],
+    #   u'name': u'jids',
+    #   u'columns': [u'time', u'distinct', u'load']}]
     data = serv.query(sql)
-    ret = []
+    ret = {}
     if data:
-        for jid in data[0]['points']:
-            ret.append(jid[1])
-
+        for _, jid, load in data[0]['points']:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
 
 

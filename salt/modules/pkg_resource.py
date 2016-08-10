@@ -105,10 +105,10 @@ def parse_targets(name=None,
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
+            'Carbon.'
         )
         # Backwards compatibility
         saltenv = kwargs['__env__']

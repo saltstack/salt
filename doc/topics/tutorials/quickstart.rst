@@ -53,6 +53,11 @@ minion is configured to not gather this data from the master.
 Now the salt minion will not look for a master and will assume that the local
 system has all of the file and pillar resources.
 
+Configuration which resided in the
+:doc:`master configuration </ref/configuration/master>` (e.g. ``/etc/salt/master``)
+should be moved to the :doc:`minion configuration </ref/configuration/minion>`
+since the minion does not read the master configuration.
+
 .. note::
 
     When running Salt in masterless mode, do not run the salt-minion daemon.

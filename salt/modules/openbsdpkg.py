@@ -36,7 +36,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'OpenBSD':
         return __virtualname__
-    return False
+    return (False, 'The openbsdpkg execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -179,16 +180,31 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         return {}
 
     old = list_pkgs()
+    errors = []
     for pkg in pkg_params:
         if pkg_type == 'repository':
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
         cmd = 'pkg_add -x {0}'.format(pkg)
-        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+        out = __salt__['cmd.run_all'](
+            cmd,
+            python_shell=False,
+            output_loglevel='trace'
+        )
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -226,10 +242,28 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+
+    out = __salt__['cmd.run_all'](
+        cmd,
+        python_shell=False,
+        output_loglevel='trace'
+    )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):

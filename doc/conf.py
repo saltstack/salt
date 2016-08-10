@@ -92,7 +92,10 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.iostream',
+    'tornado.netutil',
     'tornado.simple_httpclient',
+    'tornado.stack_context',
     'tornado.web',
     'tornado.websocket',
 
@@ -125,6 +128,8 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'pyroute2',
+    'pyroute2.ipdb',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -202,8 +207,8 @@ next_release_dir = ''  # path on web server for next release branch
 today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'previous'  # latest, previous, develop, next
-release = previous_release  # version, latest_release, previous_release
+build_type = 'latest'  # latest, previous, develop, next
+release = latest_release  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -263,11 +268,16 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-2-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
+.. |osxdownload| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -342,6 +352,8 @@ html_context = {
     'latest_release': latest_release,
     'previous_release': previous_release,
     'previous_release_dir': previous_release_dir,
+    'next_release': next_release,
+    'next_release_dir': next_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
     'today': today,

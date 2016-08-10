@@ -21,7 +21,7 @@ def __virtual__():
     '''
     if os.path.exists('/etc/munin/munin-node.conf'):
         return 'munin'
-    return False
+    return (False, 'The munin execution module cannot be loaded: munin-node is not installed.')
 
 
 def _get_conf(fname='/etc/munin/munin-node.cfg'):

@@ -34,7 +34,7 @@ def __virtual__():
     if salt.utils.which('kadmin'):
         return True
 
-    return False
+    return (False, 'The kerberos execution module not loaded: kadmin not in path')
 
 
 def __execute_kadmin(cmd):

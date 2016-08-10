@@ -30,6 +30,12 @@ correctly:
     CREATE DATABASE salt WITH OWNER salt;
     EOF
 
+In case the postgres database is a remote host, you'll need this command also:
+
+.. code-block:: sql
+
+   ALTER ROLE salt WITH LOGIN;
+
 and then:
 
 .. code-block:: sql
@@ -72,6 +78,19 @@ and then:
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+
+    DROP TABLE IF EXISTS salt_events;
+    CREATE TABLE salt_events (
+      id SERIAL,
+      tag text NOT NULL,
+      data text NOT NULL,
+      alter_time TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      master_id text NOT NULL
+    );
+    CREATE INDEX ON salt_events (tag);
+    CREATE INDEX ON salt_events (data);
+    CREATE INDEX ON salt_events (id);
+    CREATE INDEX ON salt_events (master_id);
     EOF
 
 Required python modules: psycopg2
@@ -222,6 +241,27 @@ def returner(load):
             load.get('success'),
         )
     )
+    _close_conn(conn)
+
+
+def event_return(events):
+    '''
+    Return event to a postgres server
+
+    Require that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    conn = _get_conn()
+    if conn is None:
+        return None
+    cur = conn.cursor()
+    for event in events:
+        tag = event.get('tag', '')
+        data = event.get('data', '')
+        sql = '''INSERT INTO salt_events
+                (tag, data, master_id)
+                VALUES (%s, %s, %s)'''
+        cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
     _close_conn(conn)
 
 

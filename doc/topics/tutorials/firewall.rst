@@ -1,3 +1,5 @@
+.. _firewall:
+
 ================================
 Opening the Firewall up for Salt
 ================================
@@ -103,13 +105,13 @@ common locations, but your mileage may vary.
 
 **Fedora / RHEL / CentOS**:
 
-.. code-block:: bash
+.. code-block:: text
 
     /etc/sysconfig/iptables
 
 **Arch Linux**:
 
-.. code-block:: bash
+.. code-block:: text
 
     /etc/iptables/iptables.rules
 
@@ -120,7 +122,7 @@ Follow these instructions: https://wiki.debian.org/iptables
 Once you've found your firewall rules, you'll need to add the two lines below
 to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 
-.. code-block:: bash
+.. code-block:: text
 
     -A INPUT -m state --state new -m tcp -p tcp --dport 4505 -j ACCEPT
     -A INPUT -m state --state new -m tcp -p tcp --dport 4506 -j ACCEPT
@@ -141,7 +143,7 @@ The BSD-family of operating systems uses `packet filter (pf)`_. The following
 example describes the additions to ``pf.conf`` needed to access the Salt
 master.
 
-.. code-block:: bash
+.. code-block:: text
 
     pass in on $int_if proto tcp from any to $int_if port 4505
     pass in on $int_if proto tcp from any to $int_if port 4506

@@ -17,6 +17,8 @@ Watch files and translate the changes into salt events
 # Import Python libs
 from __future__ import absolute_import
 import collections
+import fnmatch
+import os
 
 # Import salt libs
 import salt.ext.six
@@ -97,7 +99,7 @@ def validate(config):
         'unmount'
     ]
 
-    # Configuration for diskusage beacon should be a list of dicts
+    # Configuration for inotify beacon should be a dict of dicts
     log.debug('config {0}'.format(config))
     if not isinstance(config, dict):
         return False, 'Configuration for inotify beacon must be a dictionary.'
@@ -150,34 +152,39 @@ def beacon(config):
                 - close_write
               recurse: True
               auto_add: True
+              exclude:
+                - /path/to/file/or/dir/exclude1
+                - /path/to/file/or/dir/exclude2
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
 
-    * access            File accessed
-    * attrib            File metadata changed
-    * close_nowrite     Unwritable file closed
-    * close_write       Writable file closed
-    * create            File created in watched directory
-    * delete            File deleted from watched directory
-    * delete_self       Watched file or directory deleted
-    * modify            File modified
-    * moved_from        File moved out of watched directory
-    * moved_to          File moved into watched directory
-    * move_self         Watched file moved
-    * open              File opened
+    * access            - File accessed
+    * attrib            - File metadata changed
+    * close_nowrite     - Unwritable file closed
+    * close_write       - Writable file closed
+    * create            - File created in watched directory
+    * delete            - File deleted from watched directory
+    * delete_self       - Watched file or directory deleted
+    * modify            - File modified
+    * moved_from        - File moved out of watched directory
+    * moved_to          - File moved into watched directory
+    * move_self         - Watched file moved
+    * open              - File opened
 
     The mask can also contain the following options:
 
-    * dont_follow       Don't dereference symbolic links
-    * excl_unlink       Omit events for children after they have been unlinked
-    * oneshot           Remove watch after one event
-    * onlydir           Operate only if name is directory
+    * dont_follow       - Don't dereference symbolic links
+    * excl_unlink       - Omit events for children after they have been unlinked
+    * oneshot           - Remove watch after one event
+    * onlydir           - Operate only if name is directory
 
     recurse:
       Recursively watch files in the directory
     auto_add:
       Automatically start watching files that are created in the watched directory
+    exclude:
+      Exclude directories or files from triggering events in the watched directory
     '''
     ret = []
     notifier = _get_notifier()
@@ -190,10 +197,32 @@ def beacon(config):
         queue = __context__['inotify.queue']
         while queue:
             event = queue.popleft()
-            sub = {'tag': event.path,
-                   'path': event.pathname,
-                   'change': event.maskname}
-            ret.append(sub)
+
+            _append = True
+            # Find the matching path in config
+            path = event.path
+            while path != '/':
+                if path in config:
+                    break
+                path = os.path.dirname(path)
+
+            excludes = config[path].get('exclude', '')
+            if excludes and isinstance(excludes, list):
+                for exclude in excludes:
+                    if '*' in exclude:
+                        if fnmatch.fnmatch(event.pathname, exclude):
+                            _append = False
+                    else:
+                        if event.pathname.startswith(exclude):
+                            _append = False
+
+            if _append:
+                sub = {'tag': event.path,
+                       'path': event.pathname,
+                       'change': event.maskname}
+                ret.append(sub)
+            else:
+                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
 
     # Get paths currently being watched
     current = set()

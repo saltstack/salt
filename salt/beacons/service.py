@@ -46,6 +46,10 @@ def beacon(config):
     events only when the service status changes.  Otherwise, it will fire an
     event at each beacon interval.  The default is False.
 
+    `emitatstartup`: when `emitatstartup` is False the beacon will not fire
+    event when the minion is reload. Applicable only when `onchangeonly` is True.
+    The default is True.
+
     `uncleanshutdown`: If `uncleanshutdown` is present it should point to the
     location of a pid file for the service.  Most services will not clean up
     this pid file if they are shutdown uncleanly (e.g. via `kill -9`) or if they
@@ -85,6 +89,7 @@ def beacon(config):
         if config[service] is None:
             defaults = {
                     'oncleanshutdown': False,
+                    'emitatstartup': True,
                     'onchangeonly': False
                     }
             config[service] = defaults
@@ -97,7 +102,12 @@ def beacon(config):
             ret_dict[service]['uncleanshutdown'] = True if os.path.exists(filename) else False
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
             if service not in LAST_STATUS:
-                LAST_STATUS[service] = ''
+                LAST_STATUS[service] = ret_dict[service]
+                if not service['emitatstartup']:
+                    continue
+                else:
+                    ret.append(ret_dict)
+
             if LAST_STATUS[service] != ret_dict[service]:
                 LAST_STATUS[service] = ret_dict[service]
                 ret.append(ret_dict)

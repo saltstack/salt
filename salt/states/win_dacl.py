@@ -18,7 +18,7 @@ Ensure an ACL is present
             - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
             - objectType: Registry
             - user: FakeUser
-            - permission: FulLControl
+            - permission: FullControl
             - acetype: ALLOW
             - propagation: KEY&SUBKEYS
 

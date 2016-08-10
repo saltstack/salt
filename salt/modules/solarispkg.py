@@ -31,7 +31,9 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
         return __virtualname__
-    return False
+    return (False,
+            'The solarispkg execution module failed to load: only available '
+            'on Solaris <= 10.')
 
 
 def _write_adminfile(kwargs):
@@ -74,7 +76,9 @@ def _write_adminfile(kwargs):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed as a dict::
+    List the packages currently installed as a dict:
+
+    .. code-block:: python
 
         {'<package_name>': '<version>'}
 
@@ -191,31 +195,39 @@ def version(*names, **kwargs):
 def install(name=None, sources=None, saltenv='base', **kwargs):
     '''
     Install the passed package. Can install packages from the following
-    sources::
+    sources:
 
-        * Locally (package already exists on the minion
-        * HTTP/HTTPS server
-        * FTP server
-        * Salt master
+    * Locally (package already exists on the minion
+    * HTTP/HTTPS server
+    * FTP server
+    * Salt master
 
-    Returns a dict containing the new package names and versions::
+    Returns a dict containing the new package names and versions:
+
+    .. code-block:: python
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, installing a data stream pkg that already exists on the
-    minion::
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Installing a data stream pkg that already exists on the minion
 
         salt '*' pkg.install sources='[{"<pkg name>": "/dir/on/minion/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a data stream pkg that exists on the salt master::
+        # Installing a data stream pkg that exists on the salt master
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "salt://pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a data stream pkg that exists on a HTTP server::
+    CLI Example:
 
+    .. code-block:: bash
+
+        # Installing a data stream pkg that exists on a HTTP server
         salt '*' pkg.install sources='[{"<pkg name>": "http://packages.server.com/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
@@ -226,8 +238,11 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     package in the global zone is to install it in all zones. This overrides
     that and installs the package only in the global.
 
-    CLI Example, installing a data stream package only in the global zone::
+    CLI Example:
 
+    .. code-block:: bash
+
+        # Installing a data stream package only in the global zone:
         salt 'global_zone' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]' current_zone_only=True
 
     By default salt automatically provides an adminfile, to automate package
@@ -251,17 +266,24 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     providing your own adminfile to the minions.
 
     Note: You can find all of the possible options to provide to the adminfile
-    by reading the admin man page::
+    by reading the admin man page:
+
+    .. code-block:: bash
 
         man -s 4 admin
 
-    CLI Example - Overriding the 'instance' adminfile option when calling the
-    module directly::
+    CLI Example:
 
+    .. code-block:: bash
+
+        # Overriding the 'instance' adminfile option when calling the module directly
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' instance="overwrite"
 
-    CLI Example - Overriding the 'instance' adminfile option when used in a
-    state::
+    SLS Example:
+
+    .. code-block:: yaml
+
+        # Overriding the 'instance' adminfile option when used in a state
 
         SMClgcc346:
           pkg.installed:
@@ -269,15 +291,19 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
               - SMClgcc346: salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg
             - instance: overwrite
 
-    Note: the ID declaration is ignored, as the package name is read from the
-    "sources" parameter.
+    .. note::
+        The ID declaration is ignored, as the package name is read from the
+        ``sources`` parameter.
 
-    CLI Example - Providing your own adminfile when calling the module
-    directly::
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Providing your own adminfile when calling the module directly
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' admin_source='salt://pkgs/<adminfile filename>'
 
-    CLI Example - Providing your own adminfile when using states::
+        # Providing your own adminfile when using states
 
         <pkg name>:
           pkg.installed:
@@ -285,8 +311,9 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
               - <pkg name>: salt://pkgs/<pkg filename>
             - admin_source: salt://pkgs/<adminfile filename>
 
-    Note: the ID declaration is ignored, as the package name is read from the
-    "sources" parameter.
+    .. note::
+        The ID declaration is ignored, as the package name is read from the
+        ``sources`` parameter.
     '''
     if salt.utils.is_true(kwargs.get('refresh')):
         log.warning('\'refresh\' argument not implemented for solarispkg '
@@ -314,28 +341,38 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         adminfile = _write_adminfile(kwargs)
 
     old = list_pkgs()
-    cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
+    cmd_prefix = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
     # Only makes sense in a global zone but works fine in non-globals.
     if kwargs.get('current_zone_only') == 'True':
-        cmd += '-G '
+        cmd_prefix += '-G '
 
+    errors = []
     for pkg in pkg_params:
-        temp_cmd = cmd + '-d {0} "all"'.format(pkg)
+        cmd = cmd_prefix + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        __salt__['cmd.run'](
-                temp_cmd,
-                python_shell=False,
-                output_loglevel='trace')
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
 
     # Remove the temp adminfile
     if 'admin_source' not in kwargs:
         os.unlink(adminfile)
 
-    return salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def remove(name=None, pkgs=None, saltenv='base', **kwargs):
@@ -437,15 +474,31 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         os.close(fd_)
 
     # Remove the package
-    cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
-                                                 ' '.join(targets))
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+    cmd = ['/usr/sbin/pkgrm', '-n', '-a', adminfile] + targets
+    out = __salt__['cmd.run_all'](cmd,
+                                  python_shell=False,
+                                  output_loglevel='trace')
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
     # Remove the temp adminfile
     if 'admin_source' not in kwargs:
         os.unlink(adminfile)
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):

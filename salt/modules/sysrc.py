@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.which('sysrc') is not None:
         return True
-    return False
+    return (False, 'The sysrc execution module failed to load: the sysrc binary is not in the path.')
 
 
 def get(**kwargs):

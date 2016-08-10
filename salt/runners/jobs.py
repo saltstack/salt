@@ -75,7 +75,7 @@ def active(outputter=None, display_progress=False):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.active runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -167,7 +167,7 @@ def lookup_jid(jid,
             outputter = None
     else:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.lookup_jid runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -224,7 +224,7 @@ def list_job(jid, ext_source=None, outputter=None, display_progress=False):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.list_job runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -374,7 +374,7 @@ def list_jobs(ext_source=None,
             else:
                 log.error(
                     '\'dateutil\' library not available, skipping start_time '
-                    'comparision.'
+                    'comparison.'
                 )
 
         if end_time and _match:
@@ -387,7 +387,7 @@ def list_jobs(ext_source=None,
             else:
                 log.error(
                     '\'dateutil\' library not available, skipping end_time '
-                    'comparision.'
+                    'comparison.'
                 )
 
         if _match:
@@ -482,7 +482,7 @@ def print_job(jid, ext_source=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.print_job runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -507,14 +507,19 @@ def exit_success(jid, ext_source=None):
     '''
     ret = dict()
 
-    data = lookup_jid(
+    data = list_job(
         jid,
         ext_source=ext_source
     )
 
-    for minion in data:
-        if "retcode" in data[minion]:
-            ret[minion] = True if not data[minion]['retcode'] else False
+    minions = data['Minions']
+    result = data['Result']
+
+    for minion in minions:
+        if minion in result and 'return' in result[minion]:
+            ret[minion] = True if result[minion]['return'] else False
+        else:
+            ret[minion] = False
 
     return ret
 

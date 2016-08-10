@@ -77,18 +77,19 @@ class SaltStackVersion(object):
         # latest release so we can map deprecation warnings to versions.
 
 
-        # pylint: disable=E8203,E8265
-        # ----- Please refrain from fixing PEP-8 E203 and E265------------------------------------------------------->
-        # The idea is keep this readable
-        # ------------------------------------------------------------------------------------------------------------
+        # pylint: disable=E8203
+        # ----- Please refrain from fixing PEP-8 E203 and E265 ----->
+        # The idea is to keep this readable.
+        # -----------------------------------------------------------
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
         'Beryllium'     : (2015, 8),
-        'Boron'         : (MAX_SIZE - 104, 0),
+        'Boron'         : (2016, 3),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
-        #'Oxygen'       : (MAX_SIZE - 101, 0),
+        'Oxygen'        : (MAX_SIZE - 101, 0),
+        # pylint: disable=E8265
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
         #'Sodium'       : (MAX_SIZE - 98 , 0),
@@ -190,7 +191,7 @@ class SaltStackVersion(object):
         #'Bohrium'      : (MAX_SIZE - 2  , 0),
         #'Hassium'      : (MAX_SIZE - 1  , 0),
         #'Meitnerium'   : (MAX_SIZE - 0  , 0),
-        # <---- Please refrain from fixing PEP-8 E203 and E265 -------------------------------------------------------
+        # <---- Please refrain from fixing PEP-8 E203 and E265 ------
         # pylint: enable=E8203,E8265
     }
 
@@ -252,7 +253,7 @@ class SaltStackVersion(object):
         match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
-                'Unable to parse version string: {0!r}'.format(version_string)
+                'Unable to parse version string: \'{0}\''.format(version_string)
             )
         return cls(*match.groups())
 
@@ -260,7 +261,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version {0!r} is not known'.format(name)
+                'Named version \'{0}\' is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
@@ -365,7 +366,7 @@ class SaltStackVersion(object):
                 other = SaltStackVersion(*other)
             else:
                 raise ValueError(
-                    'Cannot instantiate Version from type {0!r}'.format(
+                    'Cannot instantiate Version from type \'{0}\''.format(
                         type(other)
                     )
                 )
@@ -406,7 +407,7 @@ class SaltStackVersion(object):
     def __repr__(self):
         parts = []
         if self.name:
-            parts.append('name={0!r}'.format(self.name))
+            parts.append('name=\'{0}\''.format(self.name))
         parts.extend([
             'major={0}'.format(self.major),
             'minor={0}'.format(self.minor),
@@ -584,7 +585,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except ImportError:
+        except Exception:
             yield name, None
 
 
@@ -603,19 +604,22 @@ def system_information():
         if lin_ver[0]:
             return ' '.join(lin_ver)
         elif mac_ver[0]:
-            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
+                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            else:
+                return ' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return ' '.join(win_ver)
+        else:
+            return ''
 
     system = [
+        ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
+        ('version', system_version()),
     ]
-
-    sys_ver = system_version()
-    if sys_ver:
-        system.append(('system', sys_ver))
 
     for name, attr in system:
         yield name, attr
@@ -649,7 +653,8 @@ def versions_report(include_salt_cloud=False):
     info = []
     for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
         info.append('{0}:'.format(ver_type))
-        for name in sorted(ver_info[ver_type]):
+        # List dependencies in alphabetical, case insensitive order
+        for name in sorted(ver_info[ver_type], cmp=lambda x, y: cmp(x.lower(), y.lower())):
             ver = fmt.format(name,
                              ver_info[ver_type][name] or 'Not Installed',
                              pad=padding)

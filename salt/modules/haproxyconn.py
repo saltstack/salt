@@ -31,7 +31,7 @@ def __virtual__():
     '''
     if HAS_HAPROXY:
         return __virtualname__
-    return False
+    return (False, 'The haproxyconn execution module cannot be loaded: haproxyctl module not available')
 
 
 def _get_conn(socket='/var/run/haproxy.sock'):
@@ -74,7 +74,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
         Server to enable
 
     backend
-        haproxy backend
+        haproxy backend, or all backends if "*" is supplied
 
     socket
         haproxy stats socket
@@ -85,10 +85,20 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
 
         salt '*' haproxy.enable_server web1.example.com www
     '''
-    ha_conn = _get_conn(socket)
-    ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
-    ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend, socket=socket)
+
+    if backend == '*':
+        backends = show_backends(socket=socket).split('\n')
+    else:
+        backends = [backend]
+
+    results = {}
+    for backend in backends:
+        ha_conn = _get_conn(socket)
+        ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
+        ha_conn.sendCmd(ha_cmd)
+        results[backend] = list_servers(backend, socket=socket)
+
+    return results
 
 
 def disable_server(name, backend, socket='/var/run/haproxy.sock'):
@@ -99,7 +109,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
         Server to disable
 
     backend
-        haproxy backend
+        haproxy backend, or all backends if "*" is supplied
 
     socket
         haproxy stats socket
@@ -110,10 +120,20 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
 
         salt '*' haproxy.disable_server db1.example.com mysql
     '''
-    ha_conn = _get_conn(socket)
-    ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
-    ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend, socket=socket)
+
+    if backend == '*':
+        backends = show_backends(socket=socket).split('\n')
+    else:
+        backends = [backend]
+
+    results = {}
+    for backend in backends:
+        ha_conn = _get_conn(socket)
+        ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
+        ha_conn.sendCmd(ha_cmd)
+        results[backend] = list_servers(backend, socket=socket)
+
+    return results
 
 
 def get_weight(name, backend, socket='/var/run/haproxy.sock'):

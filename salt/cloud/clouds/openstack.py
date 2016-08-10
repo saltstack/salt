@@ -27,7 +27,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-openstack-config:
       # The OpenStack identity service url
-      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
+      # The OpenStack Identity Version (default: 2)
+      auth_version: 2
       # The OpenStack compute region
       compute_region: region-b.geo-1
       # The OpenStack compute service name
@@ -66,6 +68,22 @@ For in-house Openstack Essex installation, libcloud needs the service_type :
     identity_url: 'http://control.openstack.example.org:5000/v2.0/'
     compute_name : Compute Service
     service_type : compute
+
+To use identity v3 for authentication, specify the `domain` and `auth_version`
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      identity_url: 'http://control.openstack.example.org:5000/v3/auth/tokens'
+      auth_version: 3
+      compute_name : Compute Service
+      compute_region: East
+      service_type : compute
+      tenant: tenant
+      domain: testing
+      user: daniel
+      password: securepassword
+      driver: openstack
 
 
 Either a password or an API key must also be specified:
@@ -256,6 +274,9 @@ def get_conn():
         'ex_tenant_name': config.get_cloud_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
+        'ex_domain_name': config.get_cloud_config_value(
+            'domain', vm_, __opts__, default='Default', search_global=False
+        ),
     }
 
     service_type = config.get_cloud_config_value('service_type',
@@ -288,7 +309,10 @@ def get_conn():
     )
 
     if password is not None:
-        authinfo['ex_force_auth_version'] = '2.0_password'
+        if config.get_cloud_config_value('auth_version', vm_, __opts__, search_global=False) == 3:
+            authinfo['ex_force_auth_version'] = '3.x_password'
+        else:
+            authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
         if password == 'USE_KEYRING':
             # retrieve password from system keyring
@@ -367,7 +391,7 @@ def ignore_cidr(vm_, ip):
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
         log.warning(
-            'IP {0!r} found within {1!r}; ignoring it.'.format(ip, cidr)
+            'IP \'{0}\' found within \'{1}\'; ignoring it.'.format(ip, cidr)
         )
         return True
 
@@ -575,7 +599,7 @@ def create(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                'The defined ssh_key_file {0!r} does not exist'.format(
+                'The defined ssh_key_file \'{0}\' does not exist'.format(
                     key_filename
                 )
             )
@@ -600,7 +624,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -673,7 +697,7 @@ def create(vm_):
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
-                    'Attaching floating IP {0!r} to node {1!r}'.format(
+                    'Attaching floating IP \'{0}\' to node \'{1}\''.format(
                         ip, name
                     )
                 )
@@ -777,9 +801,9 @@ def create(vm_):
     if hasattr(data, 'extra') and 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
@@ -826,7 +850,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                         # A future enhancement might be to allow salt-cloud
                         # to dynamically allocate new address but that might
                         raise SaltCloudSystemExit(
-                            'Floating pool {0!r} does not have any more '
+                            'Floating pool \'{0}\' does not have any more '
                             'please create some more or use a different '
                             'pool.'.format(net['floating'])
                         )

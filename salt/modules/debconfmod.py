@@ -28,10 +28,12 @@ def __virtual__():
     is installed.
     '''
     if __grains__['os_family'] != 'Debian':
-        return False
+        return (False, 'The debconfmod module could not be loaded: '
+                'unsupported OS family')
 
     if salt.utils.which('debconf-get-selections') is None:
-        return False
+        return (False, 'The debconfmod module could not be loaded: '
+                'debconf-utils is not installed.')
 
     return __virtualname__
 
@@ -182,9 +184,9 @@ def set_file(path, saltenv='base', **kwargs):
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Boron.'
+            '\'__env__\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = kwargs['__env__']

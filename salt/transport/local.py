@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import logging
 
 # Import Salt Libs
@@ -32,7 +32,7 @@ class LocalChannel(ReqChannel):
                     'data': ''.join(f.readlines()),
                     'dest': load['path'],
                 }
-                print ('returning', ret)
+                print('returning', ret)
         else:
             # end of buffer
             ret = {

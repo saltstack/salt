@@ -94,7 +94,7 @@ __virtualname__ = 'zk_concurrency'
 
 def __virtual__():
     if not HAS_DEPS:
-        return False
+        return (False, "Module zk_concurrency: dependencies failed")
 
     return __virtualname__
 

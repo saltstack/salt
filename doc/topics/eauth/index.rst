@@ -12,25 +12,8 @@ command authorization to any external authentication system, such as PAM or LDAP
     eAuth using the PAM external auth system requires salt-master to be run as
     root as this system needs root access to check authentication.
 
-Access Control System
----------------------
-
-.. note:: When to Use ``client_acl`` and ``external_auth``
-
-    ``client_acl`` is useful for allowing local system users to run Salt
-    commands without giving them root access. If you can log into the Salt
-    master directly, then ``client_acl`` will allow you to use Salt without
-    root privileges. If the local system is configured to authenticate against
-    a remote system, like LDAP or Active Directory, then ``client_acl`` will
-    interact with the remote system transparently.
-
-    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
-    that use Salt's Python API. It can be used at the CLI (with the ``-a``
-    flag) but it is more cumbersome as there are more steps involved.  The only
-    time it is useful at the CLI is when the local system is *not* configured
-    to authenticate against an external service *but* you still want Salt to
-    authenticate against an external service.
-
+External Authentication System Configuration
+============================================
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
 in the master configuration file and uses the :ref:`access control system
@@ -56,6 +39,9 @@ service to authenticate.
 
 .. note:: The PAM module does not allow authenticating as ``root``.
 
+.. note:: state.sls and state.highstate will return "Failed to authenticate!"
+   if the request timeout is reached.  Use -t flag to increase the timeout
+
 To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
 modules <all-salt.runners>` the following ``@`` syntax must be used:
 
@@ -76,15 +62,39 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
     Globs will not match wheel or runners! They must be explicitly
     allowed with @wheel or @runner.
 
-The external authentication system can then be used from the command-line by
-any user on the same system as the master with the ``-a`` option:
+.. warning::
+    All users that have external authentication privileges are allowed to run
+    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
+    that this could inadvertently expose some data such as minion IDs.
 
-.. code-block:: bash
+Matching syntax
+---------------
 
-    $ salt -a pam web\* test.ping
+The structure of the ``external_auth`` dictionary can take the following
+shapes. Function matches are regular expressions; minion matches are compound
+targets.
 
-The system will ask the user for the credentials required by the
-authentication system and then publish the command.
+By user:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          - <regex to match function>
+
+By user, by minion:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <minion compound target>:
+            - <regex to match function>
+
+Groups
+------
 
 To apply permissions to a group of users in an external authentication system,
 append a ``%`` to the ID:
@@ -97,10 +107,54 @@ append a ``%`` to the ID:
           - '*':
             - 'pkg.*'
 
-.. warning::
-    All users that have external authentication privileges are allowed to run
-    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
-    that this could inadvertently expose some data such as minion IDs.
+Limiting by function arguments
+------------------------------
+
+Positional arguments or keyword arguments to functions can also be whitelisted.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        my_user:
+          - '*':
+            - 'my_mod.*':
+              args:
+                - 'a.*'
+                - 'b.*'
+              kwargs:
+                'kwa': 'kwa.*'
+                'kwb': 'kwb'
+
+The rules:
+
+1. The arguments values are matched as regexp.
+2. If arguments restrictions are specified the only matched are allowed.
+3. If an argument isn't specified any value is allowed.
+4. To skip an arg use "everything" regexp ``.*``. I.e. if ``arg0`` and ``arg2``
+   should be limited but ``arg1`` and other arguments could have any value use:
+
+   .. code-block:: yaml
+
+       args:
+         - 'value0'
+         - '.*'
+         - 'value2'
+
+Usage
+=====
+
+The external authentication system can then be used from the command-line by
+any user on the same system as the master with the ``-a`` option:
+
+.. code-block:: bash
+
+    $ salt -a pam web\* test.ping
+
+The system will ask the user for the credentials required by the
+authentication system and then publish the command.
 
 .. _salt-token-generation:
 
@@ -117,7 +171,7 @@ adding a ``-T`` option when authenticating:
 
     $ salt -T -a pam web\* test.ping
 
-Now a token will be created that has a expiration of 12 hours (by default).
+Now a token will be created that has an expiration of 12 hours (by default).
 This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
@@ -129,7 +183,6 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP and Active Directory
 =========================
-
 .. note::
 
     LDAP usage requires that you have installed python-ldap.
@@ -139,7 +192,6 @@ accessed via its LDAP interface)
 
 OpenLDAP and similar systems
 ----------------------------
-
 LDAP configuration happens in the Salt master configuration file.
 
 Server configuration values and their defaults:
@@ -189,14 +241,16 @@ Server configuration values and their defaults:
     auth.ldap.activedirectory: False
     auth.ldap.persontype: 'person'
 
-There are two phases to LDAP authentication.  First, Salt authenticates to search for a users's Distinguished Name
+    auth.ldap.minion_stripdomains: []
+
+There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
 read-only access to the LDAP directory.  After Salt searches the directory to determine the actual user's DN
 and groups, it re-authenticates as the user running the Salt commands.
 
 If you are already aware of the structure of your DNs and permissions in your LDAP store are set such that
 users can look up their own group memberships, then the first and second users can be the same.  To tell Salt this is
-the case, omit the ``auth.ldap.bindpw`` parameter.  You can template the binddn like this:
+the case, omit the ``auth.ldap.bindpw`` parameter.  You can template the ``binddn`` like this:
 
 .. code-block:: yaml
 
@@ -228,6 +282,16 @@ the results are filtered against ``auth.ldap.groupclass``, default
 
     auth.ldap.groupou: Groups
 
+When using the `ldap('DC=domain,DC=com')` eauth operator, sometimes the records returned
+from LDAP or Active Directory have fully-qualified domain names attached, while minion IDs
+instead are simple hostnames.  The parameter below allows the administrator to strip
+off a certain set of domain names so the hostnames looked up in the directory service
+can match the minion IDs.
+               
+.. code-block:: yaml
+
+   auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']
+
 Active Directory
 ----------------
 
@@ -246,7 +310,7 @@ the master config:
 To determine group membership in AD, the username and password that is entered
 when LDAP is requested as the eAuth mechanism on the command line is used to
 bind to AD's LDAP interface. If this fails, then it doesn't matter what groups
-the user belongs to, he or she is denied access. Next, the distinguishedName
+the user belongs to, he or she is denied access. Next, the ``distinguishedName``
 of the user is looked up with the following LDAP search:
 
 .. code-block:: text
@@ -273,7 +337,7 @@ membership.  Then the following LDAP query is executed:
             - '*':
                 - test.ping
 
-To configure an LDAP group, append a ``%`` to the ID:
+To configure a LDAP group, append a ``%`` to the ID:
 
 .. code-block:: yaml
 
@@ -282,3 +346,17 @@ To configure an LDAP group, append a ``%`` to the ID:
         test_ldap_group%:
           - '*':
             - test.echo
+
+In addition, if there are a set of computers in the directory service that should
+be part of the eAuth definition, they can be specified like this:
+
+.. code-block:: yaml
+
+    external_auth:
+      ldap:
+        test_ldap_group%:
+          - ldap('DC=corp,DC=example,DC=com'):
+            - test.echo
+
+The string inside `ldap()` above is any valid LDAP/AD tree limiter.  `OU=` in
+particular is permitted as long as it would return a list of computer objects.

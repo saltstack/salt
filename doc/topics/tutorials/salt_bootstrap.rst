@@ -1,3 +1,5 @@
+.. _salt-bootstrap:
+
 ==============
 Salt Bootstrap
 ==============

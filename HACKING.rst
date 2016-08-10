@@ -140,6 +140,10 @@ M2Crypto installed using apt::
 
     virtualenv --system-site-packages /path/to/your/virtualenv
 
+On Gentoo systems you should use ``--system-site-packages`` when creating
+the virtualenv to enable pkg and portage_config functionality as the
+portage package is not available via pip
+
 .. note:: Using your system Python modules in the virtualenv
 
     If you have the required python modules installed on your system already

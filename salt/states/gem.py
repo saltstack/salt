@@ -35,7 +35,8 @@ def installed(name,          # pylint: disable=C0103
               rdoc=False,
               ri=False,
               pre_releases=False,
-              proxy=None):     # pylint: disable=C0103
+              proxy=None,
+              source=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -72,6 +73,10 @@ def installed(name,          # pylint: disable=C0103
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
+
+    source : None
+        Use the specified HTTP gem source server to download gem.
+        Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if ruby is not None and (__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
@@ -99,7 +104,8 @@ def installed(name,          # pylint: disable=C0103
                                rdoc=rdoc,
                                ri=ri,
                                pre_releases=pre_releases,
-                               proxy=proxy):
+                               proxy=proxy,
+                               source=source):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'

@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'NetBSD' and os.path.exists('/etc/rc.subr'):
         return __virtualname__
-    return False
+    return (False, 'The netbsdservice execution module failed to load: only available on NetBSD.')
 
 
 def start(name):

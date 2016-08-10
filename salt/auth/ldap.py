@@ -8,6 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
+import salt.ext.six as six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -24,7 +25,8 @@ except ImportError:
     HAS_LDAP = False
 
 # Defaults, override in master config
-__defopts__ = {'auth.ldap.uri': '',
+__defopts__ = {'auth.ldap.basedn': '',
+               'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
                'auth.ldap.tls': False,
@@ -33,18 +35,23 @@ __defopts__ = {'auth.ldap.uri': '',
                'auth.ldap.scope': 2,
                'auth.ldap.groupou': 'Groups',
                'auth.ldap.accountattributename': 'memberUid',
+               'auth.ldap.groupattribute': 'memberOf',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
+               'auth.ldap.minion_stripdomains': [],
                }
 
 
-def _config(key, mandatory=True):
+def _config(key, mandatory=True, opts=None):
     '''
     Return a value for 'name' from master config file options or defaults.
     '''
     try:
-        value = __opts__['auth.ldap.{0}'.format(key)]
+        if opts:
+            value = opts['auth.ldap.{0}'.format(key)]
+        else:
+            value = __opts__['auth.ldap.{0}'.format(key)]
     except KeyError:
         try:
             value = __defopts__['auth.ldap.{0}'.format(key)]
@@ -112,13 +119,14 @@ class _LDAPConnection(object):
             )
 
 
-def _bind(username, password, anonymous=False):
+def _bind_for_search(anonymous=False, opts=None):
     '''
-    Authenticate via an LDAP bind
+    Bind with binddn and bindpw only for searching LDAP
+    :param anonymous: Try binding anonymously
+    :param opts: Pass in when __opts__ is not available
+    :return: LDAPConnection object
     '''
     # Get config params; create connection dictionary
-    basedn = _config('basedn')
-    scope = _config('scope')
     connargs = {}
     # config params (auth.ldap.*)
     params = {
@@ -131,14 +139,54 @@ def _bind(username, password, anonymous=False):
     paramvalues = {}
 
     for param in params['mandatory']:
-        paramvalues[param] = _config(param)
+        paramvalues[param] = _config(param, opts=opts)
 
     for param in params['additional']:
-        paramvalues[param] = _config(param, mandatory=False)
-        #try:
-        #    paramvalues[param] = _config(param)
-        #except SaltInvocationError:
-        #    pass
+        paramvalues[param] = _config(param, mandatory=False, opts=opts)
+
+    paramvalues['anonymous'] = anonymous
+
+    # Only add binddn/bindpw to the connargs when they're set, as they're not
+    # mandatory for initializing the LDAP object, but if they're provided
+    # initially, a bind attempt will be done during the initialization to
+    # validate them
+    if paramvalues['binddn']:
+        connargs['binddn'] = paramvalues['binddn']
+        if paramvalues['bindpw']:
+            params['mandatory'].append('bindpw')
+
+    for name in params['mandatory']:
+        connargs[name] = paramvalues[name]
+
+    if not paramvalues['anonymous']:
+        if paramvalues['binddn'] and paramvalues['bindpw']:
+            # search for the user's DN to be used for the actual authentication
+            return _LDAPConnection(**connargs).ldap
+
+
+def _bind(username, password, anonymous=False, opts=None):
+    '''
+    Authenticate via an LDAP bind
+    '''
+    # Get config params; create connection dictionary
+    basedn = _config('basedn', opts=opts)
+    scope = _config('scope', opts=opts)
+    connargs = {}
+    # config params (auth.ldap.*)
+    params = {
+        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+                      'accountattributename', 'activedirectory'],
+        'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
+                       'auth_by_group_membership_only'],
+    }
+
+    paramvalues = {}
+
+    for param in params['mandatory']:
+        paramvalues[param] = _config(param, opts=opts)
+
+    for param in params['additional']:
+        paramvalues[param] = _config(param, mandatory=False, opts=opts)
 
     paramvalues['anonymous'] = anonymous
     if paramvalues['binddn']:
@@ -207,6 +255,7 @@ def _bind(username, password, anonymous=False):
 
     # Update connection dictionary with the user's password
     connargs['bindpw'] = password
+
     # Attempt bind with user dn and password
     if paramvalues['anonymous']:
         log.debug('Attempting anonymous LDAP bind')
@@ -303,9 +352,10 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
                                            [_config('accountattributename'), 'cn'])
-            for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+            for user, entry in search_results:
+                if username == user.split(',')[0].split('=')[-1]:
+                    for group in entry[_config('groupattribute')]:
+                        group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
 
             if not auth(username, kwargs['password']):
@@ -313,6 +363,75 @@ def groups(username, **kwargs):
                 return []
     else:
         log.error('ldap bind to determine group membership FAILED!')
-        return group_list
 
     return group_list
+
+
+def expand_ldap_entries(entries, opts=None):
+    '''
+
+    :param entries: ldap subtree in external_auth config option
+    :param opts: Opts to use when __opts__ not defined
+    :return: Dictionary with all allowed operations
+
+    Takes the ldap subtree in the external_auth config option and expands it
+    with actual minion names
+
+    webadmins%:  <all users in the AD 'webadmins' group>
+      - server1
+          - .*
+      - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com)
+        - test.ping
+        - service.restart
+      - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com)
+        - allowed_fn_list_attribute^
+
+    This function only gets called if auth.ldap.activedirectory = True
+    '''
+    bind = _bind_for_search(opts=opts)
+    acl_tree = []
+    for user_or_group_dict in entries:
+        if not isinstance(user_or_group_dict, dict):
+            acl_tree.append(user_or_group_dict)
+            continue
+        for minion_or_ou, matchers in six.iteritems(user_or_group_dict):
+            permissions = matchers
+            retrieved_minion_ids = []
+            if minion_or_ou.startswith('ldap('):
+                search_base = minion_or_ou.lstrip('ldap(').rstrip(')')
+
+                search_string = '(objectClass=computer)'
+                try:
+                    search_results = bind.search_s(search_base,
+                                                   ldap.SCOPE_SUBTREE,
+                                                   search_string,
+                                                   ['cn'])
+                    for ldap_match in search_results:
+                        try:
+                            minion_id = ldap_match[1]['cn'][0].lower()
+                            # Some LDAP/AD trees only have the FQDN of machines
+                            # in their computer lists.  auth.minion_stripdomains
+                            # lets a user strip off configured domain names
+                            # and arrive at the basic minion_id
+                            if opts.get('auth.ldap.minion_stripdomains', None):
+                                for domain in opts['auth.ldap.minion_stripdomains']:
+                                    if minion_id.endswith(domain):
+                                        minion_id = minion_id[:-len(domain)]
+                                        break
+                            retrieved_minion_ids.append(minion_id)
+                        except TypeError:
+                            # TypeError here just means that one of the returned
+                            # entries didn't match the format we expected
+                            # from LDAP.
+                            pass
+
+                    for minion_id in retrieved_minion_ids:
+                        acl_tree.append({minion_id: permissions})
+                    log.trace('Expanded acl_tree is: {0}'.format(acl_tree))
+                except ldap.NO_SUCH_OBJECT:
+                    pass
+            else:
+                acl_tree.append({minion_or_ou: matchers})
+
+    log.trace('expand_ldap_entries: {0}'.format(acl_tree))
+    return acl_tree

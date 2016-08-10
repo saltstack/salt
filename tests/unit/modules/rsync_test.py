@@ -19,8 +19,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import rsync
-from salt.exceptions import CommandExecutionError
-import os
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Globals
 rsync.__salt__ = {}
@@ -37,13 +36,13 @@ class RsyncTestCase(TestCase):
         '''
         with patch.dict(rsync.__salt__, {'config.option':
                                          MagicMock(return_value=False)}):
-            self.assertRaises(CommandExecutionError, rsync.rsync, False, False)
+            self.assertRaises(SaltInvocationError, rsync.rsync, '', '')
 
         with patch.dict(rsync.__salt__,
                         {'config.option': MagicMock(return_value='A'),
-                         'cmd.run_all': MagicMock(side_effect=[IOError('f'),
+                         'cmd.run': MagicMock(side_effect=[IOError('f'),
                                                                'A'])}):
-            with patch.object(rsync, '_check', return_value='A'):
+            with patch.object(rsync, '_check', return_value=['A']):
                 self.assertRaises(CommandExecutionError, rsync.rsync, 'a', 'b')
 
                 self.assertEqual(rsync.rsync('src', 'dst'), 'A')
@@ -52,25 +51,11 @@ class RsyncTestCase(TestCase):
         '''
         Test for return rsync version
         '''
-        mock = MagicMock(side_effect=[IOError('f'), {'stdout': 'A B C\n'}])
-        with patch.dict(rsync.__salt__, {'cmd.run_all': mock}):
+        mock = MagicMock(side_effect=[IOError('f'), 'A B C\n'])
+        with patch.dict(rsync.__salt__, {'cmd.run_stdout': mock}):
             self.assertRaises(CommandExecutionError, rsync.version)
 
-            self.assertEqual(rsync.version(), {'stdout': 'C'})
-
-    def test_config(self):
-        '''
-        Test for return rsync config
-        '''
-        mock_file = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, 'isfile', mock_file):
-            self.assertRaises(CommandExecutionError, rsync.config)
-
-            mock = MagicMock(side_effect=[IOError('f'), 'A'])
-            with patch.dict(rsync.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(CommandExecutionError, rsync.config)
-
-                self.assertEqual(rsync.config('confile'), 'A')
+            self.assertEqual(rsync.version(), 'C')
 
 
 if __name__ == '__main__':

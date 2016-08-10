@@ -39,6 +39,7 @@ class GPGTestCase(TestCase):
         with patch('salt.utils.which', MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
+    @patch('salt.utils.which', MagicMock())
     def test__decrypt_ciphertext(self):
         '''
         test _decrypt_ciphertext

@@ -51,7 +51,7 @@ timer3.timer                               static'''
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase):
     '''
-        Test case for salt.modules.systemd
+    Test case for salt.modules.systemd
     '''
     def test_systemctl_reload(self):
         '''
@@ -184,20 +184,27 @@ class SystemdTestCase(TestCase):
 
     def test_show(self):
         '''
-            Test to show properties of one or more units/jobs or the manager
+        Test to show properties of one or more units/jobs or the manager
         '''
-        mock = MagicMock(return_value="a = b , c = d")
+        show_output = 'a=b\nc=d\ne={ f=g ; h=i }\nWants=foo.service bar.service\n'
+        mock = MagicMock(return_value=show_output)
         with patch.dict(systemd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(systemd.show("sshd"), {'a ': ' b , c = d'})
+            self.assertDictEqual(
+                systemd.show('sshd'),
+                {'a': 'b',
+                 'c': 'd',
+                 'e': {'f': 'g', 'h': 'i'},
+                 'Wants': ['foo.service', 'bar.service']}
+            )
 
     def test_execs(self):
         '''
-            Test to return a list of all files specified as ``ExecStart``
-            for all services
+        Test to return a list of all files specified as ``ExecStart`` for all
+        services
         '''
-        mock = MagicMock(return_value=["a", "b"])
+        mock = MagicMock(return_value=['a', 'b'])
         with patch.object(systemd, 'get_all', mock):
-            mock = MagicMock(return_value={"ExecStart": {"path": "c"}})
+            mock = MagicMock(return_value={'ExecStart': {'path': 'c'}})
             with patch.object(systemd, 'show', mock):
                 self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
 

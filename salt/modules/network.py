@@ -37,7 +37,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
 
@@ -845,6 +845,27 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
+def convert_cidr(cidr):
+    '''
+    returns the network and subnet mask of a cidr addr
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.convert_cidr 172.31.0.0/16
+    '''
+    ret = {'network': None,
+           'netmask': None}
+    cidr = calc_net(cidr)
+    network_info = salt.ext.ipaddress.ip_network(cidr)
+    ret['network'] = str(network_info.network_address)
+    ret['netmask'] = str(network_info.netmask)
+    return ret
+
+
 def calc_net(ip_addr, netmask=None):
     '''
     Returns the CIDR of a subnet based on
@@ -863,13 +884,14 @@ def calc_net(ip_addr, netmask=None):
     return salt.utils.network.calc_net(ip_addr, netmask)
 
 
-def ip_addrs(interface=None, include_loopback=False, cidr=None):
+def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     Providing a CIDR via 'cidr="10.0.0.0/8"' will return only the addresses
-    which are within that subnet.
+    which are within that subnet. If 'type' is 'public', then only public
+    addresses will be returned. Ditto for 'type'='private'.
 
     CLI Example:
 
@@ -882,7 +904,13 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
     if cidr:
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
-        return addrs
+        if type == 'public':
+            return [i for i in addrs if not is_private(i)]
+        elif type == 'private':
+            return [i for i in addrs if is_private(i)]
+        else:
+            return addrs
+
 
 ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 

@@ -131,4 +131,4 @@ def caller_name(skip=2):
     if codename != '<module>':  # top level usually
         name.append(codename)   # function or a method
     del parentframe
-    return ".".join(name)
+    return '.'.join(name)

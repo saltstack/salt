@@ -61,7 +61,7 @@ def prep_bootstrap(mpt):
     return fp_, tmppath
 
 
-def _mount(path, ftype):
+def _mount(path, ftype, root=None):
     mpt = None
     if ftype == 'block':
         mpt = tempfile.mkdtemp()
@@ -71,7 +71,13 @@ def _mount(path, ftype):
     elif ftype == 'dir':
         return path
     elif ftype == 'file':
-        mpt = __salt__['img.mount_image'](path)
+        if 'guestfs.mount' in __salt__:
+            util = 'qemu_nbd'
+        elif 'qemu_nbd.init' in __salt__:
+            util = 'qemu_nbd'
+        else:
+            return None
+        mpt = __salt__['mount.mount'](path, device=root, util=util)
         if not mpt:
             return None
     return mpt
@@ -82,11 +88,11 @@ def _umount(mpt, ftype):
         __salt__['mount.umount'](mpt)
         os.rmdir(mpt)
     elif ftype == 'file':
-        __salt__['img.umount_image'](mpt)
+        __salt__['mount.umount'](mpt, util='qemu_nbd')
 
 
 def apply_(path, id_=None, config=None, approve_key=True, install=True,
-           prep_install=False, pub_key=None, priv_key=None):
+           prep_install=False, pub_key=None, priv_key=None, mount_point=None):
     '''
     Seed a location (disk image, directory, or block device) with the
     minion config, approve the minion's key, and/or install salt-minion.
@@ -133,7 +139,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
         # The directory already exists
         pass
 
-    mpt = _mount(path, ftype)
+    mpt = _mount(path, ftype, mount_point)
 
     if not mpt:
         return '{0} could not be mounted'.format(path)
@@ -284,7 +290,7 @@ def _check_install(root):
         sh_ = '/bin/bash'
 
     cmd = ('if ! type salt-minion; then exit 1; fi')
-    cmd = 'chroot \'{0}\' {1} -c {2!r}'.format(
+    cmd = 'chroot \'{0}\' {1} -c \'{2}\''.format(
         root,
         sh_,
         cmd)

@@ -92,7 +92,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
             self.assertNotIn(ret, ('', None))
         except AssertionError:
             raise AssertionError(
-                'Salt return {0!r} is in (\'\', None).'.format(ret)
+                'Salt return \'{0}\' is in (\'\', None).'.format(ret)
             )
         ret = self.run_function(
             'ssh.get_known_host', ['root', GITHUB_IP], config=KNOWN_HOSTS
@@ -101,7 +101,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
             self.assertNotIn(ret, ('', None, {}))
         except AssertionError:
             raise AssertionError(
-                'Salt return {0!r} is in (\'\', None,'.format(ret) + ' {})'
+                'Salt return \'{0}\' is in (\'\', None,'.format(ret) + ' {})'
             )
 
     def test_present_fail(self):
@@ -246,4 +246,4 @@ class SSHAuthStateTests(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(SSHKnownHostsStateTest)
+    run_tests([SSHKnownHostsStateTest, SSHAuthStateTests])

@@ -18,8 +18,8 @@ Installation from the Official SaltStack Repository
 Packages for Redhat, CentOS, and Amazon Linux are available in
 the SaltStack Repository.
 
-- `Red Hat / CentOS <http://repo.saltstack.com/#rhel>`_
-- `Amazon Linux <http://repo.saltstack.com/#amzn>`_
+- `Red Hat / CentOS <https://repo.saltstack.com/#rhel>`_
+- `Amazon Linux <https://repo.saltstack.com/#amzn>`_
 
 .. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
@@ -42,7 +42,7 @@ the SaltStack Repository.
               https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/base/RPM-GPG-KEY-CentOS-7
 
 .. note::
-    ``systemd`` and ``python-systemd`` are required by Salt, but are not
+    ``systemd`` and ``systemd-python`` are required by Salt, but are not
     installed by the Red Hat 7 ``@base`` installation or by the Salt
     installation. These dependencies might need to be installed before Salt.
 

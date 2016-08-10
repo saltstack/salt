@@ -63,7 +63,7 @@ def __virtual__():
     Only load if elasticsearch libraries exist.
     '''
     if not HAS_ELASTICSEARCH:
-        return False
+        return (False, 'Cannot load module elasticsearch: elasticsearch libraries not found')
     return True
 
 

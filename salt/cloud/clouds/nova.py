@@ -318,7 +318,7 @@ def get_image(conn, vm_):
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
-            'The specified image, {0!r}, could not be found: {1}'.format(
+            'The specified image, \'{0}\', could not be found: {1}'.format(
                 vm_image,
                 str(exc)
             )
@@ -364,7 +364,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
             return sizes[size]['id']
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -672,7 +672,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_key_file {0!r} does not exist'.format(
+            'The defined ssh_key_file \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -701,7 +701,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -894,9 +894,9 @@ def create(vm_):
     if 'password' in ret['extra']:
         del ret['extra']['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -1179,3 +1179,111 @@ def virtual_interface_create(name, net_name, **kwargs):
     '''
     conn = get_conn()
     return conn.virtual_interface_create(name, net_name)
+
+
+def floating_ip_pool_list(call=None):
+    '''
+    List all floating IP pools
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_pool_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_pool_list()
+
+
+def floating_ip_list(call=None):
+    '''
+    List floating IPs
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_list()
+
+
+def floating_ip_create(kwargs, call=None):
+    '''
+    Allocate a floating IP
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_create action must be called with -f or --function'
+        )
+
+    if 'pool' not in kwargs:
+        log.error('pool is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_create(kwargs['pool'])
+
+
+def floating_ip_delete(kwargs, call=None):
+    '''
+    De-allocate floating IP
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_delete action must be called with -f or --function'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_delete(kwargs['floating_ip'])
+
+
+def floating_ip_associate(name, kwargs, call=None):
+    '''
+    Associate a floating IP address to a server
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_associate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_associate(name, kwargs['floating_ip'])
+    return list_nodes()[name]
+
+
+def floating_ip_disassociate(name, kwargs, call=None):
+    '''
+    Disassociate a floating IP from a server
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_disassociate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_disassociate(name, kwargs['floating_ip'])
+    return list_nodes()[name]

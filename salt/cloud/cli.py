@@ -29,6 +29,7 @@ from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
 # Import salt.cloud libs
 import salt.cloud
+import salt.utils.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
 import salt.syspaths as syspaths
@@ -51,12 +52,14 @@ class SaltCloud(parsers.SaltCloudParser):
         if not check_user(salt_master_user):
             self.error(
                 'If salt-cloud is running on a master machine, salt-cloud '
-                'needs to run as the same user as the salt-master, {0!r}. If '
-                'salt-cloud is not running on a salt-master, the appropriate '
-                'write permissions must be granted to {1!r}. Please run '
-                'salt-cloud as root, {0!r}, or change permissions for '
-                '{1!r}.'.format(salt_master_user,
-                                syspaths.CONFIG_DIR)
+                'needs to run as the same user as the salt-master, \'{0}\'. '
+                'If salt-cloud is not running on a salt-master, the '
+                'appropriate write permissions must be granted to \'{1}\'. '
+                'Please run salt-cloud as root, \'{0}\', or change '
+                'permissions for \'{1}\'.'.format(
+                    salt_master_user,
+                    syspaths.CONFIG_DIR
+                )
             )
 
         try:
@@ -126,7 +129,9 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.handle_exception(msg, exc)
 
             elif self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 try:
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
@@ -213,7 +218,9 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.action and (self.config.get('names', None) or
                                       self.config.get('map', None)):
             if self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 try:
                     names = mapper.get_vmnames_by_action(self.options.action)
                 except SaltCloudException as exc:
@@ -233,8 +240,8 @@ class SaltCloud(parsers.SaltCloudParser):
             for name in names:
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
-                    comps = name.split('=')
-                    kwargs[comps[0]] = comps[1]
+                    key, value = name.split('=', 1)
+                    kwargs[key] = value
                 else:
                     msg += '  {0}\n'.format(name)
                     machines.append(name)
@@ -252,7 +259,7 @@ class SaltCloud(parsers.SaltCloudParser):
             args = self.args[:]
             for arg in args[:]:
                 if '=' in arg:
-                    key, value = arg.split('=')
+                    key, value = arg.split('=', 1)
                     kwargs[key] = value
                     args.remove(arg)
 
@@ -295,7 +302,9 @@ class SaltCloud(parsers.SaltCloudParser):
                 ret = {}
                 run_map = True
 
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 dmap = mapper.map_data()
 
                 msg = ''
@@ -351,6 +360,40 @@ class SaltCloud(parsers.SaltCloudParser):
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
+                self.handle_exception(msg, exc)
+
+        elif self.options.bootstrap:
+            host = self.options.bootstrap
+            if len(self.args) > 0:
+                if '=' not in self.args[0]:
+                    minion_id = self.args.pop(0)
+                else:
+                    minion_id = host
+            else:
+                minion_id = host
+
+            vm_ = {
+                'driver': '',
+                'ssh_host': host,
+                'name': minion_id,
+            }
+            args = self.args[:]
+            for arg in args[:]:
+                if '=' in arg:
+                    key, value = arg.split('=', 1)
+                    vm_[key] = value
+                    args.remove(arg)
+
+            if args:
+                self.error(
+                    'Any arguments passed to --bootstrap need to be passed as '
+                    'kwargs. Ex: ssh_username=larry. Remaining arguments: {0}'.format(args)
+                )
+
+            try:
+                ret = salt.utils.cloud.bootstrap(vm_, self.config)
+            except (SaltCloudException, Exception) as exc:
+                msg = 'There was an error bootstrapping the minion: {0}'
                 self.handle_exception(msg, exc)
 
         else:

@@ -7,7 +7,6 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import
 import os
 import re
-import shlex
 import socket
 import logging
 from string import ascii_letters, digits
@@ -916,13 +915,13 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Boron
+    .. deprecated:: Carbon
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Boron. Please use \'in_subnet\' instead.'
+        'in Salt Carbon. Please use \'in_subnet\' instead.'
     )
 
     return in_subnet(cidr, addr)
@@ -1176,7 +1175,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))

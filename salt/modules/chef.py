@@ -24,7 +24,7 @@ def __virtual__():
     Only load if chef is installed
     '''
     if not salt.utils.which('chef-client'):
-        return False
+        return (False, 'Cannot load chef module: chef-client not found')
     return True
 
 
@@ -124,7 +124,7 @@ def client(whyrun=False,
 
     '''
     if logfile is None:
-        logfile = _default_logfile('chef-client'),
+        logfile = _default_logfile('chef-client')
     args = ['chef-client',
             '--no-color',
             '--once',
@@ -193,7 +193,7 @@ def solo(whyrun=False,
         Enable whyrun mode when set to True
     '''
     if logfile is None:
-        logfile = _default_logfile('chef-solo'),
+        logfile = _default_logfile('chef-solo')
     args = ['chef-solo',
             '--no-color',
             '--logfile "{0}"'.format(logfile),

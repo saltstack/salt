@@ -32,7 +32,8 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'The chassis execution module cannot be loaded: '
+            'this only works in proxy minions.')
 
 
 def chassis_credentials():

@@ -66,6 +66,14 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
+if IS_WINDOWS_PLATFORM:
+    IS_SMARTOS_PLATFORM = False
+else:
+    # os.uname() not available on Windows.
+    IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
+
+# Store a reference wether if we're running under Python 3 and above
+IS_PY3 = sys.version_info > (3,)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # Or if setuptools was previously imported (which is the case when using
@@ -142,6 +150,10 @@ def _parse_requirements_file(requirements_file):
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
                     # compiled
                     continue
+            if IS_PY3 and 'futures' in line.lower():
+                # Python 3 already has futures, installing it will only break
+                # the current python installation whenever futures is imported
+                continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
@@ -208,6 +220,7 @@ class GenerateSaltSyspaths(Command):
                 base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
+                base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
@@ -626,6 +639,7 @@ SRV_ROOT_DIR= {srv_root_dir!r}
 BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
+BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
@@ -681,8 +695,8 @@ class Install(install):
     def initialize_options(self):
         install.initialize_options(self)
         # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
-            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
+        if __saltstack_version__.info >= SaltStackVersion.from_name('Carbon'):
+            # XXX: Remove the Salt Specific Options In Salt Carbon. They are now global options
             raise DistutilsArgError(
                 'Developers, please remove the salt paths configuration '
                 'setting from the setup\'s install command'
@@ -694,6 +708,7 @@ class Install(install):
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
         self.salt_base_file_roots_dir = None
+        self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
@@ -705,7 +720,7 @@ class Install(install):
 
         logged_warnings = False
         for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'srv_root_dir', 'base_file_roots_dir',
+                        'srv_root_dir', 'base_file_roots_dir', 'base_thorium_roots_dir',
                         'base_pillar_roots_dir', 'base_master_roots_dir',
                         'logs_dir', 'pidfile_dir'):
             optvalue = getattr(self, 'salt_{0}'.format(optname))
@@ -715,7 +730,7 @@ class Install(install):
                 log.warn(
                     'The \'--salt-{0}\' setting is now a global option just pass it '
                     'right after \'setup.py\'. This install setting will still work '
-                    'until Salt Boron but please migrate to the global setting as '
+                    'until Salt Carbon but please migrate to the global setting as '
                     'soon as possible.'.format(
                         optname.replace('_', '-')
                     )
@@ -726,7 +741,7 @@ class Install(install):
                         'The \'--salt-{0}\' setting was passed as a global option '
                         'and as an option to the install command. Please only pass '
                         'one of them, preferably the global option since the other '
-                        'is now deprecated and will be removed in Salt Boron.'.format(
+                        'is now deprecated and will be removed in Salt Carbon.'.format(
                             optname.replace('_', '-')
                         )
                     )
@@ -856,6 +871,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
         self.salt_base_file_roots_dir = None
+        self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
@@ -1155,6 +1171,17 @@ class SaltDistribution(distutils.dist.Distribution):
                 'site',
                 'psutil',
             ])
+        elif IS_SMARTOS_PLATFORM:
+            # we have them as requirements in pkg/smartos/esky/requirements.txt
+            # all these should be safe to force include
+            freezer_includes.extend([
+                'cherrypy',
+                'dateutils',
+                'pyghmi',
+                'croniter',
+                'mako',
+                'gnupg',
+            ])
         elif sys.platform.startswith('linux'):
             freezer_includes.append('spwd')
             try:
@@ -1204,7 +1231,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not {0!r}'.format(
+                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
                     self.salt_transport
                 )
             )

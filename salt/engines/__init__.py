@@ -12,11 +12,12 @@ import logging
 import salt
 import salt.loader
 import salt.utils
+from salt.utils.process import SignalHandlingMultiprocessingProcess
 
 log = logging.getLogger(__name__)
 
 
-def start_engines(opts, proc_mgr):
+def start_engines(opts, proc_mgr, proxy=None):
     '''
     Fire up the configured engines!
     '''
@@ -26,7 +27,7 @@ def start_engines(opts, proc_mgr):
         runners = []
     utils = salt.loader.utils(opts)
     funcs = salt.loader.minion_mods(opts, utils=utils)
-    engines = salt.loader.engines(opts, funcs, runners)
+    engines = salt.loader.engines(opts, funcs, runners, proxy=proxy)
 
     engines_opt = opts.get('engines', [])
     if isinstance(engines_opt, dict):
@@ -47,6 +48,9 @@ def start_engines(opts, proc_mgr):
             engine_opts = None
         fun = '{0}.start'.format(engine)
         if fun in engines:
+            start_func = engines[fun]
+            name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
+            log.info('Starting Engine {0}'.format(name))
             proc_mgr.add_process(
                     Engine,
                     args=(
@@ -54,25 +58,52 @@ def start_engines(opts, proc_mgr):
                         fun,
                         engine_opts,
                         funcs,
-                        runners
-                        )
+                        runners,
+                        proxy
+                        ),
+                    name=name
                     )
 
 
-class Engine(multiprocessing.Process):
+class Engine(SignalHandlingMultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, log_queue=None):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__()
+        super(Engine, self).__init__(log_queue=log_queue)
         self.opts = opts
         self.config = config
         self.fun = fun
         self.funcs = funcs
         self.runners = runners
+        self.proxy = proxy
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(
+            state['opts'],
+            state['fun'],
+            state['config'],
+            state['funcs'],
+            state['runners'],
+            state['proxy'],
+            log_queue=state['log_queue']
+        )
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'fun': self.fun,
+                'config': self.config,
+                'funcs': self.funcs,
+                'runners': self.runners,
+                'proxy': self.proxy,
+                'log_queue': self.log_queue}
 
     def run(self):
         '''
@@ -89,7 +120,8 @@ class Engine(multiprocessing.Process):
 
         self.engine = salt.loader.engines(self.opts,
                                           self.funcs,
-                                          self.runners)
+                                          self.runners,
+                                          proxy=self.proxy)
         kwargs = self.config or {}
         try:
             self.engine[self.fun](**kwargs)

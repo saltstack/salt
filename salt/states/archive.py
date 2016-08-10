@@ -20,6 +20,7 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+import salt.utils
 # remove after archive_user deprecation.
 from salt.utils import warn_until
 
@@ -30,11 +31,41 @@ __virtualname__ = 'archive'
 
 def __virtual__():
     '''
-    Only load if the npm module is available in __salt__
+    Only load if the archive module is available in __salt__
     '''
-    return __virtualname__ \
-        if [x for x in __salt__ if x.startswith('archive.')] \
-        else False
+    if 'archive.unzip' in __salt__ and 'archive.unrar' in __salt__:
+        return __virtualname__
+    else:
+        return False
+
+
+def updateChecksum(fname, target, checksum):
+    lines = []
+    compare_string = '{0}:{1}'.format(target, checksum)
+    if os.path.exists(fname):
+        with salt.utils.fopen(fname, 'r') as f:
+            lines = f.readlines()
+    with salt.utils.fopen(fname, 'w') as f:
+        f.write('{0}:{1}\n'.format(target, checksum))
+        for line in lines:
+            if line.startswith(target):
+                continue
+            f.write(line)
+
+
+def compareChecksum(fname, target, checksum):
+    if os.path.exists(fname):
+        compare_string = '{0}:{1}'.format(target, checksum)
+        with salt.utils.fopen(fname, 'r') as f:
+            while True:
+                current_line = f.readline()
+                if not current_line:
+                    break
+                if current_line.endswith('\n'):
+                    current_line = current_line[:-1]
+                if compare_string == current_line:
+                    return True
+    return False
 
 
 def _is_bsdtar():
@@ -56,12 +87,15 @@ def extracted(name,
               source,
               archive_format,
               archive_user=None,
+              password=None,
               user=None,
               group=None,
               tar_options=None,
               source_hash=None,
               if_missing=None,
-              keep=False):
+              keep=False,
+              trim_output=False,
+              source_hash_update=None):
     '''
     .. versionadded:: 2014.1.0
 
@@ -103,8 +137,29 @@ def extracted(name,
             - group: root
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
+    Example, tar with flag for lmza compression and update based if source_hash differs from what was
+    previously extracted:
+
+    .. code-block:: yaml
+
+        graylog2-server:
+          archive.extracted:
+            - name: /opt/
+            - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
+            - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
+            - source_hash_update: true
+            - tar_options: J
+            - archive_format: tar
+            - if_missing: /opt/graylog2-server-0.9.6p1/
+
     name
         Location where archive should be extracted
+
+    password
+        Password to use with password protected zip files. Currently only zip
+        files with passwords are supported.
+
+        .. versionadded:: 2016.3.0
 
     source
         Archive source, same syntax as file.managed source argument.
@@ -113,8 +168,14 @@ def extracted(name,
         Hash of source file, or file with list of hash-to-file mappings.
         It uses the same syntax as the file.managed source_hash argument.
 
+    source_hash_update
+        Set this to ``True`` if archive should be extracted if source_hash has
+        changed. This would extract regardless of the ``if_missing`` parameter.
+
+        .. versionadded:: 2016.3.0
+
     archive_format
-        tar, zip or rar
+        ``tar``, ``zip`` or ``rar``
 
     archive_user
         The user to own each extracted file.
@@ -126,11 +187,17 @@ def extracted(name,
         The user to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     group
         The group to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     if_missing
         If specified, this path will be checked, and if it exists then the
@@ -138,6 +205,10 @@ def extracted(name,
         extracts all files into a subfolder. This path can be either a
         directory or a file, so this option can also be used to check for a
         semaphore file and conditionally skip extraction.
+
+        .. versionchanged:: 2016.3.0
+            When used in combination with either ``user`` or ``group``,
+            ownership will only be enforced when ``if_missing`` is a directory.
 
     tar_options
         If ``archive_format`` is set to ``tar``, this option can be used to
@@ -167,6 +238,12 @@ def extracted(name,
 
     keep
         Keep the archive in the minion's cache
+
+    trim_output
+        The number of files we should output on success before the rest are
+        trimmed, if this is set to True then it will default to 100
+
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -180,7 +257,7 @@ def extracted(name,
     # remove this whole block after formal deprecation.
     if archive_user is not None:
         warn_until(
-          'Boron',
+          'Carbon',
           'Passing \'archive_user\' is deprecated.'
           'Pass \'user\' instead.'
         )
@@ -192,7 +269,18 @@ def extracted(name,
 
     if if_missing is None:
         if_missing = name
-    if (
+    if source_hash and source_hash_update:
+        hash = source_hash.split("=")
+        source_file = '{0}.{1}'.format(os.path.basename(source), hash[0])
+        hash_fname = os.path.join(__opts__['cachedir'],
+                            'files',
+                            __env__,
+                            source_file)
+        if compareChecksum(hash_fname, name, hash[1]):
+            ret['result'] = True
+            ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
+            return ret
+    elif (
         __salt__['file.directory_exists'](if_missing)
         or __salt__['file.file_exists'](if_missing)
     ):
@@ -277,9 +365,9 @@ def extracted(name,
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name)
+        files = __salt__['archive.unzip'](filename, name, trim_output=trim_output, password=password)
     elif archive_format == 'rar':
-        files = __salt__['archive.unrar'](filename, name)
+        files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
     else:
         if tar_options is None:
             try:
@@ -381,12 +469,21 @@ def extracted(name,
     # Recursively set user and group ownership of files after extraction.
     # Note: We do this here because we might not have access to the cachedir.
     if user or group:
-        dir_result = __salt__['state.single']('file.directory',
-                                               name,
-                                               user=user,
-                                               group=group,
-                                               recurse=['user', 'group'])
-        log.debug('file.directory: {0}'.format(dir_result))
+        if os.path.isdir(if_missing):
+            recurse = []
+            if user:
+                recurse.append('user')
+            if group:
+                recurse.append('group')
+            dir_result = __salt__['state.single']('file.directory',
+                                                  if_missing,
+                                                  user=user,
+                                                  group=group,
+                                                  recurse=recurse)
+            log.debug('file.directory: %s', dir_result)
+        elif os.path.isfile(if_missing):
+            log.debug('if_missing (%s) is a file, not enforcing user/group '
+                      'permissions', if_missing)
 
     if len(files) > 0:
         ret['result'] = True
@@ -395,6 +492,9 @@ def extracted(name,
         ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
         if not keep:
             os.unlink(filename)
+        if source_hash and source_hash_update:
+            updateChecksum(hash_fname, name, hash[1])
+
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False

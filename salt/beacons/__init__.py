@@ -12,13 +12,14 @@ import re
 import salt.loader
 import salt.utils
 import salt.utils.minion
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
 
 class Beacon(object):
     '''
-    This class is used to eveluate and execute on the beacon system
+    This class is used to evaluate and execute on the beacon system
     '''
     def __init__(self, opts, functions):
         self.opts = opts
@@ -29,12 +30,12 @@ class Beacon(object):
     def process(self, config):
         '''
         Process the configured beacons
-        The config must be a dict and looks like this in yaml
+        The config must be a list and looks like this in yaml
         code_block:: yaml
             beacons:
                 inotify:
-                    /etc/fstab: {}
-                    /var/cache/foo: {}
+                    - /etc/fstab: {}
+                    - /var/cache/foo: {}
         '''
         ret = []
         b_config = copy.deepcopy(config)
@@ -43,23 +44,40 @@ class Beacon(object):
         for mod in config:
             if mod == 'enabled':
                 continue
-            if 'enabled' in config[mod] and not config[mod]['enabled']:
-                log.trace('Beacon {0} disabled'.format(mod))
-                continue
-            elif 'enabled' in config[mod] and config[mod]['enabled']:
-                # remove 'enabled' item before processing the beacon
-                del config[mod]['enabled']
+
+            # Convert beacons that are lists to a dict to make processing easier
+            current_beacon_config = None
+            if isinstance(config[mod], list):
+                current_beacon_config = {}
+                list(map(current_beacon_config.update, config[mod]))
+            elif isinstance(config[mod], dict):
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'Beacon configuration should be a list instead of a dictionary.'
+                )
+                current_beacon_config = config[mod]
+
+            if 'enabled' in current_beacon_config:
+                if not current_beacon_config['enabled']:
+                    log.trace('Beacon {0} disabled'.format(mod))
+                    continue
+                else:
+                    # remove 'enabled' item before processing the beacon
+                    if isinstance(config[mod], dict):
+                        del config[mod]['enabled']
+                    else:
+                        self._remove_list_item(config[mod], 'enabled')
 
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
-                interval = self._determine_beacon_config(mod, 'interval', b_config)
+                interval = self._determine_beacon_config(current_beacon_config, 'interval')
                 if interval:
                     b_config = self._trim_config(b_config, mod, 'interval')
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
-                if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
+                if self._determine_beacon_config(current_beacon_config, 'disable_during_state_run'):
                     log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
                     is_running = False
@@ -88,29 +106,21 @@ class Beacon(object):
         Take a beacon configuration and strip out the interval bits
         '''
         if isinstance(b_config[mod], list):
-            b_config[mod].remove(b_config[0])
+            self._remove_list_item(b_config[mod], key)
         elif isinstance(b_config[mod], dict):
             b_config[mod].pop(key)
         return b_config
 
-    def _determine_beacon_config(self, mod, val, config_mod):
+    def _determine_beacon_config(self, current_beacon_config, key):
         '''
         Process a beacon configuration to determine its interval
         '''
-        if isinstance(config_mod, list):
-            config = None
-            val_config = [arg for arg in config_mod if val in arg]
-            if val_config:
-                config = val_config[0][val]
-        elif isinstance(config_mod, dict):
-            try:
-                config = config_mod[mod].get(val, False)
-            except AttributeError:  # The config is a list
-                config = None
-                val_config = [arg for arg in config_mod if val in arg]
-                if val_config:
-                    config = val_config[0][val]
-        return config
+
+        interval = False
+        if isinstance(current_beacon_config, dict):
+            interval = current_beacon_config.get(key, False)
+
+        return interval
 
     def _process_interval(self, mod, interval):
         '''
@@ -132,6 +142,40 @@ class Beacon(object):
             log.trace('Interval process inserting mod: {0}'.format(mod))
             self.interval_map[mod] = 1
         return False
+
+    def _get_index(self, beacon_config, label):
+        '''
+        Return the index of a labeled config item in the beacon config, -1 if the index is not found
+        '''
+
+        indexes = [index for index, item in enumerate(beacon_config) if label in item]
+        if len(indexes) < 1:
+            return -1
+        else:
+            return indexes[0]
+
+    def _remove_list_item(self, beacon_config, label):
+        '''
+        Remove an item from a beacon config list
+        '''
+
+        index = self._get_index(beacon_config, label)
+        del beacon_config[index]
+
+    def _update_enabled(self, name, enabled_value):
+        '''
+        Update whether an individual beacon is enabled
+        '''
+
+        if isinstance(self.opts['beacons'][name], dict):
+            # Backwards compatibility
+            self.opts['beacons'][name]['enabled'] = enabled_value
+        else:
+            enabled_index = self._get_index(self.opts['beacons'][name], 'enabled')
+            if enabled_index >= 0:
+                self.opts['beacons'][name][enabled_index]['enabled'] = enabled_value
+            else:
+                self.opts['beacons'][name].append({'enabled': enabled_value})
 
     def list_beacons(self):
         '''
@@ -236,7 +280,7 @@ class Beacon(object):
         Enable a beacon
         '''
 
-        self.opts['beacons'][name]['enabled'] = True
+        self._update_enabled(name, True)
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
@@ -250,7 +294,7 @@ class Beacon(object):
         Disable a beacon
         '''
 
-        self.opts['beacons'][name]['enabled'] = False
+        self._update_enabled(name, False)
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)

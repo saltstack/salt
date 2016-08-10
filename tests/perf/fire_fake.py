@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -**
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # Import system libs
 import sys
 import time
@@ -14,7 +14,7 @@ import salt.client.raet
 try:
     opts = salt.config.master_config('/etc/salt/master')
 except OSError:
-    print 'Could not open master config. Do you need to be root?'
+    print('Could not open master config. Do you need to be root?')
     sys.exit(1)
 
 
@@ -48,7 +48,7 @@ class SwarmController(object):
                 self.calibrate()
                 last_check = 0
             if self.total_complete > goal:
-                print 'Test complete'
+                print('Test complete')
                 break
 
     def fire_it(self):
@@ -67,7 +67,7 @@ class SwarmController(object):
         #remaining_requests = (self.reqs_sec * self.run_time) - self.total_complete
         # Figure out what the reqs/sec has been up to this point and then adjust up or down
         runtime_reqs_sec = self.total_complete / elapsed_time.total_seconds()
-        print 'Recalibrating. Current reqs/sec: {0}'.format(runtime_reqs_sec)
+        print('Recalibrating. Current reqs/sec: {0}'.format(runtime_reqs_sec))
         return
 
 controller = SwarmController(opts)

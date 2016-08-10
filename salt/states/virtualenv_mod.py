@@ -14,6 +14,9 @@ import os
 import salt.version
 import salt.utils
 
+from salt.exceptions import CommandNotFoundError
+
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -45,9 +48,11 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
+            pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
             env_vars=None,
+            no_use_wheel=False,
             pip_upgrade=False,
             pip_pkgs=None):
     '''
@@ -88,6 +93,9 @@ def managed(name,
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
+
+    no_use_wheel: False
+        Force to not use wheel archives (requires pip>=1.4)
 
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
@@ -165,19 +173,24 @@ def managed(name,
         return ret
 
     if not venv_exists or (venv_exists and clear):
-        _ret = __salt__['virtualenv.create'](
-            name,
-            venv_bin=venv_bin,
-            system_site_packages=system_site_packages,
-            distribute=distribute,
-            clear=clear,
-            python=python,
-            extra_search_dir=extra_search_dir,
-            never_download=never_download,
-            prompt=prompt,
-            user=user,
-            use_vt=use_vt,
-        )
+        try:
+            _ret = __salt__['virtualenv.create'](
+                name,
+                venv_bin=venv_bin,
+                system_site_packages=system_site_packages,
+                distribute=distribute,
+                clear=clear,
+                python=python,
+                extra_search_dir=extra_search_dir,
+                never_download=never_download,
+                prompt=prompt,
+                user=user,
+                use_vt=use_vt,
+            )
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
+            return ret
 
         if _ret['retcode'] != 0:
             ret['result'] = False
@@ -207,14 +220,42 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+                              'in pip {0} and newer. The version of pip '
+                              'detected was {1}.').format(min_version,
+                                                          cur_version)
+            return ret
+
     # Populate the venv via a requirements file
     if requirements or pip_pkgs:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+
+        if requirements:
+
+            if isinstance(requirements, six.string_types):
+                req_canary = requirements.split(',')[0]
+            elif isinstance(requirements, list):
+                req_canary = requirements[0]
+            else:
+                raise TypeError(
+                    'pip requirements must be either a string or a list'
+                )
+
+            if req_canary != os.path.abspath(req_canary):
+                cwd = os.path.dirname(os.path.abspath(req_canary))
+
         _ret = __salt__['pip.install'](
             pkgs=pip_pkgs,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
+            no_use_wheel=no_use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
@@ -224,6 +265,7 @@ def managed(name,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
+            ignore_installed=pip_ignore_installed,
             upgrade=pip_upgrade,
             no_deps=no_deps,
             proxy=proxy,

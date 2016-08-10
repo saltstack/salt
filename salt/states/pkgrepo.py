@@ -85,9 +85,9 @@ these states. Here is some example SLS:
     installed if it is not present.
 
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import
 import sys
 
 # Import salt libs
@@ -270,6 +270,10 @@ def managed(name, ppa=None, **kwargs):
         ret['comment'] = 'Repo management not implemented on this platform'
         return ret
 
+    if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_url" argument.'
     if 'repo' in kwargs:
         ret['result'] = False
         ret['comment'] = ('\'repo\' is not a supported argument for this '
@@ -277,8 +281,15 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
+    if 'enabled' in kwargs:
+        salt.utils.warn_until(
+            'Carbon',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
+
     repo = name
-    if __grains__['os'] == 'Ubuntu':
+    if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -304,13 +315,9 @@ def managed(name, ppa=None, **kwargs):
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    if kwargs.pop('enabled', None):
-        kwargs['disabled'] = False
-        salt.utils.warn_until(
-            'Boron',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
+    # Replace 'enabled' from kwargs with 'disabled'
+    enabled = kwargs.pop('enabled', True)
+    kwargs['disabled'] = not salt.utils.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -424,7 +431,7 @@ def managed(name, ppa=None, **kwargs):
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
+            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -488,7 +495,7 @@ def absent(name, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    repo = {}
+
     if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):
@@ -552,12 +559,5 @@ def absent(name, **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to remove repo {0}'.format(name)
-
-    # Clear cache of available packages, if present, since changes to the
-    # repositories may change the packages that are available.
-    if ret['changes']:
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('pkg._avail', None)
 
     return ret

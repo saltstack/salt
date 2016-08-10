@@ -39,7 +39,7 @@ def __virtual__():
     '''
     if __grains__['os_family'] == 'RedHat':
         return __virtualname__
-    return False
+    return (False, 'The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.')
 
 
 # Setup networking attributes
@@ -205,7 +205,7 @@ def _parse_settings_bond(opts, iface):
         # Used with miimon.
         # On: driver sends mii
         # Off: ethtool sends mii
-        'use_carrier': 'on',
+        'use_carrier': '0',
         # Default. Don't change unless you know what you are doing.
         'xmit_hash_policy': 'layer2',
     }
@@ -546,6 +546,34 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
+def _parse_settings_vlan(opts, iface):
+
+    '''
+    Filters given options and outputs valid settings for a vlan
+    '''
+    vlan = {}
+    if 'reorder_hdr' in opts:
+        if opts['reorder_hdr'] in _CONFIG_TRUE + _CONFIG_FALSE:
+            vlan.update({'reorder_hdr': opts['reorder_hdr']})
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error_iface(iface, 'reorder_hdr', valid)
+
+    if 'vlan_id' in opts:
+        if opts['vlan_id'] > 0:
+            vlan.update({'vlan_id': opts['vlan_id']})
+        else:
+            _raise_error_iface(iface, 'vlan_id', 'Positive integer')
+
+    if 'phys_dev' in opts:
+        if len(opts['phys_dev']) > 0:
+            vlan.update({'phys_dev': opts['phys_dev']})
+        else:
+            _raise_error_iface(iface, 'phys_dev', 'Non-empty string')
+
+    return vlan
+
+
 def _parse_settings_eth(opts, iface_type, enabled, iface):
     '''
     Filters given options and outputs valid settings for a
@@ -581,6 +609,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             result['bonding'] = bonding
+            result['devtype'] = "Bond"
+
+    if iface_type == 'vlan':
+        vlan = _parse_settings_vlan(opts, iface)
+        if vlan:
+            result['devtype'] = "Vlan"
+            for opt in vlan:
+                result[opt] = opts[opt]
 
     if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
         if 'addr' in opts:
@@ -594,7 +630,8 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 ifaces = __salt__['network.interfaces']()
                 if iface in ifaces and 'hwaddr' in ifaces[iface]:
                     result['addr'] = ifaces[iface]['hwaddr']
-
+    if iface_type == 'eth':
+        result['devtype'] = 'Ethernet'
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
         bypassfirewall = True
@@ -629,7 +666,16 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'ib':
         result['devtype'] = 'InfiniBand'
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway', 'zone']:
+    if 'prefix' in opts:
+        if 'netmask' in opts:
+            msg = 'Cannot use prefix and netmask together'
+            log.error(msg)
+            raise AttributeError(msg)
+        result['prefix'] = opts['prefix']
+    elif 'netmask' in opts:
+        result['netmask'] = opts['netmask']
+
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -641,14 +687,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
-    if 'ipv6_autoconf' in opts:
-        result['ipv6_autoconf'] = opts['ipv6_autoconf']
-
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'peerntp', 'slave', 'vlan', 'defroute', 'stp']:
+    for opt in ['onparent', 'peerdns', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
+                'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf', 'ipv4_failure_fatal', 'dhcpv6c']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'

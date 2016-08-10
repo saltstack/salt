@@ -13,9 +13,12 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'timezone'
 
 
 def __virtual__():
@@ -23,8 +26,16 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, 'The timezone execution module failed to load: '
+                       'win_timezone.py should replace this module on Windows.'
+                       'There was a problem loading win_timezone.py.')
+
+    if salt.utils.is_darwin():
+        return (False, 'The timezone execution module failed to load: '
+                       'mac_timezone.py should replace this module on OS X.'
+                       'There was a problem loading mac_timezone.py.')
+
+    return __virtualname__
 
 
 def _timedatectl():
@@ -115,7 +126,7 @@ def get_zone():
     if salt.utils.which('timedatectl'):
         ret = _timedatectl()
 
-        for line in (x.strip() for x in ret['stdout'].splitlines()):
+        for line in (x.strip() for x in salt.utils.itertools.split(ret['stdout'], '\n')):
             try:
                 return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
             except AttributeError:
@@ -224,9 +235,16 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
+    Compares the given timezone name with the system timezone name.
     Checks the hash sum between the given timezone, and the one set in
-    /etc/localtime. Returns True if they match, and False if not. Mostly useful
-    for running state checks.
+    /etc/localtime. Returns True if names and hash sums match, and False if not.
+    Mostly useful for running state checks.
+
+    .. versionchanged:: 2016.3.0
+
+    .. note::
+
+        On Solaris-link operating systems only a string comparison is done.
 
     CLI Example:
 
@@ -235,7 +253,11 @@ def zone_compare(timezone):
         salt '*' timezone.zone_compare 'America/Denver'
     '''
     if 'Solaris' in __grains__['os_family']:
-        return 'Not implemented for Solaris family'
+        return timezone == get_zone()
+
+    curtzstring = get_zone()
+    if curtzstring != timezone:
+        return False
 
     tzfile = '/etc/localtime'
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
@@ -248,7 +270,7 @@ def zone_compare(timezone):
     try:
         usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
-        raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
+        raise SaltInvocationError('Invalid timezone \'{0}\''.format(timezone))
 
     try:
         etczone = salt.utils.get_hash(tzfile, hash_type)

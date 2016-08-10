@@ -41,7 +41,7 @@ def __virtual__():
     cmd = _detect_os()
     if salt.utils.which(cmd):
         return 'apache'
-    return False
+    return (False, 'The apache execution module cannot be loaded: apache is not installed.')
 
 
 def _detect_os():
@@ -404,19 +404,19 @@ def _parse_config(conf, slot=None):
         else:
             print('{0}'.format(conf), file=ret, end='')
     elif isinstance(conf, list):
-        print('{0} {1}'.format(str(slot), ' '.join(conf)), file=ret, end='')
+        print('{0} {1}'.format(slot, ' '.join(conf)), file=ret, end='')
     elif isinstance(conf, dict):
         print('<{0} {1}>'.format(
             slot,
             _parse_config(conf['this'])),
-            file=ret
-        )
+              file=ret
+             )
         del conf['this']
         for key, value in six.iteritems(conf):
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
-                print('{0} {1}'.format(key, ' '.join(value)), file=ret)
+                print(_parse_config(value, key), file=ret)
             elif isinstance(value, dict):
                 print(_parse_config(value, key), file=ret)
         print('</{0}>'.format(slot), file=ret, end='')
@@ -451,6 +451,6 @@ def config(name, config, edit=True):
         configs = _parse_config(entry[key], key)
         if edit:
             with salt.utils.fopen(name, 'w') as configfile:
-                configfile.write('# This file is managed by saltstack.\n')
+                configfile.write('# This file is managed by Salt.\n')
                 configfile.write(configs)
     return configs

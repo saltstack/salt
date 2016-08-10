@@ -38,6 +38,15 @@ Nagios settings may also be configured as::
   To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
 
     salt '*' test.ping --return nagios --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return nagios --return_kwargs '{"service": "service-name"}'
+
 '''
 from __future__ import absolute_import
 

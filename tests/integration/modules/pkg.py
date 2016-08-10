@@ -196,6 +196,8 @@ class PkgModuleTest(integration.ModuleCase,
             if not isinstance(ret, dict):
                 self.skipTest('{0} encountered an error: {1}'.format(func, ret))
             self.assertNotEqual(ret, {})
+            if not isinstance(ret, dict):
+                self.skipTest('Upstream repo did not return coherent results. Skipping test.')
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
         else:

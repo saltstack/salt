@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -15,6 +17,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
@@ -66,8 +69,9 @@ dhcp_options_parameters.update(conn_parameters)
 opts = salt.config.DEFAULT_MINION_OPTS
 ctx = {}
 utils = salt.loader.utils(opts, context=ctx, whitelist=['boto'])
+serializers = salt.loader.serializers(opts)
 funcs = salt.loader.minion_mods(opts, context=ctx, utils=utils, whitelist=['boto_vpc'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_vpc'])
+salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_vpc'], serializers=serializers)
 
 
 def _has_required_boto():
@@ -86,6 +90,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -228,13 +228,21 @@ The directory to store the pki authentication keys.
 ``extension_modules``
 ---------------------
 
+.. versionchanged:: 2016.3.0
+    The default location for this directory has been moved. Prior to this
+    version, the location was a directory named ``extmods`` in the Salt
+    cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
+    moved into the master cachedir (on most platforms,
+    ``/var/cache/salt/master/extmods``).
+
 Directory for custom modules. This directory can contain subdirectories for
-each of Salt's module types such as "runners", "output", "wheel", "modules",
-"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+each of Salt's module types such as ``runners``, ``output``, ``wheel``,
+``modules``, ``states``, ``returners``, etc. This path is appended to
+:conf_master:`root_dir`.
 
 .. code-block:: yaml
 
-    extension_modules: srv/modules
+    extension_modules: /root/salt_extmods
 
 .. conf_minion:: module_dirs
 
@@ -664,6 +672,24 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+``transport_opts``
+------------------
+
+Default: ``{}``
+
+(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
+This setting has a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+
+.. code-block:: yaml
+
+    transport_opts:
+      tcp:
+        publish_port: 4605
+        ret_port: 4606
+      zeromq: []
+
 Salt-SSH Configuration
 ======================
 
@@ -777,27 +803,28 @@ minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
 
-.. conf_master:: client_acl
+.. conf_master:: publisher_acl
 
-``client_acl``
---------------
+``publisher_acl``
+-----------------
 
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions.
+can be expressed as regular expressions. Note that client_acl option is
+deprecated by publisher_acl option and will be removed in future releases.
 
 .. code-block:: yaml
 
-    client_acl:
+    publisher_acl:
       fred:
         - test.ping
         - pkg.*
 
-.. conf_master:: client_acl_blacklist
+.. conf_master:: publisher_acl_blacklist
 
-``client_acl_blacklist``
-------------------------
+``publisher_acl_blacklist``
+---------------------------
 
 Default: ``{}``
 
@@ -805,13 +832,14 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module.
+module. Note that client_acl_blacklist option is deprecated by
+publisher_acl_blacklist option and will be removed in future releases.
 
 This is completely disabled by default.
 
 .. code-block:: yaml
 
-    client_acl_blacklist:
+    publisher_acl_blacklist:
       users:
         - root
         - '^(?!sudo_).*$'   #  all non sudo users
@@ -2865,9 +2893,7 @@ master, specify the higher level master port with this configuration value.
 
     syndic_master_port: 4506
 
-.. conf_master:: syndic_log_file
-
-.. conf_master:: syndic_master_log_file
+.. conf_master:: syndic_pidfile
 
 ``syndic_pidfile``
 ------------------
@@ -2881,6 +2907,8 @@ master, specify the pidfile of the syndic daemon.
 
     syndic_pidfile: syndic.pid
 
+.. conf_master:: syndic_log_file
+
 ``syndic_log_file``
 -------------------
 
@@ -2892,6 +2920,24 @@ master, specify the log_file of the syndic daemon.
 .. code-block:: yaml
 
     syndic_log_file: salt-syndic.log
+
+.. master_conf:: syndic_failover
+
+``syndic_failover``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``random``
+
+The behaviour of the multi-syndic when connection to a master of masters failed.
+Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+will be iterated in random order. If ``ordered`` is specified, the configured
+order will be used.
+
+.. code-block:: yaml
+
+    syndic_failover: random
 
 
 Peer Publish Settings

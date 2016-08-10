@@ -10,10 +10,12 @@ import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
-import salt.state
 import salt.runner
+import salt.state
+import salt.utils
+import salt.utils.schema as S
 from salt.utils.doc import strip_rst as _strip_rst
+from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -836,3 +838,62 @@ def list_renderers(*args):
         for func in fnmatch.filter(ren_, module):
             ren.add(func)
     return sorted(ren)
+
+
+def _argspec_to_schema(mod, spec):
+    args = spec['args']
+    defaults = spec['defaults'] or []
+
+    args_req = args[:len(args) - len(defaults)]
+    args_defaults = list(zip(args[-len(defaults):], defaults))
+
+    types = {
+        'title': mod,
+        'description': mod,
+    }
+
+    for i in args_req:
+        types[i] = S.OneOfItem(items=(
+            S.BooleanItem(title=i, description=i, required=True),
+            S.IntegerItem(title=i, description=i, required=True),
+            S.NumberItem(title=i, description=i, required=True),
+            S.StringItem(title=i, description=i, required=True),
+
+            # S.ArrayItem(title=i, description=i, required=True),
+            # S.DictItem(title=i, description=i, required=True),
+        ))
+
+    for i, j in args_defaults:
+        types[i] = S.OneOfItem(items=(
+            S.BooleanItem(title=i, description=i, default=j),
+            S.IntegerItem(title=i, description=i, default=j),
+            S.NumberItem(title=i, description=i, default=j),
+            S.StringItem(title=i, description=i, default=j),
+
+            # S.ArrayItem(title=i, description=i, default=j),
+            # S.DictItem(title=i, description=i, default=j),
+        ))
+
+    return type(mod, (S.Schema,), types).serialize()
+
+
+def state_schema(module=''):
+    '''
+    Return a JSON Schema for the given state function(s)
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_schema
+        salt '*' sys.state_schema pkg.installed
+    '''
+    specs = state_argspec(module)
+
+    schemas = []
+    for state_mod, state_spec in specs.items():
+        schemas.append(_argspec_to_schema(state_mod, state_spec))
+
+    return schemas

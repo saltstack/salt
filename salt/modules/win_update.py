@@ -72,6 +72,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_update: module has failed dependencies or is not on Windows client")
 
 
 def _gather_update_categories(updateCollection):
@@ -343,7 +344,7 @@ class PyWinUpdater(object):
             results['update {0}'.format(i)] = update
         return results
 
-    def GetSearchResults(self):
+    def GetSearchResultsVerbose(self):
         updates = []
         log.debug('parsing results. {0} updates were found.'.format(
             self.download_collection.count))
@@ -352,16 +353,46 @@ class PyWinUpdater(object):
             if update.InstallationBehavior.CanRequestUserInput:
                 log.debug('Skipped update {0}'.format(str(update)))
                 continue
-            updates.append(salt.utils.locales.sdecode(update))
+            # More fields can be added from https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+            update_com_fields = ['Categories', 'Deadline', 'Description',
+                                 'Identity', 'IsMandatory',
+                                 'KBArticleIDs', 'MaxDownloadSize', 'MinDownloadSize',
+                                 'MoreInfoUrls', 'MsrcSeverity', 'ReleaseNotes',
+                                 'SecurityBulletinIDs', 'SupportUrl', 'Title']
+            simple_enums = ['KBArticleIDs', 'MoreInfoUrls', 'SecurityBulletinIDs']
+            # update_dict = {k: getattr(update, k) for k in update_com_fields}
+            update_dict = {}
+            for f in update_com_fields:
+                v = getattr(update, f)
+                if not any([isinstance(v, bool), isinstance(v, str)]):
+                    # Fields that require special evaluation.
+                    if f in simple_enums:
+                        v = [x for x in v]
+                    elif f == 'Categories':
+                        v = [{'Name': cat.Name, 'Description': cat.Description} for cat in v]
+                    elif f == 'Deadline':
+                        # Deadline will be useful and should be added.
+                        # However, until it can be tested with a date object
+                        # as returned by the COM, it is unclear how to
+                        # handle this field.
+                        continue
+                    elif f == 'Identity':
+                        v = {'RevisionNumber': v.RevisionNumber,
+                             'UpdateID': v.UpdateID}
+                update_dict[f] = v
+            updates.append(update_dict)
             log.debug('added update {0}'.format(str(update)))
         return updates
 
-    def GetSearchResultsPretty(self):
-        updates = self.GetSearchResults()
-        ret = 'There are {0} updates. They are as follows:\n'.format(len(updates))
-        for update in updates:
-            ret += '\t{0}\n'.format(str(update))
-        return ret
+    def GetSearchResults(self, fields=None):
+        """Reduce full updates information to the most important information."""
+        updates_verbose = self.GetSearchResultsVerbose()
+        if fields is not None:
+            updates = [dict((k, v) for k, v in update.items() if k in fields)
+                       for update in updates_verbose]
+            return updates
+        # Return list of titles.
+        return [update['Title'] for update in updates_verbose]
 
     def SetCategories(self, categories):
         self.categories = categories
@@ -439,7 +470,7 @@ def _search(quidditch, retries=5):
             passed = False
     if clean:
         # bragging rights.
-        comment += 'Search was done with out an error.\n'
+        comment += 'Search was done without error.\n'
 
     return (comment, True, retries)
 
@@ -499,13 +530,18 @@ def _install(quidditch, retries=5):
 
 # this is where the actual functions available to salt begin.
 
-def list_updates(verbose=False, skips=None, retries=5, categories=None):
+def list_updates(verbose=False, fields=None, skips=None, retries=5, categories=None):
     '''
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
 
     verbose
-        Print results in greater detail
+        Return full set of results, including several fields from the COM.
+
+    fields
+        Return a list of specific fields for each update. The optional
+        values here are those at the root level of the verbose list. This
+        is superceded by the verbose option.
 
     retries
         Number of retries to make before giving up. This is total, not per
@@ -518,7 +554,7 @@ def list_updates(verbose=False, skips=None, retries=5, categories=None):
 
             salt '*' win_update.list_updates categories="['Updates']"
 
-        Categories include the following:
+        Categories include, but are not limited to, the following:
 
         * Updates
         * Windows 7
@@ -533,25 +569,28 @@ def list_updates(verbose=False, skips=None, retries=5, categories=None):
         # Normal Usage
         salt '*' win_update.list_updates
 
+        # Specific Fields
+        salt '*' win_update.list_updates fields="['Title', 'Description']"
+
         # List all critical updates list in verbose detail
-        salt '*' win_update.list_updates categories=['Critical Updates'] verbose=True
+        salt '*' win_update.list_updates categories="['Critical Updates']" verbose=True
 
     '''
 
     log.debug('categories to search for are: {0}'.format(str(categories)))
-    quidditch = PyWinUpdater()
+    updates = PyWinUpdater()
     if categories:
-        quidditch.SetCategories(categories)
-    quidditch.SetSkips(skips)
+        updates.SetCategories(categories)
+    updates.SetSkips(skips)
 
     # this is where we be seeking the things! yar!
-    comment, passed, retries = _search(quidditch, retries)
+    comment, passed, retries = _search(updates, retries)
     if not passed:
         return (comment, str(passed))
     log.debug('verbose: {0}'.format(str(verbose)))
     if verbose:
-        return str(quidditch.GetSearchResultsPretty())
-    return str(quidditch)
+        return updates.GetSearchResultsVerbose()
+    return updates.GetSearchResults(fields=fields)
 
 
 def download_updates(skips=None, retries=5, categories=None):

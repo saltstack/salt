@@ -9,15 +9,18 @@ Enable and disable apache modules.
 .. code-block:: yaml
 
     Enable cgi module:
-      apache_module.enable:
+      apache_module.enabled:
         - name: cgi
 
     Disable cgi module:
-      apache_module.disable:
+      apache_module.disabled:
         - name: cgi
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -27,7 +30,7 @@ def __virtual__():
     return 'apache_module' if 'apache.a2enmod' in __salt__ else False
 
 
-def enable(name):
+def enabled(name):
     '''
     Ensure an Apache module is enabled.
 
@@ -36,7 +39,7 @@ def enable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_mod_enabled'](name)
     if not is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be enabled.'.format(name)
@@ -61,7 +64,27 @@ def enable(name):
     return ret
 
 
-def disable(name):
+def enable(name):
+    '''
+    Ensure an Apache module is enabled.
+
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
+
+    name
+        Name of the Apache module
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'This functionality has been deprecated; use "apache_module.enabled" '
+        'instead.'
+    )
+
+    return enabled(name)
+
+
+def disabled(name):
     '''
     Ensure an Apache module is disabled.
 
@@ -70,7 +93,7 @@ def disable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_mod_enabled'](name)
     if is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be disabled.'.format(name)
@@ -93,3 +116,23 @@ def disable(name):
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
+
+
+def disable(name):
+    '''
+    Ensure an Apache module is disabled.
+
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
+
+    name
+        Name of the Apache module
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'This functionality has been deprecated; use "apache_module.disabled" '
+        'instead.'
+    )
+
+    return disabled(name)

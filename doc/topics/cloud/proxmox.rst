@@ -149,3 +149,94 @@ with their default settings listed.
 
     # The name of the image, from ``salt-cloud --list-images proxmox``
     image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
+
+QEMU
+====
+
+Some functionnalities works differently if you use 'qemu' as technology. In order to create a new VM with qemu, you need to specificy some more information.
+You can also clone a qemu template which already is on your Proxmox server.
+
+QEMU profile file (for a new VM):
+
+.. code-block:: yaml
+
+  proxmox-win7:
+    # Image of the new VM
+    image: image.iso # You can get all your available images using 'salt-cloud --list-images provider_name' (Ex: 'salt-cloud --list-images my-proxmox-config')
+
+    # Technology used to create the VM ('qemu' or 'openvz')
+    technology: qemu
+ 
+    # Proxmox node name
+    host: node_name
+
+    # Proxmox password
+    password: your_password
+
+    # Workaround https://github.com/saltstack/salt/issues/27821
+    size: ''
+
+    # RAM size (MB)
+    memory: 2048
+
+    # OS Type enum (other / wxp / w2k / w2k3 / w2k8 / wvista / win7 / win8 / l24 / l26 / solaris)
+    ostype: win7
+    
+    # Hard disk location
+    sata0: <location>:<size>, format=<qcow2/vmdk/raw>, size=<size>GB #Example: local:120,format=qcow2,size=120GB
+
+    #CD/DVD Drive
+    ide2: <content_location>,media=cdrom #Example: local:iso/name.iso,media=cdrom
+
+    # Network Device
+    net0:<model>,bridge=<bridge> #Example: e1000,bridge=vmbr0
+
+    # Enable QEMU Guest Agent (0 / 1)
+    agent: 1
+
+    # VM name
+    name: Test
+
+More information about these parameters can be found on Proxmox API (http://pve.proxmox.com/pve2-api-doc/) under the 'POST' method of nodes/{node}/qemu
+
+
+QEMU profile file (for a clone):
+
+.. code-block:: yaml
+
+  proxmox-win7:
+    # Enable Clone
+    clone: 1
+
+    # New VM description
+    clone_description: 'description'
+
+    # New VM name
+    clone_name: 'name'
+
+    # New VM format (qcow2 / raw / vmdk)
+    clone_format: qcow2
+
+    # Full clone (1) or Link clone (0)
+    clone_full: 0
+
+    # VMID of Template to clone
+    clone_from: ID
+
+    # Technology used to create the VM ('qemu' or 'openvz')
+    technology: qemu
+ 
+    # Proxmox node name
+    host: node_name
+
+    # Proxmox password
+    password: your_password
+
+    # Workaround https://github.com/saltstack/salt/issues/27821
+    size: ''
+
+More information can be found on Proxmox API under the 'POST' method of /nodes/{node}/qemu/{vmid}/clone
+
+.. note::
+    The Proxmox API offers a lot more options and parameters, which are not yet supported by this salt-cloud 'overlay'. Feel free to add your contribution by forking the github repository and modifying  the following file: salt/salt/cloud/clouds/proxmox.py
+    An easy way to support more parameters for VM creation would be to add the names of the optional parameters in the 'create_nodes(vm_)' function, under the 'qemu' technology. But it requires you to dig into the code ...

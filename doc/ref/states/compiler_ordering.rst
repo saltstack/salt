@@ -182,7 +182,7 @@ Definition Order
 .. note::
 
     The Definition Order system can be disabled by turning the option
-    `state_auto_order` to `False` in the master configuration file.
+    ``state_auto_order`` to ``False`` in the master configuration file.
 
 The top level of ordering is the `Definition Order`. The `Definition Order`
 is the order in which states are defined in salt formulas. This is very
@@ -239,7 +239,7 @@ The `order` Flag
 ----------------
 
 The `Definition Order` happens transparently in the background, but the
-ordering can be explicitly overridden using the `order` flag in states:
+ordering can be explicitly overridden using the ``order`` flag in states:
 
 .. code-block:: yaml
 
@@ -252,7 +252,7 @@ This order flag will over ride the definition order, this makes it very
 simple to create states that are always executed first, last or in specific
 stages, a great example is defining a number of package repositories that
 need to be set up before anything else, or final checks that need to be
-run at the end of a state run by using `order: last` or `order: -1`.
+run at the end of a state run by using ``order: last`` or ``order: -1``.
 
 When the order flag is explicitly set the `Definition Order` system will omit
 setting an order for that state and directly use the order flag defined.
@@ -275,7 +275,7 @@ to ensure that every execution still happens in a finite order.
 
 .. note::
 
-    If running with `state_auto_order: False` the `order` key is not
+    If running with ``state_auto_order: False`` the ``order`` key is not
     set automatically, since the Lexicographical order can be derived
     from other keys.
 
@@ -304,7 +304,7 @@ at first as it creates a linear dependency evaluation sequence.
 The "Low Data" is an ordered list or dictionaries, the state runtime evaluates
 each dictionary in the order in which they are arranged in the list. When
 evaluating a single dictionary it is checked for requisites, requisites are
-evaluated in order, `require` then `watch` then `prereq`.
+evaluated in order, ``require`` then ``watch`` then ``prereq``.
 
 .. note::
 
@@ -346,7 +346,7 @@ states are written using requisites for all associations since requisites
 create clean, traceable dependency trails and make for the most portable
 formulas. To accomplish something similar to how classical imperative
 systems function all requisites can be omitted and the ``failhard`` option
-then set to `True` in the master configuration, this will stop all state runs at
+then set to ``True`` in the master configuration, this will stop all state runs at
 the first instance of a failure.
 
 In the end, using requisites creates very tight and fine grained states,

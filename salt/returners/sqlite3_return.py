@@ -16,8 +16,8 @@ minion config:
 
 .. code-block:: yaml
 
-    returner.sqlite3.database: /usr/lib/salt/salt.db
-    returner.sqlite3.timeout: 5.0
+    sqlite3.database: /usr/lib/salt/salt.db
+    sqlite3.timeout: 5.0
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -25,8 +25,8 @@ the default location:
 
 .. code-block:: yaml
 
-    alternative.returner.sqlite3.database: /usr/lib/salt/salt.db
-    alternative.returner.sqlite3.timeout: 5.0
+    alternative.sqlite3.database: /usr/lib/salt/salt.db
+    alternative.sqlite3.timeout: 5.0
 
 Use the commands to create the sqlite3 database and tables:
 
@@ -70,6 +70,14 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return sqlite3 --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return sqlite3 --return_kwargs '{"db": "/var/lib/salt/another-salt.db"}'
 
 '''
 from __future__ import absolute_import
@@ -129,10 +137,10 @@ def _get_conn(ret=None):
 
     if not database:
         raise Exception(
-                'sqlite3 config option "returner.sqlite3.database" is missing')
+                'sqlite3 config option "sqlite3.database" is missing')
     if not timeout:
         raise Exception(
-                'sqlite3 config option "returner.sqlite3.timeout" is missing')
+                'sqlite3 config option "sqlite3.timeout" is missing')
     log.debug('Connecting the sqlite3 database: {0} timeout: {1}'.format(
               database,
               timeout))
@@ -163,10 +171,10 @@ def returner(ret):
                 {'fun': ret['fun'],
                  'jid': ret['jid'],
                  'id': ret['id'],
-                 'fun_args': str(ret['fun_args']) if ret['fun_args'] else None,
+                 'fun_args': str(ret['fun_args']) if ret.get('fun_args') else None,
                  'date': str(datetime.datetime.now()),
                  'full_ret': json.dumps(ret['return']),
-                 'success': ret['success']})
+                 'success': ret.get('success', '')})
     _close_conn(conn)
 
 
@@ -261,15 +269,15 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    log.debug('sqlite3 returner <get_fun> called')
+    log.debug('sqlite3 returner <get_jids> called')
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT jid FROM jids'''
+    sql = '''SELECT jid, load FROM jids'''
     cur.execute(sql)
     data = cur.fetchall()
-    ret = []
-    for jid in data:
-        ret.append(jid[0])
+    ret = {}
+    for jid, load in data:
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     _close_conn(conn)
     return ret
 

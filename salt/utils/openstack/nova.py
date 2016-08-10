@@ -968,13 +968,110 @@ class SaltNova(object):
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
+    def floating_ip_pool_list(self):
+        '''
+        List all floating IP pools
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        pools = nt_ks.floating_ip_pools.list()
+        response = {}
+        for pool in pools:
+            response[pool.name] = {
+                'name': pool.name,
+            }
+        return response
+
+    def floating_ip_list(self):
+        '''
+        List floating IPs
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        response = {}
+        for floating_ip in floating_ips:
+            response[floating_ip.ip] = {
+                'ip': floating_ip.ip,
+                'fixed_ip': floating_ip.fixed_ip,
+                'id': floating_ip.id,
+                'instance_id': floating_ip.instance_id,
+                'pool': floating_ip.pool
+            }
+        return response
+
+    def floating_ip_show(self, ip):
+        '''
+        Show info on specific floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        for floating_ip in floating_ips:
+            if floating_ip.ip == ip:
+                return floating_ip
+        return {}
+
+    def floating_ip_create(self, pool=None):
+        '''
+        Allocate a floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ip = nt_ks.floating_ips.create(pool)
+        response = {
+            'ip': floating_ip.ip,
+            'fixed_ip': floating_ip.fixed_ip,
+            'id': floating_ip.id,
+            'instance_id': floating_ip.instance_id,
+            'pool': floating_ip.pool
+        }
+        return response
+
+    def floating_ip_delete(self, floating_ip):
+        '''
+        De-allocate a floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        ip = self.floating_ip_show(floating_ip)
+        nt_ks = self.compute_conn
+        return nt_ks.floating_ips.delete(ip)
+
+    def floating_ip_associate(self, server_name, floating_ip):
+        '''
+        Associate floating IP address to server
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.add_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
+    def floating_ip_disassociate(self, server_name, floating_ip):
+        '''
+        Disassociate a floating IP from server
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.remove_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
 # The following is a list of functions that need to be incorporated in the
 # nova module. This list should be updated as functions are added.
 #
 # absolute-limits     Print a list of absolute limits for a user
 # actions             Retrieve server actions.
 # add-fixed-ip        Add new IP address to network.
-# add-floating-ip     Add a floating IP address to a server.
 # aggregate-add-host  Add the host to the specified aggregate.
 # aggregate-create    Create a new aggregate with the specified details.
 # aggregate-delete    Delete the aggregate by its id.
@@ -1004,11 +1101,6 @@ class SaltNova(object):
 #                     and name.
 # endpoints           Discover endpoints that get returned from the
 #                     authenticate services
-# floating-ip-create  Allocate a floating IP for the current tenant.
-# floating-ip-delete  De-allocate a floating IP.
-# floating-ip-list    List floating ips for this tenant.
-# floating-ip-pool-list
-#                     List all floating ip pools.
 # get-vnc-console     Get a vnc console to a server.
 # host-action         Perform a power action on a host.
 # host-update         Update host settings.
@@ -1023,7 +1115,6 @@ class SaltNova(object):
 # reboot              Reboot a server.
 # rebuild             Shutdown, re-image, and re-boot a server.
 # remove-fixed-ip     Remove an IP address from a server.
-# remove-floating-ip  Remove a floating IP address from a server.
 # rename              Rename a server.
 # rescue              Rescue a server.
 # resize              Resize a server.

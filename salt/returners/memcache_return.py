@@ -35,15 +35,25 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return memcache --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return memcache --return_kwargs '{"host": "hostname.domain.com"}'
+
 '''
 from __future__ import absolute_import
 
 # Import python libs
 import json
 import logging
-import salt.utils.jid
 
+import salt.utils.jid
 import salt.returners
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +114,21 @@ def _get_serv(ret):
     #    an integer weight value.
 
 
+def _get_list(serv, key):
+    value = serv.get(key)
+    if value:
+        return value.strip(',').split(',')
+    return []
+
+
+def _append_list(serv, key, value):
+    if value in _get_list(serv, key):
+        return
+    r = serv.append(key, '{0},'.format(value))
+    if not r:
+        serv.add(key, '{0},'.format(value))
+
+
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
@@ -116,18 +141,17 @@ def returner(ret):
     Return data to a memcache data store
     '''
     serv = _get_serv(ret)
-    serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
+    minion = ret['id']
+    jid = ret['jid']
+    fun = ret['fun']
+    rets = json.dumps(ret)
+    serv.set('{0}:{1}'.format(jid, minion), rets)  # cache for get_jid
+    serv.set('{0}:{1}'.format(fun, minion), rets)  # cache for get_fun
 
     # The following operations are neither efficient nor atomic.
     # If there is a way to make them so, this should be updated.
-    if ret['id'] not in get_minions():
-        r = serv.append('minions', ret['id'] + ',')
-        if not r:
-            serv.add('minions', ret['id'] + ',')
-    if ret['jid'] not in get_jids():
-        r = serv.append('jids', ret['jid'] + ',')
-        if not r:
-            serv.add('jids', ret['jid'] + ',')
+    _append_list(serv, 'minions', minion)
+    _append_list(serv, 'jids', jid)
 
 
 def save_load(jid, load, minions=None):
@@ -136,7 +160,7 @@ def save_load(jid, load, minions=None):
     '''
     serv = _get_serv(ret=None)
     serv.set(jid, json.dumps(load))
-    serv.append('jids', jid)
+    _append_list(serv, 'jids', jid)
 
 
 def save_minions(jid, minions):  # pylint: disable=unused-argument
@@ -162,11 +186,12 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     '''
     serv = _get_serv(ret=None)
+    minions = _get_list(serv, 'minions')
+    returns = serv.get_multi(minions, key_prefix='{0}:'.format(jid))
+    # returns = {minion: return, minion: return, ...}
     ret = {}
-    for minion in get_minions():
-        data = serv.get('{0}:{1}'.format(minion, jid))
-        if data:
-            ret[minion] = json.loads(data)
+    for minion, data in six.iteritems(returns):
+        ret[minion] = json.loads(data)
     return ret
 
 
@@ -175,16 +200,12 @@ def get_fun(fun):
     Return a dict of the last function called for all minions
     '''
     serv = _get_serv(ret=None)
+    minions = _get_list(serv, 'minions')
+    returns = serv.get_multi(minions, key_prefix='{0}:'.format(fun))
+    # returns = {minion: return, minion: return, ...}
     ret = {}
-    for minion in serv.smembers('minions'):
-        ind_str = '{0}:{1}'.format(minion, fun)
-        try:
-            jid = serv.lindex(ind_str, 0)
-        except Exception:
-            continue
-        data = serv.get('{0}:{1}'.format(minion, jid))
-        if data:
-            ret[minion] = json.loads(data)
+    for minion, data in six.iteritems(returns):
+        ret[minion] = json.loads(data)
     return ret
 
 
@@ -193,10 +214,12 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
-    try:
-        return serv.get('jids').strip(',').split(',')
-    except AttributeError:
-        return []
+    jids = _get_list(serv, 'jids')
+    loads = serv.get_multi(jids)  # {jid: load, jid: load, ...}
+    ret = {}
+    for jid, load in six.iteritems(loads):
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+    return ret
 
 
 def get_minions():
@@ -204,7 +227,4 @@ def get_minions():
     Return a list of minions
     '''
     serv = _get_serv(ret=None)
-    try:
-        return serv.get('minions').strip(',').split(',')
-    except AttributeError:
-        return []
+    return _get_list(serv, 'minions')

@@ -41,7 +41,7 @@ def __virtual__():
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
         return True
-    return False, 'The ps module cannot be loaded: psutil must be version 0.3.0 or greater.'
+    return (False, 'The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0'.format(psutil.version_info))
 
 
 def _get_proc_cmdline(proc):
@@ -133,6 +133,8 @@ def top(num_processes=5, interval=3):
         try:
             process = psutil.Process(pid)
             user, system = process.cpu_times()
+        except ValueError:
+            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
@@ -141,6 +143,8 @@ def top(num_processes=5, interval=3):
     for process, start in six.iteritems(start_usage):
         try:
             user, system = process.cpu_times()
+        except ValueError:
+            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system

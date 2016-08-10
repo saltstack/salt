@@ -37,7 +37,8 @@ def present(
         enc=None,
         config=None,
         hash_hostname=True,
-        hash_known_hosts=True):
+        hash_known_hosts=True,
+        timeout=5):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -82,6 +83,14 @@ def present(
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
+
+    timeout : int
+        Set the timeout for connection attempts.  If ``timeout`` seconds have
+        elapsed since a connection was initiated to a host or since the last
+        time anything was read from that host, then the connection is closed
+        and the host in question considered unavailable.  Default is 5 seconds.
+
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -102,7 +111,7 @@ def present(
         salt.utils.warn_until(
             'Carbon',
             'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual'
+            'hash the whole known hosts file, not entries for individual '
             'hosts. Please use hash_known_hosts=False instead.')
         hash_known_hosts = hash_hostname
 
@@ -146,7 +155,8 @@ def present(
                 port=port,
                 enc=enc,
                 config=config,
-                hash_known_hosts=hash_known_hosts)
+                hash_known_hosts=hash_known_hosts,
+                timeout=timeout)
     if result['status'] == 'exists':
         return dict(ret,
                     comment='{0} already exists in {1}'.format(name, config))

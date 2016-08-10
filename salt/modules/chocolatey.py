@@ -36,9 +36,9 @@ def __virtual__():
     salt-minion running as SYSTEM.
     '''
     if not salt.utils.is_windows():
-        return False
+        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows')
     elif __grains__['osrelease'] in ('XP', '2003Server'):
-        return False
+        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows Vista or later')
     return 'chocolatey'
 
 
@@ -90,8 +90,6 @@ def _find_chocolatey(context, salt):
 
 def chocolatey_version():
     '''
-    .. versionadded:: 2014.7.0
-
     Returns the version of Chocolatey installed on the minion.
 
     CLI Example:
@@ -103,34 +101,12 @@ def chocolatey_version():
     if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
 
-    def find_version(legacy=False):
-        cmd = [_find_chocolatey(__context__, __salt__)]
-        if legacy:
-            cmd.append('help')
-        out = __salt__['cmd.run'](cmd, python_shell=False)
-        for line in out.splitlines():
-            line = line.lower()
-            if line.startswith('chocolatey v'):
-                __context__['chocolatey._version'] = line[12:]
-                return __context__['chocolatey._version']
-            elif line.startswith('version: '):
-                try:
-                    __context__['chocolatey._version'] = \
-                        line.split(None, 1)[-1].strip("'")
-                    return __context__['chocolatey._version']
-                except Exception:
-                    pass
-        return None
+    cmd = [_find_chocolatey(__context__, __salt__)]
+    cmd.append('-v')
+    out = __salt__['cmd.run'](cmd, python_shell=False)
+    __context__['chocolatey._version'] = out
 
-    # First try to find if we have a newer version of choco
-    # which doesn't contain the help command,
-    # else try for a legacy version
-    for legacy in [False, True]:
-        ver = find_version(legacy=legacy)
-        if ver is not None:
-            return ver
-
-    raise CommandExecutionError('Unable to determine Chocolatey version')
+    return __context__['chocolatey._version']
 
 
 def bootstrap(force=False):
@@ -346,9 +322,11 @@ def install(name,
             version=None,
             source=None,
             force=False,
+            pre_versions=False,
             install_args=None,
             override_args=False,
-            force_x86=False):
+            force_x86=False,
+            package_args=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -365,6 +343,9 @@ def install(name,
     force
         Reinstall the current version of an existing package.
 
+    pre_versions
+        Include pre-release packages. Defaults to False.
+
     install_args
         A list of install arguments you want to pass to the installation process
         i.e product key or feature list
@@ -376,6 +357,9 @@ def install(name,
 
     force_x86
         Force x86 (32bit) installation on 64 bit systems. Defaults to false.
+
+    package_args
+        A list of arguments you want to pass to the package
 
     CLI Example:
 
@@ -394,12 +378,16 @@ def install(name,
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
         cmd.extend(['-Force'])
+    if salt.utils.is_true(pre_versions):
+        cmd.extend(['-PreRelease'])
     if install_args:
         cmd.extend(['-InstallArguments', install_args])
     if override_args:
         cmd.extend(['-OverrideArguments'])
     if force_x86:
         cmd.extend(['-forcex86'])
+    if package_args:
+        cmd.extend(['-PackageParameters', package_args])
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -812,3 +800,99 @@ def version(name, check_remote=False, source=None, pre_versions=False):
                 ret[name] = ver
 
     return ret
+
+
+def add_source(name, source_location, username=None, password=None):
+    '''
+    Instructs Chocolatey to add a source.
+
+    name
+        The name of the source to be added as a chocolatey repository.
+
+    source
+        Location of the source you want to work with.
+
+    username
+        Provide username for chocolatey sources that need authentication credentials.
+
+    password
+        Provide password for chocolatey sources that need authentication credentials.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
+
+    '''
+    choc_path = _find_chocolatey(__context__, __salt__)
+    cmd = [choc_path, 'sources', 'Add', '-Name', name, "-Source", source_location]
+    if username:
+        cmd.extend(['-u', username])
+    if password:
+        cmd.extend(['-p', password])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if result['retcode'] != 0:
+        err = 'Running chocolatey failed: {0}'.format(result['stderr'])
+        log.error(err)
+        raise CommandExecutionError(err)
+
+    return result['stdout']
+
+
+def _change_source_state(name, state):
+    '''
+    Instructs Chocolatey to change the state of a source.
+
+    name
+        Name of the repository to affect.
+
+    state
+        State in which you want the chocolatey repository.
+
+    '''
+    choc_path = _find_chocolatey(__context__, __salt__)
+    cmd = [choc_path, 'source', state, "-Name", name]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if result['retcode'] != 0:
+        err = 'Running chocolatey failed: {0}'.format(result['stderr'])
+        log.error(err)
+        raise CommandExecutionError(err)
+
+    return result['stdout']
+
+
+def enable_source(name):
+    '''
+    Instructs Chocolatey to enable a source.
+
+    name
+        Name of the source repository to enable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.enable_source <name>
+
+    '''
+    return _change_source_state(name, "enable")
+
+
+def disable_source(name):
+    '''
+    Instructs Chocolatey to disable a source.
+
+    name
+        Name of the source repository to disable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.disable_source <name>
+    '''
+    return _change_source_state(name, "disable")

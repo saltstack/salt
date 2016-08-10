@@ -22,6 +22,10 @@ import salt.utils.files
 import salt.utils.jid
 import salt.exceptions
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+
 log = logging.getLogger(__name__)
 
 # load is the published job
@@ -52,9 +56,13 @@ def _jid_dir(jid):
     '''
     Return the jid_dir for the given job id
     '''
-    jid = str(jid)
-    jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
-    return os.path.join(_job_dir(), jhash[:2], jhash[2:])
+    if six.PY3:
+        jhash = getattr(hashlib, __opts__['hash_type'])(jid.encode('utf-8')).hexdigest()
+    else:
+        jhash = getattr(hashlib, __opts__['hash_type'])(str(jid)).hexdigest()
+    return os.path.join(_job_dir(),
+                        jhash[:2],
+                        jhash[2:])
 
 
 def _walk_through(job_dir):
@@ -109,7 +117,10 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
 
     try:
         with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
-            fn_.write(jid)
+            if six.PY2:
+                fn_.write(jid)
+            else:
+                fn_.write(bytes(jid, 'utf-8'))
         if nocache:
             with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
                 fn_.write('')

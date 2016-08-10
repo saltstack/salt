@@ -16,6 +16,7 @@ import datetime
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
 # pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandNotFoundError
 
 # Import salt libs
 import salt.utils
@@ -32,7 +33,7 @@ def __virtual__():
     Most everything has the ability to support at(1)
     '''
     if salt.utils.is_windows() or salt.utils.which('at') is None:
-        return False
+        return (False, 'The at module could not be loaded: at command not found')
     return True
 
 
@@ -40,11 +41,12 @@ def _cmd(binary, *args):
     '''
     Wrapper to run at(1) or return None.
     '''
-    # TODO: Use CommandNotFoundException for this
     binary = salt.utils.which(binary)
-    if binary:
-        return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
-            ' '.join(args)))
+    if not binary:
+        raise CommandNotFoundError('{0}: command not found'.format(binary))
+    cmd = [binary] + list(args)
+    return __salt__['cmd.run_stdout']([binary] + list(args),
+                                      python_shell=False)
 
 
 def atq(tag=None):
@@ -211,10 +213,10 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         stdin = ' '.join(args[1:])
     cmd = [binary, args[0]]
 
+    cmd_kwargs = {'stdin': stdin, 'python_shell': False}
     if 'runas' in kwargs:
-        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False, runas=kwargs['runas'])
-    else:
-        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False)
+        cmd_kwargs['runas'] = kwargs['runas']
+    output = __salt__['cmd.run'](cmd, **cmd_kwargs)
 
     if output is None:
         return '\'at.at\' is not available.'
@@ -255,7 +257,7 @@ def atc(jobid):
     if output is None:
         return '\'at.atc\' is not available.'
     elif output == '':
-        return {'error': 'invalid job id {0!r}'.format(jobid)}
+        return {'error': 'invalid job id \'{0}\''.format(jobid)}
 
     return output
 

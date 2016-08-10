@@ -103,9 +103,9 @@ def __virtual__():
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
                     '\'pkgng\', won\'t load old provider \'freebsdpkg\'.')
-            return False
+            return (False, 'The freebsdpkg execution module cannot be loaded: the configuration option \'providers:pkg\' is set to \'pkgng\'')
         return __virtualname__
-    return False
+    return (False, 'The freebsdpkg execution module cannot be loaded: either the os is not FreeBSD or the version of FreeBSD is >= 10.')
 
 
 def _get_repo_options(fromrepo=None, packagesite=None):
@@ -145,7 +145,9 @@ def _match(names):
 
     # Look for full matches
     full_pkg_strings = []
-    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](['pkg_info'],
+                                     output_loglevel='trace',
+                                     python_shell=False)
     for line in out.splitlines():
         try:
             full_pkg_strings.append(line.split()[0])
@@ -164,7 +166,7 @@ def _match(names):
             else:
                 ambiguous.append(name)
                 errors.append(
-                    'Ambiguous package {0!r}. Full name/version required. '
+                    'Ambiguous package \'{0}\'. Full name/version required. '
                     'Possible matches: {1}'.format(
                         name,
                         ', '.join(['{0}-{1}'.format(name, x) for x in cver])
@@ -175,7 +177,7 @@ def _match(names):
     not_matched = \
         set(names) - set(matches) - set(full_matches) - set(ambiguous)
     for name in not_matched:
-        errors.append('Package {0!r} not found'.format(name))
+        errors.append('Package \'{0}\' not found'.format(name))
 
     return matches + full_matches, errors
 
@@ -285,7 +287,9 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
 
     ret = {}
     origins = {}
-    out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](['pkg_info', '-ao'],
+                                     output_loglevel='trace',
+                                     python_shell=False)
     pkgs_re = re.compile(r'Information for ([^:]+):\s*Origin:\n([^\n]+)')
     for pkg, origin in pkgs_re.findall(out):
         if not pkg:
@@ -391,15 +395,29 @@ def install(name=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run'](
-        'pkg_add {0}'.format(' '.join(args)),
+    out = __salt__['cmd.run_all'](
+        ['pkg_add'] + args,
         env=env,
-        output_loglevel='trace'
+        output_loglevel='trace',
+        python_shell=False
     )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade():
@@ -454,11 +472,28 @@ def remove(name=None, pkgs=None, **kwargs):
         log.error(error)
     if not targets:
         return {}
-    cmd = 'pkg_delete {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+
+    out = __salt__['cmd.run_all'](
+        ['pkg_delete'] + targets,
+        output_loglevel='trace',
+        python_shell=False
+    )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
 delete = salt.utils.alias_function(remove, 'delete')
@@ -517,13 +552,13 @@ def file_dict(*packages):
 
     if packages:
         match_pattern = '\'{0}-[0-9]*\''
-        matches = [match_pattern.format(p) for p in packages]
-
-        cmd = 'pkg_info -QL {0}'.format(' '.join(matches))
+        cmd = ['pkg_info', '-QL'] + [match_pattern.format(p) for p in packages]
     else:
-        cmd = 'pkg_info -QLa'
+        cmd = ['pkg_info', '-QLa']
 
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    ret = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  python_shell=False)
 
     for line in ret['stderr'].splitlines():
         errors.append(line)

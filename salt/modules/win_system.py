@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import time
 from datetime import datetime
 
 # Import 3rd Party Libs
@@ -44,7 +45,7 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_system: module only works on Windows systems")
 
 
 def _convert_minutes_seconds(timeout, in_seconds=False):
@@ -130,16 +131,26 @@ def poweroff(timeout=5, in_seconds=False):
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def reboot(timeout=5, in_seconds=False):
+def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     '''
     Reboot a running system.
 
     :param int timeout:
-        Number of seconds before rebooting the system.
+        Number of minutes/seconds before rebooting the system. Minutes vs
+        seconds depends on the value of ``in_seconds``.
         Default is 5 minutes.
 
     :param bool in_seconds:
         Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
+
+    :param bool wait_for_reboot:
+
+        Sleeps for timeout + 30 seconds after reboot has been initiated.
+        This is useful for use in a highstate for example where
+        you have many states that could be ran after this one. Which you don't want
+        to start until after the restart i.e You could end up with a half finished state.
 
         .. versionadded:: 2015.8.0
 
@@ -151,8 +162,16 @@ def reboot(timeout=5, in_seconds=False):
     .. code-block:: bash
 
         salt '*' system.reboot 5
+        salt '*' system.reboot 5 True
     '''
-    return shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
+
+    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
+
+    if wait_for_reboot:
+        seconds = _convert_minutes_seconds(timeout, in_seconds)
+        time.sleep(seconds + 30)
+
+    return ret
 
 
 def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds=False):
@@ -414,6 +433,50 @@ def get_computer_desc():
 get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
 
 
+def get_hostname():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Get the hostname of the windows minion
+
+    :return:
+        Returns the hostname of the windows minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_hostname
+    '''
+    cmd = 'wmic computersystem get name'
+    ret = __salt__['cmd.run'](cmd=cmd)
+    _, hostname = ret.split("\n")
+    return hostname
+
+
+def set_hostname(hostname):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Set the hostname of the windows minion, requires a restart before this
+    will be updated.
+
+    :param str hostname:
+        The hostname to set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_hostname newhostname
+    '''
+    curr_hostname = get_hostname()
+    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
+    ret = __salt__['cmd.run'](cmd=cmd)
+
+    return "successful" in ret
+
+
 def _lookup_error(number):
     '''
     Lookup the error based on the passed number
@@ -474,8 +537,8 @@ def join_domain(domain,
         Default is False
 
     :param bool restart: Restarts the computer after a successful join
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool
@@ -560,8 +623,7 @@ def unjoin_domain(username=None,
     :param str workgroup: The workgroup to join the computer to. Default is
     ``WORKGROUP``
 
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :param bool disable:
         Disable the computer account in Active Directory. True to disable.
@@ -569,8 +631,7 @@ def unjoin_domain(username=None,
 
     :param bool restart: Restart the computer after successful unjoin
 
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool
@@ -653,37 +714,6 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
-def _get_date_time_format(dt_string):
-    '''
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%I:%M:%S %p',
-        '%I:%M %p',
-        '%H:%M:%S',
-        '%H:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d'
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
-
-
 def get_system_time():
     '''
     Get the system time.
@@ -708,9 +738,8 @@ def set_system_time(newtime):
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
     '''
-    # Parse time values from new time
-    time_format = _get_date_time_format(newtime)
-    dt_obj = datetime.strptime(newtime, time_format)
+    # Get date/time object from newtime
+    dt_obj = salt.utils.date_cast(newtime)
 
     # Set time using set_system_date_time()
     return set_system_date_time(hours=int(dt_obj.strftime('%H')),
@@ -822,9 +851,8 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
-    # Parse time values from new time
-    date_format = _get_date_time_format(newdate)
-    dt_obj = datetime.strptime(newdate, date_format)
+    # Get date/time object from newdate
+    dt_obj = salt.utils.date_cast(newdate)
 
     # Set time using set_system_date_time()
     return set_system_date_time(years=int(dt_obj.strftime('%Y')),

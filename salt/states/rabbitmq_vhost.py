@@ -14,9 +14,9 @@ Example:
         - write: .*
         - read: .*
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -71,22 +71,24 @@ def present(name):
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if vhost_exists:
-        ret['comment'] = 'VHost {0} already exists'.format(name)
+        ret['comment'] = 'Virtual Host \'{0}\' already exists.'.format(name)
         return ret
+
+    if not __opts__['test']:
+        result = __salt__['rabbitmq.add_vhost'](name)
+        if 'Error' in result:
+            ret['result'] = False
+            ret['comment'] = result['Error']
+            return ret
+        elif 'Added' in result:
+            ret['comment'] = result['Added']
+
+    # If we've reached this far before returning, we have changes.
+    ret['changes'] = {'old': '', 'new': name}
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Creating VHost {0}'.format(name)
-        ret['changes'] = {'old': '', 'new': name}
-        return ret
-
-    result = __salt__['rabbitmq.add_vhost'](name)
-    if 'Error' in result:
-        ret['result'] = False
-        ret['comment'] = result['Error']
-    elif 'Added' in result:
-        ret['comment'] = result['Added']
-        ret['changes'] = {'old': '', 'new': name}
+        ret['comment'] = 'Virtual Host \'{0}\' will be created.'.format(name)
 
     return ret
 
@@ -107,20 +109,23 @@ def absent(name):
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if not vhost_exists:
-        ret['comment'] = 'Virtual Host {0} is not present'.format(name)
+        ret['comment'] = 'Virtual Host \'{0}\' is not present.'.format(name)
+        return ret
 
-    elif __opts__['test']:
+    if not __opts__['test']:
+        result = __salt__['rabbitmq.delete_vhost'](name)
+        if 'Error' in result:
+            ret['result'] = False
+            ret['comment'] = result['Error']
+            return ret
+        elif 'Deleted' in result:
+            ret['comment'] = result['Deleted']
+
+    # If we've reached this far before returning, we have changes.
+    ret['changes'] = {'new': '', 'old': name}
+
+    if __opts__['test']:
         ret['result'] = None
-        if vhost_exists:
-            ret['comment'] = 'Removing Virtual Host {0}'.format(name)
+        ret['comment'] = 'Virtual Host \'{0}\' will be removed.'.format(name)
 
-    else:
-        if vhost_exists:
-            result = __salt__['rabbitmq.delete_vhost'](name)
-            if 'Error' in result:
-                ret['result'] = False
-                ret['comment'] = result['Error']
-            elif 'Deleted' in result:
-                ret['comment'] = result['Deleted']
-                ret['changes'] = {'new': '', 'old': name}
     return ret

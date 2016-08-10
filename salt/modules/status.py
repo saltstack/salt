@@ -7,12 +7,13 @@ These data can be useful for compiling into stats later.
 
 # Import python libs
 from __future__ import absolute_import
+import datetime
 import os
 import re
 import fnmatch
 import collections
+import copy
 import time
-import datetime
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -20,6 +21,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.utils
 import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
@@ -30,6 +32,11 @@ from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
 __opts__ = {}
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
 def __virtual__():
@@ -125,7 +132,7 @@ def custom():
     return ret
 
 
-@with_deprecated(globals(), "Boron")
+@with_deprecated(globals(), "Carbon")
 def uptime():
     '''
     Return the uptime for this system.
@@ -261,10 +268,27 @@ def cpustats():
             cpuctr += 1
         return ret
 
+    def sunos_cpustats():
+        '''
+        sunos specific implementation of cpustats
+        '''
+        mpstat = __salt__['cmd.run']('mpstat 1 2').splitlines()
+        fields = mpstat[0].split()
+        ret = {}
+        for cpu in mpstat:
+            if cpu.startswith('CPU'):
+                continue
+            cpu = cpu.split()
+            ret[_number(cpu[0])] = {}
+            for i in range(1, len(fields)-1):
+                ret[_number(cpu[0])][fields[i]] = _number(cpu[i])
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
+        'SunOS': sunos_cpustats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -332,6 +356,7 @@ def meminfo():
 
 def cpuinfo():
     '''
+    ..versionchanged:: 2016.3.2
     Return the CPU info for this minion
 
     CLI Example:
@@ -360,7 +385,7 @@ def cpuinfo():
                 ret[comps[0]] = comps[1].strip()
         return ret
 
-    def freebsd_cpuinfo():
+    def bsd_cpuinfo():
         '''
         freebsd specific cpuinfo implementation
         '''
@@ -374,10 +399,79 @@ def cpuinfo():
             ret[comps[0]] = comps[1].strip()
         return ret
 
+    def sunos_cpuinfo():
+        '''
+        sunos specific cpuinfo implementation
+        '''
+        ret = {}
+        ret['isainfo'] = {}
+        for line in __salt__['cmd.run']('isainfo -x').splitlines():
+            # Note: isainfo is per-system and not per-cpu
+            # Output Example:
+            #amd64: rdrand f16c vmx avx xsave pclmulqdq aes sse4.2 sse4.1 ssse3 popcnt tscp cx16 sse3 sse2 sse fxsr mmx cmov amd_sysc cx8 tsc fpu
+            #i386: rdrand f16c vmx avx xsave pclmulqdq aes sse4.2 sse4.1 ssse3 popcnt tscp ahf cx16 sse3 sse2 sse fxsr mmx cmov sep cx8 tsc fpu
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            ret['isainfo'][comps[0]] = sorted(comps[1].strip().split())
+        ret['psrinfo'] = []
+        procn = None
+        for line in __salt__['cmd.run']('psrinfo -v -p').splitlines():
+            # Output Example:
+            #The physical processor has 6 cores and 12 virtual processors (0-5 12-17)
+            #  The core has 2 virtual processors (0 12)
+            #  The core has 2 virtual processors (1 13)
+            #  The core has 2 virtual processors (2 14)
+            #  The core has 2 virtual processors (3 15)
+            #  The core has 2 virtual processors (4 16)
+            #  The core has 2 virtual processors (5 17)
+            #    x86 (GenuineIntel 306E4 family 6 model 62 step 4 clock 2100 MHz)
+            #      Intel(r) Xeon(r) CPU E5-2620 v2 @ 2.10GHz
+            #The physical processor has 6 cores and 12 virtual processors (6-11 18-23)
+            #  The core has 2 virtual processors (6 18)
+            #  The core has 2 virtual processors (7 19)
+            #  The core has 2 virtual processors (8 20)
+            #  The core has 2 virtual processors (9 21)
+            #  The core has 2 virtual processors (10 22)
+            #  The core has 2 virtual processors (11 23)
+            #    x86 (GenuineIntel 306E4 family 6 model 62 step 4 clock 2100 MHz)
+            #      Intel(r) Xeon(r) CPU E5-2620 v2 @ 2.10GHz
+            #
+            # Output Example 2:
+            #The physical processor has 4 virtual processors (0-3)
+            #  x86 (GenuineIntel 406D8 family 6 model 77 step 8 clock 2400 MHz)
+            #        Intel(r) Atom(tm) CPU  C2558  @ 2.40GHz
+            if not line:
+                continue
+            if line.startswith('The physical processor'):
+                procn = len(ret['psrinfo'])
+                line = line.split()
+                ret['psrinfo'].append({})
+                if 'cores' in line:
+                    ret['psrinfo'][procn]['topology'] = {}
+                    ret['psrinfo'][procn]['topology']['cores'] = _number(line[4])
+                    ret['psrinfo'][procn]['topology']['threads'] = _number(line[7])
+                elif 'virtual' in line:
+                    ret['psrinfo'][procn]['topology'] = {}
+                    ret['psrinfo'][procn]['topology']['threads'] = _number(line[4])
+            elif line.startswith(' ' * 6):  # 3x2 space indent
+                ret['psrinfo'][procn]['name'] = line.strip()
+            elif line.startswith(' ' * 4):  # 2x2 space indent
+                line = line.strip().split()
+                ret['psrinfo'][procn]['vendor'] = line[1][1:]
+                ret['psrinfo'][procn]['family'] = _number(line[4])
+                ret['psrinfo'][procn]['model'] = _number(line[6])
+                ret['psrinfo'][procn]['step'] = _number(line[8])
+                ret['psrinfo'][procn]['clock'] = "{0} {1}".format(line[10], line[11][:-1])
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpuinfo,
-        'FreeBSD': freebsd_cpuinfo,
+        'FreeBSD': bsd_cpuinfo,
+        'OpenBSD': bsd_cpuinfo,
+        'SunOS': sunos_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -386,6 +480,7 @@ def cpuinfo():
 
 def diskstats():
     '''
+    ..versionchanged:: 2016.3.2
     Return the disk stats for this minion
 
     CLI Example:
@@ -423,9 +518,10 @@ def diskstats():
                              'weighted_ms_spent_in_io': _number(comps[13])}
         return ret
 
-    def freebsd_diskstats():
+    def generic_diskstats():
         '''
-        freebsd specific implementation of diskstats
+        generic implementation of diskstats
+        note: freebsd and sunos
         '''
         ret = {}
         iostat = __salt__['cmd.run']('iostat -xzd').splitlines()
@@ -440,7 +536,8 @@ def diskstats():
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_diskstats,
-        'FreeBSD': freebsd_diskstats,
+        'FreeBSD': generic_diskstats,
+        'SunOS': generic_diskstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -493,14 +590,23 @@ def diskusage(*args):
             ifile = salt.utils.fopen(procf, 'r').readlines()
         elif __grains__['kernel'] == 'FreeBSD':
             ifile = __salt__['cmd.run']('mount -p').splitlines()
+        elif __grains__['kernel'] == 'SunOS':
+            ifile = __salt__['cmd.run']('mount -p').splitlines()
 
         for line in ifile:
             comps = line.split()
-            if len(comps) >= 3:
-                mntpt = comps[1]
-                fstype = comps[2]
-                if regex.match(fstype):
-                    selected.add(mntpt)
+            if __grains__['kernel'] == 'SunOS':
+                if len(comps) >= 4:
+                    mntpt = comps[2]
+                    fstype = comps[3]
+                    if regex.match(fstype):
+                        selected.add(mntpt)
+            else:
+                if len(comps) >= 3:
+                    mntpt = comps[1]
+                    fstype = comps[2]
+                    if regex.match(fstype):
+                        selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
@@ -515,6 +621,7 @@ def diskusage(*args):
 
 def vmstats():
     '''
+    ..versionchanged:: 2016.3.2
     Return the virtual memory stats for this minion
 
     CLI Example:
@@ -539,20 +646,23 @@ def vmstats():
             ret[comps[0]] = _number(comps[1])
         return ret
 
-    def freebsd_vmstats():
+    def generic_vmstats():
         '''
-        freebsd specific implementation of vmstats
+        generic implementation of vmstats
+        note: works on FreeBSD, SunOS and OpenBSD (possibly others)
         '''
         ret = {}
         for line in __salt__['cmd.run']('vmstat -s').splitlines():
             comps = line.split()
             if comps[0].isdigit():
-                ret[' '.join(comps[1:])] = _number(comps[0])
+                ret[' '.join(comps[1:])] = _number(comps[0].strip())
         return ret
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_vmstats,
-        'FreeBSD': freebsd_vmstats,
+        'FreeBSD': generic_vmstats,
+        'OpenBSD': generic_vmstats,
+        'SunOS': generic_vmstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -570,7 +680,7 @@ def nproc():
         salt '*' status.nproc
     '''
     try:
-        return int(__salt__['cmd.run']('nproc').strip())
+        return _number(__salt__['cmd.run']('nproc').strip())
     except ValueError:
         return 0
 
@@ -630,10 +740,31 @@ def netstats():
                     ret[key][' '.join(comps[1:])] = comps[0]
         return ret
 
+    def sunos_netstats():
+        '''
+        sunos specific netstats implementation
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('netstat -s').splitlines():
+            line = line.replace('=', ' = ').split()
+            if len(line) > 6:
+                line.pop(0)
+            if '=' in line:
+                if len(line) >= 3:
+                    if line[2].isdigit() or line[2][0] == '-':
+                        line[2] = _number(line[2])
+                    ret[line[0]] = line[2]
+                if len(line) >= 6:
+                    if line[5].isdigit() or line[5][0] == '-':
+                        line[5] = _number(line[5])
+                    ret[line[3]] = line[5]
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netstats,
         'FreeBSD': freebsd_netstats,
+        'SunOS': sunos_netstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -642,6 +773,7 @@ def netstats():
 
 def netdev():
     '''
+    ..versionchanged:: 2016.3.2
     Return the network device stats for this minion
 
     CLI Example:
@@ -702,10 +834,48 @@ def netdev():
             for i in range(4, 13):  # The columns we want
                 ret[comps[0]][comps[2]][comps[3]][header[i]] = _number(comps[i])
         return ret
+
+    def sunos_netdev():
+        '''
+        sunos specific implementation of netdev
+        '''
+        ret = {}
+        ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+            # fetch device info
+            netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
+            netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()
+
+            # prepare data
+            netstat_ipv4[0] = netstat_ipv4[0].split()
+            netstat_ipv4[1] = netstat_ipv4[1].split()
+            netstat_ipv6[0] = netstat_ipv6[0].split()
+            netstat_ipv6[1] = netstat_ipv6[1].split()
+
+            # add data
+            ret[dev] = {}
+            for i in range(len(netstat_ipv4[0])-1):
+                if netstat_ipv4[0][i] == 'Name':
+                    continue
+                if netstat_ipv4[0][i] in ['Address', 'Net/Dest']:
+                    ret[dev]['IPv4 {field}'.format(field=netstat_ipv4[0][i])] = netstat_ipv4[1][i]
+                else:
+                    ret[dev][netstat_ipv4[0][i]] = _number(netstat_ipv4[1][i])
+            for i in range(len(netstat_ipv6[0])-1):
+                if netstat_ipv6[0][i] == 'Name':
+                    continue
+                if netstat_ipv6[0][i] in ['Address', 'Net/Dest']:
+                    ret[dev]['IPv6 {field}'.format(field=netstat_ipv6[0][i])] = netstat_ipv6[1][i]
+                else:
+                    ret[dev][netstat_ipv6[0][i]] = _number(netstat_ipv6[1][i])
+
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netdev,
         'FreeBSD': freebsd_netdev,
+        'SunOS': sunos_netdev,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -758,7 +928,7 @@ def all_status():
             'meminfo': meminfo(),
             'netdev': netdev(),
             'netstats': netstats(),
-            'uptime': uptime(),
+            'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
             'vmstats': vmstats(),
             'w': w()}
 
@@ -827,7 +997,7 @@ def master(master=None, connected=True):
 
     Fire an event if the minion gets disconnected from its master. This
     function is meant to be run via a scheduled job from the minion. If
-    master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
+    master_ip is an FQDN/Hostname, it must be resolvable to a valid IPv4
     address.
 
     CLI Example:
@@ -862,3 +1032,70 @@ def master(master=None, connected=True):
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': master}, '__master_connected')
+
+
+def ping_master(master):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Sends ping request to the given master. Fires '__master_alive' event on success.
+    Returns bool result.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.ping_master localhost
+    '''
+    if master is None or master == '':
+        return False
+
+    opts = copy.deepcopy(__opts__)
+    opts['master'] = master
+    if 'master_ip' in opts:  # avoid 'master ip changed' warning
+        del opts['master_ip']
+    opts.update(salt.minion.prep_ip_port(opts))
+    try:
+        opts.update(salt.minion.resolve_dns(opts, fallback=False))
+    except Exception:
+        return False
+
+    timeout = opts.get('auth_timeout', 60)
+    load = {'cmd': 'ping'}
+
+    result = False
+    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
+    try:
+        payload = channel.send(load, tries=0, timeout=timeout)
+        result = True
+    except Exception as e:
+        pass
+
+    if result:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        event.fire_event({'master': master}, '__master_failback')
+
+    return result
+
+
+def time_(format='%A, %d. %B %Y %I:%M%p'):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Return the current time on the minion,
+    formatted based on the format parameter.
+
+    Default date format: Monday, 27. July 2015 07:55AM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.time
+
+        salt '*' status.time '%s'
+
+    '''
+
+    dt = datetime.datetime.today()
+    return dt.strftime(format)

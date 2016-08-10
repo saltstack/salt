@@ -1,3 +1,4 @@
+========================================================================
 The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation
 ========================================================================
 
@@ -117,7 +118,7 @@ Or just type
 
 .. code-block:: bash
 
-    ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 
 Now type the following commands in your terminal (you may want to type ``brew

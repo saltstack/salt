@@ -465,6 +465,19 @@ def _compare(actual, create_kwargs, defaults_from_image):
     return ret
 
 
+def _find_volume(name):
+    '''
+    Find volume by name on minion
+    '''
+    docker_volumes = __salt__['dockerng.volumes']()['Volumes']
+    if docker_volumes:
+        volumes = [v for v in docker_volumes if v['Name'] == name]
+        if volumes:
+            return volumes[0]
+
+    return None
+
+
 def _get_defaults_from_image(image_id):
     return __salt__['dockerng.inspect_image'](image_id)
 
@@ -2045,6 +2058,11 @@ def absent(name, force=False):
                           'forcibly remove it')
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
+        return ret
+
     try:
         ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
     except Exception as exc:
@@ -2252,10 +2270,12 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
            'comment': ''}
     if salt.utils.is_dictlist(driver_opts):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
-    volumes = __salt__['dockerng.volumes']()['Volumes']
-    if volumes is not None:
-        volumes = [v for v in volumes if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+            return ret
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
@@ -2267,14 +2287,20 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             result = True
             ret['result'] = result
             return ret
-    # volume exits, check if driver is the same.
-    volume = volumes[0]
+    # volume exists, check if driver is the same.
     if driver is not None and volume['Driver'] != driver:
         if not force:
             ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
                              " does not match specified driver ('{2}')" \
                              " and force is False".format(
                                  name, volume['Driver'], driver)
+            ret['result'] = None if __opts__['test'] else False
+            return ret
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = "The volume '{0}' will be replaced with a" \
+                             " new one using the driver '{1}'".format(
+                                 name, volume)
             return ret
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
@@ -2295,7 +2321,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = True
+    ret['result'] = None if __opts__['test'] else True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 
@@ -2322,8 +2348,8 @@ def volume_absent(name, driver=None):
            'result': False,
            'comment': ''}
 
-    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
         ret['result'] = True
         ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
         return ret

@@ -149,7 +149,7 @@ def __virtual__():
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
 
             return __virtualname__
-    return False
+    return (False, "Module win_file: module only works on Windows systems")
 
 __outputter__ = {
     'touch': 'txt',
@@ -1146,7 +1146,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 
@@ -1170,7 +1174,7 @@ def _is_reparse_point(path):
 
 def is_link(path):
     '''
-    Return the path that a symlink points to
+    Check if the path is a symlink
 
     This is only supported on Windows Vista or later.
 

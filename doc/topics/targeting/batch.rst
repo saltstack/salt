@@ -23,3 +23,8 @@ The batch system maintains a window of running minions, so, if there are a
 total of 150 minions targeted and the batch size is 10, then the command is
 sent to 10 minions, when one minion returns then the command is sent to one
 additional minion, so that the job is constantly running on 10 minions.
+
+.. versionadded:: 2016.3
+
+The ``--batch-wait`` argument can be used to specify a number of seconds to
+wait after a minion returns, before sending the command to a new minion.

@@ -22,7 +22,10 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return True if salt.utils.which('dig') else False
+    if salt.utils.which('dig'):
+        return __virtualname__
+    return (False, 'The dig execution module cannot be loaded: '
+            'the dig binary is not in the path.')
 
 
 def check_ip(addr):
@@ -205,7 +208,7 @@ def SPF(domain, record='SPF', nameserver=None):
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warn(
-            'dig returned exit code {0!r}. Returning empty list as fallback.'
+            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
             .format(result['retcode'])
         )
         return []

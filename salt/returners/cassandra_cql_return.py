@@ -83,11 +83,11 @@ Return data to a cassandra server
 
 Required python modules: cassandra-driver
 
-To use the cassandra returner, append '--return cassandra' to the salt command. ex:
+To use the cassandra returner, append '--return cassandra_cql' to the salt command. ex:
 
 .. code-block:: bash
 
-    salt '*' test.ping --return cassandra
+    salt '*' test.ping --return_cql cassandra
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -354,9 +354,9 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    query = '''SELECT DISTINCT jid FROM salt.jids;'''
+    query = '''SELECT jid, load FROM salt.jids;'''
 
-    ret = []
+    ret = {}
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
@@ -364,8 +364,9 @@ def get_jids():
         if data:
             for row in data:
                 jid = row.get('jid')
-                if jid:
-                    ret.append(jid)
+                load = row.get('load')
+                if jid and load:
+                    ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     except CommandExecutionError:
         log.critical('Could not get a list of all job ids.')
         raise

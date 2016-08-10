@@ -7,10 +7,9 @@
 Reactor System
 ==============
 
-Salt version 0.11.0 introduced the reactor system. The premise behind the
-reactor system is that with Salt's events and the ability to execute commands,
-a logic engine could be put in place to allow events to trigger actions, or
-more accurately, reactions.
+Salt's Reactor system gives Salt the ability to trigger actions in response to
+an event. It is a simple interface to watching Salt's event bus for event tags
+that match a given pattern and then running one or more commands in response.
 
 This system binds sls files to event tags on the master. These sls files then
 define reactions. This means that the reactor system has two parts. First, the
@@ -54,7 +53,7 @@ and each event tag has a list of reactor SLS files to be run.
         - /srv/reactor/start.sls        # Things to do when a minion starts
         - /srv/reactor/monitor.sls      # Other things to do
 
-      - 'salt/cloud/*/destroyed':       # Globs can be used to matching tags
+      - 'salt/cloud/*/destroyed':       # Globs can be used to match tags
         - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
 
       - 'myco/custom/event/tag':        # React to custom event tags
@@ -102,6 +101,92 @@ API and the runner system.  In this example, a command is published to the
 
 This example will execute the state.orchestrate runner and initiate an
 orchestrate execution.
+
+The Goal of Writing Reactor SLS Files
+=====================================
+
+Reactor SLS files share the familiar syntax from Salt States but there are
+important differences. The goal of a Reactor file is to process a Salt event as
+quickly as possible and then to optionally start a **new** process in response.
+
+1.  The Salt Reactor watches Salt's event bus for new events.
+2.  The event tag is matched against the list of event tags under the
+    ``reactor`` section in the Salt Master config.
+3.  The SLS files for any matches are Rendered into a data structure that
+    represents one or more function calls.
+4.  That data structure is given to a pool of worker threads for execution.
+
+Matching and rendering Reactor SLS files is done sequentially in a single
+process. Complex Jinja that calls out to slow Execution or Runner modules slows
+down the rendering and causes other reactions to pile up behind the current
+one. The worker pool is designed to handle complex and long-running processes
+such as Salt Orchestrate.
+
+tl;dr: Rendering Reactor SLS files MUST be simple and quick. The new process
+started by the worker threads can be long-running.
+
+Jinja Context
+-------------
+
+Reactor files only have access to a minimal Jinja context. ``grains`` and
+``pillar`` are not available. The ``salt`` object is available for calling
+Runner and Execution modules but it should be used sparingly and only for quick
+tasks for the reasons mentioned above.
+
+Advanced State System Capabilities
+----------------------------------
+
+Reactor SLS files, by design, do not support Requisites, ordering,
+``onlyif``/``unless`` conditionals and most other powerful constructs from
+Salt's State system.
+
+Complex Master-side operations are best performed by Salt's Orchestrate system
+so using the Reactor to kick off an Orchestrate run is a very common pairing.
+
+For example:
+
+.. code-block:: yaml
+
+    # /etc/salt/master.d/reactor.conf
+    # A custom event containing: {"foo": "Foo!", "bar: "bar*", "baz": "Baz!"}
+    reactor:
+      - myco/custom/event:
+        - /srv/reactor/some_event.sls
+
+.. code-block:: yaml
+
+    # /srv/reactor/some_event.sls
+    invoke_orchestrate_file:
+      runner.state.orchestrate:
+        - mods: orch.do_complex_thing
+        - pillar:
+            event_tag: {{ tag }}
+            event_data: {{ data | json() }}
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/do_complex_thing.sls
+    {% set tag = salt.pillar.get('event_tag') %}
+    {% set data = salt.pillar.get('event_data') %}
+
+    # Pass data from the event to a custom runner function.
+    # The function expects a 'foo' argument.
+    do_first_thing:
+      salt.runner:
+        - name: custom_runner.custom_function
+        - foo: {{ data.foo }}
+
+    # Wait for the runner to finish then send an execution to minions.
+    # Forward some data from the event down to the minion's state run.
+    do_second_thing:
+      salt.state:
+        - tgt: {{ data.bar }}
+        - sls:
+          - do_thing_on_minion
+        - pillar:
+            baz: {{ data.baz }}
+        - require:
+          - salt: do_first_thing
 
 Fire an event
 =============
@@ -295,8 +380,8 @@ For example:
     clear_the_grains_cache_for_all_minions:
       runner.cache.clear_grains
 
-If :py:func:`the runner takes arguments <salt.runners.cache.clear_grains>` then
-they can be specified as well:
+If the :py:func:`the runner takes arguments <salt.runners.cloud.profile>` then
+they must be specified as keyword arguments.
 
 .. code-block:: yaml
 
@@ -306,6 +391,9 @@ they can be specified as well:
         - instances:
           - web11       # These VM names would be generated via Jinja in a
           - web12       # real-world example.
+
+To determine the proper names for the arguments, check the documentation
+or source code for the runner function you wish to call.
 
 Passing event data to Minions or Orchestrate as Pillar
 ------------------------------------------------------
@@ -427,7 +515,7 @@ authentication every ten seconds by default.
 
 .. code-block:: yaml
 
-    {# Ink server faild to authenticate -- remove accepted key #}
+    {# Ink server failed to authenticate -- remove accepted key #}
     {% if not data['result'] and data['id'].startswith('ink') %}
     minion_remove:
       wheel.key.delete:

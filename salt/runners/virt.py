@@ -213,7 +213,8 @@ def init(
         install=True,
         start=True,
         disk='default',
-        saltenv='base'):
+        saltenv='base',
+        enable_vnc=False):
     '''
     This routine is used to create a new virtual machine. This routines takes
     a number of options to determine what the newly created virtual machine
@@ -322,6 +323,7 @@ def init(
                     install,
                     pub_key,
                     priv_key,
+                    enable_vnc,
                 ],
                 timeout=600)
     except SaltClientError as client_error:

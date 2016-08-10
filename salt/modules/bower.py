@@ -32,7 +32,9 @@ def __virtual__():
     '''
     Only work when Bower is installed
     '''
-    return salt.utils.which('bower') is not None
+    if salt.utils.which('bower') is None:
+        return (False, 'The bower module could not be loaded: bower command not found')
+    return True
 
 
 def _check_valid_version():

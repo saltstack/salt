@@ -24,10 +24,10 @@ def __virtual__():
     '''
     if salt.utils.which('guestmount'):
         return 'guestfs'
-    return False
+    return (False, 'The guestfs execution module cannot be loaded: guestmount binary not in path.')
 
 
-def mount(location, access='rw'):
+def mount(location, access='rw', root=None):
     '''
     Mount an image
 
@@ -37,12 +37,13 @@ def mount(location, access='rw'):
 
         salt '*' guest.mount /srv/images/fedora.qcow
     '''
-    root = os.path.join(
-        tempfile.gettempdir(),
-        'guest',
-        location.lstrip(os.sep).replace('/', '.')
-    )
-    log.debug('Using root {0}'.format(root))
+    if root is None:
+        root = os.path.join(
+            tempfile.gettempdir(),
+            'guest',
+            location.lstrip(os.sep).replace('/', '.')
+        )
+        log.debug('Using root {0}'.format(root))
     if not os.path.isdir(root):
         try:
             os.makedirs(root)
