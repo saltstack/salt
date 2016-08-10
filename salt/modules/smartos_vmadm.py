@@ -17,6 +17,7 @@ except ImportError:
 import salt.ext.six as six
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)

@@ -24,6 +24,7 @@ import salt.utils.args
 import salt.utils.jid
 import salt.utils.minion
 import salt.defaults.exitcodes
+from salt.defaults import exitcodes
 from salt.log import LOG_LEVELS
 from salt.utils import is_windows
 from salt.utils import print_cli
@@ -206,9 +207,9 @@ class BaseCaller(object):
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret['retcode'] = sys.modules[
-                    func.__module__].__context__.get('retcode', 0)
+                    func.__module__].__context__.get('retcode', exitcodes.EX_OK)
             except AttributeError:
-                ret['retcode'] = 1
+                ret['retcode'] = exitcodes.EX_SOFTWARE
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(

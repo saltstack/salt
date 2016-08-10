@@ -231,6 +231,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -330,7 +331,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         if isinstance(onlyif, string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
-            if cmd != 0:
+            if cmd != exitcodes.EX_OK:
                 return {'comment': 'onlyif execution failed',
                         'skip_watch': True,
                         'result': True}
@@ -338,7 +339,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
                 log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
-                if cmd != 0:
+                if cmd != exitcodes.EX_OK:
                     return {'comment': 'onlyif execution failed: {0}'.format(entry),
                             'skip_watch': True,
                             'result': True}
@@ -353,7 +354,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         if isinstance(unless, string_types):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
-            if cmd == 0:
+            if cmd == exitcodes.EX_OK:
                 return {'comment': 'unless execution succeeded',
                         'skip_watch': True,
                         'result': True}
@@ -362,7 +363,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             for entry in unless:
                 cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
                 log.debug('Last command return code: {0}'.format(cmd))
-            if all([c == 0 for c in cmd]):
+            if all([c == exitcodes.EX_OK for c in cmd]):
                 return {'comment': 'unless execution succeeded',
                         'skip_watch': True,
                         'result': True}
@@ -852,19 +853,22 @@ def run(name,
         return ret
 
     ret['changes'] = cmd_all
-    ret['result'] = not bool(cmd_all['retcode'])
+    ret['result'] = cmd_all['retcode'] == exitcodes.EX_OK
     ret['comment'] = 'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
         trigger = 'Timed out after'
-        if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
-            ret['changes']['retcode'] = 0
+        if ret['changes'].get('retcode') == exitcodes.EX_TIMEDOUT or (
+                ret['changes'].get('retcode') != exitcodes.EX_OK
+                and trigger in ret['changes'].get('stdout')
+        ):
+            ret['changes']['retcode'] = exitcodes.EX_OK
             ret['result'] = True
 
     if stateful:
         ret = _reinterpreted_state(ret)
-    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+    if __opts__['test'] and cmd_all['retcode'] == exitcodes.EX_OK and ret['changes']:
         ret['result'] = None
     return ret
 
@@ -1112,7 +1116,7 @@ def script(name,
     if kwargs.get('retcode', False):
         ret['result'] = not bool(cmd_all)
     else:
-        ret['result'] = not bool(cmd_all['retcode'])
+        ret['result'] = cmd_all['retcode'] == exitcodes.EX_OK
     if ret.get('changes', {}).get('cache_error'):
         ret['comment'] = 'Unable to cache script {0} from saltenv ' \
                          '\'{1}\''.format(source, __env__)
@@ -1120,7 +1124,7 @@ def script(name,
         ret['comment'] = 'Command \'{0}\' run'.format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
-    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+    if __opts__['test'] and cmd_all['retcode'] == exitcodes.EX_OK and ret['changes']:
         ret['result'] = None
     return ret
 

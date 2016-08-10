@@ -69,7 +69,7 @@ def _retcode_to_bool(retcode):
     Returns:
         True on 0, else False
     '''
-    return retcode == exitcodes.EX_OK:
+    return retcode == exitcodes.EX_OK
 
 
 def _stdout_list_split(retcode, stdout='', splitstring='\n'):

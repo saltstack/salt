@@ -50,6 +50,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -365,7 +366,7 @@ def repo(name,
 
     res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
 
-    if res['retcode'] > 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
     else:
         ret['changes'] = {'refresh': True}

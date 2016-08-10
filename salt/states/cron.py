@@ -144,6 +144,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
@@ -571,7 +572,7 @@ def file(name,
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
 
-    if cron_ret and cron_ret['retcode']:
+    if cron_ret and cron_ret['retcode'] != exitcodes.EX_OK:
         ret['comment'] = 'Unable to update user {0} crontab {1}.' \
                          ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
         ret['result'] = False

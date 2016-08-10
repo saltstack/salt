@@ -22,6 +22,7 @@ import pprint
 import salt.ext.six as six
 
 # Import Salt Libs
+from salt.defaults import exitcodes
 import salt.utils.cloud as suc
 
 
@@ -99,14 +100,14 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif, python_shell=True) != 0:
+            if retcode(onlyif, python_shell=True) != exitcodes.EX_OK:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless, python_shell=True) == 0:
+            if retcode(unless, python_shell=True) == exitcodes.EX_OK:
                 return _valid(name, comment='unless execution succeeded')
 
     # provider=None not cloud_provider because
@@ -176,14 +177,14 @@ def absent(name, onlyif=None, unless=None):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif, python_shell=True) != 0:
+            if retcode(onlyif, python_shell=True) != exitcodes.EX_OK:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless, python_shell=True) == 0:
+            if retcode(unless, python_shell=True) == exitcodes.EX_OK:
                 return _valid(name, comment='unless execution succeeded')
 
     if not __salt__['cloud.has_instance'](name=name, provider=None):
@@ -250,14 +251,14 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif, python_shell=True) != 0:
+            if retcode(onlyif, python_shell=True) != exitcodes.EX_OK:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless, python_shell=True) == 0:
+            if retcode(unless, python_shell=True) == exitcodes.EX_OK:
                 return _valid(name, comment='unless execution succeeded')
     instance = _get_instance([name])
     if instance and not any('Not Actioned' in key for key in instance):

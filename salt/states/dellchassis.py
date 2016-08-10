@@ -161,6 +161,7 @@ import os
 
 # Import Salt lobs
 import salt.ext.six as six
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 # Get logging started
@@ -285,7 +286,7 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
             host=current_idrac_ip,
             admin_username='root',
             admin_password=password)
-        if dnsracname_result['retcode'] == 0:
+        if dnsracname_result['retcode'] == exitcodes.EX_OK:
             ret['changes']['DNSRacName']['success'] = True
         else:
             ret['result'] = False
@@ -294,7 +295,7 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
 
     if 'DRAC DHCP' in ret['changes']:
         dhcp_result = __salt__['chassis.cmd']('set_niccfg', dhcp=idrac_dhcp)
-        if dhcp_result['retcode']:
+        if dhcp_result['retcode'] == exitcodes.EX_OK:
             ret['changes']['DRAC DHCP']['success'] = True
         else:
             ret['result'] = False
@@ -306,7 +307,7 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
                                                  netmask=idrac_netmask,
                                                  gateway=idrac_gateway,
                                                  module=name)
-        if network_result['retcode'] == 0:
+        if network_result['retcode'] == exitcodes.EX_OK:
             ret['changes']['Network']['success'] = True
         else:
             ret['result'] = False
@@ -595,7 +596,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
 
     current_nic = __salt__['chassis.cmd']('network_info', module=name)
     try:
-        if current_nic.get('retcode', 0) != 0:
+        if current_nic.get('retcode', 0) != exitcodes.EX_OK:
             ret['result'] = False
             ret['comment'] = current_nic['stdout']
             return ret

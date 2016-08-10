@@ -50,7 +50,7 @@ def _check_server_manager():
     '''
     return __salt__['cmd.retcode']('Import-Module ServerManager',
                                    shell='powershell',
-                                   python_shell=True)
+                                   python_shell=True) == exitcodes.EX_OK
 
 
 def _pshell_json(cmd, cwd=None):

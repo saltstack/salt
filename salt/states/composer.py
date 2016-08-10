@@ -160,7 +160,7 @@ def installed(name,
         ret['comment'] = 'Error executing composer in \'{0}\': {1}'.format(name, err)
         return ret
 
-    # If composer retcode != 0 then an exception was thrown and we dealt with it.
+    # If composer retcode != EX_OK then an exception was thrown and we dealt with it.
     # Any other case is success, regardless of what composer decides to output.
 
     ret['result'] = True
@@ -274,7 +274,7 @@ def update(name,
         ret['comment'] = 'Error executing composer in \'{0}\': {1}'.format(name, err)
         return ret
 
-    # If composer retcode != 0 then an exception was thrown and we dealt with it.
+    # If composer retcode != EX_OK then an exception was thrown and we dealt with it.
     # Any other case is success, regardless of what composer decides to output.
 
     ret['result'] = True
