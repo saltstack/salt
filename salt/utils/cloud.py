@@ -2387,7 +2387,8 @@ def lock_file(filename, interval=.5, timeout=15):
         else:
             break
 
-    salt.utils.fopen(lock, 'a').close()
+    with salt.utils.fopen(lock, 'a'):
+        pass
 
 
 def unlock_file(filename):
