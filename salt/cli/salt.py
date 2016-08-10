@@ -250,8 +250,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             print_cli('---------------------------')
             print_cli('Errors')
             print_cli('---------------------------')
-            for minion in errors:
-                print_cli(self._format_error(minion))
+            for error in errors:
+                print_cli(self._format_error(error))
 
     def _print_returns_summary(self, ret):
         '''
@@ -361,12 +361,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
-            if ret[host] == 'Minion did not return. [Not connected]':
+            if isinstance(ret[host], string_types) and ret[host].startswith("Minion did not return"):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:
                     docs[fun] = ret[host][fun]
-        if 'output' in self.config:
+        if self.options.output:
             for fun in sorted(docs):
                 salt.output.display_output({fun: docs[fun]}, 'nested', self.config)
         else:
