@@ -1948,7 +1948,7 @@ def save(image, filename):
         try:
             dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
-            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != retcodes.EX_OK):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != exitcodes.EX_OK):
                 return _invalid(status,
                                 id_=image,
                                 out=ret,
