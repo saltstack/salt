@@ -31,6 +31,7 @@ except:  # pylint: disable=W0702
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import logging
@@ -485,7 +486,7 @@ def addgroup(name, group):
     cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
     ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def removegroup(name, group):
@@ -522,7 +523,7 @@ def removegroup(name, group):
     cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
     ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def chhome(name, home, persist=False):
@@ -562,7 +563,7 @@ def chhome(name, home, persist=False):
 
     if persist and home is not None and pre_info['home'] is not None:
         cmd = 'move /Y {0} {1}'.format(pre_info['home'], home)
-        if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+        if __salt__['cmd.retcode'](cmd, python_shell=False) != exitcodes.EX_OK:
             log.debug('Failed to move the contents of the Home Directory')
 
     post_info = info(name)

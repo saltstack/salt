@@ -12,6 +12,15 @@ Lower value exit codes are, in-general, considered more serious.
 :=> 90-95: remote execution: build failures
 '''
 
+EX_UNSET = -1             # The exit status is unset.
+                          # NOTE: While this is a convention that is
+                          # currently in use in Salt, -1 *is* a valid
+                          # return status (it is often cast to a uint8
+                          # and is manifest as 255.  This would likely
+                          # be better as None
+
+EX_OK = 0                 # successful termination
+
 # Too many situations use "exit 1" - try not to use it when something
 # else is more appropriate.
 EX_GENERIC = 1
@@ -33,7 +42,8 @@ EX_AGGREGATE = 20
 # These constants are documented here:
 # https://docs.python.org/2/library/os.html#os.EX_OK
 
-EX_OK = 0                 # successful termination
+EX_TIMEDOUT = 63          # timeout expired
+
 # BSD range 64 - 78
 EX_USAGE = 64             # command line usage error
 EX_DATAERR = 65           # data format error

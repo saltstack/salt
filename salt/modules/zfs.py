@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
@@ -47,7 +48,7 @@ def _check_features():
         man=man
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return res['retcode'] == 0
+    return res['retcode'] == exitcodes.EX_OK
 
 
 def __virtual__():
@@ -73,7 +74,7 @@ def __virtual__():
 
     if cmd and salt.modules.cmdmod.retcode(
         cmd, output_loglevel='quiet', ignore_retcode=True
-    ) == 0:
+    ) == exitcodes.EX_OK:
         return 'zfs'
     return (False, "The zfs module cannot be loaded: zfs not found")
 
@@ -103,7 +104,7 @@ def exists(name, **kwargs):
     cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', name)
     res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
 
-    return res['retcode'] == 0
+    return res['retcode'] == exitcodes.EX_OK
 
 
 def create(name, **kwargs):
@@ -180,7 +181,7 @@ def create(name, **kwargs):
     res = __salt__['cmd.run_all'](cmd)
 
     # Check and see if the dataset is available
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name] = 'created'
@@ -232,7 +233,7 @@ def destroy(name, **kwargs):
     cmd = '{0} {1}'.format(cmd, name)
     res = __salt__['cmd.run_all'](cmd)
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         if "operation does not apply to pools" in res['stderr']:
             ret[name] = '{0}, use zpool.destroy to destroy the pool'.format(res['stderr'].splitlines()[0])
         if "has children" in res['stderr']:
@@ -297,7 +298,7 @@ def rename(name, new_name, **kwargs):
         new_name=new_name
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name] = 'renamed to {0}'.format(new_name)
@@ -377,7 +378,7 @@ def list_(name=None, **kwargs):
 
     # parse output
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         for ds in [l for l in res['stdout'].splitlines()]:
             ds = ds.split("\t")
             ds_data = {}
@@ -428,9 +429,9 @@ def mount(name='-a', **kwargs):
 
     ret = {}
     if name == '-a':
-        ret = res['retcode'] == 0
+        ret = res['retcode'] == exitcodes.EX_OK
     else:
-        if res['retcode'] != 0:
+        if res['retcode'] != exitcodes.EX_OK:
             ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
         else:
             ret[name] = 'mounted'
@@ -469,9 +470,9 @@ def unmount(name, **kwargs):
 
     ret = {}
     if name == '-a':
-        ret = res['retcode'] == 0
+        ret = res['retcode'] == exitcodes.EX_OK
     else:
-        if res['retcode'] != 0:
+        if res['retcode'] != exitcodes.EX_OK:
             ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
         else:
             ret[name] = 'unmounted'
@@ -514,7 +515,7 @@ def inherit(prop, name, **kwargs):
 
     ret = {}
     ret[name] = {}
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name][prop] = res['stderr'] if 'stderr' in res else res['stdout']
         if 'property cannot be inherited' in res['stderr']:
             ret[name][prop] = '{0}, {1}'.format(
@@ -567,7 +568,7 @@ def diff(name_a, name_b, **kwargs):
         name_b=name_b
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret = []
@@ -634,7 +635,7 @@ def rollback(name, **kwargs):
         snapshot=name
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name[:name.index('@')]] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name[:name.index('@')]] = 'rolledback to snapshot: {0}'.format(name[name.index('@')+1:])
@@ -699,7 +700,7 @@ def clone(name_a, name_b, **kwargs):
         name_b=name_b
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name_b] = 'cloned from {0}'.format(name_a)
@@ -746,7 +747,7 @@ def promote(name):
         name=name
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name] = 'promoted'
@@ -802,7 +803,7 @@ def bookmark(snapshot, bookmark):
         bookmark=bookmark
     ))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[snapshot] = 'bookmarked as {0}'.format(bookmark)
@@ -841,7 +842,7 @@ def holds(snapshot, **kwargs):
         snapshot=snapshot
     ))
 
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         if res['stdout'] != '':
             properties = "name,tag,timestamp".split(",")
             for hold in [l for l in res['stdout'].splitlines()]:
@@ -923,7 +924,7 @@ def hold(tag, *snapshot, **kwargs):
             if csnap not in ret:
                 ret[csnap] = {}
 
-            if res['retcode'] != 0:
+            if res['retcode'] != exitcodes.EX_OK:
                 for err in res['stderr'].splitlines():
                     if err.startswith('cannot hold snapshot'):
                         ret[csnap][ctag] = err[err.index(':')+2:]
@@ -1000,7 +1001,7 @@ def release(tag, *snapshot, **kwargs):
             if csnap not in ret:
                 ret[csnap] = {}
 
-            if res['retcode'] != 0:
+            if res['retcode'] != exitcodes.EX_OK:
                 for err in res['stderr'].splitlines():
                     if err.startswith('cannot release hold from snapshot'):
                         ret[csnap][ctag] = err[err.index(':')+2:]
@@ -1080,7 +1081,7 @@ def snapshot(*snapshot, **kwargs):
             snapshot=csnap
         ))
 
-        if res['retcode'] != 0:
+        if res['retcode'] != exitcodes.EX_OK:
             for err in res['stderr'].splitlines():
                 if err.startswith('cannot create snapshot'):
                     ret[csnap] = err[err.index(':')+2:]
@@ -1167,7 +1168,7 @@ def set(*dataset, **kwargs):
             if ds not in ret:
                 ret[ds] = {}
 
-            if res['retcode'] != 0:
+            if res['retcode'] != exitcodes.EX_OK:
                 ret[ds][prop] = res['stderr'] if 'stderr' in res else res['stdout']
                 if ':' in ret[ds][prop]:
                     ret[ds][prop] = ret[ds][prop][ret[ds][prop].index(':')+2:]
@@ -1256,7 +1257,7 @@ def get(*dataset, **kwargs):
 
     # parse output
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         for ds in [l for l in res['stdout'].splitlines()]:
             ds = ds.split("\t")
             ds_data = {}

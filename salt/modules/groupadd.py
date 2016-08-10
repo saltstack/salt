@@ -18,6 +18,8 @@ try:
 except ImportError:
     pass
 
+from salt.defaults import exitcodes
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -56,7 +58,7 @@ def add(name, gid=None, system=False, root=None):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def delete(name, root=None):
@@ -76,7 +78,7 @@ def delete(name, root=None):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def info(name):
@@ -184,7 +186,7 @@ def adduser(name, username, root=None):
 
     retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
 
-    return not retcode
+    return retcode == exitcodes.EX_OK
 
 
 def deluser(name, username, root=None):
@@ -226,7 +228,7 @@ def deluser(name, username, root=None):
             else:
                 log.error('group.deluser is not yet supported on this platform')
                 return False
-            return not retcode
+            return retcode == exitcodes.EX_OK
         else:
             return True
     except Exception:
@@ -260,7 +262,7 @@ def members(name, members_list, root=None):
             cmd.extend(('-R', root))
         retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     elif __grains__['kernel'] == 'OpenBSD':
-        retcode = 1
+        retcode = exitcodes.EX_GENERIC
         grp_info = __salt__['group.info'](name)
         if grp_info and name in grp_info['name']:
             __salt__['cmd.run']('groupdel {0}'.format(name),
@@ -272,13 +274,13 @@ def members(name, members_list, root=None):
                     retcode = __salt__['cmd.retcode'](
                         'usermod -G {0} {1}'.format(name, user),
                         python_shell=False)
-                    if not retcode == 0:
+                    if not retcode == exitcodes.EX_OK:
                         break
                 # provided list is '': users previously deleted from group
                 else:
-                    retcode = 0
+                    retcode = exitcodes.EX_OK
     else:
         log.error('group.members is not yet supported on this platform')
         return False
 
-    return not retcode
+    return retcode == exitcodes.EX_OK

@@ -9,6 +9,7 @@ import salt.utils
 import hashlib
 import datetime
 import socket
+from salt.defaults import exitcodes
 import salt.utils.network
 import salt.utils.validate.net
 
@@ -70,7 +71,7 @@ def ping(host, timeout=False, return_boolean=False):
         cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
     if return_boolean:
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-        if ret['retcode'] != 0:
+        if ret['retcode'] != exitcodes.EX_OK:
             return False
         else:
             return True

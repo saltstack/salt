@@ -44,6 +44,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -255,7 +256,7 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
     cmd.append('update')
     if force:
         cmd.append('-f')
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
@@ -861,7 +862,7 @@ def install(name=None,
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -1036,7 +1037,7 @@ def remove(name=None,
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -1163,7 +1164,7 @@ def upgrade(*names, **kwargs):
                                    python_shell=False,
                                    redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']

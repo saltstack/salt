@@ -17,6 +17,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
+from salt.defaults import exitcodes
 from salt.utils import kinds
 from salt import transport
 from salt import syspaths
@@ -222,7 +223,7 @@ class RAETEvent(object):
         '''
         Fire events based on information in the return load
         '''
-        if load.get('retcode') and load.get('fun'):
+        if load.get('retcode') != exitcodes.EX_OK and load.get('fun'):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in salt.utils.event.SUB_EVENT:
                 try:

@@ -11,6 +11,7 @@ import re
 import datetime
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.itertools
 import salt.utils.decorators as decorators
@@ -205,8 +206,8 @@ def verify(*packages, **kwargs):
                                   ignore_retcode=True,
                                   python_shell=False)
 
-    if not out['stdout'].strip() and out['retcode'] != 0:
-        # If there is no stdout and the retcode is 0, then verification
+    if not out['stdout'].strip() and out['retcode'] != exitcodes.EX_OK:
+        # If there is no stdout and the retcode is EX_OK, then verification
         # succeeded, but if the retcode is nonzero, then the command failed.
         msg = 'Failed to verify package(s)'
         if out['stderr']:
@@ -268,12 +269,12 @@ def modified(*packages, **flags):
     data = {}
 
     # If verification has an output, then it means it failed
-    # and the return code will be 1. We are interested in any bigger
-    # than 1 code.
-    if ret['retcode'] > 1:
+    # and the return code will be EX_GENERIC. We are interested in any bigger
+    # than EX_GENERIC code.
+    if ret['retcode'] > exitcodes.EX_GENERIC:
         del ret['stdout']
         return ret
-    elif not ret['retcode']:
+    elif ret['retcode'] == exitcodes.EX_OK:
         return data
 
     ptrn = re.compile(r"\s+")
@@ -535,7 +536,7 @@ def info(*packages, **attr):
 
     call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
                                    output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += (call['stderr'] or call['stdout'])
@@ -734,10 +735,10 @@ def checksum(*paths):
         raise CommandExecutionError("No package files has been specified.")
 
     for package_file in paths:
-        ret[package_file] = (bool(__salt__['file.file_exists'](package_file)) and
-                            not __salt__['cmd.retcode'](["rpm", "-K", "--quiet", package_file],
-                                                        ignore_retcode=True,
-                                                        output_loglevel='trace',
-                                                        python_shell=False))
+        ret[package_file] = (bool(__salt__['file.file_exists'](package_file))
+                             and __salt__['cmd.retcode'](["rpm", "-K", "--quiet", package_file],
+                                                         ignore_retcode=True,
+                                                         output_loglevel='trace',
+                                                         python_shell=False) == exitcodes.EX_OK)
 
     return ret

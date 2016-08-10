@@ -36,6 +36,7 @@ import salt.log
 import salt.utils
 import salt.utils.network
 import salt.utils.dns
+from salt.defaults import exitcodes
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -537,7 +538,7 @@ def _virtual(osdata):
         try:
             ret = __salt__['cmd.run_all'](cmd)
 
-            if ret['retcode'] > 0:
+            if ret['retcode'] > exitcodes.EX_OK:
                 if salt.log.is_logging_configured():
                     # systemd-detect-virt always returns > 0 on non-virtualized
                     # systems
@@ -1081,7 +1082,7 @@ def _linux_bin_exists(binary):
         try:
             return __salt__['cmd.retcode'](
                 '{0} {1}'.format(search_cmd, binary)
-            ) == 0
+            ) == exitcodes.EX_OK
         except salt.exceptions.CommandExecutionError:
             pass
 
@@ -1195,7 +1196,7 @@ def os_data():
             grains['selinux'] = {}
             grains['selinux']['enabled'] = __salt__['cmd.retcode'](
                 'selinuxenabled'
-            ) == 0
+            ) == exitcodes.EX_OK
             if _linux_bin_exists('getenforce'):
                 grains['selinux']['enforced'] = __salt__['cmd.run'](
                     'getenforce'
@@ -1908,7 +1909,7 @@ def _hw_data(osdata):
         }
         for key, oid in six.iteritems(nbsd_hwdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
-            if result['retcode'] == 0:
+            if result['retcode'] == exitcodes.EX_OK:
                 grains[key] = result['stdout']
     elif osdata['kernel'] == 'Darwin':
         grains['manufacturer'] = 'Apple Inc.'

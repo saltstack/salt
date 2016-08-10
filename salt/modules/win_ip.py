@@ -10,6 +10,7 @@ import socket
 import time
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.network
 import salt.utils.validate.net
@@ -295,7 +296,7 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         cmd.append('gateway={0}'.format(gateway))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Unable to set IP address: {0}'.format(result['stderr'])
         )
