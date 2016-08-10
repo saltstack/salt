@@ -641,8 +641,8 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         if pubfile:
-            ifile = salt.utils.fopen(pubfile, 'r')
-            pubkey = ifile.read()
+            with salt.utils.fopen(pubfile, 'r') as fp_:
+                pubkey = fp_.read()
         if not pubkey:
             return False
         nt_ks.keypairs.create(name, public_key=pubkey)
