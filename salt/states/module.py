@@ -98,6 +98,8 @@ from __future__ import absolute_import
 import salt.loader
 import salt.utils
 import salt.utils.jid
+
+from salt.defaults import exitcodes
 from salt.ext.six.moves import range
 
 

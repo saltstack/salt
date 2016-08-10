@@ -50,6 +50,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
