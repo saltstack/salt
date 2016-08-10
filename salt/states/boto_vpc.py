@@ -221,7 +221,7 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
                                         profile=profile)
         if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create VPC: {0}.'.format(r['error']['message'])
+            ret['comment'] = 'Error in creating VPC: {0}.'.format(r['error']['message'])
             return ret
         _describe = __salt__['boto_vpc.describe'](vpc_id=r['id'], region=region, key=key,
                                                   keyid=keyid, profile=profile)
@@ -407,7 +407,7 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
                                                      profile=profile)
         if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create DHCP options: {1}'.format(r['error']['message'])
+            ret['comment'] = 'Failed to create DHCP options: {0}'.format(r['error']['message'])
             return ret
 
         ret['changes']['old'] = {'dhcp_options': None}
