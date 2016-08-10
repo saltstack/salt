@@ -148,13 +148,18 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     Validate the file state
     '''
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
+    #@skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_symlink(self):
         '''
         file.symlink
         '''
         name = os.path.join(integration.TMP, 'symlink')
         tgt = os.path.join(integration.TMP, 'target')
+
+        # Windows must have a source directory to link to
+        if salt.utils.is_windows() and not os.path.isdir(tgt):
+            os.mkdir(tgt)
+
         ret = self.run_state('file.symlink', name=name, target=tgt)
         self.assertSaltTrueReturn(ret)
 
