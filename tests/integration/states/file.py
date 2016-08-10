@@ -148,7 +148,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     Validate the file state
     '''
 
-    #@skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_symlink(self):
         '''
         file.symlink
@@ -195,21 +194,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isdir(name))
 
-    @skipIf(IS_WINDOWS, 'os.symlink not available in Windows')
     def test_absent_link(self):
         '''
         file.absent
         '''
         name = os.path.join(integration.TMP, 'link_to_kill')
-        if not os.path.islink('{0}.tgt'.format(name)):
-            os.symlink(name, '{0}.tgt'.format(name))
+        tgt = '{0}.tgt'.format(name)
+
+        # Windows must have a source directory to link to
+        if salt.utils.is_windows() and not os.path.isdir(tgt):
+            os.mkdir(tgt)
+
+        if not self.run_function('file.is_link', [name]):
+            self.run_function('file.symlink', [tgt, name])
+
         ret = self.run_state('file.absent', name=name)
+
         try:
             self.assertSaltTrueReturn(ret)
-            self.assertFalse(os.path.islink(name))
+            self.assertFalse(self.run_function('file.is_link', [name]))
         finally:
-            if os.path.islink('{0}.tgt'.format(name)):
-                os.unlink('{0}.tgt'.format(name))
+            if self.run_function('file.is_link', [name]):
+                self.run_function('file.remove', [name])
 
     def test_test_absent(self):
         '''
@@ -476,7 +482,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.remove(funny_file)
             os.remove(funny_url_path)
 
-    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_managed_contents(self):
         '''
         test file.managed with contents that is a boolean, string, integer,
@@ -489,44 +494,52 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         managed_files = {}
         state_keys = {}
         for typ in ('bool', 'str', 'int', 'float', 'list', 'dict'):
-            managed_files[typ] = tempfile.mkstemp()[1]
+            fd_, managed_files[typ] = tempfile.mkstemp()
+
+            # Release the handle so they can be removed in Windows
+            try:
+                os.close(fd_)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise exc
+
             state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
-                fp_.write(textwrap.dedent('''\
-                bool file:
-                  file.managed:
-                    - name: {bool}
-                    - contents: True
+            with salt.utils.fopen(state_file, 'w') as fd_:
+                fd_.write(textwrap.dedent('''\
+                    bool file:
+                      file.managed:
+                        - name: {bool}
+                        - contents: True
 
-                str file:
-                  file.managed:
-                    - name: {str}
-                    - contents: Salt was here.
+                    str file:
+                      file.managed:
+                        - name: {str}
+                        - contents: Salt was here.
 
-                int file:
-                  file.managed:
-                    - name: {int}
-                    - contents: 340282366920938463463374607431768211456
+                    int file:
+                      file.managed:
+                        - name: {int}
+                        - contents: 340282366920938463463374607431768211456
 
-                float file:
-                  file.managed:
-                    - name: {float}
-                    - contents: 1.7518e-45  # gravitational coupling constant
+                    float file:
+                      file.managed:
+                        - name: {float}
+                        - contents: 1.7518e-45  # gravitational coupling constant
 
-                list file:
-                  file.managed:
-                    - name: {list}
-                    - contents: [1, 1, 2, 3, 5, 8, 13]
+                    list file:
+                      file.managed:
+                        - name: {list}
+                        - contents: [1, 1, 2, 3, 5, 8, 13]
 
-                dict file:
-                  file.managed:
-                    - name: {dict}
-                    - contents:
-                        C: charge
-                        P: parity
-                        T: time
-                '''.format(**managed_files)))
+                    dict file:
+                      file.managed:
+                        - name: {dict}
+                        - contents:
+                            C: charge
+                            P: parity
+                            T: time
+                    '''.format(**managed_files)))
 
             ret = self.run_function('state.sls', [state_name])
             for typ in state_keys:
