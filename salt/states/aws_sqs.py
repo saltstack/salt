@@ -16,6 +16,8 @@ information.
             - region: eu-west-1
 '''
 
+from __future__ import absolute_import
+
 from salt.defaults import exitcodes
 
 

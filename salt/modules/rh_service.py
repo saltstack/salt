@@ -486,7 +486,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == exitcodse.EX_OK
+    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def delete(name, **kwargs):
