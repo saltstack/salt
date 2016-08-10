@@ -1621,21 +1621,22 @@ def create_empty_crl(
         return 'CRL "{0}" already exists'.format(crl_file)
 
     try:
-        ca_cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+        with salt.utils.fopen('{0}/{1}/{2}.crt'.format(
                 cert_base_path(),
                 ca_name,
-                ca_filename
-            )).read()
-        )
-        ca_key = OpenSSL.crypto.load_privatekey(
-            OpenSSL.crypto.FILETYPE_PEM,
-            salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                ca_filename)) as fp_:
+            ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                fp_.read()
+            )
+        with salt.utils.fopen('{0}/{1}/{2}.key'.format(
                 cert_base_path(),
                 ca_name,
-                ca_filename)).read()
-        )
+                ca_filename)) as fp_:
+            ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                fp_.read()
+            )
     except IOError:
         return 'There is no CA named "{0}"'.format(ca_name)
 
@@ -1706,21 +1707,22 @@ def revoke_cert(
         cert_filename = '{0}'.format(CN)
 
     try:
-        ca_cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+        with salt.utils.fopen('{0}/{1}/{2}.crt'.format(
                 cert_base_path(),
                 ca_name,
-                ca_filename
-            )).read()
-        )
-        ca_key = OpenSSL.crypto.load_privatekey(
-            OpenSSL.crypto.FILETYPE_PEM,
-            salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                ca_filename)) as fp_:
+            ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                fp_.read()
+            )
+        with salt.utils.fopen('{0}/{1}/{2}.key'.format(
                 cert_base_path(),
                 ca_name,
-                ca_filename)).read()
-        )
+                ca_filename)) as fp_:
+            ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                fp_.read()
+            )
     except IOError:
         return 'There is no CA named "{0}"'.format(ca_name)
 
@@ -1756,8 +1758,8 @@ def revoke_cert(
         index_serial_subject)
 
     ret = {}
-    with salt.utils.fopen(index_file) as f:
-        for line in f:
+    with salt.utils.fopen(index_file) as fp_:
+        for line in fp_:
             if index_r_data_pattern.match(line):
                 revoke_date = line.split('\t')[2]
                 try:
@@ -1785,8 +1787,8 @@ def revoke_cert(
 
     crl = OpenSSL.crypto.CRL()
 
-    with salt.utils.fopen(index_file) as f:
-        for line in f:
+    with salt.utils.fopen(index_file) as fp_:
+        for line in fp_:
             if line.startswith('R'):
                 fields = line.split('\t')
                 revoked = OpenSSL.crypto.Revoked()
@@ -1811,8 +1813,8 @@ def revoke_cert(
             crl_file)
         return ret
 
-    with salt.utils.fopen(crl_file, 'w') as f:
-        f.write(crl_text)
+    with salt.utils.fopen(crl_file, 'w') as fp_:
+        fp_.write(crl_text)
 
     return ('Revoked Certificate: "{0}/{1}.crt", '
             'serial number: {2}').format(
