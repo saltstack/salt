@@ -3282,7 +3282,8 @@ def export(name,
         if compression != 'gzip':
             # gzip doesn't use a Compressor object, it uses a .open() method to
             # open the filehandle. If not using gzip, we need to open the
-            # filehandle here.
+            # filehandle here. We make sure to close it in the "finally" block
+            # below.
             out = salt.utils.fopen(path, 'wb')
         response = _client_wrapper('export', name)
         buf = None
