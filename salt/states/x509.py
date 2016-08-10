@@ -614,10 +614,11 @@ def pem_managed(name,
 
     new = __salt__['x509.get_pem_entry'](text=text)
 
-    if os.path.isfile(name):
-        current = salt.utils.fopen(name).read()
-    else:
-        current = '{0} does not exist.'.format(name)
+    try:
+        with salt.utils.fopen(name) as fp_:
+            current = fp_.read()
+    except (OSError, IOError):
+        current = '{0} does not exist or is unreadable'.format(name)
 
     if new == current:
         ret['result'] = True
