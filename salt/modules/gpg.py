@@ -20,6 +20,7 @@ import re
 import time
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.syspaths
 from salt.exceptions import SaltInvocationError
@@ -851,7 +852,7 @@ def trust_key(keyid=None,
                                   runas=_user,
                                   python_shell=False)
 
-    if not res['retcode'] == 0:
+    if not res['retcode'] == exitcodes.EX_OK:
         ret['res'] = False
         ret['message'] = res['stderr']
     else:

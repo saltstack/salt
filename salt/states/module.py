@@ -265,7 +265,7 @@ def run(name, **kwargs):
 
     ret['result'] = True
     # if mret is a dict and there is retcode and its non-zero
-    if isinstance(mret, dict) and mret.get('retcode', 0) != 0:
+    if isinstance(mret, dict) and mret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
         ret['result'] = False
     # if its a boolean, return that as the result
     elif isinstance(mret, bool):
@@ -275,7 +275,7 @@ def run(name, **kwargs):
         if isinstance(changes_ret, dict):
             if isinstance(changes_ret.get('result', {}), bool):
                 ret['result'] = changes_ret.get('result', {})
-            elif changes_ret.get('retcode', 0) != 0:
+            elif changes_ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
                 ret['result'] = False
     return ret
 

@@ -17,6 +17,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -355,7 +356,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
                                       output_loglevel='trace',
                                       python_shell=False)
 
-        if out['retcode'] != 0 and out['stderr']:
+        if out['retcode'] != exitcodes.EX_OK and out['stderr']:
             errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
@@ -479,7 +480,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
                                   python_shell=False,
                                   output_loglevel='trace')
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []

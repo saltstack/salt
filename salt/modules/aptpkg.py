@@ -34,6 +34,7 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
@@ -384,7 +385,7 @@ def refresh_db(cache_valid_time=0):
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -758,7 +759,7 @@ def install(name=None,
         out = __salt__['cmd.run_all'](cmd,
                                       output_loglevel='trace',
                                       python_shell=False)
-        if out['retcode'] != 0 and out['stderr']:
+        if out['retcode'] != exitcodes.EX_OK and out['stderr']:
             errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
@@ -813,7 +814,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         output_loglevel='trace',
         python_shell=False,
     )
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -1069,7 +1070,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
                                    python_shell=False,
                                    redirect_stderr=True,
                                    env=DPKG_ENV_VARS.copy())
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']
@@ -1385,7 +1386,7 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
                                    python_shell=False,
                                    output_loglevel='trace')
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         msg = 'Failed to get upgrades'
         for key in ('stderr', 'stdout'):
             if call[key]:
@@ -1506,7 +1507,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                               output_loglevel='trace',
                                               python_shell=False,
                                               ignore_retcode=True)
-            if retcode == 0:
+            if retcode == exitcodes.EX_OK:
                 return ret
     except Exception as exc:
         log.error(exc)
@@ -1823,7 +1824,7 @@ def del_repo_key(name=None, **kwargs):
 
     cmd = ['apt-key', 'del', keyid]
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         msg = 'Failed to remove keyid {0}'
         if result['stderr']:
             msg += ': {0}'.format(result['stderr'])
@@ -1898,7 +1899,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                     out = __salt__['cmd.run_all'](cmd,
                                                   python_shell=False,
                                                   **kwargs)
-                    if out['retcode']:
+                    if out['retcode'] != exitcodes.EX_OK:
                         raise CommandExecutionError(
                             'Unable to add PPA \'{0}\'. \'{1}\' exited with '
                             'status {2!s}: \'{3}\' '.format(
@@ -2034,7 +2035,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 ret = __salt__['cmd.run_all'](cmd,
                                               python_shell=False,
                                               **kwargs)
-                if ret['retcode'] != 0:
+                if ret['retcode'] != exitcodes.EX_OK:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
                         .format(ret['stdout'])
@@ -2355,7 +2356,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
             cmd = 'dpkg --clear-selections'
             if not __opts__['test']:
                 result = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-                if result['retcode'] != 0:
+                if result['retcode'] != exitcodes.EX_OK:
                     err = ('Running dpkg --clear-selections failed: '
                            '{0}'.format(result['stderr']))
                     log.error(err)
@@ -2375,7 +2376,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                     result = __salt__['cmd.run_all'](cmd,
                                                      stdin=cmd_in,
                                                      output_loglevel='trace')
-                    if result['retcode'] != 0:
+                    if result['retcode'] != exitcodes.EX_OK:
                         log.error(
                             'failed to set state {0} for package '
                             '{1}'.format(_state, _pkg)
@@ -2414,7 +2415,7 @@ def _resolve_deps(name, pkgs, **kwargs):
             python_shell=False
         )
 
-        if ret != 0:
+        if ret != exitcodes.EX_OK:
             raise CommandExecutionError(
                 'Error: unable to resolve dependencies for: {0}'.format(name)
             )

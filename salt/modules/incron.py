@@ -9,6 +9,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.ext.six.moves import range
 
@@ -75,7 +76,7 @@ def write_incron_file(user, path):
 
         salt '*' incron.write_incron_file root /tmp/new_incron
     '''
-    return __salt__['cmd.retcode'](_get_incron_cmdstr(path), runas=user, python_shell=False) == 0
+    return __salt__['cmd.retcode'](_get_incron_cmdstr(path), runas=user, python_shell=False) == exitcodes.EX_OK
 
 
 def write_incron_file_verbose(user, path):
@@ -261,7 +262,7 @@ def set_job(user, path, mask, cmd):
 
     lst['crons'] = updated_crons
     comdat = _write_incron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
 
@@ -308,7 +309,7 @@ def rm_job(user,
         lst['crons'].pop(rm_)
         ret = 'removed'
     comdat = _write_incron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
 

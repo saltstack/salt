@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandNotFoundError
@@ -143,7 +144,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '{0} -f start {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -157,7 +158,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '{0} stop {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -171,7 +172,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '{0} -f restart {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -185,7 +186,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '{0} reload {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -203,7 +204,7 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
 
     cmd = '{0} check {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def enable(name, **kwargs):
@@ -246,7 +247,7 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = '{0} set {1} status off'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def disabled(name):
@@ -260,7 +261,7 @@ def disabled(name):
         salt '*' service.disabled <service name>
     '''
     cmd = '{0} get {1} status'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def enabled(name, **kwargs):
@@ -279,7 +280,7 @@ def enabled(name, **kwargs):
         salt '*' service.enabled <service name> flags=<flags>
     '''
     cmd = '{0} get {1} status'.format(_cmd(), name)
-    if not __salt__['cmd.retcode'](cmd):
+    if __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK:
         # also consider a service disabled if the current flags are different
         # than the configured ones so we have a chance to update them
         flags = _get_flags(**kwargs)

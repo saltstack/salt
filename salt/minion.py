@@ -27,6 +27,7 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
+from salt.defaults import exitcodes
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
 
@@ -1365,7 +1366,7 @@ class Minion(MinionBase):
                     func,
                     data['arg'],
                     data)
-                minion_instance.functions.pack['__context__']['retcode'] = 0
+                minion_instance.functions.pack['__context__']['retcode'] = exitcodes.EX_OK
 
                 executors = data.get('module_executors') or opts.get('module_executors', ['direct_call.get'])
                 if isinstance(executors, six.string_types):
@@ -1412,7 +1413,7 @@ class Minion(MinionBase):
                     ret['return'] = return_data
                 ret['retcode'] = minion_instance.functions.pack['__context__'].get(
                     'retcode',
-                    0
+                    exitcodes.EX_OK
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
@@ -1463,6 +1464,9 @@ class Minion(MinionBase):
                     minion_instance.function_errors[mod_name]
                 )
             ret['success'] = False
+            # FIXME: the below 254 should be mapped to some value in
+            # salt.defaults.exitcodes - it's unclear why 254 was
+            # chosen
             ret['retcode'] = 254
             ret['out'] = 'nested'
 

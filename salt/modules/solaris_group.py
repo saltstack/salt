@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 
@@ -62,7 +63,7 @@ def add(name, gid=None, **kwargs):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def delete(name):
@@ -77,7 +78,7 @@ def delete(name):
     '''
     ret = __salt__['cmd.run_all']('groupdel {0}'.format(name), python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def info(name):

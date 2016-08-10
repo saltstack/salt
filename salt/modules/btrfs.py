@@ -27,6 +27,7 @@ import logging
 
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.fsutils
 from salt.exceptions import CommandExecutionError
@@ -400,7 +401,7 @@ def _fsck_ext(device):
     NOTE: Maybe this function needs to be moved as a standard method in extfs module in a future.
     '''
     msgs = {
-        0: 'No errors',
+        exitcodes.EX_OK: 'No errors',
         1: 'Filesystem errors corrected',
         2: 'System should be rebooted',
         4: 'Filesystem errors left uncorrected',

@@ -276,6 +276,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip_longest
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -4360,13 +4361,13 @@ def patch(name,
             ret['comment'] = 'File {0} will be patched'.format(name)
             ret['result'] = None
             return ret
-        if ret['changes']['retcode']:
+        if ret['changes']['retcode'] != exitcodes.EX_OK:
             return ret
 
     ret['changes'] = __salt__['file.patch'](
         name, cached_source_path, options=options
     )
-    ret['result'] = not ret['changes']['retcode']
+    ret['result'] = ret['changes']['retcode'] == exitcodes.EX_OK
     if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
@@ -5301,7 +5302,7 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
     cret = __salt__['cmd.run_all'](_cmd, **check_cmd_opts)
-    if cret['retcode'] != 0:
+    if cret['retcode'] != exitcodes.EX_OK:
         ret = {'comment': 'check_cmd execution failed',
                'skip_watch': True,
                'result': False}

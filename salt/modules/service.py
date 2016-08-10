@@ -7,6 +7,8 @@ from __future__ import absolute_import
 # Import python libs
 import os
 
+from salt.defaults import exitcodes
+
 __func_alias__ = {
     'reload_': 'reload'
 }
@@ -90,7 +92,7 @@ def run(name, action):
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
         name
     ) + ' ' + action
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def start(name):

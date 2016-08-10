@@ -32,6 +32,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
@@ -1070,7 +1071,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                                              output_loglevel='quiet',
                                              python_shell=False,
                                              redirect_stderr=True)
-            if not result['retcode']:
+            if result['retcode'] == exitcodes.EX_OK:
                 ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
             elif result['retcode'] == 3010:
@@ -1321,7 +1322,7 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
                                              output_loglevel='trace',
                                              python_shell=False,
                                              redirect_stderr=True)
-            if not result['retcode']:
+            if result['retcode'] == exitcodes.EX_OK:
                 ret[target] = {'uninstall status': 'success'}
                 changed.append(target)
             else:

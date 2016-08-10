@@ -34,6 +34,7 @@ import os
 import os.path
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -863,9 +864,9 @@ def config_test(syslog_ng_sbin_dir=None, cfgfile=None):
                                             'syslog-ng',
                                             params)
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=exitcodes.EX_UNSET, stderr=str(err))
 
-    retcode = ret.get('retcode', -1)
+    retcode = ret.get('retcode', exitcodes.EX_UNSET)
     stderr = ret.get('stderr', None)
     stdout = ret.get('stdout', None)
     return _format_return_data(retcode, stdout, stderr)
@@ -889,9 +890,9 @@ def version(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=exitcodes.EX_UNSET, stderr=str(err))
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         return _format_return_data(ret['retcode'],
                                    stderr=ret['stderr'],
                                    stdout=ret['stdout'])
@@ -922,9 +923,9 @@ def modules(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=exitcodes.EX_UNSET, stderr=str(err))
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         return _format_return_data(ret['retcode'],
                                    ret.get('stdout'),
                                    ret.get('stderr'))
@@ -956,7 +957,7 @@ def stats(syslog_ng_sbin_dir=None):
                                             'syslog-ng-ctl',
                                             ('stats',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=exitcodes.EX_UNSET, stderr=str(err))
 
     return _format_return_data(ret['retcode'],
                                ret.get('stdout'),
@@ -1131,7 +1132,7 @@ def reload_(name):
         command = ['syslog-ng-ctl', 'reload']
         result = __salt__['cmd.run_all'](command, python_shell=False)
 
-    succ = True if result['retcode'] == 0 else False
+    succ = True if result['retcode'] == exitcodes.EX_OU else False
     return _format_state_result(name, result=succ, comment=result['stdout'])
 
 

@@ -48,6 +48,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 from salt.utils import locales
 
@@ -172,7 +173,7 @@ def add(name,
                                 'homephone': homephone})
     cmd.extend(['-c', gecos_field])
     cmd.extend(['-n', name])
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def delete(name, remove=False, force=False):
@@ -192,7 +193,7 @@ def delete(name, remove=False, force=False):
     if remove:
         cmd.append('-r')
     cmd.extend(['-n', name])
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def getent(refresh=False):
@@ -346,7 +347,7 @@ def chgroups(name, groups, append=False):
     if append:
         groups += ugrps
     cmd = ['pw', 'usermod', '-G', ','.join(groups), '-n', name]
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def chfullname(name, fullname):

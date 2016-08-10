@@ -21,6 +21,7 @@ import time
 import traceback
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils import vt
@@ -333,7 +334,7 @@ def copy_to(name,
         raise SaltInvocationError('Destination path must be absolute')
     if run_all(name,
                'test -d {0}'.format(pipes.quote(dest)),
-               **cmd_kwargs)['retcode'] == 0:
+               **cmd_kwargs)['retcode'] == exitcodes.EX_OK:
         # Destination is a directory, full path to dest file will include the
         # basename of the source file.
         dest = os.path.join(dest, source_name)
@@ -344,12 +345,12 @@ def copy_to(name,
         dest_dir, dest_name = os.path.split(dest)
         if run_all(name,
                    'test -d {0}'.format(pipes.quote(dest_dir)),
-                   **cmd_kwargs)['retcode'] != 0:
+                   **cmd_kwargs)['retcode'] != exitcodes.EX_OK:
             if makedirs:
                 result = run_all(name,
                                  'mkdir -p {0}'.format(pipes.quote(dest_dir)),
                                  **cmd_kwargs)
-                if result['retcode'] != 0:
+                if result['retcode'] != exitcodes.EX_OK:
                     error = ('Unable to create destination directory {0} in '
                              'container \'{1}\''.format(dest_dir, name))
                     if result['stderr']:
@@ -362,7 +363,7 @@ def copy_to(name,
                 )
     if not overwrite and run_all(name,
                                  'test -e {0}'.format(pipes.quote(dest)),
-                                 **cmd_kwargs)['retcode'] == 0:
+                                 **cmd_kwargs)['retcode'] == exitcodes.EX_OK:
         raise CommandExecutionError(
             'Destination path {0} already exists. Use overwrite=True to '
             'overwrite it'.format(dest)

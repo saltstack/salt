@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import logging
 import salt.utils
 import salt.modules.cmdmod
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 __salt__ = {
@@ -101,7 +102,7 @@ def info(dev):
     cmd = 'udevadm info --export --query=all --{0}={1}'.format(qtype, dev)
     udev_result = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
 
-    if udev_result['retcode'] != 0:
+    if udev_result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(udev_result['stderr'])
 
     return _parse_udevadm_info(udev_result['stdout'])[0]
@@ -176,7 +177,7 @@ def exportdb():
     cmd = 'udevadm info --export-db'
     udev_result = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
 
-    if udev_result['retcode']:
+    if udev_result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(udev_result['stderr'])
 
     return _parse_udevadm_info(udev_result['stdout'])

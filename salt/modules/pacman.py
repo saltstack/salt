@@ -18,6 +18,7 @@ import re
 import os.path
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.itertools
 import salt.utils.systemd
@@ -142,7 +143,7 @@ def list_upgrades(refresh=False, root=None, **kwargs):  # pylint: disable=W0613
                                    python_shell=False,
                                    output_loglevel='trace')
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -407,7 +408,7 @@ def refresh_db(root=None):
                                    output_loglevel='trace',
                                    env={'LANG': 'C'},
                                    python_shell=False)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += ': ' + call['stderr']
@@ -581,7 +582,7 @@ def install(name=None,
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -653,7 +654,7 @@ def upgrade(refresh=False, root=None, **kwargs):
                                    python_shell=False,
                                    redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']
@@ -698,7 +699,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []

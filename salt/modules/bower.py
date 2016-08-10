@@ -17,6 +17,7 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 
@@ -113,7 +114,7 @@ def install(pkg,
                                      env=env,
                                      python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     # If package is already installed, Bower will emit empty dict to STDOUT
@@ -162,7 +163,7 @@ def uninstall(pkg, dir, runas=None, env=None):
                                      env=env,
                                      python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     # If package is not installed, Bower will emit empty dict to STDOUT
@@ -206,7 +207,7 @@ def list_(dir, runas=None, env=None):
                                      env=env,
                                      python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout'])['dependencies']

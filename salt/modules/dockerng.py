@@ -269,6 +269,7 @@ import errno
 import subprocess
 
 # Import Salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
@@ -3213,10 +3214,10 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
     else:
         if retcode(name,
                    'test -e {0}'.format(pipes.quote(source)),
-                   ignore_retcode=True) == 0:
+                   ignore_retcode=True) == exitcodes.EX_OK:
             if retcode(name,
                        'test -f {0}'.format(pipes.quote(source)),
-                       ignore_retcode=True) != 0:
+                       ignore_retcode=True) != exitcodes.EX_OK:
                 raise SaltInvocationError('Source must be a regular file')
         else:
             raise SaltInvocationError(
@@ -3928,7 +3929,7 @@ def load(path, image=None):
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
     post = images(all=True)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         msg = 'Failed to load image(s) from {0}'.format(path)
         if result['stderr']:
             msg += ': {0}'.format(result['stderr'])
@@ -4380,7 +4381,7 @@ def save(name,
     cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Failed to save image(s) to {0}'.format(path)
         if result['stderr']:
             err += ': {0}'.format(result['stderr'])
@@ -5139,7 +5140,7 @@ def _script(name,
         if not fn_:
             _cleanup_tempfile(path)
             return {'pid': 0,
-                    'retcode': 1,
+                    'retcode': exitcodes.EX_GENERIC,
                     'stdout': '',
                     'stderr': '',
                     'cache_error': True}
@@ -5148,7 +5149,7 @@ def _script(name,
         if not fn_:
             _cleanup_tempfile(path)
             return {'pid': 0,
-                    'retcode': 1,
+                    'retcode': exitcodes.EX_GENERIC,
                     'stdout': '',
                     'stderr': '',
                     'cache_error': True}
@@ -5742,7 +5743,7 @@ def call(name, function, *args, **kwargs):
         ret = __salt__['dockerng.run_all'](name,
                                            subprocess.list2cmdline(map(str, salt_argv)))
         # python not found
-        if ret['retcode'] != 0:
+        if ret['retcode'] != exitcodes.EX_OK:
             raise CommandExecutionError(ret['stderr'])
 
         # process "real" result in stdout
@@ -5796,7 +5797,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     mkdirp_trans_argv = ['mkdir', '-p', trans_dest_path]
     # put_archive requires the path to exist
     ret = __salt__['dockerng.run_all'](name, subprocess.list2cmdline(mkdirp_trans_argv))
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         return {'result': False, 'comment': ret['stderr']}
 
     ret = None
@@ -5825,11 +5826,11 @@ def sls(name, mods=None, saltenv='base', **kwargs):
                 )
             )
     if not isinstance(ret, dict):
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
     elif not salt.utils.check_state_result(ret):
         __context__['retcode'] = 2
     else:
-        __context__['retcode'] = 0
+        __context__['retcode'] = exitcodes.EX_OK
     return ret
 
 

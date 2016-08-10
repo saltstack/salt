@@ -16,6 +16,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -172,7 +173,7 @@ def bootstrap(force=False):
             __salt__['cp.get_url'](url, dest)
             cmd = [dest, '/quiet', '/norestart']
             result = __salt__['cmd.run_all'](cmd, python_shell=False)
-            if result['retcode'] != 0:
+            if result['retcode'] != exitcodes.EX_OK:
                 err = ('Installing Windows PowerShell failed. Please run the '
                        'installer GUI on the host to get a more specific '
                        'reason.')
@@ -188,7 +189,7 @@ def bootstrap(force=False):
     __salt__['cp.get_url'](net4_url, dest)
     cmd = [dest, '/q', '/norestart']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = ('Installing .NET v4.0 failed. Please run the installer GUI on '
                'the host to get a more specific reason.')
         log.error(err)
@@ -204,7 +205,7 @@ def bootstrap(force=False):
     )
     result = __salt__['cmd.run_all'](cmd, python_shell=True)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -258,7 +259,7 @@ def list_(narrow=None,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -294,7 +295,7 @@ def list_webpi():
     cmd = [choc_path, 'list', '-source', 'webpi']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -320,7 +321,7 @@ def list_windowsfeatures():
     cmd = [choc_path, 'list', '-source', 'windowsfeatures']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -417,7 +418,7 @@ def install(name,
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in [exitcodes.EX_OK, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -536,7 +537,7 @@ def install_missing(name, version=None, source=None):
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -665,7 +666,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1605, 1614, 1641]:
+    if result['retcode'] not in [exitcodes.EX_OK, 1605, 1614, 1641]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -757,7 +758,7 @@ def upgrade(name,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in [exitcodes.EX_OK, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -801,7 +802,7 @@ def update(name, source=None, pre_versions=False):
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in [exitcodes.EX_OK, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -851,7 +852,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -902,7 +903,7 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(['-p', password])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -925,7 +926,7 @@ def _change_source_state(name, state):
     cmd = [choc_path, 'source', state, "-name", name]
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
