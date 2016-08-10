@@ -297,6 +297,17 @@ class ZypperTestCase(TestCase):
                     continue
                 self.assertEqual(installed['virgo-dummy'][pn_key], pn_val)
 
+    def test_info_installed_with_non_ascii_char(self):
+        '''
+        Test the return information of the named package(s), installed on the system whith non-ascii chars
+
+        :return:
+        '''
+        run_out = {'vīrgô': {'description': 'vīrgô d€šçripţiǫñ'}}
+        with patch.dict(zypper.__salt__, {'lowpkg.info': MagicMock(return_value=run_out)}):
+            installed = zypper.info_installed()
+            self.assertEqual(installed['vīrgô']['description'], 'vīrgô d€šçripţiǫñ')
+
     def test_info_available(self):
         '''
         Test return the information of the named package available for the system.
