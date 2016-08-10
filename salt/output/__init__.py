@@ -99,7 +99,10 @@ def display_output(data, out=None, opts=None):
                         # try to let the stream write
                         # even if we didn't encode it
                         pass
-                ofh.write(fdata.decode())
+                if six.PY3:
+                    ofh.write(fdata.decode())
+                else:
+                    ofh.write(fdata)
                 ofh.write('\n')
             return
         if display_data:
