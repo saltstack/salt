@@ -267,7 +267,8 @@ def _text_or_file(input_):
     Determines if input is a path to a file, or a string with the content to be parsed.
     '''
     if os.path.isfile(input_):
-        return salt.utils.fopen(input_).read()
+        with salt.utils.fopen(input_) as fp_:
+            return fp_.read()
     else:
         return input_
 
@@ -627,7 +628,8 @@ def write_pem(text, path, pem_type=None):
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
     text = get_pem_entry(text, pem_type=pem_type)
-    salt.utils.fopen(path, 'w').write(text)
+    with salt.utils.fopen(path, 'w') as fp_:
+        fp_.write(text)
     return 'PEM written to {0}'.format(path)
 
 
