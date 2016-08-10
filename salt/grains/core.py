@@ -1114,7 +1114,7 @@ def os_data():
                         edge_len = max(len(x) for x in supported_inits) - 1
                         buf_size = __opts__['file_buffer_size']
                         try:
-                            with open(init_bin, 'rb') as fp_:
+                            with salt.utils.fopen(init_bin, 'rb') as fp_:
                                 buf = True
                                 edge = ''
                                 buf = fp_.read(buf_size).lower()
