@@ -2934,10 +2934,10 @@ def delete_vpc_peering_connection(conn_id=None, conn_name=None, region=None,
 
     conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
     if conn_name:
-        conn_id = _vpc_peering_conn_id_for_name(name, conn)
+        conn_id = _vpc_peering_conn_id_for_name(conn_name, conn)
         if not conn_id:
             raise SaltInvocationError("Couldn't resolve VPC peering connection "
-                                      "{0} to an ID".format(name))
+                                      "{0} to an ID".format(conn_name))
     try:
         log.debug('Trying to delete vpc peering connection')
         conn.delete_vpc_peering_connection( DryRun=dry_run, VpcPeeringConnectionId=conn_id)
