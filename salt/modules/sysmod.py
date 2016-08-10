@@ -400,14 +400,14 @@ def list_modules(*args):
         return sorted(modules)
 
     for module in args:
-        if '*' not in module:
+        if '*' in module:
+            for func in fnmatch.filter(__salt__, module):
+                modules.add(func.split('.')[0])
+        else:
             for func in __salt__:
                 mod_test = func.split('.')[0]
                 if mod_test == module:
                     modules.add(mod_test)
-        else:
-            for func in fnmatch.filter(__salt__, module):
-                modules.add(func.split('.')[0])
     return sorted(modules)
 
 
@@ -612,14 +612,14 @@ def list_state_modules(*args):
         return sorted(modules)
 
     for module in args:
-        if '*' not in module:
+        if '*' in module:
+            for func in fnmatch.filter(st_.states, module):
+                modules.add(func.split('.')[0])
+        else:
             for func in st_.states:
                 mod_test = func.split('.')[0]
                 if mod_test == module:
                     modules.add(mod_test)
-        else:
-            for func in fnmatch.filter(st_.states, module):
-                modules.add(func.split('.')[0])
     return sorted(modules)
 
 
@@ -652,14 +652,14 @@ def list_runners(*args):
         return sorted(runners)
 
     for module in args:
-        if '*' not in module:
+        if '*' in module:
+            for func in fnmatch.filter(run_.functions, module):
+                runners.add(func.split('.')[0])
+        else:
             for func in run_.functions:
                 mod_test = func.split('.')[0]
                 if mod_test == module:
                     runners.add(mod_test)
-        else:
-            for func in fnmatch.filter(run_.functions, module):
-                runners.add(func.split('.')[0])
     return sorted(runners)
 
 
@@ -739,14 +739,14 @@ def list_returners(*args):
         return sorted(returners)
 
     for module in args:
-        if '*' not in module:
+        if '*' in module:
+            for func in fnmatch.filter(returners_, module):
+                returners.add(func.split('.')[0])
+        else:
             for func in returners_:
                 mod_test = func.split('.')[0]
                 if mod_test == module:
                     returners.add(mod_test)
-        else:
-            for func in fnmatch.filter(returners_, module):
-                returners.add(func.split('.')[0])
     return sorted(returners)
 
 
