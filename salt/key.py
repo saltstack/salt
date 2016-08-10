@@ -165,7 +165,8 @@ class KeyCLI(object):
         ret = self.client.cmd_sync(low)
 
         ret = ret['data']['return']
-        if isinstance(ret, dict) and 'local' in ret:
+        if (isinstance(ret, dict) and 'local' in ret and
+                cmd not in ('finger', 'finger_all')):
             ret.pop('local', None)
 
         return ret
