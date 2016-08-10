@@ -66,6 +66,33 @@ def _unhandled_mock_read(filename):
 
 
 class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+
+    def test_sha256_is_default_for_master(self):
+        fpath = tempfile.mktemp()
+        try:
+            salt.utils.fopen(fpath, 'w').write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+            config = sconfig.master_config(fpath)
+            self.assertEqual(config['hash_type'], 'sha256')
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+
+    def test_sha256_is_default_for_minion(self):
+        fpath = tempfile.mktemp()
+        try:
+            salt.utils.fopen(fpath, 'w').write(
+                "root_dir: /\n"
+                "key_logfile: key\n"
+            )
+            config = sconfig.minion_config(fpath)
+            self.assertEqual(config['hash_type'], 'sha256')
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
         try:
