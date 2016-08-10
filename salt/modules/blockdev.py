@@ -38,76 +38,6 @@ def __virtual__():
     return __virtualname__
 
 
-def tune(device, **kwargs):
-    '''
-    Set attributes for the specified device
-
-    .. deprecated:: Carbon
-       Use `disk.tune`
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' blockdev.tune /dev/sdX1 read-ahead=1024 read-write=True
-
-    Valid options are: ``read-ahead``, ``filesystem-read-ahead``,
-    ``read-only``, ``read-write``.
-
-    See the ``blockdev(8)`` manpage for a more complete description of these
-    options.
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
-    )
-    return __salt__['disk.tune'](device, **kwargs)
-
-
-@decorators.which('wipefs')
-def wipe(device):
-    '''
-    Remove the filesystem information
-
-    .. deprecated:: Carbon
-       Use `disk.tune`
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' blockdev.wipe /dev/sdX1
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
-    )
-    return __salt__['disk.wipe'](device)
-
-
-def dump(device, args=None):
-    '''
-    Return all contents of dumpe2fs for a specified device
-
-    .. deprecated:: Carbon
-       Use `disk.dump`
-
-    args
-        a list containing only the desired arguments to return
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' blockdev.dump /dev/sdX1
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
-    )
-    return __salt__['disk.dump'](device, args)
-
-
 @decorators.which('sync')
 @decorators.which('mkfs')
 def format_(device, fs_type='ext4',
@@ -208,23 +138,3 @@ def fstype(device):
                 return fs_type
 
     return ''
-
-
-@decorators.which('resize2fs')
-def resize2fs(device):
-    '''
-    Resizes the filesystem.
-
-    .. deprecated:: Carbon
-       Use `disk.resize2fs`
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' blockdev.resize2fs /dev/sdX1
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
-    )
-    return __salt__['disk.resize2fs'](device)
