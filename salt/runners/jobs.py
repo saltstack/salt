@@ -507,14 +507,19 @@ def exit_success(jid, ext_source=None):
     '''
     ret = dict()
 
-    data = lookup_jid(
+    data = list_job(
         jid,
         ext_source=ext_source
     )
 
-    for minion in data:
-        if "retcode" in data[minion]:
-            ret[minion] = True if not data[minion]['retcode'] else False
+    minions = data['Minions']
+    result = data['Result']
+
+    for minion in minions:
+        if minion in result and 'return' in result[minion]:
+            ret[minion] = True if result[minion]['return'] else False
+        else:
+            ret[minion] = False
 
     return ret
 
