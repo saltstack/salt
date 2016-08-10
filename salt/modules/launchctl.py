@@ -20,6 +20,7 @@ import plistlib
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 import salt.ext.six as six
@@ -251,7 +252,7 @@ def stop(job_label, runas=None):
     if service:
         cmd = 'launchctl unload -w {0}'.format(service['file_path'],
                                                runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
+        return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == exitcodes.EX_OK
 
     return False
 
@@ -271,7 +272,7 @@ def start(job_label, runas=None):
     service = _service_by_name(job_label)
     if service:
         cmd = 'launchctl load -w {0}'.format(service['file_path'], runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
+        return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == exitcodes.EX_OK
 
     return False
 

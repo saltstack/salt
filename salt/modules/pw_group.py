@@ -15,6 +15,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 
 log = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ def add(name, gid=None, **kwargs):
     cmd = '{0} -n {1}'.format(cmd, name)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def delete(name):
@@ -76,7 +77,7 @@ def delete(name):
     '''
     ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name), python_shell=False)
 
-    return not ret['retcode']
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def info(name):
@@ -158,7 +159,7 @@ def adduser(name, username):
     retcode = __salt__['cmd.retcode']('pw groupmod {0} -m {1}'.format(
         name, username), python_shell=False)
 
-    return not retcode
+    return retcode == exitcodes.EX_OK
 
 
 def deluser(name, username):
@@ -183,7 +184,7 @@ def deluser(name, username):
     retcode = __salt__['cmd.retcode']('pw groupmod {0} -d {1}'.format(
         name, username), python_shell=False)
 
-    return not retcode
+    return retcode == exitcodes.EX_OK
 
 
 def members(name, members_list):
@@ -203,4 +204,4 @@ def members(name, members_list):
     retcode = __salt__['cmd.retcode']('pw groupmod {0} -M {1}'.format(
         name, members_list), python_shell=False)
 
-    return not retcode
+    return retcode == exitcodes.EX_OK

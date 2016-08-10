@@ -11,6 +11,7 @@ import re
 import datetime
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -75,7 +76,7 @@ def bin_pkg_info(path, saltenv='base'):
 
     cmd = ['dpkg', '-I', path]
     result = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         msg = 'Unable to get info for ' + path
         if result['stderr']:
             msg += ': ' + result['stderr']
@@ -152,7 +153,7 @@ def list_pkgs(*packages):
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
         return msg
@@ -184,7 +185,7 @@ def file_list(*packages):
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
         return msg
@@ -226,7 +227,7 @@ def file_dict(*packages):
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
         return msg
@@ -285,7 +286,7 @@ def _get_pkg_info(*packages):
     cmd = cmd.strip()
 
     call = __salt__['cmd.run_all'](cmd, python_chell=False)
-    if call['retcode']:
+    if call['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
 
     for pkg_info in [elm for elm in re.split(r"------", call['stdout']) if elm.strip()]:

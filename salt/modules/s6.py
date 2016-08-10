@@ -23,6 +23,7 @@ import os
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 __func_alias__ = {
@@ -60,7 +61,7 @@ def start(name):
         salt '*' s6.start <service name>
     '''
     cmd = 's6-svc -u {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -74,7 +75,7 @@ def stop(name):
         salt '*' s6.stop <service name>
     '''
     cmd = 's6-svc -d {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def term(name):
@@ -88,7 +89,7 @@ def term(name):
         salt '*' s6.term <service name>
     '''
     cmd = 's6-svc -t {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -102,7 +103,7 @@ def reload_(name):
         salt '*' s6.reload <service name>
     '''
     cmd = 's6-svc -h {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -116,7 +117,7 @@ def restart(name):
         salt '*' s6.restart <service name>
     '''
     cmd = 's6-svc -t {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def full_restart(name):

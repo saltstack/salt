@@ -22,6 +22,7 @@ import logging
 
 import salt.utils
 import salt.utils.http
+from salt.defaults import exitcodes
 from salt.utils.decorators import memoize
 
 LOG = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ def _run_cmd(cmd):
         ret['stdout'] = result['stdout']
     if result.get('stderr'):
         ret['stderr'] = result['stderr']
-    ret['success'] = result['retcode'] == 0
+    ret['success'] = result['retcode'] == exitcodes.EX_OK
 
     return ret
 

@@ -49,6 +49,7 @@ import six
 
 # Import Salt libs
 import salt.utils.jid
+from salt.defaults import exitcodes
 
 try:
     from raven import Client
@@ -91,7 +92,7 @@ def returner(ret):
                     result['failed_states'] = failed_states
                     return False
 
-        if result.get('success') and result.get('retcode', 0) == 0:
+        if result.get('success') and result.get('retcode', exitcodes.EX_OK) == exitcodes.EX_OK:
             return True
 
         return False

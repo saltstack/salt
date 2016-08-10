@@ -13,6 +13,7 @@ import os
 import re
 import tempfile
 
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'vbox_guest'
@@ -135,7 +136,7 @@ def _additions_install_linux(mount_point, **kwargs):
         log.warning("{0} is not fully supported yet.".format(guest_os))
     installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
-    if installer_ret['retcode'] in (0, 1):
+    if installer_ret['retcode'] in (exitcodes.EX_OK, exitcodes.EX_GENERIC):
         if reboot:
             __salt__['system.reboot']()
         elif restart_x11:
@@ -196,7 +197,7 @@ def _additions_dir():
 
 def _additions_remove_linux_run(cmd):
     uninstaller_ret = __salt__['cmd.run_all'](cmd)
-    return uninstaller_ret['retcode'] in (0, )
+    return uninstaller_ret['retcode'] in (exitcodes.EX_OK, )
 
 
 def _additions_remove_linux(**kwargs):

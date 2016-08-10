@@ -14,6 +14,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 # Import 3rd-party libs
@@ -46,7 +47,7 @@ def _pecl(command, defaults=False):
 
     ret = __salt__['cmd.run_all'](cmdline, python_shell=True)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         log.error('Problem running pecl. Is php-pear installed?')

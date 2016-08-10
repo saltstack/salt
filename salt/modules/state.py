@@ -26,6 +26,7 @@ import time
 
 # Import salt libs
 import salt.config
+from salt.defaults import exitcodes
 import salt.payload
 import salt.state
 import salt.utils
@@ -89,10 +90,10 @@ def _set_retcode(ret):
     '''
 
     # Set default retcode to 0
-    __context__['retcode'] = 0
+    __context__['retcode'] = exitcodes.EX_OK
 
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return
     if not salt.utils.check_state_result(ret):
         __context__['retcode'] = 2
@@ -208,7 +209,7 @@ def _check_queue(queue, kwargs):
     else:
         conflict = running(concurrent=kwargs.get('concurrent', False))
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = exitcodes.EX_GENERIC
             return conflict
 
 
@@ -244,11 +245,11 @@ def low(data, queue=False, **kwargs):
         st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return err
     ret = st_.call(data)
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
     if salt.utils.check_state_result(ret):
         __context__['retcode'] = 2
     return ret
@@ -344,7 +345,7 @@ def template(tem, queue=False, **kwargs):
         tem = '{sls}.sls'.format(sls=tem)
     high_state, errors = st_.render_state(tem, saltenv, '', None, local=True)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return errors
     ret = st_.state.call_high(high_state)
     _set_retcode(ret)
@@ -908,7 +909,7 @@ def sls(mods,
     else:
         conflict = running(concurrent)
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = exitcodes.EX_GENERIC
             return conflict
 
     # Ensure desired environment
@@ -923,7 +924,7 @@ def sls(mods,
     if disabled:
         for state in disabled:
             log.debug('Salt state {0} run is disabled. To re-enable, run state.enable {0}'.format(state))
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return disabled
 
     if not _check_pillar(kwargs):
@@ -985,7 +986,7 @@ def sls(mods,
         high_, errors = st_.render_highstate({saltenv: mods})
 
         if errors:
-            __context__['retcode'] = 1
+            __context__['retcode'] = exitcodes.EX_GENERIC
             return errors
 
         if exclude:
@@ -1189,7 +1190,7 @@ def sls_id(
         st_.pop_active()
     errors += st_.state.verify_high(high_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return errors
     chunks = st_.state.compile_high_data(high_)
     ret = {}
@@ -1251,7 +1252,7 @@ def show_low_sls(mods,
         st_.pop_active()
     errors += st_.state.verify_high(high_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return errors
     ret = st_.state.compile_high_data(high_)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -1320,7 +1321,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     # value from before this function was run.
     __opts__['test'] = orig_test
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return errors
     return high_
 
@@ -1356,7 +1357,7 @@ def show_top(queue=False, **kwargs):
     top_ = st_.get_top()
     errors += st_.verify_tops(top_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return errors
     matches = st_.top_matches(top_)
     return matches
@@ -1384,7 +1385,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         return conflict
     comps = fun.split('.')
     if len(comps) < 2:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
@@ -1410,7 +1411,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
     err = st_.verify_data(kwargs)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return err
 
     st_._mod_init(kwargs)

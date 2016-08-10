@@ -14,6 +14,7 @@ import logging
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ def _check_features():
         man=man
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return res['retcode'] == 0
+    return res['retcode'] == exitcodes.EX_OK
 
 
 @decorators.memoize
@@ -111,7 +112,7 @@ def status(zpool=None):
         zpool=' {0}'.format(zpool) if zpool else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
 
@@ -223,7 +224,7 @@ def iostat(zpool=None, sample_time=0):
         sample_time=' {0} 2'.format(sample_time) if sample_time else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
 
@@ -371,7 +372,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
         zpool=' {0}'.format(zpool) if zpool else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
 
@@ -422,7 +423,7 @@ def get(zpool, prop=None, show_source=False):
         zpool=zpool
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
 
@@ -478,7 +479,7 @@ def set(zpool, prop, value):
         zpool=zpool
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool][prop] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool][prop] = value
@@ -504,7 +505,7 @@ def exists(zpool):
         zpool=zpool
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         return False
     return True
 
@@ -538,7 +539,7 @@ def destroy(zpool, force=False):
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
-        if res['retcode'] != 0:
+        if res['retcode'] != exitcodes.EX_OK:
             ret[zpool] = 'error destroying storage pool'
             if 'stderr' in res and res['stderr'] != '':
                 ret[zpool] = res['stderr']
@@ -576,7 +577,7 @@ def scrub(zpool, stop=False):
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
         ret[zpool] = {}
-        if res['retcode'] != 0:
+        if res['retcode'] != exitcodes.EX_OK:
             ret[zpool]['scrubbing'] = False
             if 'stderr' in res:
                 if 'currently scrubbing' in res['stderr']:
@@ -701,7 +702,7 @@ def create(zpool, *vdevs, **kwargs):
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # Check and see if the pools is available
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = 'created with {0}'.format(devs)
@@ -751,7 +752,7 @@ def add(zpool, *vdevs, **kwargs):
         devs=devs
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = 'added {0}'.format(devs)
@@ -816,7 +817,7 @@ def attach(zpool, device, new_device, force=False):
         new_device=new_device
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = {}
@@ -858,7 +859,7 @@ def detach(zpool, device):
         device=device
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = {}
@@ -932,7 +933,7 @@ def replace(zpool, old_device, new_device=None, force=False):
         new_device=' {0}'.format(new_device) if new_device else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = 'replaced {0} with {1}'.format(old_device, new_device)

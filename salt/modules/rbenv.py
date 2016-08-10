@@ -17,6 +17,7 @@ import re
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import SaltInvocationError
 
@@ -108,7 +109,7 @@ def _rbenv_exec(command, env=None, runas=None, ret=None):
         ret.update(result)
         return ret
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         return result['stdout']
     else:
         return False
@@ -119,7 +120,7 @@ def _install_rbenv(path, runas=None):
         return True
 
     cmd = ['git', 'clone', 'https://github.com/sstephenson/rbenv.git', path]
-    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == exitcodes.EX_OK
 
 
 def _install_ruby_build(path, runas=None):
@@ -129,7 +130,7 @@ def _install_ruby_build(path, runas=None):
 
     cmd = ['git', 'clone',
            'https://github.com/sstephenson/ruby-build.git', path]
-    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == exitcodes.EX_OK
 
 
 def _update_rbenv(path, runas=None):
@@ -139,7 +140,7 @@ def _update_rbenv(path, runas=None):
     return __salt__['cmd.retcode'](['git', 'pull'],
                                    runas=runas,
                                    cwd=path,
-                                   python_shell=False) == 0
+                                   python_shell=False) == exitcodes.EX_OK
 
 
 def _update_ruby_build(path, runas=None):
@@ -150,7 +151,7 @@ def _update_ruby_build(path, runas=None):
     return __salt__['cmd.retcode'](['git', 'pull'],
                                    runas=runas,
                                    cwd=path,
-                                   python_shell=False) == 0
+                                   python_shell=False) == exitcodes.EX_OK
 
 
 def install(runas=None, path=None):
@@ -245,7 +246,7 @@ def install_ruby(ruby, runas=None):
 
     ret = {}
     ret = _rbenv_exec(['install', ruby], env=env, runas=runas, ret=ret)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         rehash(runas=runas)
         return ret['stderr']
     else:
@@ -392,7 +393,7 @@ def do(cmdline, runas=None, env=None):
         python_shell=False
     )
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         rehash(runas=runas)
         return result['stdout']
     else:

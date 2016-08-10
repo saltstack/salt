@@ -14,6 +14,8 @@ from __future__ import absolute_import
 import os
 import glob
 
+from salt.defaults import exitcodes
+
 __func_alias__ = {
     'reload_': 'reload'
 }
@@ -42,7 +44,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/rc.d/{0} onestart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -56,7 +58,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/rc.d/{0} onestop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -70,7 +72,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/rc.d/{0} onerestart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -84,7 +86,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/etc/rc.d/{0} onereload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def force_reload(name):
@@ -98,7 +100,7 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     cmd = '/etc/rc.d/{0} forcereload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -115,7 +117,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} onestatus'.format(name)
-    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def _get_svc(rcd, service_status):
@@ -229,7 +231,7 @@ def _rcconf_status(name, service_status):
     rxname = '^{0}=.*'.format(name)
     newstatus = '{0}={1}'.format(name, service_status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
-    if ret == 0:  # service found in rc.conf, modify its status
+    if ret == exitcodes.EX_OK:  # service found in rc.conf, modify its status
         __salt__['file.replace'](rcconf, rxname, newstatus)
     else:
         ret = __salt__['file.append'](rcconf, newstatus)

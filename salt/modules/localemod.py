@@ -16,6 +16,7 @@ except ImportError:
     pass
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.locales
 import salt.utils.systemd
@@ -98,7 +99,7 @@ def _localectl_set(locale=''):
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
     cmd = 'localectl set-locale {0}'.format(args)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def list_avail():
@@ -198,7 +199,7 @@ def set_locale(locale):
         )
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
     elif 'Solaris' in __grains__['os_family']:
         if locale not in __salt__['locale.list_avail']():
             return False
@@ -337,10 +338,10 @@ def gen_locale(locale, **kwargs):
             'Command "locale-gen" or "localedef" was not found on this system.')
 
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode']:
+    if res['retcode'] != exitcodes.EX_OK:
         log.error(res['stderr'])
 
     if kwargs.get('verbose'):
         return res
     else:
-        return res['retcode'] == 0
+        return res['retcode'] == exitcodes.EX_OK
