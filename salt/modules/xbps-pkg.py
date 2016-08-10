@@ -17,6 +17,7 @@ import logging
 import glob
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
@@ -272,7 +273,7 @@ def refresh_db():
     '''
     cmd = 'xbps-install -Sy'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']

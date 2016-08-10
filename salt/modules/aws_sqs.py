@@ -11,6 +11,7 @@ import json
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +174,7 @@ def list_queues(region, opts=None, user=None):
     out = _run_aws('list-queues', region, opts, user)
 
     ret = {
-        'retcode': 0,
+        'retcode': exitcodes.EX_OK,
         'stdout': out['QueueUrls'],
     }
     return ret
@@ -207,7 +208,7 @@ def create_queue(name, region, opts=None, user=None):
         user=user, **create)
 
     ret = {
-        'retcode': 0,
+        'retcode': exitcodes.EX_OK,
         'stdout': out['QueueUrl'],
         'stderr': '',
     }
@@ -258,7 +259,7 @@ def delete_queue(name, region, opts=None, user=None):
         success = False
 
     ret = {
-        'retcode': 0 if success else 1,
+        'retcode': exitcodes.EX_OK if success else exitcodes.EX_GENERIC,
         'stdout': out,
         'stderr': err,
     }

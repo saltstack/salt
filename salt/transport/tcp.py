@@ -135,8 +135,8 @@ if USE_LOAD_BALANCER:
         # Based on default used in tornado.netutil.bind_sockets()
         backlog = 128
 
-        def __init__(self, opts, socket_queue, log_queue=None):
-            super(LoadBalancerServer, self).__init__(log_queue=log_queue)
+        def __init__(self, opts, socket_queue, log_queue=None, pm_queue=None):
+            super(LoadBalancerServer, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
             self.opts = opts
             self.socket_queue = socket_queue
             self._socket = None
@@ -177,6 +177,8 @@ if USE_LOAD_BALANCER:
             self._socket.setblocking(1)
             self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
             self._socket.listen(self.backlog)
+
+            self._notify_ready()
 
             while True:
                 try:

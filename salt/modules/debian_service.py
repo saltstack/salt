@@ -21,6 +21,7 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 # pylint: enable=import-error
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils.systemd
 
 __func_alias__ = {
@@ -163,7 +164,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = _service_cmd(name, 'start')
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -177,7 +178,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = _service_cmd(name, 'stop')
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -191,7 +192,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = _service_cmd(name, 'restart')
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -205,7 +206,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = _service_cmd(name, 'reload')
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def force_reload(name):
@@ -219,7 +220,7 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     cmd = _service_cmd(name, 'force-reload')
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -236,7 +237,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = _service_cmd(name, 'status')
-    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def _osrel():
@@ -268,7 +269,7 @@ def enable(name, **kwargs):
         osrel = _osrel()
         if osrel == 'testing/unstable' or osrel == 'unstable' or osrel.endswith("/sid"):
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
-    return not __salt__['cmd.retcode'](cmd, python_shell=True)
+    return __salt__['cmd.retcode'](cmd, python_shell=True) == exitcodes.EX_OK
 
 
 def disable(name, **kwargs):
@@ -286,7 +287,7 @@ def disable(name, **kwargs):
         cmd = 'update-rc.d -f {0} remove'.format(name)
     else:
         cmd = 'update-rc.d {0} disable'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def enabled(name, **kwargs):

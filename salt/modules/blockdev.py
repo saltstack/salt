@@ -15,6 +15,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -169,8 +170,8 @@ def format_(device, fs_type='ext4',
             cmd.append('-f')
     cmd.append(str(device))
 
-    mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
-    sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0
+    mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == exitcodes.EX_OK
+    sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == exitcodes.EX_OK
 
     return all([mkfs_success, sync_success])
 

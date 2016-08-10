@@ -12,6 +12,7 @@ import re
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
@@ -245,7 +246,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     os.remove(env['GIT_SSH'])
 
             # If the command was successful, no need to try additional IDs
-            if result['retcode'] == 0:
+            if result['retcode'] == exitcodes.EX_OK:
                 return result
             else:
                 err = result['stdout' if redirect_stderr else 'stderr']
@@ -281,7 +282,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             redirect_stderr=redirect_stderr,
             **kwargs)
 
-        if result['retcode'] == 0:
+        if result['retcode'] == exitcodes.EX_OK:
             return result
         else:
             if failhard:
@@ -953,7 +954,7 @@ def config_get(key,
                             **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
-    if result['retcode'] == 1:
+    if result['retcode'] == exitcodes.EX_GENERIC:
         return None
     ret = result['stdout'].splitlines()
     if all_:
@@ -1029,9 +1030,9 @@ def config_get_regexp(key,
                             ignore_retcode=ignore_retcode,
                             **kwargs)
 
-    # git config --get exits with retcode of 1 when key does not exist
+    # git config --get exits with retcode of 1(EX_GENERIC) when key does not exist
     ret = {}
-    if result['retcode'] == 1:
+    if result['retcode'] == exitcodes.EX_GENERIC:
         return ret
     for line in result['stdout'].splitlines():
         try:
@@ -1276,9 +1277,9 @@ def config_unset(key,
                    ignore_retcode=ignore_retcode,
                    failhard=False)
     retcode = ret['retcode']
-    if retcode == 0:
+    if retcode == exitcodes.EX_OK:
         return True
-    elif retcode == 1:
+    elif retcode == exitcodes.EX_GENERIC:
         raise CommandExecutionError('Section or key is invalid')
     elif retcode == 5:
         if config_get(cwd,
@@ -2000,7 +2001,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
         out = _git_run(['git', 'worktree', 'list', '--porcelain'],
                        cwd=cwd,
                        runas=user)
-        if out['retcode'] != 0:
+        if out['retcode'] != exitcodes.EX_OK:
             msg = 'Failed to list worktrees'
             if out['stderr']:
                 msg += ': {0}'.format(out['stderr'])
@@ -2559,7 +2560,7 @@ def merge_base(cwd,
                       ignore_retcode=ignore_retcode,
                       failhard=False if is_ancestor else True)
     if is_ancestor:
-        return result['retcode'] == 0
+        return result['retcode'] == exitcodes.EX_OK
     all_bases = result['stdout'].splitlines()
     if all_:
         return all_bases

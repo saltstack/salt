@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
-    Test the salt-syndic command
+    Test the `salt-syndic` command line executable
     '''
 
     _call_binary_ = 'salt-syndic'
@@ -95,7 +95,6 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
         syndic = testprogram.TestDaemonSaltSyndic(
             name='unknown_user',
             config_base={'user': 'unknown'},
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         syndic.setup()
@@ -119,7 +118,6 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         syndic = testprogram.TestDaemonSaltSyndic(
             name='unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Syndic setup here to ensure config and script exist
         syndic.setup()
@@ -142,7 +140,6 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         syndic = testprogram.TestDaemonSaltSyndic(
             name='correct_usage',
-            parent_dir=self._test_dir,
         )
         # Syndic setup here to ensure config and script exist
         syndic.setup()

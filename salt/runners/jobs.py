@@ -20,6 +20,7 @@ import salt.returners
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.exceptions import SaltClientError
+from salt.defaults import exitcodes
 
 try:
     import dateutil.parser as dateutil_parser
@@ -514,7 +515,7 @@ def exit_success(jid, ext_source=None):
 
     for minion in data:
         if "retcode" in data[minion]:
-            ret[minion] = True if not data[minion]['retcode'] else False
+            ret[minion] = data[minion]['retcode'] == exitcodes.EX_OK
 
     return ret
 

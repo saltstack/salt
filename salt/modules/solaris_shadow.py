@@ -24,6 +24,7 @@ except ImportError:
         pass  # We're most likely on a Windows machine.
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 try:
@@ -139,7 +140,7 @@ def info(name):
     #  6. Warning period
 
     output = __salt__['cmd.run_all']('passwd -s {0}'.format(name), python_shell=False)
-    if output['retcode'] != 0:
+    if output['retcode'] != exitcodes.EX_OK:
         return ret
 
     fields = output['stdout'].split()

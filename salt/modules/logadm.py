@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ def rotate(name,
         command += " {0}".format(pattern)
 
     result = __salt__['cmd.run_all'](command, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         return dict(Error='Failed in adding log', Output=result['stderr'])
 
     return dict(Result='Success')
@@ -101,7 +102,7 @@ def remove(name, conf_file=default_conf):
     '''
     command = "logadm -f {0} -r {1}".format(conf_file, name)
     result = __salt__['cmd.run_all'](command, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         return dict(
             Error='Failure in removing log. Possibly already removed?',
             Output=result['stderr']

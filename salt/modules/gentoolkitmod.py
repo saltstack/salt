@@ -16,6 +16,8 @@ try:
 except ImportError:
     pass
 
+from salt.defaults import exitcodes
+
 # Define the module's virtual name
 __virtualname__ = 'gentoolkit'
 
@@ -48,7 +50,7 @@ def revdep_rebuild(lib=None):
     cmd = 'revdep-rebuild -i --quiet --no-progress'
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def _pretty_size(size):

@@ -15,6 +15,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError
 import salt.utils
@@ -91,7 +92,7 @@ def _srvmgr(func, as_json=False):
 
     cmd_ret = __salt__['cmd.run_all'](command, shell='powershell', python_shell=True)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         _LOG.error('Unable to execute command: %s\nError: %s', command, cmd_ret['stderr'])
     return cmd_ret
 
@@ -212,7 +213,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         _LOG.debug('Site created successfully: %s', name)
         return True
     _LOG.error('Unable to create site: %s', name)
@@ -250,7 +251,7 @@ def remove_site(name):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         _LOG.debug('Site removed successfully: %s', name)
         return True
     _LOG.error('Unable to remove site: %s', name)
@@ -339,7 +340,7 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_bindings = list_bindings(site)
 
         if name in new_bindings:
@@ -380,7 +381,7 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_bindings = list_bindings(site)
 
         if name not in new_bindings:
@@ -492,7 +493,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_cert_bindings = list_cert_bindings(site)
 
         if binding_info not in new_cert_bindings:
@@ -556,7 +557,7 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_cert_bindings = list_cert_bindings(site)
 
         if binding_info not in new_cert_bindings:
@@ -664,7 +665,7 @@ def create_apppool(name):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         _LOG.debug('Application pool created successfully: %s', name)
         return True
     _LOG.error('Unable to create application pool: %s', name)
@@ -698,7 +699,7 @@ def remove_apppool(name):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         _LOG.debug('Application pool removed successfully: %s', name)
         return True
     _LOG.error('Unable to remove application pool: %s', name)
@@ -727,7 +728,7 @@ def restart_apppool(name):
     pscmd.append("Restart-WebAppPool '{0}'".format(name))
 
     cmd_ret = _srvmgr(str().join(pscmd))
-    return cmd_ret['retcode'] == 0
+    return cmd_ret['retcode'] == exitcodes.EX_OK
 
 
 def get_container_setting(name, container, settings):
@@ -783,7 +784,7 @@ def get_container_setting(name, container, settings):
     # Validate the setting names that were passed in.
     cmd_ret = _srvmgr(func=str().join(pscmd_validate), as_json=True)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         message = 'One or more invalid property names were specified for the provided container.'
         raise SaltInvocationError(message)
 
@@ -854,7 +855,7 @@ def set_container_setting(name, container, settings):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         _LOG.error('Unable to set settings for %s: %s', container, name)
         return False
 
@@ -970,7 +971,7 @@ def create_app(name, site, sourcepath, apppool=None):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_apps = list_apps(site)
 
         if name in new_apps:
@@ -1007,7 +1008,7 @@ def remove_app(name, site):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_apps = list_apps(site)
 
         if name not in new_apps:
@@ -1100,7 +1101,7 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_vdirs = list_vdirs(site, app)
 
         if name in new_vdirs:
@@ -1146,7 +1147,7 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
 
     cmd_ret = _srvmgr(str().join(pscmd))
 
-    if cmd_ret['retcode'] == 0:
+    if cmd_ret['retcode'] == exitcodes.EX_OK:
         new_vdirs = list_vdirs(site, app)
 
         if name not in new_vdirs:

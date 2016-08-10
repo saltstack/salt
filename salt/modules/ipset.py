@@ -10,6 +10,7 @@ import logging
 # Import Salt libs
 import salt.ext.six as six
 from salt.ext.six.moves import map, range
+from salt.defaults import exitcodes
 import salt.utils
 
 # Import third-party libs
@@ -472,7 +473,7 @@ def test(set=None, entry=None, family='ipv4', **kwargs):
     cmd = '{0} test {1} {2}'.format(_ipset_cmd(), set, entry)
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         # Entry doesn't exist in set return false
         return False
 
@@ -525,7 +526,7 @@ def _find_set_members(set):
     cmd = '{0} list {1}'.format(_ipset_cmd(), set)
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         # Set doesn't exist return false
         return False
 
@@ -548,7 +549,7 @@ def _find_set_info(set):
     cmd = '{0} list -t {1}'.format(_ipset_cmd(), set)
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         # Set doesn't exist return false
         return False
 

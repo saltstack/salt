@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -141,7 +142,7 @@ def set_(device, **kwargs):
                                         device)
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Unable to set desired quota. Error follows: \n{0}'
             .format(result['stderr'])

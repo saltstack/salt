@@ -12,6 +12,7 @@ import re
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -560,7 +561,7 @@ def package_info(package, image=None):
 
     out = __salt__['cmd.run_all'](cmd)
 
-    if out['retcode'] == 0:
+    if out['retcode'] == exitcodes.EX_OK:
         ret = dict()
         for line in str(out['stdout']).splitlines():
             if ' : ' in line:

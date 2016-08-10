@@ -174,7 +174,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = _service_cmd(name, 'start')
-    return not _ret_code(cmd)
+    return _ret_code(cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -188,7 +188,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = _service_cmd(name, 'stop')
-    return not _ret_code(cmd)
+    return _ret_code(cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -202,7 +202,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = _service_cmd(name, 'restart')
-    return not _ret_code(cmd)
+    return _ret_code(cmd) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -216,7 +216,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = _service_cmd(name, 'reload')
-    return not _ret_code(cmd)
+    return _ret_code(cmd) == exitcodes.EX_OK
 
 
 def zap(name):
@@ -230,7 +230,7 @@ def zap(name):
         salt '*' service.zap <service name>
     '''
     cmd = _service_cmd(name, 'zap')
-    return not _ret_code(cmd)
+    return _ret_code(cmd) == exitcodes.EX_OK
 
 
 def status(name, sig=None):

@@ -24,6 +24,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.ext.six as six
@@ -180,12 +181,12 @@ def install(name, clean=True):
         reset_system_locale=False,
         python_shell=False
     )
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         __context__['ports.install_error'] = result['stderr']
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
     ret = salt.utils.compare_dicts(old, new)
-    if not ret and result['retcode'] == 0:
+    if not ret and result['retcode'] == exitcodes.EX_OK:
         # No change in package list, but the make install was successful.
         # Assume that the installation was a recompile with new options, and
         # set return dict so that changes are detected by the ports.installed
@@ -276,7 +277,7 @@ def showconfig(name, default=False, dict_return=False):
             python_shell=False
         )
         output = result['stdout'].splitlines()
-        if result['retcode'] != 0:
+        if result['retcode'] != exitcodes.EX_OK:
             error = result['stderr']
         else:
             error = ''
@@ -407,7 +408,7 @@ def update(extract=False):
         _portsnap() + ['fetch'],
         python_shell=False
     )
-    if not result['retcode'] == 0:
+    if not result['retcode'] == exitcodes.EX_OK:
         raise CommandExecutionError(
             'Unable to fetch ports snapshot: {0}'.format(result['stderr'])
         )
@@ -435,7 +436,7 @@ def update(extract=False):
             _portsnap() + ['extract'],
             python_shell=False
         )
-        if not result['retcode'] == 0:
+        if not result['retcode'] == exitcodes.EX_OK:
             raise CommandExecutionError(
                 'Unable to extract ports snapshot {0}'.format(result['stderr'])
             )
@@ -444,7 +445,7 @@ def update(extract=False):
         _portsnap() + ['update'],
         python_shell=False
     )
-    if not result['retcode'] == 0:
+    if not result['retcode'] == exitcodes.EX_OK:
         raise CommandExecutionError(
             'Unable to apply ports snapshot: {0}'.format(result['stderr'])
         )

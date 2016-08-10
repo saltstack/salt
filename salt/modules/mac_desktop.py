@@ -5,6 +5,7 @@ Mac OS X implementations of various commands in the "desktop" interface
 from __future__ import absolute_import
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -136,7 +137,7 @@ def _check_cmd(call):
     '''
     Check the output of the cmd.run_all function call.
     '''
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         std_err = call.get('stderr')
         std_out = call.get('stdout')

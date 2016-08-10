@@ -263,6 +263,7 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
+from salt.defaults import exitcodes
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['esxi']
@@ -397,7 +398,7 @@ def ch_config(cmd, *args, **kwargs):
             kwargs.pop(k)
 
     if 'vsphere.' + cmd not in __salt__:
-        return {'retcode': -1, 'message': 'vsphere.' + cmd + ' is not available.'}
+        return {'retcode': exitcodes.EX_UNSET, 'message': 'vsphere.' + cmd + ' is not available.'}
     else:
         return __salt__['vsphere.' + cmd](*args, **kwargs)
 

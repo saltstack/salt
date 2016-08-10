@@ -10,6 +10,7 @@ import os
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -47,7 +48,7 @@ def _rvm(command, runas=None, cwd=None):
                                   cwd=cwd,
                                   python_shell=False)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     return False
 
@@ -96,7 +97,7 @@ def install(runas=None):
         runas=runas,
         python_shell=True
     )
-    if ret['retcode'] > 0:
+    if ret['retcode'] > exitcodes.EX_OK:
         msg = 'Error encountered while downloading the RVM installer'
         if ret['stderr']:
             msg += '. stderr follows:\n\n' + ret['stderr']

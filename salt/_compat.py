@@ -32,6 +32,7 @@ except Exception:
             except Exception:
                 raise
 
+from salt.defaults import exitcodes
 
 # True if we are running on Python 3.
 PY3 = sys.version_info[0] == 3
@@ -162,7 +163,7 @@ if sys.version_info < (2, 7):
         process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
         output, unused_err = process.communicate()
         retcode = process.poll()
-        if retcode:
+        if retcode != exitcodes.EX_OK:
             cmd = kwargs.get("args")
             if cmd is None:
                 cmd = popenargs[0]

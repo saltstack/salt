@@ -5,6 +5,7 @@ Module for viewing and modifying sysctl parameters
 from __future__ import absolute_import
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -98,7 +99,7 @@ def assign(name, value):
     cmd = 'sysctl {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if data['retcode'] != 0:
+    if data['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('sysctl failed: {0}'.format(
             data['stderr']))
     new_name, new_value = data['stdout'].split(':', 1)

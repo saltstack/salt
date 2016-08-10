@@ -12,6 +12,7 @@ import time
 # Import Salt libs
 import salt.utils
 import salt.key
+from salt.defaults import exitcodes
 
 # Import third party libs
 import salt.ext.six as six
@@ -126,17 +127,17 @@ def kill(timeout=15):
 
     ret = {
         'killed': None,
-        'retcode': 1,
+        'retcode': exitcodes.EX_GENERIC,
     }
     comment = []
     pid = __grains__.get('pid')
     if not pid:
         comment.append('Unable to find "pid" in grains')
-        ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
+        ret['retcode'] = exitcodes.EX_SOFTWARE
     else:
         if 'ps.kill_pid' not in __salt__:
             comment.append('Missing command: ps.kill_pid')
-            ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
+            ret['retcode'] = exitcodes.EX_SOFTWARE
         else:
             # The retcode status comes from the first kill signal
             ret['retcode'] = int(not __salt__['ps.kill_pid'](pid))
@@ -156,7 +157,7 @@ def kill(timeout=15):
                 else:
                     # The process did not exit before the timeout
                     comment.append('Timed out waiting for minion to exit')
-                    ret['retcode'] = salt.defaults.exitcodes.EX_TEMPFAIL
+                    ret['retcode'] = exitcodes.EX_TEMPFAIL
 
     if comment:
         ret['comment'] = comment
@@ -231,7 +232,7 @@ def restart():
     ret = {
         'killed': None,
         'restart': {},
-        'retcode': 0,
+        'retcode': exitcodes.EX_OK,
     }
 
     restart_cmd = __salt__['config.get']('minion_restart_command')
@@ -254,7 +255,7 @@ def restart():
                 comment.append(ret['comment'])
             else:
                 comment.extend(ret['comment'])
-        if ret['retcode']:
+        if ret['retcode'] != exitcodes.EX_OK:
             comment.append('Kill failed - not restarting')
             should_restart = False
 
