@@ -10,6 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {

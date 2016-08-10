@@ -18,6 +18,7 @@ import logging
 # Import salt libs
 import salt.utils.systemd
 import salt.utils.odict as odict
+from salt.defaults import exitcodes
 
 # Set up logging
 log = logging.getLogger(__name__)

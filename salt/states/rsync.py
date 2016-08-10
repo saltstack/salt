@@ -28,6 +28,7 @@ State to synchronize files and directories with rsync.
 '''
 
 from __future__ import absolute_import
+from salt.defaults import exitcodes
 import salt.utils
 import os
 
@@ -135,7 +136,7 @@ def synchronized(name, source,
             ret['comment'] = _get_summary(result['stdout'])
             return ret
 
-        if result.get('retcode'):
+        if result.get('retcode') != exitcodes.EX_OK:
             ret['result'] = False
             ret['comment'] = result['stderr']
             ret['changes'] = result['stdout']

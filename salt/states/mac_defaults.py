@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ def write(name, domain, value, vtype='string', user=None):
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
     else:
         out = __salt__['macdefaults.write'](domain, name, value, vtype, user)
-        if out['retcode'] != 0:
+        if out['retcode'] != exitcodes.EX_OK:
             ret['result'] = False
             ret['comment'] = 'Failed to write default. {0}'.format(out['stdout'])
         else:
@@ -100,7 +101,7 @@ def absent(name, domain, user=None):
 
     out = __salt__['macdefaults.delete'](domain, name, user)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         ret['comment'] += "{0} {1} is already absent".format(domain, name)
     else:
         ret['changes']['absent'] = "{0} {1} is now absent".format(domain, name)

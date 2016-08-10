@@ -10,6 +10,7 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 '''
 from __future__ import absolute_import
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.exceptions
 
@@ -81,7 +82,7 @@ def set_(filename, section, parameter, value):
             python_shell=False,
             )
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         return result['stdout']
     else:
         raise salt.exceptions.CommandExecutionError(result['stderr'])
@@ -120,7 +121,7 @@ def get(filename, section, parameter):
             python_shell=False,
             )
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         return result['stdout']
     else:
         raise salt.exceptions.CommandExecutionError(result['stderr'])
@@ -158,7 +159,7 @@ def delete(filename, section, parameter):
             python_shell=False,
             )
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         return result['stdout']
     else:
         raise salt.exceptions.CommandExecutionError(result['stderr'])
