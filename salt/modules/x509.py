@@ -1209,6 +1209,12 @@ def create_certificate(
         An additional path to copy the resulting certificate to. Can be used
         to maintain a copy of all certificates issued for revocation purposes.
 
+    prepend_cn:
+        If set to True, the CN and a dash will be prepended to the copypath's filename.
+
+        Example:
+            /etc/pki/issued_certs/www.example.com-DE:CA:FB:AD:00:00:00:00.crt
+
     signing_policy:
         A signing policy that should be used to create this certificate.
         Signing policies should be defined in the minion configuration, or in
@@ -1414,13 +1420,13 @@ def create_certificate(
             'failed to verify certificate signature')
 
     if 'copypath' in kwargs:
-        write_pem(
-            text=cert.as_pem(),
-            path=os.path.join(
-                kwargs['copypath'], kwargs['serial_number'] + '.crt'),
-            overwrite=overwrite,
-            pem_type='CERTIFICATE'
-        )
+        if 'prepend_cn' in kwargs and kwargs['prepend_cn'] is True:
+            prepend = str(kwargs['CN']) + '-'
+        else:
+            prepend = ''
+        write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
+                  prepend + kwargs['serial_number']+'.crt'),
+                  pem_type='CERTIFICATE')
 
     if path:
         return write_pem(
