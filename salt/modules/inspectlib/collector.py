@@ -326,7 +326,8 @@ def is_alive(pidfile):
     '''
     # Just silencing os.kill exception if no such PID, therefore try/pass.
     try:
-        os.kill(int(open(pidfile).read().strip()), 0)
+        with salt.utils.fopen(pidfile) as fp_:
+            os.kill(int(fp_.read().strip()), 0)
         sys.exit(1)
     except Exception as ex:
         pass
@@ -364,9 +365,8 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             reinit_crypto()
-            fpid = open(pidfile, "w")
-            fpid.write("{0}\n".format(pid))
-            fpid.close()
+            with salt.utils.fopen(pidfile, 'w') as fp_:
+                fp_.write('{0}\n'.format(pid))
             sys.exit(0)
     except OSError as ex:
         sys.exit(1)
