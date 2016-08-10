@@ -396,16 +396,15 @@ def list_modules(*args):
     modules = set()
     if not args:
         for func in __salt__:
-            comps = func.split('.')
-            modules.add(comps[0])
+            modules.add(func.split('.')[0])
         return sorted(modules)
 
     for module in args:
         if '*' not in module:
             for func in __salt__:
-                comps = func.split('.')
-                if comps[0] == module:
-                    modules.add(comps[0])
+                mod_test = func.split('.')[0]
+                if mod_test == module:
+                    modules.add(mod_test)
         else:
             for func in fnmatch.filter(__salt__, module):
                 modules.add(func.split('.')[0])
@@ -609,16 +608,15 @@ def list_state_modules(*args):
     if not args:
         for func in st_.states:
             log.debug('func {0}'.format(func))
-            comps = func.split('.')
-            modules.add(comps[0])
+            modules.add(func.split('.')[0])
         return sorted(modules)
 
     for module in args:
         if '*' not in module:
             for func in st_.states:
-                comps = func.split('.')
-                if comps[0] == module:
-                    modules.add(comps[0])
+                mod_test = func.split('.')[0]
+                if mod_test == module:
+                    modules.add(mod_test)
         else:
             for func in fnmatch.filter(st_.states, module):
                 modules.add(func.split('.')[0])
@@ -656,9 +654,9 @@ def list_runners(*args):
     for module in args:
         if '*' not in module:
             for func in run_.functions:
-                comps = func.split('.')
-                if comps[0] == module:
-                    runners.add(comps[0])
+                mod_test = func.split('.')[0]
+                if mod_test == module:
+                    runners.add(mod_test)
         else:
             for func in fnmatch.filter(run_.functions, module):
                 runners.add(func.split('.')[0])
@@ -743,9 +741,9 @@ def list_returners(*args):
     for module in args:
         if '*' not in module:
             for func in returners_:
-                comps = func.split('.')
-                if comps[0] == module:
-                    returners.add(comps[0])
+                mod_test = func.split('.')[0]
+                if mod_test == module:
+                    returners.add(mod_test)
         else:
             for func in fnmatch.filter(returners_, module):
                 returners.add(func.split('.')[0])
