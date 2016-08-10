@@ -7,6 +7,7 @@ prefix or in `sysexits.h`).
 Lower value exit codes are, in-general, considered more serious.
 
 :32-63: Reserved for Salt internal failures
+:64-78: BSD-standardized exit values
 :80-125: Reserved for Salt remote execution failures
 :=> 80-89: remote execution: state system failures
 :=> 90-95: remote execution: build failures
