@@ -325,7 +325,7 @@ class ProcessManager(object):
             else:
                 return
         if salt.utils.is_windows():
-            with open(os.devnull, 'wb') as devnull:
+            with salt.utils.fopen(os.devnull, 'wb') as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
                     # because the processes don't have a sigterm handler.
