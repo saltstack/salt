@@ -250,9 +250,9 @@ class SyncClientMixin(object):
         if msg:
             salt.utils.warn_until('Oxygen', ' '.join(msg))
 
-        return self._low(fun, low, full_return=full_return)
+        return self._low(fun, low, print_event=print_event, full_return=full_return)
 
-    def _low(self, fun, low, full_return=False):
+    def _low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
