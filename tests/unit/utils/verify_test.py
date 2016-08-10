@@ -21,6 +21,12 @@ from salttesting.helpers import (
     requires_network,
     TestsLoggingHandler
 )
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -32,7 +38,9 @@ from salt.utils.verify import (
     verify_socket,
     zmq_version,
     check_max_open_files,
-    valid_id
+    valid_id,
+    log,
+    verify_log,
 )
 
 # Import 3rd-party libs
@@ -115,7 +123,6 @@ class TestVerify(TestCase):
 
     @skipIf(True, 'Skipping until we can find why Jenkins is bailing out')
     def test_max_open_files(self):
-
         with TestsLoggingHandler() as handler:
             logmsg_dbg = (
                 'DEBUG:This salt-master instance has accepted {0} minion keys.'
@@ -215,6 +222,28 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_verify_log(self):
+        '''
+        Test that verify_log works as expected
+        '''
+        message = 'Insecure logging configuration detected! Sensitive data may be logged.'
+
+        mock_cheese = MagicMock()
+        with patch.object(log, 'warn', mock_cheese):
+            verify_log({'log_level': 'cheeseshop'})
+            mock_cheese.assert_called_once_with(message)
+
+        mock_trace = MagicMock()
+        with patch.object(log, 'warn', mock_trace):
+            verify_log({'log_level': 'trace'})
+            mock_trace.assert_called_once_with(message)
+
+        mock_info = MagicMock()
+        with patch.object(log, 'warn', mock_info):
+            verify_log({'log_level': 'info'})
+            mock_info.assert_not_called()
 
 
 if __name__ == '__main__':
