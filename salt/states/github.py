@@ -160,7 +160,7 @@ def absent(name, profile="github", **kwargs):
 
 def team_present(
         name,
-        description='',
+        description=None,
         repo_names=None,
         privacy='secret',
         permission='pull',
@@ -247,7 +247,8 @@ def team_present(
 
         if len(parameters) > 0:
             if __opts__['test']:
-                test_comments.append('Team properties are set to be edited.')
+                test_comments.append('Team properties are set to be edited: {0}'
+                                     .format(parameters))
                 ret['result'] = None
             else:
                 result = __salt__['github.edit_team'](name, profile=profile,
@@ -262,11 +263,12 @@ def team_present(
                     ret['comment'] = 'Failed to update team properties.'
                     return ret
 
+        manage_repos = repo_names is not None
         current_repos = set(__salt__['github.list_team_repos'](name, profile=profile))
         repo_names = set(repo_names or [])
 
         repos_to_add = repo_names - current_repos
-        repos_to_remove = current_repos - repo_names
+        repos_to_remove = current_repos - repo_names if repo_names else []
 
         if repos_to_add:
             if __opts__['test']:
@@ -332,12 +334,14 @@ def team_present(
             ret['comment'] = 'Failed to create team {0}.'.format(name)
             return ret
 
+    manage_members = members is not None
+
     mfa_deadline = datetime.datetime.utcnow() - datetime.timedelta(seconds=no_mfa_grace_seconds)
     members_no_mfa = __salt__['github.list_members_without_mfa'](profile=profile)
 
     members_lower = {}
-    for name, info in six.iteritems(members):
-        members_lower[name.lower()] = info
+    for member_name, info in six.iteritems(members or {}):
+        members_lower[member_name.lower()] = info
 
     member_change = False
     current_members = __salt__['github.list_team_members'](name, profile=profile)
@@ -378,7 +382,8 @@ def team_present(
         if member in members_lower:
             mfa_violation = _member_violates_mfa(member, members_lower[member],
                                                  mfa_deadline, members_no_mfa)
-        if member not in members_lower or (enforce_mfa and mfa_violation):
+        if (manage_members and member not in members_lower or
+            (enforce_mfa and mfa_violation)):
             # Remove from team
             member_change = True
             if __opts__['test']:
@@ -476,7 +481,7 @@ def team_absent(name, profile="github", **kwargs):
 
 def repo_present(
         name,
-        description='',
+        description=None,
         homepage=None,
         private=False,
         has_issues=True,
@@ -562,7 +567,7 @@ def repo_present(
         parameters = {}
         old_parameters = {}
         for param_name, param_value in six.iteritems(given_params):
-            if (param_name not in ignore_params and
+            if (param_value is not None and param_name not in ignore_params and
                     target[param_name] is not param_value and
                     target[param_name] != param_value):
                 parameters[param_name] = param_value
