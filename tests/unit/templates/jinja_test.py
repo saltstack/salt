@@ -170,8 +170,8 @@ class TestGetTemplate(TestCase):
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
-                    fp_.read(),
-                    dict(opts=self.local_opts, saltenv='test'))
+                fp_.read(),
+                dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
@@ -180,8 +180,9 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        out = render_jinja_tmpl(
-                salt.utils.fopen(filename).read(),
+        with salt.utils.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                fp_.read(),
                 dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'Hey world !a b !\n')
 
@@ -197,8 +198,9 @@ class TestGetTemplate(TestCase):
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        out = render_jinja_tmpl(
-                salt.utils.fopen(filename).read(),
+        with salt.utils.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                fp_.read(),
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                            'file_roots': self.local_opts['file_roots'],
                            'pillar_roots': self.local_opts['pillar_roots']},
@@ -224,12 +226,13 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
-        self.assertRaisesRegexp(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='test'))
+        with salt.utils.fopen(filename) as fp_:
+            self.assertRaisesRegexp(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                fp_.read(),
+                dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_for_undefined(self):
@@ -249,12 +252,13 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
-        self.assertRaisesRegexp(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='test'))
+        with salt.utils.fopen(filename) as fp_:
+            self.assertRaisesRegexp(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                fp_.read(),
+                dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_syntaxerror(self):
@@ -274,12 +278,13 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
-        self.assertRaisesRegexp(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='test'))
+        with salt.utils.fopen(filename) as fp_:
+            self.assertRaisesRegexp(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                fp_.read(),
+                dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_non_ascii_encoding(self):
@@ -288,8 +293,9 @@ class TestGetTemplate(TestCase):
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        out = render_jinja_tmpl(
-                salt.utils.fopen(filename).read(),
+        with salt.utils.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                fp_.read(),
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                            'file_roots': self.local_opts['file_roots'],
                            'pillar_roots': self.local_opts['pillar_roots']},
@@ -301,8 +307,9 @@ class TestGetTemplate(TestCase):
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = render_jinja_tmpl(
-                salt.utils.fopen(filename).read(),
+        with salt.utils.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                fp_.read(),
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                            'file_roots': self.local_opts['file_roots'],
                            'pillar_roots': self.local_opts['pillar_roots']},
