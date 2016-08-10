@@ -290,7 +290,7 @@ class SysmodTestCase(TestCase):
 
         self.assertListEqual(sysmod.list_state_modules('s*'), ['sys', 'sysctl', 'system'])
 
-    # 'list_runners' function tests: 1
+    # 'list_runners' function tests: 4
 
     def test_list_runners(self):
         '''
@@ -298,7 +298,11 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_runners(), _modules)
 
-        self.assertListEqual(sysmod.list_runners('m*'), [])
+        self.assertListEqual(sysmod.list_runners('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_runners('user'), ['user'])
+
+        self.assertListEqual(sysmod.list_runners('s*'), ['sys', 'sysctl', 'system'])
 
     # 'list_runner_functions' function tests: 7
 

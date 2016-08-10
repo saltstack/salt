@@ -650,18 +650,18 @@ def list_runners(*args):
     runners = set()
     if not args:
         for func in run_.functions:
-            comps = func.split('.')
-            if len(comps) < 2:
-                continue
-            runners.add(comps[0])
+            runners.add(func.split('.')[0])
         return sorted(runners)
 
     for module in args:
-        for func in fnmatch.filter(run_.functions, module):
-            comps = func.split('.')
-            if len(comps) < 2:
-                continue
-            runners.add(comps[0])
+        if '*' not in module:
+            for func in run_.functions:
+                comps = func.split('.')
+                if comps[0] == module:
+                    runners.add(comps[0])
+        else:
+            for func in fnmatch.filter(run_.functions, module):
+                runners.add(func.split('.')[0])
     return sorted(runners)
 
 
