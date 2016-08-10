@@ -221,21 +221,22 @@ class AESReqServerMixin(object):
 
         elif os.path.isfile(pubfn):
             # The key has been accepted, check it
-            if salt.utils.fopen(pubfn, 'r').read().strip() != load['pub'].strip():
-                log.error(
-                    'Authentication attempt from {id} failed, the public '
-                    'keys did not match. This may be an attempt to compromise '
-                    'the Salt cluster.'.format(**load)
-                )
-                # put denied minion key into minions_denied
-                with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
-                    fp_.write(load['pub'])
-                eload = {'result': False,
-                         'id': load['id'],
-                         'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
+            with salt.utils.fopen(pubfn, 'r') as pubfn_handle:
+                if pubfn_handle.read().strip() != load['pub'].strip():
+                    log.error(
+                        'Authentication attempt from {id} failed, the public '
+                        'keys did not match. This may be an attempt to compromise '
+                        'the Salt cluster.'.format(**load)
+                    )
+                    # put denied minion key into minions_denied
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                        fp_.write(load['pub'])
+                    eload = {'result': False,
+                             'id': load['id'],
+                             'pub': load['pub']}
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': False}}
 
         elif not os.path.isfile(pubfn_pend):
             # The key has not been accepted, this is a new minion
@@ -307,58 +308,60 @@ class AESReqServerMixin(object):
                 # Check if the keys are the same and error out if this is the
                 # case. Otherwise log the fact that the minion is still
                 # pending.
-                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                    log.error(
-                        'Authentication attempt from {id} failed, the public '
-                        'key in pending did not match. This may be an '
-                        'attempt to compromise the Salt cluster.'
-                        .format(**load)
-                    )
-                    # put denied minion key into minions_denied
-                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
-                        fp_.write(load['pub'])
-                    eload = {'result': False,
-                             'id': load['id'],
-                             'pub': load['pub']}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
-                    return {'enc': 'clear',
-                            'load': {'ret': False}}
-                else:
-                    log.info(
-                        'Authentication failed from host {id}, the key is in '
-                        'pending and needs to be accepted with salt-key '
-                        '-a {id}'.format(**load)
-                    )
-                    eload = {'result': True,
-                             'act': 'pend',
-                             'id': load['id'],
-                             'pub': load['pub']}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
-                    return {'enc': 'clear',
-                            'load': {'ret': True}}
+                with salt.utils.fopen(pubfn_pend, 'r') as pubfn_handle:
+                    if pubfn_handle.read() != load['pub']:
+                        log.error(
+                            'Authentication attempt from {id} failed, the public '
+                            'key in pending did not match. This may be an '
+                            'attempt to compromise the Salt cluster.'
+                            .format(**load)
+                        )
+                        # put denied minion key into minions_denied
+                        with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                            fp_.write(load['pub'])
+                        eload = {'result': False,
+                                 'id': load['id'],
+                                 'pub': load['pub']}
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        return {'enc': 'clear',
+                                'load': {'ret': False}}
+                    else:
+                        log.info(
+                            'Authentication failed from host {id}, the key is in '
+                            'pending and needs to be accepted with salt-key '
+                            '-a {id}'.format(**load)
+                        )
+                        eload = {'result': True,
+                                 'act': 'pend',
+                                 'id': load['id'],
+                                 'pub': load['pub']}
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        return {'enc': 'clear',
+                                'load': {'ret': True}}
             else:
                 # This key is in pending and has been configured to be
                 # auto-signed. Check to see if it is the same key, and if
                 # so, pass on doing anything here, and let it get automatically
                 # accepted below.
-                if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
-                    log.error(
-                        'Authentication attempt from {id} failed, the public '
-                        'keys in pending did not match. This may be an '
-                        'attempt to compromise the Salt cluster.'
-                        .format(**load)
-                    )
-                    # put denied minion key into minions_denied
-                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
-                        fp_.write(load['pub'])
-                    eload = {'result': False,
-                             'id': load['id'],
-                             'pub': load['pub']}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
-                    return {'enc': 'clear',
-                            'load': {'ret': False}}
-                else:
-                    pass
+                with salt.utils.fopen(pubfn_pend, 'r') as pubfn_handle:
+                    if pubfn_handle.read() != load['pub']:
+                        log.error(
+                            'Authentication attempt from {id} failed, the public '
+                            'keys in pending did not match. This may be an '
+                            'attempt to compromise the Salt cluster.'
+                            .format(**load)
+                        )
+                        # put denied minion key into minions_denied
+                        with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                            fp_.write(load['pub'])
+                        eload = {'result': False,
+                                 'id': load['id'],
+                                 'pub': load['pub']}
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        return {'enc': 'clear',
+                                'load': {'ret': False}}
+                    else:
+                        pass
 
         else:
             # Something happened that I have not accounted for, FAIL!
