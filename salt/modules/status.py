@@ -25,6 +25,7 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
+import salt.executors.wmicall
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
@@ -336,10 +337,20 @@ def meminfo():
         sysctlvmtot = [x for x in sysctlvmtot if x]
         ret['vm.vmtotal'] = sysctlvmtot
         return ret
+
+    def windows_meminfo():
+        '''
+        windows specific meminfo
+        '''
+        ret = {}
+        return ret
+        # Win32_PerfFormattedData_PerfOS_Memory
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_meminfo,
         'FreeBSD': freebsd_meminfo,
+        'Windows': windows_meminfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -640,13 +651,15 @@ def vmstats():
 
     def windows_vmstats():
         try:
-            rstring = os.popen('wmic path Win32_PerfFormattedData_PerfOS_Memory' + ' 2>&1','r').read().strip()
-            arr = rstring.split()
-            intlist = [x for x in arr if x.isdigit()]
-            log.trace('intlist {0}'.format(str(intlist)))
-            strlist = [x for x in arr if not x.isdigit()]
-            log.trace('strlist {0}'.format(str(strlist)))
-            return dict(zip(strlist, intlist))
+            __import__('salt.executors.wmicall')
+        except Exception, e:
+            log.debug(e)
+        try:
+            mywmi = WMICall('Win32_PerfFormattedData_PerfOS_Memory')
+            return mywmi.execute().formatresponse()
+        except Exception, e:
+            log.debug(e)
+            return {}
         except:
             log.debug('Switching to psutil as backup on Windows')
             return psutil.virtual_memory()
