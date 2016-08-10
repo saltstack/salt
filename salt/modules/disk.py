@@ -17,6 +17,7 @@ from salt.ext import six
 from salt.ext.six.moves import zip
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.utils.decorators import depends
@@ -241,7 +242,7 @@ def blkid(device=None):
     ret = {}
     blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
 
-    if blkid_result['retcode'] > 0:
+    if blkid_result['retcode'] > exitcodes.EX_OK:
         return ret
 
     for line in blkid_result['stdout'].splitlines():
@@ -314,7 +315,7 @@ def wipe(device):
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
-    if out['retcode'] == 0:
+    if out['retcode'] == exitcodes.EX_OK:
         return True
     else:
         log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
@@ -335,7 +336,7 @@ def dump(device, args=None):
     ret = {}
     opts = [c[2:] for c in cmd.split() if c.startswith('--')]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] == 0:
+    if out['retcode'] == exitcodes.EX_OK:
         lines = [line for line in out['stdout'].splitlines() if line]
         count = 0
         for line in lines:
@@ -366,7 +367,7 @@ def resize2fs(device):
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
-    if out['retcode'] == 0:
+    if out['retcode'] == exitcodes.EX_OK:
         return True
 
 
@@ -482,7 +483,7 @@ def _hdparm(args, failhard=True):
     '''
     cmd = 'hdparm {0}'.format(args)
     result = __salt__['cmd.run_all'](cmd)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         msg = '{0}: {1}'.format(cmd, result['stderr'])
         if failhard:
             raise CommandExecutionError(msg)
@@ -650,7 +651,7 @@ def smart_attributes(dev, attributes=None, values=None):
 
     cmd = 'smartctl --attributes {0}'.format(dev)
     smart_result = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
-    if smart_result['retcode'] != 0:
+    if smart_result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(smart_result['stderr'])
 
     smart_result = iter(smart_result['stdout'].splitlines())

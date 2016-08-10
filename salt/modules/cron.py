@@ -15,6 +15,7 @@ import random
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext.six.moves import range
 
 
@@ -183,10 +184,10 @@ def write_cron_file(user, path):
     if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
         return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
                                        runas=user,
-                                       python_shell=False) == 0
+                                       python_shell=False) == exitcodes.EX_OK
     else:
         return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
-                                       python_shell=False) == 0
+                                       python_shell=False) == exitcodes.EX_OK
 
 
 def write_cron_file_verbose(user, path):
@@ -390,7 +391,7 @@ def set_special(user, special, cmd):
             'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
@@ -531,7 +532,7 @@ def set_job(user,
     lst['crons'].append(cron)
 
     comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
@@ -558,7 +559,7 @@ def rm_special(user, special, cmd):
     if rm_ is not None:
         ret = 'removed'
         comdat = _write_cron_lines(user, _render_tab(lst))
-        if comdat['retcode']:
+        if comdat['retcode'] != exitcodes.EX_OK:
             # Failed to commit
             return comdat['stderr']
     return ret
@@ -606,7 +607,7 @@ def rm_job(user,
         lst['crons'].pop(rm_)
         ret = 'removed'
     comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
     return ret
@@ -638,7 +639,7 @@ def set_env(user, name, value=None):
     env = {'name': name, 'value': value}
     lst['env'].append(env)
     comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
@@ -664,7 +665,7 @@ def rm_env(user, name):
         lst['env'].pop(rm_)
         ret = 'removed'
     comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
+    if comdat['retcode'] != exitcodes.EX_OK:
         # Failed to commit, return the error
         return comdat['stderr']
     return ret

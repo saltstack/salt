@@ -16,6 +16,7 @@ import logging
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def _fmadm_action_fmri(action, fmri):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = res['stderr']
     else:
         result = True
@@ -271,7 +272,7 @@ def list_records(after=None, before=None):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = 'error executing fmdump'
     else:
         result = _parse_fmdump(res['stdout'])
@@ -301,7 +302,7 @@ def show(uuid):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = 'error executing fmdump'
     else:
         result = _parse_fmdump_verbose(res['stdout'])
@@ -327,7 +328,7 @@ def config():
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = 'error executing fmadm config'
     else:
         result = _parse_fmadm_config(res['stdout'])
@@ -357,7 +358,7 @@ def load(path):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = res['stderr']
     else:
         result = True
@@ -387,7 +388,7 @@ def unload(module):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = res['stderr']
     else:
         result = True
@@ -420,7 +421,7 @@ def reset(module, serd=None):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         result['Error'] = res['stderr']
     else:
         result = True

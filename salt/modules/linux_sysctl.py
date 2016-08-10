@@ -12,6 +12,7 @@ import re
 # Import salt libs
 import salt.ext.six as six
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import salt.utils.systemd
@@ -153,7 +154,7 @@ def assign(name, value):
     regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name), re.escape(value)))
 
     if not regex.match(out) or 'Invalid argument' in str(err):
-        if data['retcode'] != 0 and err:
+        if data['retcode'] != exitcodes.EX_OK and err:
             error = err
         else:
             error = out

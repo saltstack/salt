@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 import os.path
 import logging
+
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ def ls_(get_size=True):
     '''
 
     if not salt.utils.which('lsscsi'):
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return 'scsi.ls not available - lsscsi command not found'
 
     if get_size:
@@ -45,8 +47,8 @@ def ls_(get_size=True):
 
     ret = {}
     res = __salt__['cmd.run_all'](cmd)
-    rc = res.get('retcode', -1)
-    if rc != 0:
+    rc = res.get('retcode', exitcodes.EX_UNSET)
+    if rc != exitcodes.EX_OK:
         __context__['retcode'] = rc
         error = res.get('stderr', '').split('\n')[0]
         if error == "lsscsi: invalid option -- 's'":

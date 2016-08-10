@@ -16,6 +16,7 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.defaults import exitcodes
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
@@ -996,7 +997,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         return out['stderr']
     return True
 
@@ -1038,7 +1039,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         else:
             cmd = 'mount -u {0} {1} {2} '.format(args, device, name)
         out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-        if out['retcode']:
+        if out['retcode'] != exitcodes.EX_OK:
             return out['stderr']
         return True
     # Mount a filesystem that isn't already
@@ -1076,7 +1077,7 @@ def umount(name, device=None, user=None, util='mount'):
     else:
         cmd = 'umount {0}'.format(device)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         return out['stderr']
     return True
 

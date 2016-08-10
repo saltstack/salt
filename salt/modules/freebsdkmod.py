@@ -9,6 +9,7 @@ import os
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 # Define the module's virtual name
@@ -201,7 +202,7 @@ def load(mod, persist=False):
     pre_mods = lsmod()
     response = __salt__['cmd.run_all']('kldload {0}'.format(mod),
                                        python_shell=False)
-    if response['retcode'] == 0:
+    if response['retcode'] == exitcodes.EX_OK:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
         persist_mods = set()

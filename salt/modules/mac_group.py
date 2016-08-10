@@ -13,6 +13,7 @@ except ImportError:
 # Import Salt Libs
 import salt.utils
 import salt.utils.itertools
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
 
@@ -67,7 +68,7 @@ def add(name, gid=None, **kwargs):
     if gid:
         cmd.extend(['-i', gid])
     cmd.append(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def _list_gids():
@@ -105,7 +106,7 @@ def delete(name):
     if not info(name):
         return True
     cmd = ['dseditgroup', '-o', 'delete', name]
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def adduser(group, name):
@@ -122,7 +123,7 @@ def adduser(group, name):
     if not then adds it.
     '''
     cmd = 'dscl . -merge /Groups/{0} GroupMembership {1}'.format(group, name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def deluser(group, name):
@@ -141,7 +142,7 @@ def deluser(group, name):
     then returns True.
     '''
     cmd = 'dscl . -delete /Groups/{0} GroupMembership {1}'.format(group, name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def members(name, members_list):
@@ -156,21 +157,21 @@ def members(name, members_list):
 
     Replaces a membership list for a local group 'foo'.
     '''
-    retcode = 1
+    retcode = exitcodes.EX_GENERIC
     grp_info = __salt__['group.info'](name)
     if grp_info and name in grp_info['name']:
         cmd = '/usr/bin/dscl . -delete /Groups/{0} GroupMembership'.format(name)
-        retcode = __salt__['cmd.retcode'](cmd) == 0
+        retcode = __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
         for user in members_list.split(','):
             cmd = '/usr/bin/dscl . -merge /Groups/{0} GroupMembership {1}'.format(name, user)
             retcode = __salt__['cmd.retcode'](cmd)
-            if not retcode == 0:
+            if retcode != exitcodes.EX_OK:
                 break
             # provided list is '': users previously deleted from group
             else:
-                retcode = 0
+                retcode = exitcodes.EX_OK
 
-    return retcode == 0
+    return retcode == exitcodes.EX_OK
 
 
 def info(name):
@@ -246,4 +247,4 @@ def chgid(name, gid):
     if gid == pre_info['gid']:
         return True
     cmd = ['dseditgroup', '-o', 'edit', '-i', gid, name]
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK

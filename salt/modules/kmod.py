@@ -10,6 +10,7 @@ import re
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -233,7 +234,7 @@ def load(mod, persist=False):
     '''
     pre_mods = lsmod()
     res = __salt__['cmd.run_all']('modprobe {0}'.format(mod), python_shell=False)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
         persist_mods = set()
@@ -279,7 +280,7 @@ def remove(mod, persist=False, comment=True):
     '''
     pre_mods = lsmod()
     res = __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         post_mods = lsmod()
         mods = _rm_mods(pre_mods, post_mods)
         persist_mods = set()

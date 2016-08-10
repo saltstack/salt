@@ -46,6 +46,7 @@ except ImportError:
     pass
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.find
 import salt.utils.filebuffer
@@ -3226,7 +3227,7 @@ def restorecon(path, recursive=False):
         cmd = ['restorecon', '-FR', path]
     else:
         cmd = ['restorecon', '-F', path]
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def get_selinux_context(path):
@@ -3279,7 +3280,7 @@ def set_selinux_context(path,
         cmd.extend(['-l', range])
     cmd.append(path)
 
-    ret = not __salt__['cmd.retcode'](cmd, python_shell=False)
+    ret = __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
     if ret:
         return get_selinux_context(path)
     else:

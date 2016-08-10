@@ -361,7 +361,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         ret = {}
         out = ''
-        retcode = 0
+        retcode = exitcodes.EX_OK
         for key, data in six.iteritems(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
@@ -375,9 +375,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Determine a retcode for a given return
         '''
-        retcode = 0
+        retcode = exitcodes.EX_OK
         # if there is a dict with retcode, use that
-        if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+        if isinstance(ret, dict) and ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:

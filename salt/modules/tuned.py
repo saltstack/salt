@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 __func_alias__ = {
@@ -82,7 +83,7 @@ def off():
 
     # turn off all profiles
     result = __salt__['cmd.retcode']('tuned-adm off')
-    if int(result) != 0:
+    if int(result) != exitcodes.EX_OK:
         return False
     return True
 
@@ -100,6 +101,6 @@ def profile(profile_name):
 
     # run tuned-adm with the profile specified
     result = __salt__['cmd.retcode']('tuned-adm profile {0}'.format(profile_name))
-    if int(result) != 0:
+    if int(result) != exitcodes.EX_OK:
         return False
     return '{0}'.format(profile_name)
