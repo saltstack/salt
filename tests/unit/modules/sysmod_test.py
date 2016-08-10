@@ -360,7 +360,7 @@ class SysmodTestCase(TestCase):
         self.assertListEqual(sysmod.list_returner_functions('sys.list'), [])
         self.assertListEqual(sysmod.list_returner_functions('exist.exist'), ['exist.exist'])
 
-    # 'list_renderers' function tests: 1
+    # 'list_renderers' function tests: 4
 
     def test_list_renderers(self):
         '''
@@ -368,7 +368,11 @@ class SysmodTestCase(TestCase):
         '''
         self.assertListEqual(sysmod.list_renderers(), _functions)
 
-        self.assertListEqual(sysmod.list_renderers('sqlite3.get_*'), [])
+        self.assertListEqual(sysmod.list_renderers('nonexist'), [])
+
+        self.assertListEqual(sysmod.list_renderers('user.info'), ['user.info'])
+
+        self.assertListEqual(sysmod.list_renderers('syst*'), ['system.halt', 'system.reboot'])
 
 
 if __name__ == '__main__':

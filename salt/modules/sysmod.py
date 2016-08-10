@@ -817,18 +817,18 @@ def list_renderers(*args):
         salt '*' sys.list_renderers 'yaml*'
 
     '''
-    ren_ = salt.loader.render(__opts__, [])
-    ren = set()
+    renderers_ = salt.loader.render(__opts__, [])
+    renderers = set()
 
     if not args:
-        for func in six.iterkeys(ren_):
-            ren.add(func)
-        return sorted(ren)
+        for rend in six.iterkeys(renderers_):
+            renderers.add(rend)
+        return sorted(renderers)
 
     for module in args:
-        for func in fnmatch.filter(ren_, module):
-            ren.add(func)
-    return sorted(ren)
+        for rend in fnmatch.filter(renderers_, module):
+            renderers.add(rend)
+    return sorted(renderers)
 
 
 def _argspec_to_schema(mod, spec):
