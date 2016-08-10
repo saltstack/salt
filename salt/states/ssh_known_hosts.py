@@ -129,7 +129,8 @@ def present(
             result = __salt__['ssh.check_known_host'](user, name,
                                                       key=key,
                                                       fingerprint=fingerprint,
-                                                      config=config)
+                                                      config=config,
+                                                      port=port)
         except CommandNotFoundError as err:
             ret['result'] = False
             ret['comment'] = 'ssh.check_known_host error: {0}'.format(err)

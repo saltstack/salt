@@ -2389,8 +2389,7 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
-            __salt__['file.makedirs_perms'](
-                name, user, group, int(str(dir_mode), 8) if dir_mode else None)
+            __salt__['file.makedirs_perms'](name, user, group, dir_mode)
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
