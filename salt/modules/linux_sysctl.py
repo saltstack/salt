@@ -41,7 +41,8 @@ def _check_systemd_salt_config():
         sysctl_dir = os.path.split(conf)[0]
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
-        salt.utils.fopen(conf, 'w').close()
+        with salt.utils.fopen(conf, 'w'):
+            pass
     return conf
 
 
@@ -80,16 +81,17 @@ def show(config_file=False):
     ret = {}
     if config_file:
         try:
-            for line in salt.utils.fopen(config_file):
-                if not line.startswith('#') and '=' in line:
-                    # search if we have some '=' instead of ' = ' separators
-                    SPLIT = ' = '
-                    if SPLIT not in line:
-                        SPLIT = SPLIT.strip()
-                    key, value = line.split(SPLIT, 1)
-                    key = key.strip()
-                    value = value.lstrip()
-                    ret[key] = value
+            with salt.utils.fopen(config_file) as fp_:
+                for line in fp_:
+                    if not line.startswith('#') and '=' in line:
+                        # search if we have some '=' instead of ' = ' separators
+                        SPLIT = ' = '
+                        if SPLIT not in line:
+                            SPLIT = SPLIT.strip()
+                        key, value = line.split(SPLIT, 1)
+                        key = key.strip()
+                        value = value.lstrip()
+                        ret[key] = value
         except (OSError, IOError):
             log.error('Could not open sysctl file')
             return None

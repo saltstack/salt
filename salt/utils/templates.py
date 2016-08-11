@@ -278,8 +278,10 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
+            with salt.utils.fopen(template_path) as fp_:
+                template_contents = fp_.read()
             out += salt.utils.get_context(
-                salt.utils.fopen(template_path).read(),
+                template_contents,
                 line,
                 marker='    <======================')
         else:
