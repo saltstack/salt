@@ -310,7 +310,8 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        return salt.utils.fopen(input_).read()
+        with salt.utils.fopen(input_) as fp_:
+            return fp_.read()
     else:
         return input_
 
