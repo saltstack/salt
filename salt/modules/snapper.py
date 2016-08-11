@@ -46,23 +46,24 @@ SNAPPER_DBUS_OBJECT = 'org.opensuse.Snapper'
 SNAPPER_DBUS_PATH = '/org/opensuse/Snapper'
 SNAPPER_DBUS_INTERFACE = 'org.opensuse.Snapper'
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
-bus = None  # pylint: disable=invalid-name
-system_bus_error = None  # pylint: disable=invalid-name
-snapper = None  # pylint: disable=invalid-name
-snapper_error = None  # pylint: disable=invalid-name
+bus = None
+system_bus_error = None
+snapper = None
+snapper_error = None
 
 if HAS_DBUS:
     try:
-        bus = dbus.SystemBus()  # pylint: disable=invalid-name
+        bus = dbus.SystemBus()
     except dbus.DBusException as exc:
         log.error(exc)
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
             try:
-                snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
+                snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,
                                                         SNAPPER_DBUS_PATH),
                                          dbus_interface=SNAPPER_DBUS_INTERFACE)
             except (dbus.DBusException, ValueError) as exc:
@@ -70,6 +71,7 @@ if HAS_DBUS:
                 snapper_error = exc
         else:
             snapper_error = 'snapper is missing'
+# pylint: enable=invalid-name
 
 
 def __virtual__():
