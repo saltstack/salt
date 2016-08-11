@@ -214,6 +214,12 @@ class LinuxLVMTestCase(TestCase):
         self.assertEqual(linux_lvm.lvcreate(None, None, None, None),
                          'Error: Either size or extents must be specified')
 
+        self.assertEqual(linux_lvm.lvcreate(None, None, thinvolume=True, thinpool=True),
+                        'Error: Please set only one of thinvolume or thinpool to True')
+
+        self.assertEqual(linux_lvm.lvcreate(None, None, thinvolume=True, extents=1),
+                        'Error: Thin volume size cannot be specified as extents')
+
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'lvdisplay', return_value={}):
