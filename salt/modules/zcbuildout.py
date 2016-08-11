@@ -518,9 +518,10 @@ def upgrade_bootstrap(directory='.',
                 if not os.path.isdir(dbuild):
                     os.makedirs(dbuild)
                 # only try to download once per buildout checkout
-                salt.utils.fopen(os.path.join(
-                    dbuild,
-                    '{0}.updated_bootstrap'.format(buildout_ver)))
+                with salt.utils.fopen(os.path.join(
+                        dbuild,
+                        '{0}.updated_bootstrap'.format(buildout_ver))):
+                    pass
             except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
                 data = _urlopen(booturl).read()

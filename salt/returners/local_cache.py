@@ -72,6 +72,8 @@ def _walk_through(job_dir):
             if not os.path.isfile(load_path):
                 continue
 
+            # serial.load() closes the filehandle, no need to enclose this in a
+            # "with" block.
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             yield jid, job, t_path, final

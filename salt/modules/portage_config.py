@@ -5,6 +5,7 @@ Configure ``portage(5)``
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 import os
 import shutil
 
@@ -35,6 +36,8 @@ except ImportError:
 BASE_PATH = '/etc/portage/package.{0}'
 SUPPORTED_CONFS = ('accept_keywords', 'env', 'license', 'mask', 'properties',
                    'unmask', 'use')
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -190,7 +193,8 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                 backup_files.append(file_path + '.bak')
 
                 if cp[0] == '/' or cp.split('/') > 2:
-                    rearrange.extend(list(salt.utils.fopen(file_path)))
+                    with salt.utils.fopen(file_path) as fp_:
+                        rearrange.extend(fp_.readlines())
                     os.remove(file_path)
                 else:
                     new_contents = ''
@@ -346,43 +350,49 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         new_contents = ''
         added = False
 
-        for l in file_handler:
-            l_strip = l.strip()
-            if l_strip == '':
-                new_contents += '\n'
-            elif l_strip[0] == '#':
-                new_contents += l
-            elif l_strip.split()[0] == atom:
-                if l_strip in to_delete_if_empty:
-                    continue
-                if overwrite:
-                    new_contents += string.strip() + '\n'
-                    added = True
-                else:
-                    old_flags = [flag for flag in l_strip.split(' ') if flag][1:]
-                    if conf == 'accept_keywords':
-                        if not old_flags:
-                            new_contents += l
-                            if not new_flags:
-                                added = True
-                            continue
-                        elif not new_flags:
-                            continue
-                    merged_flags = _merge_flags(new_flags, old_flags, conf)
-                    if merged_flags:
-                        new_contents += '{0} {1}\n'.format(
-                            atom, ' '.join(merged_flags))
+        try:
+            for l in file_handler:
+                l_strip = l.strip()
+                if l_strip == '':
+                    new_contents += '\n'
+                elif l_strip[0] == '#':
+                    new_contents += l
+                elif l_strip.split()[0] == atom:
+                    if l_strip in to_delete_if_empty:
+                        continue
+                    if overwrite:
+                        new_contents += string.strip() + '\n'
+                        added = True
                     else:
-                        new_contents += '{0}\n'.format(atom)
-                    added = True
-            else:
-                new_contents += l
-        if not added:
-            new_contents += string.strip() + '\n'
-        file_handler.seek(0)
-        file_handler.truncate(len(new_contents))
-        file_handler.write(new_contents)
-        file_handler.close()
+                        old_flags = [flag for flag in l_strip.split(' ') if flag][1:]
+                        if conf == 'accept_keywords':
+                            if not old_flags:
+                                new_contents += l
+                                if not new_flags:
+                                    added = True
+                                continue
+                            elif not new_flags:
+                                continue
+                        merged_flags = _merge_flags(new_flags, old_flags, conf)
+                        if merged_flags:
+                            new_contents += '{0} {1}\n'.format(
+                                atom, ' '.join(merged_flags))
+                        else:
+                            new_contents += '{0}\n'.format(atom)
+                        added = True
+                else:
+                    new_contents += l
+            if not added:
+                new_contents += string.strip() + '\n'
+        except Exception as exc:
+            log.error('Failed to write to %s: %s', complete_file_path, exc)
+        else:
+            file_handler.seek(0)
+            file_handler.truncate(len(new_contents))
+            file_handler.write(new_contents)
+        finally:
+            file_handler.close()
+
         try:
             os.remove(complete_file_path + '.bak')
         except OSError:
@@ -430,21 +440,20 @@ def get_flags_from_package_conf(conf, atom):
             return []
         flags = []
         try:
-            file_handler = salt.utils.fopen(package_file)
+            with salt.utils.fopen(package_file) as fp_:
+                for line in fp_:
+                    line = line.strip()
+                    line_package = line.split()[0]
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    if match_list.issubset(line_list):
+                        f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
+                        if f_tmp:
+                            flags.extend(f_tmp)
+                        else:
+                            flags.append('~ARCH')
+            return _merge_flags(flags)
         except IOError:
             return []
-        else:
-            for line in file_handler:
-                line = line.strip()
-                line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
-                    f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
-                    if f_tmp:
-                        flags.extend(f_tmp)
-                    else:
-                        flags.append('~ARCH')
-            return _merge_flags(flags)
 
 
 def has_flag(conf, atom, flag):
@@ -512,17 +521,16 @@ def is_present(conf, atom):
         package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         try:
-            file_handler = salt.utils.fopen(package_file)
+            with salt.utils.fopen(package_file) as fp_:
+                for line in fp_:
+                    line = line.strip()
+                    line_package = line.split()[0]
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    if match_list.issubset(line_list):
+                        return True
         except IOError:
-            return False
-        else:
-            for line in file_handler:
-                line = line.strip()
-                line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
-                    return True
-            return False
+            pass
+        return False
 
 
 def get_iuse(cp):
