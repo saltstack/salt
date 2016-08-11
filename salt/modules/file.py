@@ -2415,32 +2415,6 @@ def contains_regex(path, regex, lchar=''):
         return False
 
 
-def contains_regex_multiline(path, regex):
-    '''
-    .. deprecated:: 0.17.0
-       Use :func:`search` instead.
-
-    Return True if the given regular expression matches anything in the text
-    of a given file
-
-    Traverses multiple lines at a time, via the salt BufferedReader (reads in
-    chunks)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.contains_regex_multiline /etc/crontab '^maint'
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
-        "file.search(path, regex, multiline=True)"
-    )
-
-    search(path, regex, multiline=True)
-
-
 def contains_glob(path, glob_expr):
     '''
     .. deprecated:: 0.17.0

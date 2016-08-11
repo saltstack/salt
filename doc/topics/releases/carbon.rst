@@ -310,6 +310,9 @@ Execution Module Deprecations
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
 
+- The ``contains_regex_multiline`` function was removed from the ``file`` execution module.
+  Use ``file.search`` instead.
+
 - ``reg`` execution module
 
   Functions in the ``reg`` execution module had misleading and confusing names
