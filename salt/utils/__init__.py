@@ -2482,9 +2482,6 @@ def argspec_report(functions, module=''):
     argspec function signatures
     '''
     ret = {}
-    # TODO: cp.get_file will also match cp.get_file_str. this is the
-    # same logic as sys.doc, and it is not working as expected, see
-    # issue #3614
     if '*' in module:
         for fun in fnmatch.filter(functions, module):
             try:
