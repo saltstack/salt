@@ -951,7 +951,6 @@ def sls(mods,
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
-
     try:
         st_ = salt.state.HighState(opts,
                                    pillar,
@@ -995,6 +994,15 @@ def sls(mods,
                 high_['__exclude__'].extend(exclude)
             else:
                 high_['__exclude__'] = exclude
+        snapper_pre = None
+        if not opts['test'] and __opts__.get('snapper_states'):
+            # Run the snapper pre snapshot
+            jid = kwargs.get('__pub_jid', 'called localy')
+            snapper_pre = __salt__['snapper.create_snapshot'](
+                    config=__opts__.get('snapper_states_config', 'root'),
+                    snapshot_type='pre',
+                    description='Salt State run for jid {0}'.format(jid),
+                    __pub_jid=jid)
         ret = st_.state.call_high(high_, orchestration_jid)
     finally:
         st_.pop_active()
@@ -1027,6 +1035,15 @@ def sls(mods,
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
         log.error(msg.format(cfn))
     os.umask(cumask)
+    if not opts['test'] and __opts__.get('snapper_states') and snapper_pre:
+        # Run the snapper pre snapshot
+        jid = kwargs.get('__pub_jid', 'called localy')
+        snapper_pre = __salt__['snapper.create_snapshot'](
+                config=__opts__.get('snapper_states_config', 'root'),
+                snapshot_type='post',
+                pre_number=snapper_pre,
+                description='Salt State run for jid {0}'.format(jid),
+                __pub_jid=jid)
     return ret
 
 
