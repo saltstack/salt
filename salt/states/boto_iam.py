@@ -779,7 +779,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
                 return ret
     ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} users are set to be removed.'.format(name)])
     existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
-    ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
+    _ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
