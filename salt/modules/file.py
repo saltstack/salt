@@ -3431,7 +3431,7 @@ def apply_template_on_contents(
             to_str=True,
             context=context_dict,
             saltenv=saltenv,
-            grains=__grains__,
+            grains=__opts__['grains'],
             pillar=__pillar__,
             salt=__salt__,
             opts=__opts__)['data'].encode('utf-8')
@@ -3615,7 +3615,7 @@ def get_managed(
                     context=context_dict,
                     salt=__salt__,
                     pillar=__pillar__,
-                    grains=__grains__,
+                    grains=__opts__['grains'],
                     opts=__opts__,
                     **kwargs)
             else:
