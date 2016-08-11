@@ -2250,9 +2250,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 'file.managed',
                 name=source,
                 source=source,
+                skip_verify=True,
                 template='jinja',
                 context={'foo': 'Hello world!'}
             )
+
             self.assertSaltFalseReturn(ret)
             self.assertIn(
                 ('Source file cannot be the same as destination'),
