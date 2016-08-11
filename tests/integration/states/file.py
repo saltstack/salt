@@ -448,7 +448,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_changes=False>', changes['diff'])
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
+    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_managed_escaped_file_path(self):
         '''
         file.managed test that 'salt://|' protects unusual characters in file path
@@ -638,7 +638,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_directory_clean_exclude(self):
         '''
         file.directory with clean=True and exclude_pat set
@@ -663,10 +662,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(keepfile, 'w'):
             pass
 
+        exclude_pat = 'E@^straydir(|/keepfile)$'
+        if salt.utils.is_windows():
+            exclude_pat = 'E@^straydir(|\\\\keepfile)$'
+
         ret = self.run_state('file.directory',
                              name=name,
                              clean=True,
-                             exclude_pat='E@^straydir(|/keepfile)$')
+                             exclude_pat=exclude_pat)
 
         try:
             self.assertSaltTrueReturn(ret)
@@ -676,10 +679,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_test_directory_clean_exclude(self):
         '''
-        file.directory test with clean=True and exclude_pat set
+        file.directory with test=True, clean=True and exclude_pat set
         '''
         name = os.path.join(integration.TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
@@ -701,13 +703,18 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(keepfile, 'w'):
             pass
 
+        exclude_pat = 'E@^straydir(|/keepfile)$'
+        if salt.utils.is_windows():
+            exclude_pat = 'E@^straydir(|\\\\keepfile)$'
+
         ret = self.run_state('file.directory',
                              test=True,
                              name=name,
                              clean=True,
-                             exclude_pat='E@^straydir(|/keepfile)$')
+                             exclude_pat=exclude_pat)
 
         comment = next(six.itervalues(ret))['comment']
+
         try:
             self.assertSaltNoneReturn(ret)
             self.assertTrue(os.path.exists(strayfile))
@@ -1065,7 +1072,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_replace_issue_18612_prepend(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1076,7 +1082,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Case description:
 
-        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The tested multifile contains multiple lines not matching the pattern or replacement in any way
         The replacement pattern should be prepended to the file
         '''
         test_name = 'test_replace_issue_18612_prepend'
@@ -1109,7 +1115,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_replace_issue_18612_append(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1120,7 +1125,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Case description:
 
-        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The tested multifile contains multiple lines not matching the pattern or replacement in any way
         The replacement pattern should be appended to the file
         '''
         test_name = 'test_replace_issue_18612_append'
@@ -1153,7 +1158,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_replace_issue_18612_append_not_found_content(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1164,7 +1168,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Case description:
 
-        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The tested multifile contains multiple lines not matching the pattern or replacement in any way
         The 'not_found_content' value should be appended to the file
         '''
         test_name = 'test_replace_issue_18612_append_not_found_content'
@@ -1203,7 +1207,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
     def test_replace_issue_18612_change_mid_line_with_comment(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1386,6 +1389,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # comment twice
             ret = self.run_state('file.comment', name=name, regex='^comment')
+
             # result is still positive
             self.assertSaltTrueReturn(ret)
             # line is still commented
@@ -1875,6 +1879,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(filename)
 
     def test_issue_11003_immutable_lazy_proxy_sum(self):
+        # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
         testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
         sls_template = [
@@ -1938,7 +1943,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-    @skipIf(IS_WINDOWS, 'Need to fix for Windows')
+    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 characters on the sls
@@ -2189,14 +2194,25 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
 
-    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_template_local_file(self):
         '''
         Test a file.managed state with a local file as the source. Test both
         with the file:// protocol designation prepended, and without it.
         '''
-        source = tempfile.mkstemp()[-1]
-        dest = tempfile.mkstemp()[-1]
+        fd_, source = tempfile.mkstemp()
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+
+        fd_, dest = tempfile.mkstemp()
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+
         with salt.utils.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
@@ -2214,13 +2230,18 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.remove(source)
             os.remove(dest)
 
-    @skipIf(IS_WINDOWS, 'Error 32 on Windows, file in use')
     def test_template_local_file_noclobber(self):
         '''
         Test the case where a source file is in the minion's local filesystem,
         and the source path is the same as the destination path.
         '''
-        source = tempfile.mkstemp()[-1]
+        fd_, source = tempfile.mkstemp()
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+
         with salt.utils.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
