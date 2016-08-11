@@ -46,26 +46,43 @@ SNAPPER_DBUS_OBJECT = 'org.opensuse.Snapper'
 SNAPPER_DBUS_PATH = '/org/opensuse/Snapper'
 SNAPPER_DBUS_INTERFACE = 'org.opensuse.Snapper'
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
-bus = None  # pylint: disable=invalid-name
-snapper = None  # pylint: disable=invalid-name
+bus = None
+system_bus_error = None
+snapper = None
+snapper_error = None
 
 if HAS_DBUS:
-    bus = dbus.SystemBus()  # pylint: disable=invalid-name
-    if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
-        snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
-                                                SNAPPER_DBUS_PATH),
-                                 dbus_interface=SNAPPER_DBUS_INTERFACE)
+    try:
+        bus = dbus.SystemBus()
+    except dbus.DBusException as exc:
+        log.error(exc)
+        system_bus_error = exc
+    else:
+        if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
+            try:
+                snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,
+                                                        SNAPPER_DBUS_PATH),
+                                         dbus_interface=SNAPPER_DBUS_INTERFACE)
+            except (dbus.DBusException, ValueError) as exc:
+                log.error(exc)
+                snapper_error = exc
+        else:
+            snapper_error = 'snapper is missing'
+# pylint: enable=invalid-name
 
 
 def __virtual__():
+    error_msg = 'The snapper module cannot be loaded: {0}'
     if not HAS_DBUS:
-        return (False, 'The snapper module cannot be loaded:'
-                ' missing python dbus module')
+        return False, error_msg.format('missing python dbus module')
     elif not snapper:
-        return (False, 'The snapper module cannot be loaded:'
-                ' missing snapper')
+        return False, error_msg.format(snapper_error)
+    elif not bus:
+        return False, error_msg.format(system_bus_error)
+
     return 'snapper'
 
 
