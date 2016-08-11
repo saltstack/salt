@@ -51,6 +51,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 bus = None  # pylint: disable=invalid-name
 system_bus_error = None
 snapper = None  # pylint: disable=invalid-name
+snapper_error = None
 
 if HAS_DBUS:
     try:
@@ -60,9 +61,13 @@ if HAS_DBUS:
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
-            snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
-                                                    SNAPPER_DBUS_PATH),
-                                     dbus_interface=SNAPPER_DBUS_INTERFACE)
+            try:
+                snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
+                                                        SNAPPER_DBUS_PATH),
+                                         dbus_interface=SNAPPER_DBUS_INTERFACE)
+            except (dbus.DBusException, ValueError) as exc:
+                log.error(exc)
+                snapper_error = exc
 
 
 def __virtual__():
@@ -70,7 +75,7 @@ def __virtual__():
     if not HAS_DBUS:
         return False, error_msg.format('missing python dbus module')
     elif not snapper:
-        return False, error_msg.format('missing snapper')
+        return False, error_msg.format(snapper_error)
     elif not bus:
         return False, error_msg.format(system_bus_error)
 
