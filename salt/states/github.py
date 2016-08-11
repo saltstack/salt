@@ -86,7 +86,7 @@ def present(name, profile="github", **kwargs):
             ret['comment'] = 'Failed to add user {0} to the org'.format(name)
     else:
         ret['comment'] = 'User {0} has already been invited.'.format(name)
-        ret['result'] = None
+        ret['result'] = True
 
     return ret
 
@@ -143,11 +143,6 @@ def absent(name, profile="github", **kwargs):
             ret['result'] = False
     else:
         ret['comment'] = "User {0} has already been deleted!".format(name)
-
-        if __opts__['test']:
-            ret['result'] = None
-            return ret
-
         ret['result'] = True
 
     return ret
