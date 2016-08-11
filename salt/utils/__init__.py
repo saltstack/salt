@@ -2482,7 +2482,7 @@ def argspec_report(functions, module=''):
     argspec function signatures
     '''
     ret = {}
-    if '*' in module:
+    if '*' in module or '.' in module:
         for fun in fnmatch.filter(functions, module):
             try:
                 aspec = salt.utils.args.get_function_argspec(functions[fun])
@@ -2499,12 +2499,11 @@ def argspec_report(functions, module=''):
             ret[fun]['kwargs'] = True if kwargs else None
 
     else:
-        # allow both "sys" and "sys." to match sys, without also matching
-        # sysctl
-        moduledot = module + '.' if module and not module.endswith('.') else module
+        # "sys" should just match sys without also matching sysctl
+        moduledot = module + '.'
 
         for fun in functions:
-            if fun == module or fun.startswith(moduledot):
+            if fun.startswith(moduledot):
                 try:
                     aspec = salt.utils.args.get_function_argspec(functions[fun])
                 except TypeError:
