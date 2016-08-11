@@ -31,6 +31,7 @@ from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.utils.decorators import with_deprecated
 from salt.exceptions import CommandExecutionError
+from salt.executors.wmicall import WMICall
 
 __virtualname__ = 'status'
 __opts__ = {}
@@ -342,9 +343,8 @@ def meminfo():
         '''
         windows specific meminfo
         '''
-        ret = {}
-        return ret
-        # Win32_PerfFormattedData_PerfOS_Memory
+        mywmi = salt.executors.wmicall.get('Win32_PerfFormattedData_PerfOS_Memory');
+        return mywmi.execute().formatresponse()
 
     # dict that return a function that does the right thing per platform
     get_version = {
@@ -650,10 +650,6 @@ def vmstats():
         return ret
 
     def windows_vmstats():
-        try:
-            from salt.executors.wmicall import WMICall
-        except Exception, e:
-            log.debug(e)
         try:
             mywmi = salt.executors.wmicall.get('Win32_PerfFormattedData_PerfOS_Memory');
             return mywmi.execute().formatresponse()
