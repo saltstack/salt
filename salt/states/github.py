@@ -43,8 +43,6 @@ def present(name, profile="github", **kwargs):
 
         ensure user test is present in github:
             github.present:
-                - fullname: 'Example TestUser1'
-                - email: 'example@domain.com'
                 - name: 'gitexample'
 
     The following parameters are required:
@@ -52,9 +50,6 @@ def present(name, profile="github", **kwargs):
     name
         This is the github handle of the user in the organization
     '''
-
-    email = kwargs.get('email')
-    full_name = kwargs.get('fullname')
 
     ret = {
         'name': name,
