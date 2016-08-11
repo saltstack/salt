@@ -25,7 +25,7 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
-import salt.executors.wmicall
+#import salt.executors.wmicall
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
@@ -651,15 +651,12 @@ def vmstats():
 
     def windows_vmstats():
         try:
-            __import__('salt.executors.wmicall')
+            from salt.executors.wmicall import WMICall
         except Exception, e:
             log.debug(e)
         try:
-            mywmi = WMICall('Win32_PerfFormattedData_PerfOS_Memory')
+            mywmi = salt.executors.wmicall.get('Win32_PerfFormattedData_PerfOS_Memory');
             return mywmi.execute().formatresponse()
-        except Exception, e:
-            log.debug(e)
-            return {}
         except:
             log.debug('Switching to psutil as backup on Windows')
             return psutil.virtual_memory()
