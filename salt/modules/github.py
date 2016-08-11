@@ -748,43 +748,43 @@ def get_repo_info(repo_name, profile='github'):
     org_name = _get_config_value(profile, 'org_name')
     client = _get_client(profile)
 
-    repo = client.get_repo('/'.join([org_name, repo_name]))
-    if repo:
-        # client.get_repo will return a github.Repository.Repository object,
-        # even if the repo is invalid. We need to catch the exception when
-        # we try to perform actions on the repo object, rather than above
-        # the if statement.
-        try:
+    try:
+        repo = client.get_repo('/'.join([org_name, repo_name]))
+        if repo:
+            # client.get_repo can return a github.Repository.Repository object,
+            # even if the repo is invalid. We need to catch the exception when
+            # we try to perform actions on the repo object, rather than above
+            # the if statement.
             ret['id'] = repo.id
-        except github.UnknownObjectException:
-            raise CommandExecutionError(
-                'The \'{0}\' repository under the \'{1}\' organization could not '
-                'be found.'.format(
-                    repo_name,
-                    org_name
-                )
-            )
-        ret['name'] = repo.name
-        ret['full_name'] = repo.full_name
-        ret['owner'] = repo.owner.login
-        ret['private'] = repo.private
-        ret['html_url'] = repo.html_url
-        ret['description'] = repo.description
-        ret['fork'] = repo.fork
-        ret['homepage'] = repo.homepage
-        ret['size'] = repo.size
-        ret['stargazers_count'] = repo.stargazers_count
-        ret['watchers_count'] = repo.watchers_count
-        ret['language'] = repo.language
-        ret['open_issues_count'] = repo.open_issues_count
-        ret['forks'] = repo.forks
-        ret['open_issues'] = repo.open_issues
-        ret['watchers'] = repo.watchers
-        ret['default_branch'] = repo.default_branch
-        ret['has_issues'] = repo.has_issues
-        ret['has_wiki'] = repo.has_wiki
-        ret['has_downloads'] = repo.has_downloads
 
+            ret['name'] = repo.name
+            ret['full_name'] = repo.full_name
+            ret['owner'] = repo.owner.login
+            ret['private'] = repo.private
+            ret['html_url'] = repo.html_url
+            ret['description'] = repo.description
+            ret['fork'] = repo.fork
+            ret['homepage'] = repo.homepage
+            ret['size'] = repo.size
+            ret['stargazers_count'] = repo.stargazers_count
+            ret['watchers_count'] = repo.watchers_count
+            ret['language'] = repo.language
+            ret['open_issues_count'] = repo.open_issues_count
+            ret['forks'] = repo.forks
+            ret['open_issues'] = repo.open_issues
+            ret['watchers'] = repo.watchers
+            ret['default_branch'] = repo.default_branch
+            ret['has_issues'] = repo.has_issues
+            ret['has_wiki'] = repo.has_wiki
+            ret['has_downloads'] = repo.has_downloads
+    except github.UnknownObjectException:
+        raise CommandExecutionError(
+            'The \'{0}\' repository under the \'{1}\' organization could not '
+            'be found.'.format(
+                repo_name,
+                org_name
+            )
+        )
     return ret
 
 
@@ -1436,8 +1436,15 @@ def list_members_without_mfa(profile="github", ignore_cache=False):
         organization = client.get_organization(
             _get_config_value(profile, 'org_name')
         )
+
+        filter_key = 'filter'
+        # Silly hack to see if we're past PyGithub 1.26.0, where the name of
+        # the filter kwarg changed
+        if hasattr(github.Team.Team, 'membership'):
+            filter_key = 'filter_'
+
         __context__[key] = [m.login.lower() for m in
-                            _get_members(organization, {'filter': '2fa_disabled'})]
+                            _get_members(organization, {filter_key: '2fa_disabled'})]
     return __context__[key]
 
 
@@ -1502,9 +1509,6 @@ def add_team_member(name, team_name, profile="github"):
         log.exception('Resource not found: {0}'.format(team['id']))
         return False
 
-    if not hasattr(team, 'add_membership'):
-        return (False, 'PyGithub 1.26.0 or greater is required for team '
-                       'management, please upgrade.')
     try:
         # Can't use team.add_membership due to this bug that hasn't made it into
         # a PyGithub release yet https://github.com/PyGithub/PyGithub/issues/363
@@ -1592,18 +1596,15 @@ def list_teams(profile="github", ignore_cache=False):
         organization = client.get_organization(
             _get_config_value(profile, 'org_name')
         )
-        headers, teams_data = organization._requester.requestJsonAndCheck(
-            'GET',
-            organization.url + '/teams'
-        )
+        teams_data = organization.get_teams()
         teams = {}
         for team in teams_data:
-            teams[team['name']] = {
-                'id': team['id'],
-                'slug': team['slug'],
-                'description': team['description'],
-                'permission': team['permission'],
-                'privacy': team['privacy']
+            teams[team.name] = {
+                'id': team.id,
+                'slug': team.slug,
+                'description': team.raw_data['description'],
+                'permission': team.permission,
+                'privacy': team.raw_data['privacy']
             }
         __context__[key] = teams
 
