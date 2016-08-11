@@ -1320,9 +1320,11 @@ def create_xml_path(path):
 
         salt '*' virt.create_xml_path <path to XML file on the node>
     '''
-    if not os.path.isfile(path):
+    try:
+        with salt.utils.fopen(path, 'r') as fp_:
+            return create_xml_str(fp_.read())
+    except (OSError, IOError):
         return False
-    return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
 def define_xml_str(xml):
@@ -1350,9 +1352,11 @@ def define_xml_path(path):
         salt '*' virt.define_xml_path <path to XML file on the node>
 
     '''
-    if not os.path.isfile(path):
+    try:
+        with salt.utils.fopen(path, 'r') as fp_:
+            return define_xml_str(fp_.read())
+    except (OSError, IOError):
         return False
-    return define_xml_str(salt.utils.fopen(path, 'r').read())
 
 
 def define_vol_xml_str(xml):
@@ -1382,9 +1386,11 @@ def define_vol_xml_path(path):
         salt '*' virt.define_vol_xml_path <path to XML file on the node>
 
     '''
-    if not os.path.isfile(path):
+    try:
+        with salt.utils.fopen(path, 'r') as fp_:
+            return define_vol_xml_str(fp_.read())
+    except (OSError, IOError):
         return False
-    return define_vol_xml_str(salt.utils.fopen(path, 'r').read())
 
 
 def migrate_non_shared(vm_, target, ssh=False):
@@ -1574,8 +1580,9 @@ def is_kvm_hyper():
         salt '*' virt.is_kvm_hyper
     '''
     try:
-        if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
-            return False
+        with salt.utils.fopen('/proc/modules') as fp_:
+            if 'kvm_' not in fp_.read():
+                return False
     except IOError:
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
@@ -1599,9 +1606,10 @@ def is_xen_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        if 'xen_' not in salt.utils.fopen('/proc/modules').read():
-            return False
-    except IOError:
+        with salt.utils.fopen('/proc/modules') as fp_:
+            if 'xen_' not in fp_.read():
+                return False
+    except (OSError, IOError):
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
