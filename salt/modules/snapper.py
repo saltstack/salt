@@ -52,17 +52,23 @@ bus = None  # pylint: disable=invalid-name
 snapper = None  # pylint: disable=invalid-name
 
 if HAS_DBUS:
-    bus = dbus.SystemBus()  # pylint: disable=invalid-name
-    if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
-        snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
-                                                SNAPPER_DBUS_PATH),
-                                 dbus_interface=SNAPPER_DBUS_INTERFACE)
+    try:
+        bus = dbus.SystemBus()  # pylint: disable=invalid-name
+        if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
+            snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
+                                                    SNAPPER_DBUS_PATH),
+                                     dbus_interface=SNAPPER_DBUS_INTERFACE)
+    except dbus.DBusException:
+        pass
 
 
 def __virtual__():
     if not HAS_DBUS:
         return (False, 'The snapper module cannot be loaded:'
                 ' missing python dbus module')
+    elif not bus:
+        return (False, 'The snapper module cannot be loaded:'
+                ' dbus is not running')
     elif not snapper:
         return (False, 'The snapper module cannot be loaded:'
                 ' missing snapper')
