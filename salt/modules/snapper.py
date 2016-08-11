@@ -68,6 +68,8 @@ if HAS_DBUS:
             except (dbus.DBusException, ValueError) as exc:
                 log.error(exc)
                 snapper_error = exc
+        else:
+            snapper_error = 'snapper is missing'
 
 
 def __virtual__():
