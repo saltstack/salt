@@ -258,7 +258,8 @@ def get_saved_rules(conf_file=None, family='ipv4'):
     if _conf() and not conf_file:
         conf_file = _conf()
 
-    lines = salt.utils.fopen(conf_file).readlines()
+    with salt.utils.fopen(conf_file) as fp_:
+        lines = fp_.readlines()
     rules = []
     for line in lines:
         tmpline = line.strip()

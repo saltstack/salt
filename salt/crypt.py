@@ -223,7 +223,8 @@ class MasterKeys(dict):
                 self.sig_path = os.path.join(self.opts['pki_dir'],
                                              opts['master_pubkey_signature'])
                 if os.path.isfile(self.sig_path):
-                    self.pub_signature = salt.utils.fopen(self.sig_path).read()
+                    with salt.utils.fopen(self.sig_path) as fp_:
+                        self.pub_signature = fp_.read()
                     log.info('Read {0}\'s signature from {1}'
                              ''.format(os.path.basename(self.pub_path),
                                        self.opts['master_pubkey_signature']))

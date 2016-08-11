@@ -114,7 +114,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
-            salt.utils.fopen(config, 'w+').close()
+            with salt.utils.fopen(config, 'w+'):
+                pass
         except (IOError, OSError):
             msg = 'Could not create {0}'
             raise CommandExecutionError(msg.format(config))

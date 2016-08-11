@@ -102,10 +102,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
         try:
-            salt.utils.fopen(fpath, 'w').write(
-                "root_dir: /\n"
-                "key_logfile: key\n"
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: /\n'
+                    'key_logfile: key\n'
+                )
             config = sconfig.master_config(fpath)
             # os.path.join behavior
             self.assertEqual(config['key_logfile'], os.path.join('/', 'key'))
@@ -121,10 +122,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            salt.utils.fopen(fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(root_dir, fpath)
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
             config = sconfig.master_config(fpath)
             self.assertEqual(config['log_file'], fpath)
         finally:
@@ -140,10 +142,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             os.makedirs(env_root_dir)
             env_fpath = os.path.join(env_root_dir, 'config-env')
 
-            salt.utils.fopen(env_fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(env_root_dir, env_fpath)
-            )
+            with salt.utils.fopen(env_fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
+                )
 
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file.
@@ -155,10 +158,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            salt.utils.fopen(fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(root_dir, fpath)
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
             # Let's set the environment variable, yet, since the configuration
             # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
@@ -182,10 +186,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             os.makedirs(env_root_dir)
             env_fpath = os.path.join(env_root_dir, 'config-env')
 
-            salt.utils.fopen(env_fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(env_root_dir, env_fpath)
-            )
+            with salt.utils.fopen(env_fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
+                )
 
             os.environ['SALT_MINION_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file
@@ -197,10 +202,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            salt.utils.fopen(fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(root_dir, fpath)
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
             # Let's set the environment variable, yet, since the configuration
             # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
@@ -226,19 +232,21 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             # configuration settings using the provided client configuration
             # file
             master_config = os.path.join(env_root_dir, 'master')
-            salt.utils.fopen(master_config, 'w').write(
-                'blah: true\n'
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(env_root_dir, master_config)
-            )
+            with salt.utils.fopen(master_config, 'w') as fp_:
+                fp_.write(
+                    'blah: true\n'
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(env_root_dir, master_config)
+                )
             os.environ['SALT_MASTER_CONFIG'] = master_config
 
             # Now the client configuration file
             env_fpath = os.path.join(env_root_dir, 'config-env')
-            salt.utils.fopen(env_fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(env_root_dir, env_fpath)
-            )
+            with salt.utils.fopen(env_fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
+                )
 
             os.environ['SALT_CLIENT_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file
@@ -251,10 +259,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            salt.utils.fopen(fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(root_dir, fpath)
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
             # Let's set the environment variable, yet, since the configuration
             # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
@@ -278,11 +287,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             # Let's populate a minion configuration file with some basic
             # settings
-            salt.utils.fopen(minion_config, 'w').write(
-                'blah: false\n'
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(tempdir, minion_config)
-            )
+            with salt.utils.fopen(minion_config, 'w') as fp_:
+                fp_.write(
+                    'blah: false\n'
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(tempdir, minion_config)
+                )
 
             # Now, let's populate an extra configuration file under minion.d
             # Notice that above we've set blah as False and below as True.
@@ -290,9 +300,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             # file so overrides can happen, the final value of blah should be
             # True.
             extra_config = os.path.join(minion_confd, 'extra.conf')
-            salt.utils.fopen(extra_config, 'w').write(
-                'blah: true\n'
-            )
+            with salt.utils.fopen(extra_config, 'w') as fp_:
+                fp_.write('blah: true\n')
 
             # Let's load the configuration
             config = sconfig.minion_config(minion_config)
@@ -313,11 +322,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
             # Let's populate a master configuration file with some basic
             # settings
-            salt.utils.fopen(master_config, 'w').write(
-                'blah: false\n'
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(tempdir, master_config)
-            )
+            with salt.utils.fopen(master_config, 'w') as fp_:
+                fp_.write(
+                    'blah: false\n'
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(tempdir, master_config)
+                )
 
             # Now, let's populate an extra configuration file under master.d
             # Notice that above we've set blah as False and below as True.
@@ -325,9 +335,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             # file so overrides can happen, the final value of blah should be
             # True.
             extra_config = os.path.join(master_confd, 'extra.conf')
-            salt.utils.fopen(extra_config, 'w').write(
-                'blah: true\n'
-            )
+            with salt.utils.fopen(extra_config, 'w') as fp_:
+                fp_.write('blah: true\n')
 
             # Let's load the configuration
             config = sconfig.master_config(master_config)
@@ -846,10 +855,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             os.makedirs(env_root_dir)
             env_fpath = os.path.join(env_root_dir, 'config-env')
 
-            salt.utils.fopen(env_fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(env_root_dir, env_fpath)
-            )
+            with salt.utils.fopen(env_fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(env_root_dir, env_fpath)
+                )
 
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath
             # Should load from env variable, not the default configuration file
@@ -861,10 +871,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            salt.utils.fopen(fpath, 'w').write(
-                'root_dir: {0}\n'
-                'log_file: {1}\n'.format(root_dir, fpath)
-            )
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
             # Let's set the environment variable, yet, since the configuration
             # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the

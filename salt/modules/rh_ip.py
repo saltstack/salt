@@ -833,18 +833,16 @@ def _write_file_iface(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    fout = salt.utils.fopen(filename, 'w')
-    fout.write(data)
-    fout.close()
+    with salt.utils.fopen(filename, 'w') as fp_:
+        fp_.write(data)
 
 
 def _write_file_network(data, filename):
     '''
     Writes a file to disk
     '''
-    fout = salt.utils.fopen(filename, 'w')
-    fout.write(data)
-    fout.close()
+    with salt.utils.fopen(filename, 'w') as fp_:
+        fp_.write(data)
 
 
 def _read_temp(data):

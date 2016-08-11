@@ -601,9 +601,8 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
-                yaml.dump(computed_config, default_flow_style=False)
-            )
+            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
+                fp_.write(yaml.dump(computed_config, default_flow_style=False))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
@@ -724,14 +723,13 @@ class TestDaemon(object):
         sync_needed = self.parser.options.clean
         if self.parser.options.clean is False:
             def sumfile(fpath):
-                # Since we will be doing this for small files, it should be ok
-                fobj = salt.utils.fopen(fpath)
                 m = md5()
-                while True:
-                    d = fobj.read(8096)
-                    if not d:
-                        break
-                    m.update(d)
+                with salt.utils.fopen(fpath) as fobj:
+                    while True:
+                        d = fobj.read(8096)
+                        if not d:
+                            break
+                        m.update(d)
                 return m.hexdigest()
             # Since we're not cleaning up, let's see if modules are already up
             # to date so we don't need to re-sync them

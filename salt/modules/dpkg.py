@@ -312,9 +312,10 @@ def _get_pkg_license(pkg):
     licenses = set()
     cpr = "/usr/share/doc/{0}/copyright".format(pkg)
     if os.path.exists(cpr):
-        for line in open(cpr).read().split(os.linesep):
-            if line.startswith("License:"):
-                licenses.add(line.split(":", 1)[1].strip())
+        with salt.utils.fopen(cpr) as fp_:
+            for line in fp_.read().split(os.linesep):
+                if line.startswith("License:"):
+                    licenses.add(line.split(":", 1)[1].strip())
 
     return ", ".join(sorted(licenses))
 
@@ -349,17 +350,18 @@ def _get_pkg_ds_avail():
     ret = dict()
     pkg_mrk = "Package:"
     pkg_name = "package"
-    for pkg_info in open(avail).read().split(pkg_mrk):
-        nfo = dict()
-        for line in (pkg_mrk + pkg_info).split(os.linesep):
-            line = line.split(": ", 1)
-            if len(line) != 2:
-                continue
-            key, value = line
-            if value.strip():
-                nfo[key.lower()] = value
-        if nfo.get(pkg_name):
-            ret[nfo[pkg_name]] = nfo
+    with salt.utils.fopen(avail) as fp_:
+        for pkg_info in fp_.read().split(pkg_mrk):
+            nfo = dict()
+            for line in (pkg_mrk + pkg_info).split(os.linesep):
+                line = line.split(": ", 1)
+                if len(line) != 2:
+                    continue
+                key, value = line
+                if value.strip():
+                    nfo[key.lower()] = value
+            if nfo.get(pkg_name):
+                ret[nfo[pkg_name]] = nfo
 
     return ret
 

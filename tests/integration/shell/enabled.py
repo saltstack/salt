@@ -56,7 +56,8 @@ class EnabledTest(integration.ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(enabled_ret)
 
         try:
-            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+            with salt.utils.fopen(state_file, 'w') as fp_:
+                fp_.write(textwrap.dedent('''\
                 {{% set shell_enabled = salt['cmd.run']("{0}") %}}
 
                 shell_enabled:
@@ -82,7 +83,8 @@ class EnabledTest(integration.ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(disabled_ret)
 
         try:
-            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+            with salt.utils.fopen(state_file, 'w') as fp_:
+                fp_.write(textwrap.dedent('''\
                 {{% set shell_disabled = salt['cmd.run']("{0}", python_shell=False) %}}
 
                 shell_enabled:

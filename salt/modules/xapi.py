@@ -787,9 +787,10 @@ def is_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        if 'xen_' not in salt.utils.fopen('/proc/modules').read():
-            return False
-    except IOError:
+        with salt.utils.fopen('/proc/modules') as fp_:
+            if 'xen_' not in fp_.read():
+                return False
+    except (OSError, IOError):
         return False
     # there must be a smarter way...
     return 'xenstore' in __salt__['cmd.run'](__grains__['ps'])
