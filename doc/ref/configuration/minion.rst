@@ -1292,6 +1292,39 @@ if an environment lacks one.
 
     default_top: dev
 
+.. conf_minion:: snapper_states
+
+``snapper_states``
+------------------
+
+Default: False
+
+The `snapper_states` value is used to enable taking snapper snapshots before
+and after salt state runs. This allows for state runs to be rolled back.
+
+For snapper states to function properly snapper needs to be installed and
+enabled.
+
+.. code-block:: yaml
+
+    snapper_states: True
+
+.. conf_minion:: snapper_states_config
+
+``snapper_states_config``
+-------------------------
+
+Default: ``root``
+
+Snapper can execute based on a snapper configuration. The configuration
+needs to be set up before snapper can use it. The default configuration
+is ``root``, this default makes snapper run on SUSE systems using the
+default configuration set up at install time.
+
+.. code-block:: yaml
+
+    snapper_states_config: root
+
 File Directory Settings
 =======================
 
