@@ -416,7 +416,7 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
+                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
                     break
 
     def _delete_not_kept(nfn):
@@ -2457,7 +2457,7 @@ def recurse(name,
                 merge_ret(path, _ret)
                 return
             else:
-                os.remove(path)
+                __salt__['file.remove'](path)
                 _ret['changes'] = {'diff': 'Replaced file with a directory'}
                 merge_ret(path, _ret)
 
