@@ -348,14 +348,14 @@ def vgextend(vgname, devices):
 
 
 def lvcreate(lvname,
-        vgname,
-        size=None,
-        extents=None,
-        snapshot=None,
-        pv=None,
-        thinvolume=False,
-        thinpool=False,
-        **kwargs):
+             vgname,
+             size=None,
+             extents=None,
+             snapshot=None,
+             pv=None,
+             thinvolume=False,
+             thinpool=False,
+             **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
