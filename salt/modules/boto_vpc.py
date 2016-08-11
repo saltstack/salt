@@ -2940,7 +2940,7 @@ def delete_vpc_peering_connection(conn_id=None, conn_name=None, region=None,
                                       "{0} to an ID".format(conn_name))
     try:
         log.debug('Trying to delete vpc peering connection')
-        conn.delete_vpc_peering_connection( DryRun=dry_run, VpcPeeringConnectionId=conn_id)
+        conn.delete_vpc_peering_connection(DryRun=dry_run, VpcPeeringConnectionId=conn_id)
         return {'msg': 'VPC peering connection deleted.'}
     except botocore.exceptions.ClientError as err:
         e = salt.utils.boto.get_error(err)
