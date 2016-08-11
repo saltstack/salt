@@ -517,6 +517,8 @@ class MinionBase(object):
             conn = False
             # shuffle the masters and then loop through them
             opts['local_masters'] = copy.copy(opts['master'])
+            if opts['random_master']:
+                shuffle(opts['local_masters'])
             last_exc = None
 
             while True:
@@ -570,6 +572,8 @@ class MinionBase(object):
 
         # single master sign in
         else:
+            if opts['random_master']:
+                log.warning('random_master is True but there is only one master specified. Ignoring.')
             while True:
                 attempts += 1
                 if tries > 0:

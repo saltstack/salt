@@ -171,7 +171,8 @@ class SaltmodTestCase(TestCase):
         name = 'state'
 
         ret = {'changes': True, 'name': 'state', 'result': True,
-               'comment': "Runner function 'state' executed."}
+               'comment': 'Runner function \'state\' executed.',
+               '__orchestration__': True}
         runner_mock = MagicMock(return_value={'return': True})
 
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
@@ -186,7 +187,8 @@ class SaltmodTestCase(TestCase):
         name = 'state'
 
         ret = {'changes': True, 'name': 'state', 'result': True,
-               'comment': "Wheel function 'state' executed."}
+               'comment': 'Wheel function \'state\' executed.',
+               '__orchestration__': True}
         wheel_mock = MagicMock(return_value={'return': True})
 
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):

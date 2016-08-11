@@ -1170,7 +1170,7 @@ def runner(name, **kwargs):
             prefix='run'
         )
 
-    return rclient.cmd(name, kwarg=kwargs, full_return=True)
+    return rclient.cmd(name, kwarg=kwargs, print_event=False, full_return=True)
 
 
 def wheel(name, *args, **kwargs):
@@ -1249,6 +1249,7 @@ def wheel(name, *args, **kwargs):
                                arg=args,
                                pub_data=pub_data,
                                kwarg=valid_kwargs,
+                               print_event=False,
                                full_return=True)
     except SaltInvocationError:
         raise CommandExecutionError(

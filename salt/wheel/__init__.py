@@ -118,7 +118,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         fun = low.pop('fun')
         return self.async(fun, low)
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, full_return=False):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
         Execute a function
 
@@ -131,6 +131,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
                                             arg,
                                             pub_data,
                                             kwarg,
+                                            print_event,
                                             full_return)
 
 
