@@ -49,9 +49,9 @@ SNAPPER_DBUS_INTERFACE = 'org.opensuse.Snapper'
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 bus = None  # pylint: disable=invalid-name
-system_bus_error = None
+system_bus_error = None  # pylint: disable=invalid-name
 snapper = None  # pylint: disable=invalid-name
-snapper_error = None
+snapper_error = None  # pylint: disable=invalid-name
 
 if HAS_DBUS:
     try:
