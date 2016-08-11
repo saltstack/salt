@@ -469,21 +469,20 @@ def get_flags_from_package_conf(conf, atom):
                 for line in fp_:
                     line = line.strip()
                     line_package = line.split()[0]
-                    
-                    found_match = False
+
                     if has_wildcard:
                         found_match = line_package == atom
                     else:
                         line_list = _porttree().dbapi.xmatch("match-all", line_package)
                         found_match = match_list.issubset(line_list)
-    
+
                     if found_match:
                         f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
                         if f_tmp:
                             flags.extend(f_tmp)
                         else:
                             flags.append('~ARCH')
-                    
+
             return _merge_flags(flags)
         except IOError:
             return []
@@ -568,7 +567,7 @@ def is_present(conf, atom):
                 for line in fp_:
                     line = line.strip()
                     line_package = line.split()[0]
-                
+
                     if has_wildcard:
                         if line_package == str(atom):
                             return True
