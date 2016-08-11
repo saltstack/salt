@@ -56,7 +56,7 @@ class StateCompilerTestCase(TestCase):
         '''
         high_data = {'git': OrderedDict([('pkg', [OrderedDict([('require', [OrderedDict([('file', OrderedDict([('test1', 'test')]))])])]), 'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
         minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
-        minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')]), 'my_secret': 'beer', 'gluster': OrderedDict([('hosts', OrderedDict([('gluster.w1', '10.71.60.142'), ('gluster.w2', '10.71.60.132')]))])}
+        minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
         state_obj = salt.state.State(minion_opts)
         with self.assertRaises(salt.exceptions.SaltRenderError):
             state_obj.call_high(high_data)
