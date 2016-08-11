@@ -1007,7 +1007,8 @@ def mod_hostname(hostname):
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
-    host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
+    with salt.utils.fopen('/etc/hosts', 'r') as fp_:
+        host_c = fp_.readlines()
 
     with salt.utils.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
@@ -1026,7 +1027,8 @@ def mod_hostname(hostname):
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
-        network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
+        with salt.utils.fopen('/etc/sysconfig/network', 'r') as fp_:
+            network_c = fp_.readlines()
 
         with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
             for net in network_c:
