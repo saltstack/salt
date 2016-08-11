@@ -23,13 +23,9 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-<<<<<<< HEAD
+from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
-=======
-from salt.log.setup import LOG_LEVELS
-from salt.exceptions import SaltClientError, SaltSystemExit
->>>>>>> 2016.3
 import salt.defaults.exitcodes
 import salt.utils
 
