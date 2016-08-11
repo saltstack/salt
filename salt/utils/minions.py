@@ -17,6 +17,7 @@ import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 import salt.auth.ldap
+import salt.cache
 import salt.ext.six as six
 
 # Import 3rd-party libs
@@ -69,37 +70,21 @@ def get_minion_data(minion, opts):
 
     Return value is a tuple of the minion ID, grains, and pillar
     '''
+    grains = None
+    pillar = None
     if opts.get('minion_data_cache', False):
-        serial = salt.payload.Serial(opts)
-        cdir = os.path.join(opts['cachedir'], 'minions')
-        if not os.path.isdir(cdir):
-            return minion if minion else None, None, None
-        minions = os.listdir(cdir)
+        cache = salt.cache.Cache(opts)
         if minion is None:
-            # If no minion specified, take first one with valid grains
-            for id_ in minions:
-                datap = os.path.join(cdir, id_, 'data.p')
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        miniondata = serial.load(fp_)
-                except (IOError, OSError):
+            for id_ in cache.list('minions'):
+                data = cache.fetch('minions/{0}'.format(id_), 'data')
+                if data is None:
                     continue
-                grains = miniondata.get('grains')
-                pillar = miniondata.get('pillar')
-                return id_, grains, pillar
         else:
-            # Search for specific minion
-            datap = os.path.join(cdir, minion, 'data.p')
-            try:
-                with salt.utils.fopen(datap, 'rb') as fp_:
-                    miniondata = serial.load(fp_)
-            except (IOError, OSError):
-                return minion, None, None
-            grains = miniondata.get('grains')
-            pillar = miniondata.get('pillar')
-            return minion, grains, pillar
-    # No cache dir, return empty dict
-    return minion if minion else None, None, None
+            data = cache.fetch('minions/{0}'.format(minion), 'data')
+        if data is not None:
+            grains = data['grains']
+            pillar = data['pillar']
+    return minion if minion else None, grains, pillar
 
 
 def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
@@ -195,6 +180,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
+        self.cache = salt.cache.Cache(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get('transport', 'zeromq') in ('zeromq', 'tcp'):
             self.acc = 'minions'
@@ -256,30 +242,27 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            mlist = []
+            minions = []
             for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                 if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
-                    mlist.append(fn_)
-            minions = set(mlist)
+                    minions.append(fn_)
         elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+            minions = self.cache.list('minions')
         else:
-            return list()
+            return []
 
         if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+            if greedy:
+                cminions = self.cache.list('minions')
+            else:
+                cminions = minions
+            minions = set(minions)
+            for id_ in cminions:
+                mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
+                if mdata is None:
                     minions.remove(id_)
                     continue
-                search_results = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get(search_type)
+                search_results = mdata.get(search_type)
                 if not salt.utils.subdict_match(search_results,
                                                 expr,
                                                 delimiter=delimiter,
@@ -337,16 +320,19 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            minions = set(self._pki_minions())
+            minions = self._pki_minions()
         elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+            minions = self.cache.list('minions')
         else:
             return []
 
         if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
+            if greedy:
+                cminions = self.cache.list('minions')
+            else:
+                cminions = minions
+            if cminions is None:
+                return minions
 
             tgt = expr
             try:
@@ -361,21 +347,15 @@ class CkMinions(object):
                     return []
             proto = 'ipv{0}'.format(tgt.version)
 
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
+            minions = set(minions)
+            for id_ in cminions:
+                mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
+                if mdata is None:
+                    if not greedy:
                         minions.remove(id_)
                     continue
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        grains = self.serial.load(fp_).get('grains')
-                except (IOError, OSError):
-                    continue
-
-                if proto not in grains:
+                grains = mdata.get('grains')
+                if grains is None or proto not in grains:
                     match = False
                 elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
                     match = str(tgt) in grains[proto]
@@ -412,7 +392,7 @@ class CkMinions(object):
                         mlist.append(fn_)
                 return mlist
             elif cache_enabled:
-                return os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+                return self.cache.list('minions')
             else:
                 return list()
 
@@ -574,8 +554,8 @@ class CkMinions(object):
         '''
         minions = set()
         if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
+            search = self.cache.list('minions')
+            if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
             if '127.0.0.1' in addrs or '0.0.0.0' in addrs:
@@ -585,15 +565,11 @@ class CkMinions(object):
                 addrs.update(set(salt.utils.network.ip_addrs()))
             if subset:
                 search = subset
-            else:
-                search = os.listdir(cdir)
             for id_ in search:
-                datap = os.path.join(cdir, id_, 'data.p')
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        grains = self.serial.load(fp_).get('grains', {})
-                except (AttributeError, IOError, OSError):
+                mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
+                if mdata is None:
                     continue
+                grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' and not include_localhost:
                         continue
@@ -1089,17 +1065,12 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     minions = checker.check_minions(
             tgt,
             tgt_type)
+    cache = salt.cache.Cache(opts)
     for minion in minions:
-        mine = os.path.join(
-                opts['cachedir'],
-                'minions',
-                minion,
-                'mine.p')
-        try:
-            with salt.utils.fopen(mine, 'rb') as fp_:
-                fdata = serial.load(fp_).get(fun)
-                if fdata:
-                    ret[minion] = fdata
-        except Exception:
+        mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
+        if mdata is None:
             continue
+        fdata = mdata.get(fun)
+        if fdata:
+            ret[minion] = fdata
     return ret

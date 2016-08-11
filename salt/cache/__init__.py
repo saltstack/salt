@@ -8,18 +8,47 @@ from __future__ import absolute_import
 import os
 import time
 from salt.loader import LazyLoader
+from salt.payload import Serial
 
 
 class Cache(object):
     '''
-    Main caching object
+    Base caching object providing access to the modular cache subsystem.
+
+    Related configuration options:
+
+    :param cache:
+        The name of the cache driver to use. This is the name of the python
+        module of the `salt.cache` package. Defult is `localfs`.
+
+    :param serial:
+        The module of `salt.serializers` package that should be used by the cache
+        driver to store data.
+        If a driver can't use a specific module or uses specific objects storage
+        it can ignore this parameter.
+
+    Terminology.
+
+    Salt cache subsystem is organized as a tree with nodes and leafs like a
+    filesystem. Cache consists of banks. Each bank can contain a number of
+    keys. Each key can contain a dict or any other object serializable with
+    `salt.payload.Serial`. I.e. any data object in the cache can be
+    addressed by the path to the bank and the key name:
+        bank: 'minions/alpha'
+        key:  'data'
+
+    Bank names should be formatted in a way that can be used as a
+    directory structure. If slashes are included in the name, then they
+    refer to a nested structure.
+
+    Key name is a string identifier of a data container (like a file inside a
+    directory) which will hold the data.
     '''
-    def __init__(self, opts, driver=None):
+    def __init__(self, opts):
         self.opts = opts
+        self.driver = opts['cache']
+        self.serial = Serial(opts)
         self.modules = self._modules()
-        if driver is None:
-            driver = 'msgpack'
-        self.driver = driver
 
     def _modules(self, functions=None, whitelist=None):
         '''
@@ -32,7 +61,8 @@ class Cache(object):
             tag='cache',
             pack={
                 '__opts__': self.opts,
-                '__cache__': functions
+                '__cache__': functions,
+                '__context__': {'serial': self.serial},
             },
             whitelist=whitelist,
         )
@@ -79,23 +109,22 @@ class Cache(object):
         '''
         Store data using the specified module
 
-        bank
+        :param bank:
             The name of the location inside the cache which will hold the key
             and its associated data.
 
-            Bank names should be formatted in a way that can be used as a
-            directory structure. If slashes are included in the name, then they
-            refer to a nested directory structure (meaning, directories will be
-            created to accomodate the name).
-
-        key
+        :param key:
             The name of the key (or file inside a directory) which will hold
             the data. File extensions should not be provided, as they will be
             added by the driver itself.
 
-        data
+        :param data:
             The data which will be stored in the cache. This data should be
             in a format which can be serialized by msgpack/json/yaml/etc.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'store')
         return self.modules[fun](bank, key, data)
@@ -104,26 +133,111 @@ class Cache(object):
         '''
         Fetch data using the specified module
 
-        bank
+        :param bank:
             The name of the location inside the cache which will hold the key
             and its associated data.
 
-            Bank names should be formatted in a way that can be used as a
-            directory structure. If slashes are included in the name, then they
-            refer to a nested directory structure (meaning, directories will be
-            created to accomodate the name).
-
-        key
+        :param key:
             The name of the key (or file inside a directory) which will hold
             the data. File extensions should not be provided, as they will be
             added by the driver itself.
+
+        :return:
+            Return a python object fetched from the cache or None if the given
+            path or key not found.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'fetch')
         return self.modules[fun](bank, key)
 
     def updated(self, bank, key):
         '''
-        Return the last updated epoch for the specified key
+        Get the last updated epoch for the specified key
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :param key:
+            The name of the key (or file inside a directory) which will hold
+            the data. File extensions should not be provided, as they will be
+            added by the driver itself.
+
+        :return:
+            Return an int epoch time in seconds or None if the object wasn't
+            found in cache.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'updated')
+        return self.modules[fun](bank, key)
+
+    def flush(self, bank, key=None):
+        '''
+        Remove the key from the cache bank with all the key content. If no key is specified remove
+        the entire bank with all keys and sub-banks inside.
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :param key:
+            The name of the key (or file inside a directory) which will hold
+            the data. File extensions should not be provided, as they will be
+            added by the driver itself.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
+        '''
+        fun = '{0}.{1}'.format(self.driver, 'flush')
+        return self.modules[fun](bank)
+
+    def list(self, bank):
+        '''
+        Lists entries stored in the specified bank.
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :return:
+            An iterable object containing all bank entries. Returns an empty
+            iterator if the bank doesn't exists.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
+        '''
+        fun = '{0}.{1}'.format(self.driver, 'list')
+        return self.modules[fun](bank)
+
+    def contains(self, bank, key=None):
+        '''
+        Checks if the specified bank contains the specified key.
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :param key:
+            The name of the key (or file inside a directory) which will hold
+            the data. File extensions should not be provided, as they will be
+            added by the driver itself.
+
+        :return:
+            Returns True if the specified key exists in the given bank and False
+            if not.
+            If key is None checks for the bank existense.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
+        '''
+        fun = '{0}.{1}'.format(self.driver, 'contains')
         return self.modules[fun](bank, key)

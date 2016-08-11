@@ -17,7 +17,6 @@ import signal
 import stat
 import logging
 import multiprocessing
-import tempfile
 import traceback
 
 # Import third party libs
@@ -1315,20 +1314,10 @@ class AESFuncs(object):
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                os.makedirs(cdir)
-            datap = os.path.join(cdir, 'data.p')
-            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-            os.close(tmpfh)
-            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                fp_.write(
-                    self.serial.dumps(
-                        {'grains': load['grains'],
-                         'pillar': data})
-                    )
-            # On Windows, os.rename will fail if the destination file exists.
-            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
+            self.masterapi.cache.store('minions/{0}'.format(load['id']),
+                                       'data',
+                                       {'grains': load['grains'],
+                                        'pillar': data})
         return data
 
     def _minion_event(self, load):

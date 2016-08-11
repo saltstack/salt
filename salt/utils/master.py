@@ -12,11 +12,11 @@ from __future__ import absolute_import
 import os
 import logging
 import signal
-import tempfile
 from threading import Thread, Event
 
 # Import salt libs
 import salt.log
+import salt.cache
 import salt.client
 import salt.pillar
 import salt.utils
@@ -91,6 +91,7 @@ class MasterPillarUtil(object):
         self.use_cached_pillar = use_cached_pillar
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
+        self.cache = salt.cache.Cache(opts)
         log.debug(
             'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
@@ -108,19 +109,13 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached mine data minion_data_cache'
                       'and enfore_mine_cache are both disabled.')
             return mine_data
-        mdir = os.path.join(self.opts['cachedir'], 'minions')
-        try:
-            for minion_id in minion_ids:
-                if not salt.utils.verify.valid_id(self.opts, minion_id):
-                    continue
-                path = os.path.join(mdir, minion_id, 'mine.p')
-                if os.path.isfile(path):
-                    with salt.utils.fopen(path, 'rb') as fp_:
-                        mdata = self.serial.loads(fp_.read())
-                        if isinstance(mdata, dict):
-                            mine_data[minion_id] = mdata
-        except (OSError, IOError):
-            return mine_data
+        minion_ids = self.cache.list('minions')
+        for minion_id in minion_ids:
+            if not salt.utils.verify.valid_id(self.opts, minion_id):
+                continue
+            mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'mine')
+            if isinstance(mdata, dict):
+                mine_data[minion_id] = mdata
         return mine_data
 
     def _get_cached_minion_data(self, *minion_ids):
@@ -132,21 +127,15 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached data because minion_data_cache is not '
                       'enabled.')
             return grains, pillars
-        mdir = os.path.join(self.opts['cachedir'], 'minions')
-        try:
-            for minion_id in minion_ids:
-                if not salt.utils.verify.valid_id(self.opts, minion_id):
-                    continue
-                path = os.path.join(mdir, minion_id, 'data.p')
-                if os.path.isfile(path):
-                    with salt.utils.fopen(path, 'rb') as fp_:
-                        mdata = self.serial.loads(fp_.read())
-                        if mdata.get('grains', False):
-                            grains[minion_id] = mdata['grains']
-                        if mdata.get('pillar', False):
-                            pillars[minion_id] = mdata['pillar']
-        except (OSError, IOError):
-            return grains, pillars
+        minion_ids = self.cache.list('minions')
+        for minion_id in minion_ids:
+            if not salt.utils.verify.valid_id(self.opts, minion_id):
+                continue
+            mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'data')
+            if 'grains' in mdata:
+                grains[minion_id] = mdata['grains']
+            if 'pillar' in mdata:
+                pillars[minion_id] = mdata['pillar']
         return grains, pillars
 
     def _get_live_minion_grains(self, minion_ids):
@@ -353,50 +342,35 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
+            c_minions = self.cache.list('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue
-                cdir = os.path.join(self.opts['cachedir'], 'minions', minion_id)
-                if not os.path.isdir(cdir):
-                    # Cache dir for this minion does not exist. Nothing to do.
+
+                if minion_id not in c_minions:
+                    # Cache bank for this minion does not exist. Nothing to do.
                     continue
-                data_file = os.path.join(cdir, 'data.p')
-                mine_file = os.path.join(cdir, 'mine.p')
+                bank = 'minions/{0}'.format(minion_id)
                 minion_pillar = pillars.pop(minion_id, False)
                 minion_grains = grains.pop(minion_id, False)
                 if ((clear_pillar and clear_grains) or
                     (clear_pillar and not minion_grains) or
                     (clear_grains and not minion_pillar)):
                     # Not saving pillar or grains, so just delete the cache file
-                    os.remove(os.path.join(data_file))
+                    self.cache.flush(bank, 'data')
                 elif clear_pillar and minion_grains:
-                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-                    os.close(tmpfh)
-                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                        fp_.write(self.serial.dumps({'grains': minion_grains}))
-                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
+                    self.cache.store(bank, 'data', {'grains': minion_grains})
                 elif clear_grains and minion_pillar:
-                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-                    os.close(tmpfh)
-                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                        fp_.write(self.serial.dumps({'pillar': minion_pillar}))
-                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
+                    self.cache.store(bank, 'data', {'pillar': minion_pillar})
                 if clear_mine:
                     # Delete the whole mine file
-                    os.remove(os.path.join(mine_file))
+                    self.cache.flush(bank, 'mine')
                 elif clear_mine_func is not None:
                     # Delete a specific function from the mine file
-                    with salt.utils.fopen(mine_file, 'rb') as fp_:
-                        mine_data = self.serial.loads(fp_.read())
+                    mine_data = self.cache.fetch(bank, 'mine')
                     if isinstance(mine_data, dict):
                         if mine_data.pop(clear_mine_func, False):
-                            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-                            os.close(tmpfh)
-                            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                                fp_.write(self.serial.dumps(mine_data))
-                            salt.utils.atomicfile.atomic_rename(
-                                tmpfname,
-                                mine_file)
+                            self.cache.store(bank, 'mine', mine_data)
         except (OSError, IOError):
             return True
         return True

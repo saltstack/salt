@@ -16,6 +16,7 @@ import hashlib
 import logging
 
 # Import salt libs
+import salt.cache
 import salt.client
 import salt.crypt
 import salt.daemons.masterapi
@@ -385,17 +386,22 @@ class Key(object):
         '''
         if preserve_minions is None:
             preserve_minions = []
-        m_cache = os.path.join(self.opts['cachedir'], self.ACC)
-        if not os.path.isdir(m_cache):
-            return
         keys = self.list_keys()
         minions = []
         for key, val in six.iteritems(keys):
             minions.extend(val)
         if not self.opts.get('preserve_minion_cache', False) or not preserve_minions:
-            for minion in os.listdir(m_cache):
-                if minion not in minions and minion not in preserve_minions:
-                    shutil.rmtree(os.path.join(m_cache, minion))
+            m_cache = os.path.join(self.opts['cachedir'], self.ACC)
+            if os.path.isdir(m_cache):
+                for minion in os.listdir(m_cache):
+                    if minion not in minions and minion not in preserve_minions:
+                        shutil.rmtree(os.path.join(m_cache, minion))
+            cache = salt.cache.Cache(self.opts)
+            clist = cache.list(self.ACC)
+            if clist:
+                for minion in cache.list(self.ACC):
+                    if minion not in minions and minion not in preserve_minions:
+                        cache.flush('{0}/{1}'.format(self.ACC, minion))
 
     def check_master(self):
         '''
@@ -862,6 +868,12 @@ class RaetKey(Key):
             for minion in os.listdir(m_cache):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
+            cache = salt.cache.Cache(self.opts)
+            clist = cache.list(self.ACC)
+            if clist:
+                for minion in cache.list(self.ACC):
+                    if minion not in minions and minion not in preserve_minions:
+                        cache.flush('{0}/{1}'.format(self.ACC, minion))
 
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
