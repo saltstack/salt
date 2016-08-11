@@ -370,14 +370,14 @@ def lvcreate(lvname,
     .. versionadded:: to_complete
 
     Support for thin pools and thin volumes
-    
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' lvm.lvcreate new_thinpool_name   vg_name               size=20G thinpool=True
         salt '*' lvm.lvcreate new_thinvolume_name vg_name/thinpool_name size=10G thinvolume=True
-    
+
     '''
     if size and extents:
         return 'Error: Please specify only one of size or extents'
