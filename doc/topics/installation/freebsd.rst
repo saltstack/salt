@@ -2,10 +2,6 @@
 FreeBSD
 =======
 
-Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0,
-9.1, 10.0 and later releases.
-
 Installation
 ============
 
@@ -40,9 +36,7 @@ following file to your system:
 
     saltstack: {
       url: "https://repo.saltstack.com/freebsd/${ABI}/",
-      mirror_type: "http",
       enabled: yes
-      priority: 10
     }
 
 You should now be able to install Salt from this new repository:
