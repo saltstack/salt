@@ -1116,6 +1116,11 @@ class AESFuncs(object):
             load['id'],
             'files',
             normpath)
+        # One last safety check here
+        if not os.path.normpath(cpath).startswith(self.opts['cachedir']):
+            log.warning('Attempt to write received file outside of master cache '
+                        'directory! Requested file write: {0}. Access denied.'.format(cpath))
+            return False
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
