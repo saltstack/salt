@@ -589,6 +589,8 @@ class Client(object):
                         result.append(chunk)
             else:
                 dest_tmp = "{0}.part".format(dest)
+                # We need an open filehandle to use in the on_chunk callback,
+                # that's why we're not using a with clause here.
                 destfp = salt.utils.fopen(dest_tmp, 'wb')
 
                 def on_chunk(chunk):
@@ -1083,6 +1085,8 @@ class RemoteClient(Client):
                     os.makedirs(destdir)
                 else:
                     return False
+            # We need an open filehandle here, that's why we're not using a
+            # with clause:
             fn_ = salt.utils.fopen(dest, 'wb+')
         else:
             log.debug('No dest file found')

@@ -63,7 +63,8 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run unless
         '''
         state_key = 'cmd_|-/var/log/messages_|-/var/log/messages_|-run'
-        salt.utils.fopen(self.state_file, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             /var/log/messages:
               cmd.run:
                 - unless: echo cheese > {0}
@@ -77,7 +78,8 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run creates already there
         '''
         state_key = 'cmd_|-touch {0}_|-touch {0}_|-run'.format(self.test_file)
-        salt.utils.fopen(self.state_file, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             touch {0}:
               cmd.run:
                 - creates: {0}
@@ -93,7 +95,8 @@ class CMDRunRedirectTest(integration.ModuleCase,
         '''
         os.remove(self.test_file)
         state_key = 'cmd_|-touch {0}_|-touch {0}_|-run'.format(self.test_file)
-        salt.utils.fopen(self.state_file, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             touch {0}:
               cmd.run:
                 - creates: {0}
@@ -108,7 +111,8 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run with shell redirect
         '''
         state_key = 'cmd_|-date > {0}_|-date > {0}_|-run'.format(self.test_file)
-        salt.utils.fopen(self.state_file, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             date > {0}:
               cmd.run
             '''.format(self.test_file)))
@@ -139,7 +143,8 @@ class CMDRunWatchTest(integration.ModuleCase,
         saltines_key = 'cmd_|-saltines_|-echo_|-run'
         biscuits_key = 'cmd_|-biscuits_|-echo hello_|-wait'
 
-        salt.utils.fopen(self.state_file, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             saltines:
               cmd.run:
                 - name: echo
