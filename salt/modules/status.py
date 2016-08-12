@@ -469,8 +469,14 @@ def cpuinfo():
         return ret
 
     def windows_cpuinfo():
-        ret = {}
-        return ret
+        '''
+        Windows specific cpuinfo
+        '''
+        mywmi = salt.executors.wmicall.get('Win32_PerfRawData_PerfOS_Processor')
+        mywmi2 = salt.executors.wmicall.get('Win32_Processor')
+        d1 = mywmi.execute().formatresponse()
+        d2 = mywmi2.execute().formatresponse()
+        return dict(d1, **d2)
 
     # dict that returns a function that does the right thing per platform
     get_version = {
