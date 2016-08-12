@@ -466,7 +466,7 @@ class Client(object):
         url_path = os.path.join(
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_scheme in string.letters:
+        if url_scheme is not '' and url_scheme in string.letters:
             url_path = '{0}:{1}'.format(url_scheme, url_path)
             url_scheme = 'file'
 

@@ -3504,7 +3504,7 @@ def get_managed(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
 
         import string as _string
-        if parsed_scheme in _string.letters:
+        if parsed_scheme is not '' and parsed_scheme in _string.letters:
             parsed_path = '{0}:{1}'.format(parsed_scheme, parsed_path)
             parsed_scheme = 'file'
 
