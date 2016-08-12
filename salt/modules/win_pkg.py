@@ -160,7 +160,7 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
     ret = {}
     for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
         if version(name):
-            latest = latest_version(name, refresh=False)
+            latest = latest_version(name, refresh=False, saltenv=saltenv)
             if latest:
                 ret[name] = latest
     return ret
