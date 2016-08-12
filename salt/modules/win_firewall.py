@@ -105,7 +105,8 @@ def get_rule(name='all'):
     return ret
 
 
-def add_rule(name, localport, protocol='tcp', action='allow', dir='in', remote_ip='any'):
+def add_rule(name, localport, protocol='tcp', action='allow', dir='in',
+             remoteip='any'):
     '''
     .. versionadded:: 2015.5.0
 
@@ -125,7 +126,7 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in', remote_i
            'protocol={0}'.format(protocol),
            'dir={0}'.format(dir),
            'action={0}'.format(action),
-           'remoteip={0}'.format(remote_ip)]
+           'remoteip={0}'.format(remoteip)]
 
     if 'icmpv4' not in protocol and 'icmpv6' not in protocol:
         cmd.append('localport={0}'.format(localport))
@@ -138,7 +139,7 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in', remote_i
         return False
 
 
-def delete_rule(name, localport, protocol='tcp', dir='in', remote_ip='any'):
+def delete_rule(name, localport, protocol='tcp', dir='in', remoteip='any'):
     '''
     .. versionadded:: 2015.8.0
 
@@ -155,7 +156,7 @@ def delete_rule(name, localport, protocol='tcp', dir='in', remote_ip='any'):
            'name={0}'.format(name),
            'protocol={0}'.format(protocol),
            'dir={0}'.format(dir),
-           'remoteip={0}'.format(remote_ip)]
+           'remoteip={0}'.format(remoteip)]
 
     if 'icmpv4' not in protocol and 'icmpv6' not in protocol:
         cmd.append('localport={0}'.format(localport))

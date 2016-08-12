@@ -96,8 +96,12 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.add_rule("test", "8080"))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule', 'name=test',
-                                              'protocol=tcp', 'dir=in', 'action=allow', 'localport=8080'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall',
+                                              'firewall', 'add', 'rule',
+                                              'name=test', 'protocol=tcp',
+                                              'dir=in', 'action=allow',
+                                              'localport=8080',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     def test_add_rule_icmp4(self):
@@ -143,8 +147,13 @@ class WinFirewallTestCase(TestCase):
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.delete_rule("test", "8080", "tcp",
                                                      "in"))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
-                                              'protocol=tcp', 'dir=in', 'localport=8080'], python_shell=False)
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall',
+                                              'firewall', 'delete', 'rule',
+                                              'name=test', 'protocol=tcp',
+                                              'dir=in',
+                                              'localport=8080',
+                                              'remoteip=any'],
+                                             python_shell=False)
 
     def test_delete_rule_icmp4(self):
         '''
