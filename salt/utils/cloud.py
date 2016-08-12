@@ -1684,10 +1684,12 @@ def run_inline_script(host,
     return True
 
 
-def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
+def fire_event(key, msg, tag, args=None, sock_dir=None, opts=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
-        sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
+        if opts is None:
+            opts = {}
+        sock_dir = os.path.join(opts.get('sock_dir', syspaths.SOCK_DIR), 'master')
     event = salt.utils.event.get_event(
         'master',
         sock_dir,

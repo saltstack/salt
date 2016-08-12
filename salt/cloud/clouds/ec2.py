@@ -1851,6 +1851,7 @@ def request_instance(vm_=None, call=None):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': params, 'location': location},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -1929,6 +1930,7 @@ def request_instance(vm_=None, call=None):
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -1993,6 +1995,7 @@ def query_instance(vm_=None, call=None):
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
         {'instance_id': instance_id},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -2099,6 +2102,7 @@ def query_instance(vm_=None, call=None):
             'instance queried',
             'salt/cloud/{0}/query_reactor'.format(vm_['name']),
             {'data': data},
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -2137,6 +2141,7 @@ def wait_for_instance(
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
         {'ip_address': ip_address},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -2316,6 +2321,7 @@ def wait_for_instance(
             'ssh is available',
             'salt/cloud/{0}/ssh_ready_reactor'.format(vm_['name']),
             {'ip_address': ip_address},
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -2392,6 +2398,7 @@ def create(vm_=None, call=None):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
@@ -2489,6 +2496,7 @@ def create(vm_=None, call=None):
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
         {'tags': tags},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -2558,6 +2566,7 @@ def create(vm_=None, call=None):
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
             {'volumes': volumes},
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -2598,6 +2607,7 @@ def create(vm_=None, call=None):
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
         event_data,
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -3017,6 +3027,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name, 'instance_id': instance_id},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -3079,6 +3090,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name, 'instance_id': instance_id},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

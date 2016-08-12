@@ -603,6 +603,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -620,6 +621,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': kwargs},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -688,6 +690,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -968,6 +971,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -983,6 +987,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
