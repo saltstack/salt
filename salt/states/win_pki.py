@@ -36,6 +36,28 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
     :param bool exportable: Mark the certificate as exportable. Only applicable to pfx format.
     :param str password: The password of the certificate. Only applicable to pfx format.
     :param str saltenv: The environment the file resides in.
+
+    Example of usage with only the required arguments:
+
+    .. code-block:: yaml
+
+        site0-cert-imported:
+            win_pki.import_cert:
+                - name: salt://win/webserver/certs/site0.cer
+
+    Example of usage specifying all available arguments:
+
+    .. code-block:: yaml
+
+        site0-cert-imported:
+            win_pki.import_cert:
+                - name: salt://win/webserver/certs/site0.pfx
+                - cert_format: pfx
+                - context: LocalMachine
+                - store: My
+                - exportable: True
+                - password: TestPassword
+                - saltenv: base
     '''
     ret = {'name': name,
            'changes': dict(),
@@ -80,6 +102,24 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
     :param str thumbprint: The thumbprint value of the target certificate.
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
+
+    Example of usage with only the required arguments:
+
+    .. code-block:: yaml
+
+        site0-cert-removed:
+            win_pki.remove_cert:
+                - thumbprint: 9988776655443322111000AAABBBCCCDDDEEEFFF
+
+    Example of usage specifying all available arguments:
+
+    .. code-block:: yaml
+
+        site0-cert-removed:
+            win_pki.remove_cert:
+                - thumbprint: 9988776655443322111000AAABBBCCCDDDEEEFFF
+                - context: LocalMachine
+                - store: My
     '''
     ret = {'name': name,
            'changes': dict(),
