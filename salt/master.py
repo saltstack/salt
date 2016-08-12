@@ -1063,7 +1063,7 @@ class AESFuncs(object):
             return False
         if not isinstance(load['path'], list):
             return False
-        if not self.opts['file_recv'] or os.path.isabs(load['path']):
+        if not self.opts['file_recv']:
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
@@ -1102,7 +1102,7 @@ class AESFuncs(object):
 
         # Path normalization should have been done by the sending
         # minion but we can't guarantee it. Re-do it here.
-        normpath = os.path.normpath(os.path.join(load['path']))
+        normpath = os.path.normpath(os.path.join(*load['path']))
 
         # Ensure that this safety check is done after the path
         # have been normalized.
