@@ -361,6 +361,10 @@ def cpuinfo():
     ..versionchanged:: 2016.3.2
     Return the CPU info for this minion
 
+    Tested and working in:
+    -Windows Server 2012r2
+    -Centos 6
+
     CLI Example:
 
     .. code-block:: bash
