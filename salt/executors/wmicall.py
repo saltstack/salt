@@ -35,10 +35,22 @@ class WMICall(ModuleExecutorBase):
     def execute(self):
         '''
         Call a windows function and return the results
+        Assumes the wmiinput in the constructor is a WMI object
         Chainable
         '''
         self.log.trace("wmi execute is running")
         self.wmiresult = os.popen('wmic path %s %s' % (self.wmitarget ,' 2>&1'),'r').read().strip()
+        self.log.trace(self.wmiresult)
+        return self
+
+    def executepure(self):
+        '''
+        Call a windows function and return the results
+        Assumes the wmiinput in the constructor is a full command
+        Chainable
+        '''
+        self.log.trace("wmi executepure is running")
+        self.wmiresult = os.popen('%s %s' % (self.wmitarget ,' 2>&1'),'r').read().strip()
         self.log.trace(self.wmiresult)
         return self
 
