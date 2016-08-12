@@ -24,10 +24,6 @@ For example:
       # optional: some functions require a repo_name, which
       # can be set in the config file, or passed in at the CLI.
       repo_name: my_repo
-
-      # optional: only some functions, such as 'add_user',
-      # require a dev_team_id.
-      dev_team_id: 1234
 '''
 
 # Import python libs
@@ -271,23 +267,8 @@ def add_user(name, profile='github'):
         log.exception("Resource not found {0}: ".format(str(e)))
         return False
 
-    org_team = organization.get_team(
-        _get_config_value(profile, 'dev_team_id')
-    )
-
-    try:
-        headers, data = org_team._requester.requestJsonAndCheck(
-            "PUT",
-            org_team.url + "/memberships/" + github_named_user._identity,
-            input={'role': 'member'},
-            parameters={'role': 'member'}
-        )
-    except github.GithubException as e:
-        log.error("Unable to add user", exc_info=True)
-        return True
-
     headers, data = organization._requester.requestJsonAndCheck(
-        "GET",
+        "PUT",
         organization.url + "/memberships/" + github_named_user._identity
     )
 
