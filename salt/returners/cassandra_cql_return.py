@@ -159,21 +159,24 @@ def returner(ret):
     '''
     query = '''INSERT INTO salt.salt_returns (
                  jid, minion_id, fun, alter_time, full_ret, return, success
-               ) VALUES (
-                 '{0}', '{1}', '{2}', '{3}', '{4}', '{5}', {6}
-               );'''.format(
-                 ret['jid'],
-                 ret['id'],
-                 ret['fun'],
-                 int(time.time() * 1000),
-                 json.dumps(ret).replace("'", "''"),
-                 json.dumps(ret['return']).replace("'", "''"),
-                 ret.get('success', False)
-               )
+               ) VALUES (?, ?, ?, ?, ?, ?, ?)'''
+
+    statement_arguments = []
+
+    statement_arguments.append('{0}'.format(ret['jid']))
+    statement_arguments.append('{0}'.format(ret['id']))
+    statement_arguments.append('{0}'.format(ret['fun']))
+    statement_arguments.append(int(time.time() * 1000))
+    statement_arguments.append('{0}'.format(json.dumps(ret).replace("'", "''")))
+    statement_arguments.append('{0}'.format(json.dumps(ret['return']).replace("'", "''")))
+    statement_arguments.append(ret.get('success', False))
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        __salt__['cassandra_cql.cql_query'](query)
+        __salt__['cassandra_cql.cql_query_with_prepare'](query,
+                                                         'returner_return',
+                                                         tuple(statement_arguments),
+                                                         async=True)
     except CommandExecutionError:
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
@@ -185,13 +188,19 @@ def returner(ret):
     # The data in salt.minions will be used by get_fun and get_minions
     query = '''INSERT INTO salt.minions (
                  minion_id, last_fun
-               ) VALUES (
-                 '{0}', '{1}'
-               );'''.format(ret['id'], ret['fun'])
+               ) VALUES (?, ?)'''
+
+    statement_arguments = []
+
+    statement_arguments.append('{0}'.format(ret['id']))
+    statement_arguments.append('{0}'.format(ret['fun']))
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        __salt__['cassandra_cql.cql_query'](query)
+        __salt__['cassandra_cql.cql_query_with_prepare'](query,
+                                                         'returner_minion',
+                                                         tuple(statement_arguments),
+                                                         async=True)
     except CommandExecutionError:
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
@@ -218,16 +227,19 @@ def event_return(events):
         query = '''INSERT INTO salt.salt_events (
                      id, alter_time, data, master_id, tag
                    ) VALUES (
-                     {0}, {1}, '{2}', '{3}', '{4}'
-                   );'''.format(str(uuid.uuid1()),
-                                int(time.time() * 1000),
-                                json.dumps(data).replace("'", "''"),
-                                __opts__['id'],
-                                tag)
+                     ?, ?, ?, ?, ?)
+                 '''
+        statement_arguments = [str(uuid.uuid1()),
+                               int(time.time() * 1000),
+                               json.dumps(data).replace("'", "''"),
+                               __opts__['id'],
+                               tag]
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
         try:
-            __salt__['cassandra_cql.cql_query'](query)
+            __salt__['cassandra_cql.cql_query_with_prepare'](query, 'salt_events',
+                                                             statement_arguments,
+                                                             async=True)
         except CommandExecutionError:
             log.critical('Could not store events with Cassandra returner.')
             raise
@@ -245,13 +257,18 @@ def save_load(jid, load, minions=None):
     # json.dumps(load) must be escaped Cassandra style.
     query = '''INSERT INTO salt.jids (
                  jid, load
-               ) VALUES (
-                 '{0}', '{1}'
-               );'''.format(jid, json.dumps(load).replace("'", "''"))
+               ) VALUES (?, ?)'''
+
+    statement_arguments = [
+        jid,
+        json.dumps(load).replace("'", "''")
+    ]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        __salt__['cassandra_cql.cql_query'](query)
+        __salt__['cassandra_cql.cql_query_with_prepare'](query, 'save_load',
+                                                         statement_arguments,
+                                                         async=True)
     except CommandExecutionError:
         log.critical('Could not save load in jids table.')
         raise
@@ -272,13 +289,13 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    query = '''SELECT load FROM salt.jids WHERE jid = '{0}';'''.format(jid)
+    query = '''SELECT load FROM salt.jids WHERE jid = ?;'''
 
     ret = {}
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        data = __salt__['cassandra_cql.cql_query'](query)
+        data = __salt__['cassandra_cql.cql_query_with_prepare'](query, 'get_load', [jid])
         if data:
             load = data[0].get('load')
             if load:
@@ -298,13 +315,13 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    query = '''SELECT minion_id, full_ret FROM salt.salt_returns WHERE jid = '{0}';'''.format(jid)
+    query = '''SELECT minion_id, full_ret FROM salt.salt_returns WHERE jid = ?;'''
 
     ret = {}
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        data = __salt__['cassandra_cql.cql_query'](query)
+        data = __salt__['cassandra_cql.cql_query_with_prepare'](query, 'get_jid', [jid])
         if data:
             for row in data:
                 minion = row.get('minion_id')
@@ -326,13 +343,13 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    query = '''SELECT minion_id, last_fun FROM salt.minions where last_fun = '{0}';'''.format(fun)
+    query = '''SELECT minion_id, last_fun FROM salt.minions where last_fun = ?;'''
 
     ret = {}
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
-        data = __salt__['cassandra_cql.cql_query'](query)
+        data = __salt__['cassandra_cql.cql_query'](query, 'get_fun', [fun])
         if data:
             for row in data:
                 minion = row.get('minion_id')
