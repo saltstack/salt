@@ -8,6 +8,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
@@ -53,9 +54,9 @@ class WinIisTestCase(TestCase):
     @patch('salt.modules.win_iis._srvmgr',
            MagicMock(return_value={
                      'retcode': 0,
-                     'stdout': ('[{"name": "MyTestPool", "state": "Started",'
-                                ' "Applications": {"value": ["MyTestSite"],'
-                                ' "Count": 1}}]')}))
+                     'stdout': json.dumps([{'name': 'MyTestPool', 'state': 'Started',
+                                            'Applications': {'value': ['MyTestSite'],
+                                                             'Count': 1}}])}))
     def test_list_apppools(self):
         '''
         Test - List all configured IIS application pools.
@@ -95,7 +96,7 @@ class WinIisTestCase(TestCase):
         '''
         Test - Create a basic website in IIS.
         '''
-        kwargs = {'name': 'MyTestSite', 'sourcepath': 'C:\\inetpub\\wwwroot',
+        kwargs = {'name': 'MyTestSite', 'sourcepath': r'C:\inetpub\wwwroot',
                   'apppool': 'MyTestPool', 'hostheader': 'mytestsite.local',
                   'ipaddress': '*', 'port': 80, 'protocol': 'http'}
         with patch.dict(win_iis.__salt__):
@@ -111,13 +112,66 @@ class WinIisTestCase(TestCase):
         '''
         Test - Create a basic website in IIS using invalid data.
         '''
-        kwargs = {'name': 'MyTestSite', 'sourcepath': 'C:\\inetpub\\wwwroot',
+        kwargs = {'name': 'MyTestSite', 'sourcepath': r'C:\inetpub\wwwroot',
                   'apppool': 'MyTestPool', 'hostheader': 'mytestsite.local',
                   'ipaddress': '*', 'port': 80, 'protocol': 'invalid-protocol-name'}
         with patch.dict(win_iis.__salt__):
             self.assertRaises(SaltInvocationError, win_iis.create_site, **kwargs)
 
+    @patch('salt.modules.win_iis._srvmgr',
+           MagicMock(return_value={'retcode': 0}))
+    @patch('salt.modules.win_iis.list_sites',
+           MagicMock(return_value={
+                     'MyTestSite': {'apppool': 'MyTestPool',
+                                    'bindings': {'*:80:': {'certificatehash': None,
+                                                           'certificatestorename': None,
+                                                           'hostheader': None,
+                                                           'ipaddress': '*', 'port': 80,
+                                                           'protocol': 'http',
+                                                           'sslflags': 0}},
+                                    'id': 1, 'sourcepath': r'C:\inetpub\wwwroot',
+                                    'state': 'Started'}}))
+    def test_remove_site(self):
+        '''
+        Test - Delete a website from IIS.
+        '''
+        with patch.dict(win_iis.__salt__):
+            self.assertTrue(win_iis.remove_site('MyTestSite'))
+
+    @patch('salt.modules.win_iis._srvmgr',
+           MagicMock(return_value={
+                     'retcode': 0,
+                     'stdout': json.dumps([{'applicationPool': 'MyTestPool',
+                                            'name': 'testApp', 'path': '/testApp',
+                                            'PhysicalPath': r'C:\inetpub\apps\testApp',
+                                            'preloadEnabled': False,
+                                            'protocols': 'http'}])}))
+    def test_list_apps(self):
+        '''
+        Test - Get all configured IIS applications for the specified site.
+        '''
+        with patch.dict(win_iis.__salt__):
+            self.assertIsInstance(win_iis.list_apps('MyTestSite'), dict)
+
+    @patch('salt.modules.win_iis.list_sites',
+           MagicMock(return_value={
+                     'MyTestSite': {'apppool': 'MyTestPool',
+                                    'bindings': {'*:80:': {'certificatehash': None,
+                                                           'certificatestorename': None,
+                                                           'hostheader': None,
+                                                           'ipaddress': '*', 'port': 80,
+                                                           'protocol': 'http',
+                                                           'sslflags': 0}},
+                                    'id': 1, 'sourcepath': r'C:\inetpub\wwwroot',
+                                    'state': 'Started'}}))
+    def test_list_bindings(self):
+        '''
+        Test - Get all configured IIS bindings for the specified site.
+        '''
+        with patch.dict(win_iis.__salt__):
+            self.assertIsInstance(win_iis.list_bindings('MyTestSite'), dict)
+
 
 if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=C0413
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(WinIisTestCase, needs_daemon=False)
