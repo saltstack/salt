@@ -1542,14 +1542,14 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar=pillar)
-    snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
+    snapper_pre = _snapper_pre(popts, kwargs.get('__pub_jid', 'called localy'))
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
     except (IOError, OSError):
         pass
     _set_retcode(ret)
-    _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
+    _snapper_post(popts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
 
