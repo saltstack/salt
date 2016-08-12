@@ -64,8 +64,7 @@ if NO_MOCK is False:
                        call.write('::1 localhost'),
                        call.write('\n'),
                        call.write('fe80::1%lo0 localhost'),
-                       call.write('\n'),
-                       call.close()]
+                       call.write('\n')]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

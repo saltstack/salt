@@ -435,7 +435,7 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
+                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1269,9 +1269,9 @@ def managed(name,
             incompatible with the ``contents`` options.
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        If this setting is applied, then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, py, genshi,
+        cheetah, and wempy are supported.
 
     makedirs : False
         If set to ``True``, then the parent directories will be created to
@@ -2543,8 +2543,7 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
-            __salt__['file.makedirs_perms'](
-                name, user, group, int(str(dir_mode), 8) if dir_mode else None)
+            __salt__['file.makedirs_perms'](name, user, group, dir_mode)
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
@@ -2612,7 +2611,7 @@ def recurse(name,
                 merge_ret(path, _ret)
                 return
             else:
-                os.remove(path)
+                __salt__['file.remove'](path)
                 _ret['changes'] = {'diff': 'Replaced file with a directory'}
                 merge_ret(path, _ret)
 

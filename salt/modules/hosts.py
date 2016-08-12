@@ -33,7 +33,8 @@ def _get_or_create_hostfile():
     if hfn is None:
         hfn = ''
     if not os.path.exists(hfn):
-        salt.utils.fopen(hfn, 'w').close()
+        with salt.utils.fopen(hfn, 'w'):
+            pass
     return hfn
 
 
@@ -160,7 +161,8 @@ def set_host(ip, alias):
     if not alias.strip():
         line_to_add = ''
 
-    lines = salt.utils.fopen(hfn).readlines()
+    with salt.utils.fopen(hfn) as fp_:
+        lines = fp_.readlines()
     for ind, line in enumerate(lines):
         tmpline = line.strip()
         if not tmpline:
@@ -198,7 +200,8 @@ def rm_host(ip, alias):
     if not has_pair(ip, alias):
         return True
     hfn = _get_or_create_hostfile()
-    lines = salt.utils.fopen(hfn).readlines()
+    with salt.utils.fopen(hfn) as fp_:
+        lines = fp_.readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:

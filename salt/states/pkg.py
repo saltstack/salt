@@ -2565,7 +2565,8 @@ def mod_init(low):
     if low['fun'] == 'installed' or low['fun'] == 'latest':
         rtag = __gen_rtag()
         if not os.path.exists(rtag):
-            salt.utils.fopen(rtag, 'w+').write('')
+            with salt.utils.fopen(rtag, 'w+'):
+                pass
         return ret
     return False
 
