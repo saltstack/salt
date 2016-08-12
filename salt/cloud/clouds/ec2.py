@@ -2395,7 +2395,7 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
-        vm_['name'], vm_['profile'], 'ec2', vm_['driver']
+        vm_['name'], vm_['profile'], 'ec2', vm_['driver'], opts=__opts__,
     )
 
     vm_['key_filename'] = key_filename
@@ -3082,7 +3082,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    salt.utils.cloud.cachedir_index_del(name)
+    salt.utils.cloud.cachedir_index_del(name, opts=__opts__)
 
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)

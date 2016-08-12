@@ -2406,7 +2406,7 @@ def unlock_file(filename):
         log.trace('Unable to remove lock for {0}: {1}'.format(filename, exc))
 
 
-def cachedir_index_add(minion_id, profile, driver, provider, base=None):
+def cachedir_index_add(minion_id, profile, driver, provider, base=None, opts=None):
     '''
     Add an entry to the cachedir index. This generally only needs to happen when
     a new instance is created. This entry should contain:
@@ -2421,7 +2421,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     salt-ssh. However, other code that makes use of profile information can also
     make use of this function.
     '''
-    base = init_cachedir(base)
+    base = init_cachedir(base, opts=opts)
     index_file = os.path.join(base, 'index.p')
     lock_file(index_file)
 
@@ -2448,12 +2448,12 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     unlock_file(index_file)
 
 
-def cachedir_index_del(minion_id, base=None):
+def cachedir_index_del(minion_id, base=None, opts=None):
     '''
     Delete an entry from the cachedir index. This generally only needs to happen
     when an instance is deleted.
     '''
-    base = init_cachedir(base)
+    base = init_cachedir(base, opts=opts)
     index_file = os.path.join(base, 'index.p')
     lock_file(index_file)
 
@@ -2472,12 +2472,14 @@ def cachedir_index_del(minion_id, base=None):
     unlock_file(index_file)
 
 
-def init_cachedir(base=None):
+def init_cachedir(base=None, opts=None):
     '''
     Initialize the cachedir needed for Salt Cloud to keep track of minions
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        if opts is None:
+            opts = {}
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
     needed_dirs = (base,
                    os.path.join(base, 'requested'),
                    os.path.join(base, 'active'))
@@ -2507,13 +2509,15 @@ def request_minion_cachedir(
     will be set to None.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        if opts is None:
+            opts = {}
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
 
     if not fingerprint:
         if pubkey is not None:
             fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
 
-    init_cachedir(base)
+    init_cachedir(base, opts=opts)
 
     data = {
         'minion_id': minion_id,
@@ -2532,6 +2536,7 @@ def change_minion_cachedir(
         cachedir,
         data=None,
         base=None,
+        opts=None,
 ):
     '''
     Changes the info inside a minion's cachedir entry. The type of cachedir
@@ -2550,7 +2555,9 @@ def change_minion_cachedir(
         return False
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        if opts is None:
+            opts = {}
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
@@ -2564,14 +2571,16 @@ def change_minion_cachedir(
         msgpack.dump(cache_data, fh_)
 
 
-def activate_minion_cachedir(minion_id, base=None):
+def activate_minion_cachedir(minion_id, base=None, opts=None):
     '''
     Moves a minion from the requested/ cachedir into the active/ cachedir. This
     means that Salt Cloud has verified that a requested instance properly
     exists, and should be expected to exist from here on out.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        if opts is None:
+            opts = {}
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
 
     fname = '{0}.p'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
@@ -2589,7 +2598,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
         return
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
 
     driver = next(six.iterkeys(opts['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
@@ -2609,7 +2618,7 @@ def list_cache_nodes_full(opts, provider=None, base=None):
         return
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud', 'active')
 
     minions = {}
     # First, get a list of all drivers in use
@@ -2640,7 +2649,7 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud')
 
     minions = list_cache_nodes_full(opts, base=base)
 
@@ -2795,7 +2804,7 @@ def cache_node_list(nodes, provider, opts):
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
-    base = os.path.join(init_cachedir(), 'active')
+    base = os.path.join(init_cachedir(opts=opts), 'active')
     driver = next(six.iterkeys(opts['providers'][provider]))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -2820,8 +2829,9 @@ def cache_node(node, provider, opts):
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
-    if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
-        init_cachedir()
+    base = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cloud', 'active')
+    if not os.path.exists(base):
+        init_cachedir(opts=opts)
 
     base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
     provider, driver = provider.split(':')
