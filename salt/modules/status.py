@@ -468,12 +468,17 @@ def cpuinfo():
                 ret['psrinfo'][procn]['clock'] = "{0} {1}".format(line[10], line[11][:-1])
         return ret
 
+    def windows_cpuinfo():
+        ret = {}
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpuinfo,
         'FreeBSD': bsd_cpuinfo,
         'OpenBSD': bsd_cpuinfo,
         'SunOS': sunos_cpuinfo,
+        'Windows': windows_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
