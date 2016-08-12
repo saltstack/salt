@@ -191,6 +191,8 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
         dns_update.replace(name, ttl, rdata)
     elif not is_exist:
         dns_update.add(name, ttl, rdata)
+    else:
+        return None
     answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
         return False
