@@ -1238,9 +1238,15 @@ def managed(name,
         on Windows
 
     template
-        If this setting is applied, then the named templating engine will be
-        used to render the downloaded file. Currently jinja, mako, py, genshi,
-        cheetah, and wempy are supported.
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     makedirs : False
         If set to ``True``, then the parent directories will be created to
