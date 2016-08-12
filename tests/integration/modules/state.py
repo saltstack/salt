@@ -235,9 +235,9 @@ class StateModuleTest(integration.ModuleCase,
             ''')
 
         if salt.utils.is_windows():
-            new_contents = contents.splitlines()
-            contents = os.linesep.join(new_contents)
-            contents += os.linesep
+            new_contents = expected.splitlines()
+            expected = os.linesep.join(new_contents)
+            expected += os.linesep
 
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting

@@ -599,7 +599,6 @@ def diskusage(*args):
                     ifile = fp_.read().splitlines()
             except OSError:
                 return {}
-            ifile = salt.utils.fopen(procf, 'r').readlines()
         elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
             ifile = __salt__['cmd.run']('mount -p').splitlines()
         else:
