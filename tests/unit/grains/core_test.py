@@ -192,7 +192,7 @@ class CoreGrainsTestCase(TestCase):
                                                 with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
                                                     os_grains = core.os_data()
 
-        self.assertEqual(os_grains.get('os_family'), 'SUSE')
+        self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
     def _run_suse_os_grains_tests(self, os_release_map):
@@ -242,7 +242,7 @@ class CoreGrainsTestCase(TestCase):
                                                         os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os'), 'SUSE')
-        self.assertEqual(os_grains.get('os_family'), 'SUSE')
+        self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('osfullname'), os_release_map['osfullname'])
         self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
