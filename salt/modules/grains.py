@@ -335,8 +335,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         salt '*' grains.append key val
     '''
     grains = get(key, [], delimiter)
-    if not isinstance(grains, list) and convert is True:
-        grains = [grains]
+    if convert:
+        if not isinstance(grains, list):
+            grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val in grains:
