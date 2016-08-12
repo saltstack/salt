@@ -9,6 +9,7 @@ import contextlib
 import logging
 import os
 import shutil
+import string
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPInputError
 
@@ -461,16 +462,23 @@ class Client(object):
         Get a single file from a URL.
         '''
         url_data = urlparse(url)
+        url_scheme = url_data.scheme
+        url_path = os.path.join(
+                url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_data.scheme in ('file', ''):
+        if url_scheme in string.letters:
+            url_path = '{0}:{1}'.format(url_scheme, url_path)
+            url_scheme = 'file'
+
+        if url_scheme in ('file', ''):
             # Local filesystem
-            if not os.path.isabs(url_data.path):
+            if not os.path.isabs(url_path):
                 raise CommandExecutionError(
-                    'Path \'{0}\' is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_path)
                 )
-            return url_data.path
+            return url_path
 
-        if url_data.scheme == 'salt':
+        if url_scheme == 'salt':
             return self.get_file(
                 url, dest, makedirs, saltenv, cachedir=cachedir)
         if dest:
