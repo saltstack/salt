@@ -407,8 +407,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
 
         try:
-            salt.utils.fopen(funny_url_path, 'w').close()
-            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+            with salt.utils.fopen(funny_url_path, 'w'):
+                pass
+            with salt.utils.fopen(state_file, 'w') as fp_:
+                fp_.write(textwrap.dedent('''\
                 {0}:
                   file.managed:
                     - source: {1}
@@ -438,7 +440,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             managed_files[typ] = tempfile.mkstemp()[1]
             state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
         try:
-            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+            with salt.utils.fopen(state_file, 'w') as fp_:
+                fp_.write(textwrap.dedent('''\
                 bool file:
                   file.managed:
                     - name: {bool}
@@ -550,13 +553,15 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        salt.utils.fopen(strayfile, 'w').close()
+        with salt.utils.fopen(strayfile, 'w'):
+            pass
 
         straydir = os.path.join(name, 'straydir')
         if not os.path.isdir(straydir):
             os.makedirs(straydir)
 
-        salt.utils.fopen(os.path.join(straydir, 'strayfile2'), 'w').close()
+        with salt.utils.fopen(os.path.join(straydir, 'strayfile2'), 'w'):
+            pass
 
         ret = self.run_state('file.directory', name=name, clean=True)
         try:
@@ -576,17 +581,20 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        salt.utils.fopen(strayfile, 'w').close()
+        with salt.utils.fopen(strayfile, 'w'):
+            pass
 
         straydir = os.path.join(name, 'straydir')
         if not os.path.isdir(straydir):
             os.makedirs(straydir)
 
         strayfile2 = os.path.join(straydir, 'strayfile2')
-        salt.utils.fopen(strayfile2, 'w').close()
+        with salt.utils.fopen(strayfile2, 'w'):
+            pass
 
         keepfile = os.path.join(straydir, 'keepfile')
-        salt.utils.fopen(keepfile, 'w').close()
+        with salt.utils.fopen(keepfile, 'w'):
+            pass
 
         ret = self.run_state('file.directory',
                              name=name,
@@ -610,17 +618,20 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        salt.utils.fopen(strayfile, 'w').close()
+        with salt.utils.fopen(strayfile, 'w'):
+            pass
 
         straydir = os.path.join(name, 'straydir')
         if not os.path.isdir(straydir):
             os.makedirs(straydir)
 
         strayfile2 = os.path.join(straydir, 'strayfile2')
-        salt.utils.fopen(strayfile2, 'w').close()
+        with salt.utils.fopen(strayfile2, 'w'):
+            pass
 
         keepfile = os.path.join(straydir, 'keepfile')
-        salt.utils.fopen(keepfile, 'w').close()
+        with salt.utils.fopen(keepfile, 'w'):
+            pass
 
         ret = self.run_state('file.directory',
                              test=True,
@@ -853,10 +864,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
-        salt.utils.fopen(strayfile, 'w').close()
+        with salt.utils.fopen(strayfile, 'w'):
+            pass
 
         # Corner cases: replacing file with a directory and vice versa
-        salt.utils.fopen(os.path.join(name, '36'), 'w').close()
+        with salt.utils.fopen(os.path.join(name, '36'), 'w'):
+            pass
         os.makedirs(os.path.join(name, 'scene33'))
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail', clean=True)
@@ -876,10 +889,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
-        salt.utils.fopen(strayfile, 'w').close()
+        with salt.utils.fopen(strayfile, 'w'):
+            pass
 
         # Corner cases: replacing file with a directory and vice versa
-        salt.utils.fopen(os.path.join(name, '32'), 'w').close()
+        with salt.utils.fopen(os.path.join(name, '32'), 'w'):
+            pass
         os.makedirs(os.path.join(name, 'scene34'))
         ret = self.run_state('file.recurse',
                              name=name,
@@ -891,6 +906,36 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertFalse(os.path.exists(strayfile))
             self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
             self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_issue_34945(self):
+        '''
+        This tests the case where the source dir for the file.recurse state
+        does not contain any files (only subdirectories), and the dir_mode is
+        being managed. For a long time, this corner case resulted in the top
+        level of the destination directory being created with the wrong initial
+        permissions, a problem that would be corrected later on in the
+        file.recurse state via running state.directory. However, the
+        file.directory state only gets called when there are files to be
+        managed in that directory, and when the source directory contains only
+        subdirectories, the incorrectly-set initial perms would not be
+        repaired.
+
+        This was fixed in https://github.com/saltstack/salt/pull/35309
+        '''
+        dir_mode = '2775'
+        issue_dir = 'issue-34945'
+        name = os.path.join(integration.TMP, issue_dir)
+
+        try:
+            ret = self.run_state('file.recurse',
+                                 name=name,
+                                 source='salt://' + issue_dir,
+                                 dir_mode=dir_mode)
+            self.assertSaltTrueReturn(ret)
+            actual_dir_mode = oct(stat.S_IMODE(os.stat(name).st_mode))[-4:]
+            self.assertEqual(dir_mode, actual_dir_mode)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -1573,7 +1618,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # Get a path to the temporary file
         tmp_file = os.path.join(integration.TMP, 'issue-2041-comment.txt')
         # Write some data to it
-        salt.utils.fopen(tmp_file, 'w').write('hello\nworld\n')
+        with salt.utils.fopen(tmp_file, 'w') as fp_:
+            fp_.write('hello\nworld\n')
         # create the sls template
         template_lines = [
             '{0}:'.format(tmp_file),
@@ -1607,11 +1653,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # Get a path to the temporary file
         tmp_file = os.path.join(integration.TMP, 'issue-2379-file-append.txt')
         # Write some data to it
-        salt.utils.fopen(tmp_file, 'w').write(
-            'hello\nworld\n' +          # Some junk
-            '#PermitRootLogin yes\n' +  # Commented text
-            '# PermitRootLogin yes\n'   # Commented text with space
-        )
+        with salt.utils.fopen(tmp_file, 'w') as fp_:
+            fp_.write(
+                'hello\nworld\n'           # Some junk
+                '#PermitRootLogin yes\n'   # Commented text
+                '# PermitRootLogin yes\n'  # Commented text with space
+            )
         # create the sls template
         template_lines = [
             '{0}:'.format(tmp_file),

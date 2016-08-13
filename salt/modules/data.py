@@ -52,6 +52,7 @@ def load():
 
     try:
         datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
+        # serial.load() will close the filehandle, no need for a "with" block
         fn_ = salt.utils.fopen(datastore_path, 'rb')
         return serial.load(fn_)
     except (IOError, OSError, NameError):

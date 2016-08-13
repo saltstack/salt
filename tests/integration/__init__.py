@@ -1153,9 +1153,8 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
-                yaml.dump(computed_config, default_flow_style=False)
-            )
+            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
+                fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         salt.utils.fopen(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(sub_minion_computed_config, default_flow_style=False)

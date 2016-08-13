@@ -641,7 +641,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
             ficn = os.path.join(stats_path, '{0}.{1}.stats'.format(id_, date))
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
-                with open(ficn, 'w') as fic:
+                with fopen(ficn, 'w') as fic:
                     pstats.Stats(pr, stream=fic).sort_stats('cumulative')
             log.info('PROFILING: {0} generated'.format(ficp))
             log.info('PROFILING (cumulative): {0} generated'.format(ficn))

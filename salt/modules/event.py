@@ -39,7 +39,7 @@ def fire_master(data, tag, preload=None):
 
         salt '*' event.fire_master '{"data":"my event data"}' 'tag'
     '''
-    if __opts__.get('local', None):
+    if (__opts__.get('local', None) or __opts__.get('file_client', None) == 'local') and not __opts__.get('use_master_when_local', False):
         #  We can't send an event if we're in masterless mode
         log.warning('Local mode detected. Event with tag {0} will NOT be sent.'.format(tag))
         return False

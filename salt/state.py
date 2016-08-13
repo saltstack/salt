@@ -1876,11 +1876,14 @@ class State(object):
                                 found = True
                                 reqs[r_state].append(chunk)
                             continue
-                        if (fnmatch.fnmatch(chunk['name'], req_val) or
-                            fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if req_key == 'id' or chunk['state'] == req_key:
-                                found = True
-                                reqs[r_state].append(chunk)
+                        try:
+                            if (fnmatch.fnmatch(chunk['name'], req_val) or
+                                fnmatch.fnmatch(chunk['__id__'], req_val)):
+                                if req_key == 'id' or chunk['state'] == req_key:
+                                    found = True
+                                    reqs[r_state].append(chunk)
+                        except KeyError:
+                            raise SaltRenderError('Could not locate requisite of [{0}] present in state with name [{1}]'.format(req_key, chunk['name']))
                     if not found:
                         return 'unmet', ()
         fun_stats = set()
