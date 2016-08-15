@@ -987,7 +987,6 @@ class LocalClient(object):
                 except KeyError as exc:
                     # This is a safe pass. We're just using the try/except to avoid having to deep-check for keys
                     log.debug('Passing on saltutil error. This may be an error in saltclient. {0}'.format(exc))
-                    print(raw)
                     pass
 
                 # Keep track of the jid events to unsubscribe from later
