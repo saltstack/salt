@@ -3599,8 +3599,7 @@ def append(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
-        slines = [item.rstrip() for item in slines]
+        slines = fp_.read().splitlines()
 
     append_lines = []
     try:
@@ -3648,8 +3647,7 @@ def append(name,
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
-        nlines = [item.rstrip(os.linesep) for item in nlines]
+        nlines = fp_.read().splitlines()
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
