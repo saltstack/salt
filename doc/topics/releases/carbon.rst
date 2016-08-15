@@ -50,6 +50,17 @@ Ponies!
 We all agreed that cowsay was just not good enough, install the `ponysay`
 command and the new `pony` outputter will work. For for the whole family!
 
+Developer Features
+------------------
+
+Pre-loader
+..........
+
+Salt sub-systems (viz. states, modules, engines, etc.) no longer require
+modifications to `salt/loader.py`.  The LazyLoader invocation function(s)
+for a sub-system can now be contained in the sub-system directory in a
+pre-loader file (`_loader.py`)
+
 Additional Features
 -------------------
 
