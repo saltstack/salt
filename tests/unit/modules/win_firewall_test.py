@@ -28,7 +28,7 @@ win_firewall.__salt__ = {}
 IS_WIN = win_firewall.__virtual__()
 
 
-@skipIf(not IS_WIN, "This test case runs only on Windows system")
+@skipIf(not IS_WIN[0], "This test case runs only on Windows system")
 class WinFirewallTestCase(TestCase):
     '''
     Test cases for salt.modules.win_firewall
