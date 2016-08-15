@@ -806,6 +806,7 @@ def mod_repo(repo, **kwargs):
         cmd_opt = global_cmd_opt + ['mr'] + cmd_opt + [repo]
         __zypper__.refreshable.xml.call(*cmd_opt)
 
+    comment = None
     if call_refresh:
         # when used with "zypper ar --refresh" or "zypper mr --refresh"
         # --gpg-auto-import-keys is not doing anything
@@ -813,11 +814,13 @@ def mod_repo(repo, **kwargs):
         refresh_opts = global_cmd_opt + ['refresh'] + [repo]
         __zypper__.xml.call(*refresh_opts)
     elif not added and not cmd_opt:
-        raise CommandExecutionError(
-            'Specified arguments did not result in modification of repo'
-        )
+        comment = 'Specified arguments did not result in modification of repo'
 
-    return get_repo(repo)
+    repo = get_repo(repo)
+    if comment:
+        repo['comment'] = comment
+
+    return repo
 
 
 def refresh_db():
