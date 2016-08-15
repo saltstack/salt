@@ -540,10 +540,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     return lxc_init_interface
 
 
-def _get_profile(key, old_key, name, **kwargs):
+def _get_profile(key, name, **kwargs):
     if isinstance(name, dict):
         profilename = name.pop('name', None)
-        return _get_profile(key, old_key, profilename, **name)
+        return _get_profile(key, profilename, **name)
 
     if name is None:
         profile_match = {}
@@ -555,20 +555,9 @@ def _get_profile(key, old_key, name, **kwargs):
                 merge='recurse'
             )
         if profile_match is None:
-            # Try legacy profile location
-            profile_match = \
-                __salt__['config.get'](
-                    'lxc.{1}:{0}'.format(name, old_key), None)
-            if profile_match is not None:
-                salt.utils.warn_until(
-                    'Carbon',
-                    'lxc.{1} has been deprecated, please configure LXC '
-                    'container profiles under lxc.{0} instead'.format(
-                        key, old_key))
-            else:
-                # No matching profile, make the profile an empty dict so that
-                # overrides can be applied below.
-                profile_match = {}
+            # No matching profile, make the profile an empty dict so that
+            # overrides can be applied below.
+            profile_match = {}
 
     if not isinstance(profile_match, dict):
         raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
@@ -619,7 +608,7 @@ def get_container_profile(name=None, **kwargs):
         salt-call lxc.get_container_profile centos
         salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
     '''
-    profile = _get_profile('container_profile', 'profile', name, **kwargs)
+    profile = _get_profile('container_profile', name, **kwargs)
     return profile
 
 
@@ -679,7 +668,7 @@ def get_network_profile(name=None, **kwargs):
         salt-call lxc.get_network_profile default
     '''
 
-    profile = _get_profile('network_profile', 'nic', name, **kwargs)
+    profile = _get_profile('network_profile', name, **kwargs)
     return profile
 
 
@@ -1130,7 +1119,6 @@ def init(name,
          memory=None,
          profile=None,
          network_profile=None,
-         nic=_marker,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -1197,10 +1185,6 @@ def init(name,
         Network profile to use for the container
 
         .. versionadded:: 2015.5.0
-
-    nic
-        .. deprecated:: 2015.5.0
-            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces, will override
@@ -1271,10 +1255,6 @@ def init(name,
 
         .. versionadded:: 2015.8.0
 
-    clone
-        .. deprecated:: 2015.5.0
-            Use ``clone_from`` instead
-
     clone_from
         Original from which to use a clone operation to create the container.
         Default: ``None``
@@ -1324,28 +1304,10 @@ def init(name,
            'changes': {}}
 
     profile = get_container_profile(copy.deepcopy(profile))
-    if bool(nic) and nic is not _marker:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'nic\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'network_profile\' instead.'
-        )
-        network_profile = nic
     if not network_profile:
         network_profile = profile.get('network_profile')
     if not network_profile:
         network_profile = DEFAULT_NIC
-
-    try:
-        kwargs['clone_from'] = kwargs.pop('clone')
-    except KeyError:
-        pass
-    else:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'clone\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'clone_from\' instead.'
-        )
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
@@ -1383,14 +1345,6 @@ def init(name,
     salt_config = _get_salt_config(config, **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
-    if password and password_encrypted is None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Starting with the Carbon release, passwords passed to the '
-            '\'lxc.init\' function will be assumed to be hashed, unless '
-            'password_encrypted=False. Please keep this in mind.'
-        )
-        password_encrypted = False
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
@@ -2409,12 +2363,6 @@ def start(name, **kwargs):
     '''
     Start the named container
 
-    restart : False
-        .. deprecated:: 2015.5.0
-            Use :mod:`lxc.restart <salt.modules.lxc.restart>`
-
-        Restart the container if it is already running
-
     path
         path to the container parent directory
         default: /var/lib/lxc (system)
@@ -2449,13 +2397,6 @@ def start(name, **kwargs):
         cmd += ' -f {0}'.format(pipes.quote(lxc_config))
     cmd += ' -d'
     _ensure_exists(name, path=path)
-    if kwargs.get('restart', False):
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'restart\' argument to \'lxc.start\' has been deprecated, '
-            'please use \'lxc.restart\' instead.'
-        )
-        return restart(name, path=path)
     if state(name, path=path) == 'frozen':
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
@@ -3721,59 +3662,6 @@ def _run(name,
         return ret
     else:
         return ret[output]
-
-
-def run_cmd(name,
-            cmd,
-            no_start=False,
-            preserve_state=True,
-            stdin=None,
-            stdout=True,
-            stderr=False,
-            python_shell=True,
-            path=None,
-            output_loglevel='debug',
-            use_vt=False,
-            ignore_retcode=False,
-            chroot_fallback=False,
-            keep_env='http_proxy,https_proxy,no_proxy'):
-    '''
-
-    path
-        path to the container parent
-        default: /var/lib/lxc (system default)
-
-        .. versionadded:: 2015.8.0
-
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.run <salt.modules.lxc.run>` instead
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'lxc.run_cmd has been deprecated, please use one of the lxc.run '
-        'functions (or lxc.retcode). See the documentation for more '
-        'information.'
-    )
-    if stdout and stderr:
-        output = 'all'
-    elif stdout:
-        output = 'stdout'
-    elif stderr:
-        output = 'stderr'
-    else:
-        output = 'retcode'
-    return _run(name,
-                cmd,
-                output=output,
-                no_start=no_start,
-                preserve_state=preserve_state,
-                stdin=stdin,
-                python_shell=python_shell,
-                path=path,
-                output_loglevel=output_loglevel,
-                use_vt=use_vt,
-                ignore_retcode=ignore_retcode,
-                keep_env=keep_env)
 
 
 def run(name,
