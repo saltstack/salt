@@ -16,9 +16,9 @@ import tornado
 import tornado.gen
 import tornado.netutil
 import tornado.concurrent
+from tornado.locks import Semaphore
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
-
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
@@ -593,9 +593,11 @@ class IPCMessageSubscriber(IPCClient):
         self._read_stream_future = None
         self._sync_ioloop_running = False
         self.saved_data = []
+        self._sync_read_in_progress = Semaphore()
 
     @tornado.gen.coroutine
     def _read_sync(self, timeout):
+        yield self._sync_read_in_progress.acquire()
         exc_to_raise = None
         ret = None
 
@@ -649,6 +651,7 @@ class IPCMessageSubscriber(IPCClient):
 
         if exc_to_raise is not None:
             raise exc_to_raise  # pylint: disable=E0702
+        self._sync_read_in_progress.release()
         raise tornado.gen.Return(ret)
 
     def read_sync(self, timeout=None):

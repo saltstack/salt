@@ -2330,7 +2330,7 @@ class ClearFuncs(object):
 
             # Get the returner's save_load arg_spec.
             try:
-                arg_spec = salt.utils.args.get_function_argspec(fstr)
+                arg_spec = salt.utils.args.get_function_argspec(self.mminion.returners[fstr])
 
                 # Check if 'minions' is included in returner's save_load arg_spec.
                 # This may be missing in custom returners, which we should warn about.
