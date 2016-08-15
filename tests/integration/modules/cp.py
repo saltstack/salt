@@ -288,7 +288,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.hash_file
         '''
-        md5_hash = self.run_function(
+        sha256_hash = self.run_function(
                 'cp.hash_file',
                 [
                     'salt://grail/scene33',
@@ -303,9 +303,7 @@ class CPModuleTest(integration.ModuleCase):
             if six.PY3:
                 data = salt.utils.to_bytes(data)
             self.assertEqual(
-                    md5_hash['hsum'],
-                    hashlib.md5(data).hexdigest()
-                    )
+                sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 
     def test_get_file_from_env_predefined(self):
         '''
