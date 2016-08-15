@@ -100,8 +100,8 @@ class WinFirewallTestCase(TestCase):
                                               'firewall', 'add', 'rule',
                                               'name=test', 'protocol=tcp',
                                               'dir=in', 'action=allow',
-                                              'localport=8080',
-                                              'remoteip=any'],
+                                              'remoteip=any',
+                                              'localport=8080'],
                                              python_shell=False)
 
     def test_add_rule_icmp4(self):
