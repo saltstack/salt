@@ -288,7 +288,6 @@ def _format_host(host, data):
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
-
             elif __opts__.get('state_output', 'full').lower() == 'changes':
                 # Print terse if no error and no changes, otherwise, be
                 # verbose
