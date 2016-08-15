@@ -279,12 +279,16 @@ def _format_host(host, data):
                 msg = _format_terse(tcolor, comps, ret, colors, tabular)
                 hstrs.append(msg)
                 continue
-            elif __opts__.get('state_output', 'full').lower() == 'mixed':
+            elif __opts__.get('state_output', 'full').lower().startswith('mixed'):
+                if __opts__['state_output'] == 'mixed_id':
+                    # Swap in the ID for the name. Refs #35137
+                    comps[2] = comps[1]
                 # Print terse unless it failed
                 if ret['result'] is not False:
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
+
             elif __opts__.get('state_output', 'full').lower() == 'changes':
                 # Print terse if no error and no changes, otherwise, be
                 # verbose
