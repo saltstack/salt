@@ -21,6 +21,9 @@ Description
 Salt copy copies a local file out to all of the Salt minions matched by the
 given target.
 
+Salt copy is only intended for use with small files (< 100KB). If you need
+to copy large files out to minions please use the cp.get_file function.
+
 Note: salt-cp uses salt's publishing mechanism. This means the privacy of the
 contents of the file on the wire is completely dependent upon the transport
 in use. In addition, if the salt-master is running with debug logging it is
