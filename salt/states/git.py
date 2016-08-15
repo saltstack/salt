@@ -177,14 +177,24 @@ def _failed_submodule_update(ret, exc, comments=None):
     return _fail(ret, msg, comments)
 
 
-def _not_fast_forward(ret, pre, post, branch, local_branch,
+def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
                       local_changes, comments):
+    if branch is None and rev != 'HEAD' and local_branch != rev:
+        branch_msg = (
+            ' The desired rev ({0}) differs from the name of the local branch '
+            '({1}), if the desired rev is a branch name then a forced update '
+            'could possibly be avoided by setting the \'branch\' parameter to '
+            '\'{0}\' instead.'.format(rev, local_branch)
+        )
+    else:
+        branch_msg = ''
+
     pre = _short_sha(pre)
     post = _short_sha(post)
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.'.format(
+        'True to force this update{3}.{4}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -194,7 +204,8 @@ def _not_fast_forward(ret, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
-            ' and discard these changes' if local_changes else ''
+            ' and discard these changes' if local_changes else '',
+            branch_msg,
         ),
         comments
     )
@@ -851,6 +862,7 @@ def latest(name,
                 if not force_reset:
                     return _not_fast_forward(
                         ret,
+                        rev,
                         base_rev,
                         remote_rev,
                         branch,
@@ -1141,6 +1153,7 @@ def latest(name,
                     if fast_forward is False and not force_reset:
                         return _not_fast_forward(
                             ret,
+                            rev,
                             base_rev,
                             remote_rev,
                             branch,
