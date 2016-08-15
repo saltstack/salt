@@ -28,8 +28,8 @@ sub-systems.
 
 from __future__ import absolute_import
 
-import salt.loader_pre as loader_pre
-from salt import loader_core
+from salt import loader_pre
+from salt.loader_core import *
 
 # Side-effect of importing `salt.loader` - discover extensions and load all of the pre-loaders
-loader_pre.load_all_loaders(loader_core.SALT_BASE_PATH, globals())
+loader_pre.load_all_loaders(SALT_BASE_PATH, globals())
