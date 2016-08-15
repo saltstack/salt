@@ -463,7 +463,7 @@ Reload
 ------
 
 ``reload_modules`` is a boolean option that forces salt to reload its modules
-after a state finishes. ``reload_pillar`` can also be set.
+after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
 
 Unless
