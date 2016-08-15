@@ -230,7 +230,7 @@ def main(argv):  # pylint: disable=W0613
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:
-        os.execv(sys.executable, salt_argv)
+        subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)
 
