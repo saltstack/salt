@@ -117,4 +117,3 @@ def fstype(device):
         'and will disappear in Oxygen. Use the disk.fstype function instead.'
     )
     return __salt__['disk.fstype'](device)
-
