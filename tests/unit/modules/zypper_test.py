@@ -73,7 +73,7 @@ class ZypperTestCase(TestCase):
         self.zypper_patcher_config = {
             '_get_configured_repos': Mock(side_effect=side_effect),
             '__zypper__': Mock(),
-            'get_repo': Mock()
+            'get_repo': Mock(return_value={})
         }
 
     def test_list_upgrades(self):
@@ -493,17 +493,8 @@ class ZypperTestCase(TestCase):
             'salt.modules.zypper', **self.zypper_patcher_config)
 
         with zypper_patcher:
-            with self.assertRaisesRegexp(
-                Exception,
-                'Specified arguments did not result in modification of repo'
-            ):
-                zypper.mod_repo(name, **{'url': url})
-            with self.assertRaisesRegexp(
-                Exception,
-                'Specified arguments did not result in modification of repo'
-            ):
-                zypper.mod_repo(name, **{'url': url, 'gpgautoimport': 'a'})
-
+            self.assertEqual(zypper.mod_repo(name, **{'url': url}),
+                             {'comment': 'Specified arguments did not result in modification of repo'})
             zypper.__zypper__.xml.call.assert_not_called()
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
