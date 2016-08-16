@@ -148,6 +148,8 @@ def output(data):
         'Data passed to highstate outputter is not a valid highstate return: %s',
         data
     )
+    # We should not reach here, but if we do return empty string
+    return ''
 
 
 def _format_host(host, data):
