@@ -16,8 +16,8 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has five output modes, ``full``, ``terse``,
-    ``mixed``, ``changes`` and ``filter``.
+    The highstate outputter has six output modes, ``full``, ``terse``,
+    ``mixed``, ``mixed_id``, ``changes`` and ``filter``.
 
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
@@ -25,6 +25,9 @@ state_output:
       only one line.
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
+    * If ``mixed_id`` is used, then the mixed form will be used, but the
+      be drawn from the state ID. This is useful for cases where the name
+      value might be very long and hard to read.
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
     * If ``filter`` is used, then either or both of two different filters can be
