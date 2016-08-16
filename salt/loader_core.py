@@ -260,7 +260,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     mod_dict_class = salt.utils.odict.OrderedDict
 
     def __init__(self,
-                 module_dirs,
+                 module_dirs_,
                  opts=None,
                  tag='module',
                  loaded_base_name=None,
@@ -283,7 +283,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.context_dict = salt.utils.context.ContextDict()
         self.opts = self.__prep_mod_opts(opts)
 
-        self.module_dirs = module_dirs
+        self.module_dirs = module_dirs_
         self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
