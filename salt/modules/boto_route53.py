@@ -109,6 +109,74 @@ def _get_split_zone(zone, _conn, private_zone):
     return False
 
 
+def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
+                          key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about one, or all, zones in the bound account.
+    If neither zone_id nor domain_name is provided, return all zones.
+    Note that the return format is slightly different between the 'all'
+    and 'single' description types.
+
+    zone_id
+        The unique identifier for the Hosted Zone
+
+    domain_name
+        The FQDN of the Hosted Zone (including final period)
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if zone_id and domain_name:
+        raise SaltInvocationError('At most one of zone_id or domain_name may '
+                                  'be provided')
+    retries = 10
+    while retries:
+        try:
+            if zone_id:
+                zone_id = zone_id.replace('/hostedzone/',
+                        '') if zone_id.startswith('/hostedzone/') else zone_id
+                ret = getattr(conn.get_hosted_zone(zone_id),
+                              'GetHostedZoneResponse', None)
+            elif domain_name:
+                ret = getattr(conn.get_hosted_zone_by_name(domain_name),
+                              'GetHostedZoneResponse', None)
+            else:
+                marker = None
+                ret = None
+                while marker is not '':
+                    r = conn.get_all_hosted_zones(start_marker=marker,
+                                                  zone_list=ret)
+                    ret = r['ListHostedZonesResponse']['HostedZones']
+                    marker = r['ListHostedZonesResponse'].get('NextMarker', '')
+            return ret if ret else []
+        except DNSServerError as e:
+            # if rate limit, retry:
+            if retries and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(3)
+                tries -= 1
+                continue
+            log.error('Could not list zones: {0}'.format(e.message))
+            return []
+
+
+def list_all_zones_by_name(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, by their FQDNs, all hosted zones in the bound account.
+    '''
+    ret = describe_hosted_zones(region=region, key=key, keyid=keyid,
+                                profile=profile)
+    return [r['Name'] for r in ret]
+
+
+def list_all_zones_by_id(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, by their IDs, all hosted zones in the bound account.
+    '''
+    ret = describe_hosted_zones(region=region, key=key, keyid=keyid,
+                                profile=profile)
+    return [r['Id'].replace('/hostedzone/', '') for r in ret]
+
+
 def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
                 retry_on_rate_limit=True, rate_limit_retries=5):
     '''
@@ -147,7 +215,7 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
     .. versionadded:: 2015.8.0
 
     zone
-        DNZ zone to create
+        DNS zone to create
 
     private
         True/False if the zone will be a private zone
@@ -449,3 +517,130 @@ def _wait_for_sync(status, conn, wait_for_sync):
         time.sleep(20)
     log.error('Timed out waiting for Route53 status update.')
     return False
+
+
+def create_hosted_zone(domain_name, caller_ref=None, comment='',
+                       private_zone=False, vpc_id=None, vpc_name=None,
+                       vpc_region=None, region=None, key=None, keyid=None,
+                       profile=None):
+    '''
+    Create a new Route53 Hosted Zone. Returns a Python data structure with
+    information about the newly created Hosted Zone.
+
+    domain_name
+        The name of the domain. This should be a fully-specified domain, and
+        should terminate with a period. This is the name you have registered
+        with your DNS registrar. It is also the name you will delegate from your
+        registrar to the Amazon Route 53 delegation servers returned in response
+        to this request.
+
+    caller_ref
+        A unique string that identifies the request and that allows
+        create_hosted_zone() calls to be retried without the risk of executing
+        the operation twice.  You want to provide this where possible, since
+        additional calls while the first is in PENDING status will be accepted
+        and can lead to multiple copies of the zone being created in Route53.
+
+    comment
+        Any comments you want to include about the hosted zone.
+
+    private_zone
+        Set True if creating a private hosted zone.
+
+    vpc_id
+        When creating a private hosted zone, either the VPC ID or VPC Name to
+        associate with is required.  Exclusive with vpe_name.  Ignored if passed
+        for a non-private zone.
+
+    vpc_name
+        When creating a private hosted zone, either the VPC ID or VPC Name to
+        associate with is required.  Exclusive with vpe_id.  Ignored if passed
+        for a non-private zone.
+
+    vpc_region
+        When creating a private hosted zone, the region of the associated VPC is
+        required.  If not provided, an effort will be made to determine it from
+        vpc_id or vpc_name, if possible.  If this fails, you'll need to provide
+        an explicit value for this option.  Ignored if passed for a non-private
+        zone.
+
+    region
+        Region endpoint to connect to
+
+    key
+        AWS key to bind with
+
+    keyid
+        AWS keyid to bind with
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid
+
+    CLI Example::
+
+        salt myminion boto_route53.create_hosted_zone example.org
+    '''
+    if region is None:
+        region = 'universal'
+
+    if not domain_name.endswith('.'):
+        raise SaltInvocationError('Domain MUST be fully-qualified, complete '
+                                  'with ending period.')
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    deets = conn.get_hosted_zone_by_name(domain_name)
+    if deets:
+        log.info('Route53 hosted zone {0} already exists'.format(domain_name))
+        return None
+
+    args = {'domain_name': domain_name,
+            'caller_ref': caller_ref,
+            'comment': comment,
+            'private_zone': private_zone}
+
+    if private_zone:
+        if not _exactly_one((vpc_name, vpc_id)):
+            raise SaltInvocationError('Either vpc_name or vpc_id is required '
+                                      'when creating a private zone.')
+        vpcs = __salt__['boto_vpc.describe_vpcs'](
+                vpc_id=vpc_id, name=vpc_name, region=region, key=key,
+                keyid=keyid, profile=profile).get('vpcs', [])
+        if vpc_region and vpcs:
+            vpcs = [v for v in vpcs if v['region'] == vpc_region]
+        if not vpcs:
+            log.error('Private zone requested but a VPC matching given criteria'
+                      ' not found.')
+            return None
+        if len(vpcs) > 1:
+            log.error('Private zone requested but multiple VPCs matching given '
+                      'criteria found: {0}.'.format([v['id'] for v in vpcs]))
+            return None
+        vpc = vpcs[0]
+        if vpc_name:
+            vpc_id = vpc['id']
+        if not vpc_region:
+            vpc_region = vpc['region']
+        args.update({'vpc_id': vpc_id, 'vpc_region': vpc_region})
+    else:
+        if any((vpc_id, vpc_name, vpc_region)):
+            log.info('Options vpc_id, vpc_name, and vpc_region are ignored '
+                     'when creating non-private zones.')
+
+    retries = 10
+    while retries:
+        try:
+            # Crazy layers of dereference...
+            r = conn.create_hosted_zone(**args)
+            r = r.CreateHostedZoneResponse.__dict__ if hasattr(r,
+                    'CreateHostedZoneResponse') else {}
+            return r.get('parent', {}).get('CreateHostedZoneResponse')
+        except DNSServerError as e:
+            if retries and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(3)
+                retries -= 1
+                continue
+            log.error('Failed to create hosted zone {0}: {1}'.format(
+                    domain_name, e.message))
+            return None
