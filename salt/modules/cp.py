@@ -790,9 +790,19 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         load_path = upload_path.lstrip(os.sep)
     else:
         load_path = path.lstrip(os.sep)
+    # Normalize the path. This does not eliminate
+    # the possibility that relative entries will still be present
+    load_path_normal = os.path.normpath(load_path)
+
+    # If this is Windows and a drive letter is present, remove it
+    load_path_split_drive = os.path.splitdrive(load_path_normal)[1:]
+
+    # Finally, split the remaining path into a list for delivery to the master
+    load_path_list = os.path.split(load_path_split_drive)
+
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
-            'path': load_path,
+            'path': load_path_list,
             'tok': auth.gen_token('salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
