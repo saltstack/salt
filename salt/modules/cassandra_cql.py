@@ -232,36 +232,27 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
         port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
         cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
         cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
-        log.debug('()()()()()()()()()()()()( proto version passed {0} ^^^'.format(protocol_version))
         protocol_version = _load_properties(property_name=None, config_option='protocol_version',
                                             set_default=True, default=4)
-        log.debug('^^^^^^^^^^^^^^^^^^^^^^ proto version retrieved {0} ^^^'.format(protocol_version))
- 
 
         try:
             auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
             ssl_opts = _get_ssl_opts()
             if ssl_opts:
-                # lbp = WhiteListRoundRobinPolicy(contact_points)
                 cluster = Cluster(contact_points,
                                   port=port,
-#                                   load_balancing_policy=lbp,
                                   auth_provider=auth_provider,
                                   ssl_options=ssl_opts,
                                   protocol_version=protocol_version,
                                   compression=True)
             else:
-#                lbp = WhiteListRoundRobinPolicy(contact_points)
                 cluster = Cluster(contact_points, port=port,
-#                                  load_balancing_policy=lbp,
                                   auth_provider=auth_provider,
                                   protocol_version=protocol_version,
                                   compression=True)
             for recontimes in [1, 2, 3]:
                 try:
-                    log.warning('Attempting connect')
                     session = cluster.connect()
-                    log.warning('After connect')
                     break
                 except OperationTimedOut:
                     log.warning('Cassandra cluster.connect timed out, try {0}'.format(recontimes))
