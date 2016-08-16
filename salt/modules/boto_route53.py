@@ -123,6 +123,25 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
     domain_name
         The FQDN of the Hosted Zone (including final period)
 
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_route53.describe_hosted_zones domain_name=foo.bar.com. \
+                profile='{"region": "us-east-1", "keyd": "A12345678AB", "key": "xblahblahblah"}'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if zone_id and domain_name:
@@ -162,6 +181,25 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
 def list_all_zones_by_name(region=None, key=None, keyid=None, profile=None):
     '''
     List, by their FQDNs, all hosted zones in the bound account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_route53.list_all_zones_by_name
     '''
     ret = describe_hosted_zones(region=region, key=key, keyid=keyid,
                                 profile=profile)
@@ -171,6 +209,25 @@ def list_all_zones_by_name(region=None, key=None, keyid=None, profile=None):
 def list_all_zones_by_id(region=None, key=None, keyid=None, profile=None):
     '''
     List, by their IDs, all hosted zones in the bound account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_route53.list_all_zones_by_id
     '''
     ret = describe_hosted_zones(region=region, key=key, keyid=keyid,
                                 profile=profile)
