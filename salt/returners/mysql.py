@@ -44,29 +44,19 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.mysql.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
     alternative.mysql.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
-Should you wish the returner data to be cleaned out every so often
-provide values for the following variables in the master configuration file.
-These variables accept the same parameters as any scheduler entry, except
-the function and function args, as they will be pre-filled with the functions
-to clean out or archive the returner data. Example:
+Should you wish the returner data to be cleaned out every so often, set
+`keep_jobs` to the number of hours for the jobs to live in the tables.
+Setting it to `0` or leaving it unset will cause the data to stay in the tables.
 
-.. code-block:: yaml
+Should you wish to archive jobs in a different table for later processing,
+set `archive_jobs` to True.  Salt will create 3 archive tables
 
-    mysql_returner_purge_schedule:
+- `jids_archive`
+- `salt_returns_archive`
+- `salt_events_archive`
 
-The archive schedule configuration takes one extra parameter, `archive_name_template`.
-This is a template for the names of the archive tables in your MySQL database.  The
-parameter accepts template variables `date` and `table` which will be replaced with
-the date of the archive and the name of the table being archived.  For example,
-if `archive_name_template` is set to {{ table }}_archive_{{ date }} and the archive
-is performed on July 17, 2016 at 1:00:00 PM the table names will look like
-`jids_archive_20160717130000`, `salt_returns_archive_20160717130000`, etc.
-
-.. code-block:: yaml
-
-    mysql_returner_archive_schedule:
-        archive_name_template: {{table}}_archive_{{ date }}
-
+and move the contents of `jids`, `salt_returns`, and `salt_events` that are
+more than `keep_jobs` hours old to these tables.
 
 Use the following mysql database schema:
 
@@ -465,12 +455,121 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
-def clean_old_jobs():
+def _purge_jobs(timestamp):
     '''
-    Called in the master's event loop every loop_interval.
+    Purge records from the returner tables.
+    :param job_age_in_seconds:  Purge jobs older than this
     :return:
     '''
-    if __opts__.get('keep_jobs', False):
+    with _get_serv() as cur:
+        try:
+            sql = 'delete from `jids` where jid in (select distinct jid from salt_returns where alter_time < %s)'
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to delete contents of table \'jids\'')
+            log.error(str(e))
+            raise salt.exceptions.Salt(str(e))
 
-        if __opts__.get('archive_jobs', False):
+        try:
+            sql = 'delete from `salt_returns` where alter_time < %s'
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to delete contents of table \'salt_returns\'')
+            log.error(str(e))
+            raise salt.exceptions.Salt(str(e))
+
+        try:
+            sql = 'delete from `salt_events` where alter_time < %s'
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to delete contents of table \'salt_events\'')
+            log.error(str(e))
+            raise salt.exceptions.Salt(str(e))
+
+    return True
+
+
+def _archive_jobs(timestamp):
+    '''
+    Copy rows to a set of backup tables, then purge rows.
+    :param timestamp: Archive rows older than this timestamp
+    :return:
+    '''
+    source_tables = ['jids',
+                     'salt_returns',
+                     'salt_events']
+
+    with _get_serv() as cur:
+        target_tables = {}
+        for table_name in source_tables:
+            try:
+                tmp_table_name = table_name + '_archive'
+                sql = 'create table if not exists {0} like {1}'.format(tmp_table_name, table_name)
+                cur.execute(sql)
+                cur.execute('COMMIT')
+                target_tables[table_name] = tmp_table_name
+            except MySQLdb.Error as e:
+                log.error('mysql returner archiver was unable to create the archive tables.')
+                log.error(str(e))
+                raise salt.exceptions.SaltRunnerError(str(e))
+
+    with _get_serv() as cur:
+        try:
+            sql = 'insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
+            log.error(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
+        except Exception as e:
+            log.error(e)
+            raise
+
+        try:
+            sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_returns'], 'salt_returns')
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to copy contents of table \'salt_returns\'')
+            log.error(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
+
+        try:
+            sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
+            cur.execute(sql, (timestamp,))
+            cur.execute('COMMIT')
+        except MySQLdb.Error as e:
+            log.error('mysql returner archiver was unable to copy contents of table \'salt_events\'')
+            log.error(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
+
+    return _purge_jobs(timestamp)
+
+
+def clean_old_jobs():
+    '''
+    Called in the master's event loop every loop_interval.  Archives and/or
+    deletes the events and job details from the database.
+    :return:
+    '''
+    if __opts__.get('keep_jobs', False) and int(__opts__.get('keep_jobs', 0)) > 0:
+        try:
+            with _get_serv() as cur:
+                sql = 'select now() - %s as stamp;'
+                cur.execute(sql, (__opts__['keep_jobs'],))
+                rows = cur.fetchall()
+                stamp = int(rows[0][0]) * 60 * 60
+
+            if __opts__.get('archive_jobs', False):
+                _archive_jobs(stamp)
+            else:
+                _purge_jobs(stamp)
+        except MySQLdb.Error as e:
+            log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
+            log.error(str(e))
+            raise salt.exceptions.Salt(str(e))
 
