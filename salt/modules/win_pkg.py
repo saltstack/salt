@@ -87,9 +87,18 @@ def latest_version(*names, **kwargs):
 
         # get latest installed version of package
         if name in installed_pkgs:
-            log.trace('Sorting out the latest available version of {0}'.format(name))
-            latest_installed = sorted(installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
-            log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
+            log.trace('Determining latest installed version of %s', name)
+            try:
+                latest_installed = sorted(
+                    installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
+            except IndexError:
+                log.warning(
+                    '%s was empty in pkg.list_pkgs return data, this is '
+                    'probably a bug in list_pkgs', name
+                )
+            else:
+                log.debug('Latest installed version of %s is %s',
+                          name, latest_installed)
 
         # get latest available (from winrepo_dir) version of package
         pkg_info = _get_package_info(name)
@@ -1100,7 +1109,10 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
 def _get_latest_pkg_version(pkginfo):
     if len(pkginfo) == 1:
         return next(six.iterkeys(pkginfo))
-    return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()
+    try:
+        return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()
+    except IndexError:
+        return ''
 
 
 def compare_versions(ver1='', oper='==', ver2=''):
