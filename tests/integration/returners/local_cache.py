@@ -6,8 +6,6 @@ Tests for the local_cache returner
 from __future__ import absolute_import
 import logging
 import os
-import platform
-import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
