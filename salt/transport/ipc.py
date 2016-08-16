@@ -726,4 +726,5 @@ class IPCMessageSubscriber(IPCClient):
                 self._read_stream_future.exc_info()
 
     def __del__(self):
-        self.close()
+        if IPCMessageSubscriber in globals():
+            self.close()
