@@ -483,20 +483,21 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
-            self.message_client = SaltMessageClient(
-                self.opts,
-                self.opts['master_ip'],
-                int(self.auth.creds['publish_port']),
-                io_loop=self.io_loop,
-                connect_callback=self.connect_callback,
-                disconnect_callback=self.disconnect_callback)
-            yield self.message_client.connect()  # wait for the client to be connected
-            self.connected = True
+            if self.auth.authenticated:
+                self.message_client = SaltMessageClient(
+                    self.opts,
+                    self.opts['master_ip'],
+                    int(self.auth.creds['publish_port']),
+                    io_loop=self.io_loop,
+                    connect_callback=self.connect_callback,
+                    disconnect_callback=self.disconnect_callback)
+                yield self.message_client.connect()  # wait for the client to be connected
+                self.connected = True
         # TODO: better exception handling...
         except KeyboardInterrupt:
             raise
-        except:
-            raise SaltClientError('Unable to sign_in to master')  # TODO: better error message
+        except Exception as exc:
+            raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
         '''
@@ -881,7 +882,7 @@ class SaltMessageClient(object):
                 yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
-                if '__last_transport' in self.opts:
+                if 'detect_mode' in self.opts:
                     log.info('There was an error trying to use TCP transport; '
                              'attempting to fallback to another transport')
                 else:
