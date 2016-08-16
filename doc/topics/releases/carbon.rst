@@ -313,6 +313,19 @@ Execution Module Deprecations
 - The ``contains_regex_multiline`` function was removed from the ``file`` execution module.
   Use ``file.search`` instead.
 
+- The ``lxc`` execution module has the following changes:
+
+  - The ``run_cmd`` function was removed. Use ``lxc.run`` instead.
+  - The ``nic`` argument was removed from the ``lxc.init`` function. Use ``network_profile``
+    instead.
+  - The ``clone`` argument was removed from the ``lxc.init`` function. Use ``clone_from``
+    instead.
+  - passwords passed to the ``lxc.init`` function will be assumed to be hashed, unless
+    ``password_encrypted=False``.
+  - The ``restart`` argument for ``lxc.start`` was removed. Use ``lxc.restart`` instead.
+  - The old style of defining lxc containers has been removed. Please use keys under which
+    LXC profiles should be configured such as ``lxc.container_profile.profile_name``.
+
 - ``reg`` execution module
 
   Functions in the ``reg`` execution module had misleading and confusing names
