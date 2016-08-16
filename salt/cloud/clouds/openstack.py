@@ -512,7 +512,7 @@ def request_instance(vm_=None, call=None):
     if config_drive is not None:
         kwargs['ex_config_drive'] = config_drive
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -582,7 +582,7 @@ def create(vm_):
 
     vm_['key_filename'] = key_filename
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -771,7 +771,7 @@ def create(vm_):
 
     vm_['salt_host'] = salt_ip_address
     vm_['ssh_host'] = ip_address
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data.__dict__)
 
     if hasattr(data, 'extra') and 'password' in data.extra:
@@ -784,7 +784,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),

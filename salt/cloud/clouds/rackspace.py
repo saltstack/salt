@@ -202,7 +202,7 @@ def create(vm_):
         pass
 
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -222,7 +222,7 @@ def create(vm_):
         'size': get_size(conn, vm_)
     }
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -429,7 +429,7 @@ def create(vm_):
             del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -438,9 +438,9 @@ def create(vm_):
         )
 
         if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
+            deployed = __utils__['cloud.deploy_windows'](**deploy_kwargs)
         else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
+            deployed = __utils__['cloud.deploy_script'](**deploy_kwargs)
 
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -463,7 +463,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
