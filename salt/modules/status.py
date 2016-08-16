@@ -534,6 +534,17 @@ def diskstats():
                              'weighted_ms_spent_in_io': _number(comps[13])}
         return ret
 
+    def windows_diskstats():
+        '''
+        windows specific diskstats
+        '''
+        try:
+            mywmi = salt.executors.wmicall.get('Win32_PerfRawData_PerfDisk_PhysicalDisk');
+            return mywmi.execute().formatresponse()
+        except:
+            log.debug('Switching to psutil as backup on Windows')
+            return psutil.disk_io_counters(perdisk=True)
+
     def generic_diskstats():
         '''
         generic implementation of diskstats
@@ -554,6 +565,7 @@ def diskstats():
         'Linux': linux_diskstats,
         'FreeBSD': generic_diskstats,
         'SunOS': generic_diskstats,
+        'Windows': windows_diskstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
