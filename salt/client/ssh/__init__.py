@@ -126,8 +126,11 @@ SUDO=""
 if [ -n "{{SUDO}}" ]
 then SUDO="sudo "
 fi
-if [ "$SUDO" ]
+SUDO_USER="{{SUDO_USER}}"
+if [ "$SUDO" ] && [ "$SUDO_USER" ]
 then SUDO="sudo -u {{SUDO_USER}}"
+elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
+then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
