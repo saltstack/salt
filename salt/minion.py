@@ -731,9 +731,6 @@ class MinionManager(MinionBase):
     defined in the master option and binds each minion object to a respective
     master.
     '''
-    # timeout for one of the minions to auth with a master
-    MINION_CONNECT_TIMEOUT = 5
-
     def __init__(self, opts):
         super(MinionManager, self).__init__(opts)
         self.auth_wait = self.opts['acceptance_wait_time']
@@ -771,9 +768,8 @@ class MinionManager(MinionBase):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
-            s_opts['auth_timeout'] = self.MINION_CONNECT_TIMEOUT
             minion = Minion(s_opts,
-                            self.MINION_CONNECT_TIMEOUT,
+                            s_opts['auth_timeout'],
                             False,
                             io_loop=self.io_loop,
                             loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
