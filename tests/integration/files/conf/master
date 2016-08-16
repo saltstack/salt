@@ -10,6 +10,7 @@ sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
 fileserver_list_cache_time: 0
+file_recv: True
 pillar_opts: True
 peer:
   '.*':
