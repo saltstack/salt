@@ -2295,6 +2295,19 @@ ext_pillar.
 
     ext_pillar_first: False
 
+.. conf_master:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
+
 .. _git-pillar-config-opts:
 
 Git External Pillar (git_pillar) Configuration Options

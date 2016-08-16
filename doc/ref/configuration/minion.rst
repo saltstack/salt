@@ -1271,6 +1271,19 @@ the environment setting, but for pillar instead of states.
 
     pillarenv: None
 
+.. conf_minion:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
+
 .. conf_minion:: file_recv_max_size
 
 ``file_recv_max_size``
