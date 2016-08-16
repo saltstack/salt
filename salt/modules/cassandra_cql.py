@@ -100,7 +100,6 @@ try:
     from cassandra.connection import ConnectionException, \
         ConnectionShutdown, OperationTimedOut
     from cassandra.auth import PlainTextAuthProvider
-    from cassandra.policies import DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy
     from cassandra.query import dict_factory
     # pylint: enable=import-error,no-name-in-module
     HAS_DRIVER = True
