@@ -380,8 +380,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def connect(self):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self.publish_port = self.auth.creds['publish_port']
-        self._socket.connect(self.master_pub)
+        if self.opts.get('detect_mode', False) is False:
+            self.publish_port = self.auth.creds['publish_port']
+            self._socket.connect(self.master_pub)
 
     @property
     def master_pub(self):
@@ -993,6 +994,9 @@ class AsyncReqMessageClient(object):
             future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message] = future
+
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)

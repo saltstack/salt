@@ -574,8 +574,23 @@ class MinionBase(object):
                 opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
                 try:
-                    pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
-                    yield pub_channel.connect()
+                    if self.opts['transport'] == 'detect':
+                        self.opts['detect_mode'] = True
+                        #for trans in ('zeromq', 'tcp'):
+                        for trans in ('tcp', 'zeromq'):
+                            log.debug('00000000000000')
+                            self.opts['transport'] = trans
+                            log.debug('11111111111111')
+                            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                            log.debug('22222222222222')
+                            yield pub_channel.connect()
+                            log.debug('33333333333333')
+                            if not pub_channel.auth.authenticated:
+                                log.debug('44444444444444')
+                                continue
+                    else:
+                            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                            yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token('salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))

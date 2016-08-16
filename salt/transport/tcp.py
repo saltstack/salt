@@ -981,6 +981,9 @@ class SaltMessageClient(object):
         # Add this future to the mapping
         self.send_future_map[message_id] = future
 
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
+
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message_id)
             self.send_timeout_map[message_id] = send_timeout
