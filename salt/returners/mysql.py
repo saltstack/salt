@@ -463,3 +463,14 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def clean_old_jobs():
+    '''
+    Called in the master's event loop every loop_interval.
+    :return:
+    '''
+    if __opts__.get('keep_jobs', False):
+
+        if __opts__.get('archive_jobs', False):
+
