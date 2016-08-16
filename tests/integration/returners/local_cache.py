@@ -15,23 +15,15 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from integration import TMP
 import salt.utils.job
 from salt.returners import local_cache
 
 log = logging.getLogger(__name__)
-if platform.uname()[0] == 'Darwin':
-    SYS_TMP_DIR = '/tmp'
-elif salt.utils.is_windows():
-    SYS_TMP_DIR = os.path.join("c:/", "tmp")
-else:
-    SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
-
-# CACHE_DIR
-TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
-TMP_CACHE_DIR = os.path.join(TMP, 'master-minion-root', 'cache')
 
 # JOBS DIR and FILES
-JOBS_DIR = os.path.join(TMP, TMP_CACHE_DIR, 'jobs')
+TMP_CACHE_DIR = os.path.join(TMP, 'master-minion-root', 'cache')
+JOBS_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
 JID_DIR = os.path.join(JOBS_DIR, 'b1', '4dac7bc743c928d7fac908823af1ab')
 JID_FILE = os.path.join(JID_DIR, 'jid')
 JID_MINION_DIR = os.path.join(JID_DIR, 'minion', 'return.p')
