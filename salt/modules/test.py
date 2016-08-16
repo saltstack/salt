@@ -443,7 +443,7 @@ def not_loaded():
     '''
     prov = providers()
     ret = set()
-    for mod_dir in salt.loader._module_dirs(__opts__, 'modules', 'module'):
+    for mod_dir in salt.loader.module_dirs(__opts__, 'modules', 'module'):
         if not os.path.isabs(mod_dir):
             continue
         if not os.path.isdir(mod_dir):
