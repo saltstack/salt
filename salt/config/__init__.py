@@ -232,6 +232,10 @@ VALID_OPTS = {
     # List of startup states
     'sls_list': list,
 
+    # Configuration for snapper in the state system
+    'snapper_states': bool,
+    'snapper_states_config': str,
+
     # A top file to execute if startup_states == 'top'
     'top_file': str,
 
@@ -1048,6 +1052,8 @@ DEFAULT_MINION_OPTS = {
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
+    'snapper_states': False,
+    'snapper_states_config': 'root',
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,

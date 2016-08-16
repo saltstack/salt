@@ -36,6 +36,23 @@ These updates include many more Thorium states, a system for automating
 key management, the ability to use Thorium to easily replace old
 reactors and a great deal of stability and bug fixes.
 
+State Rollback Using Snapper
+----------------------------
+
+Rollback has been one of the most prevalent requests for Salt. We
+have researched it extensively and concluded that the only way to
+accomplish truly reliable rollback would be to execute it at
+the filesystem layer. To accomplish this we have introduced Snapper
+integration into Salt States.
+
+Snapper is a tool which allows for simple and reliable snapshots
+of the filesystem to be made. With the new `snapper_states` option
+set to `True` in the minion config a snapshot will be made before
+and after every Salt State run.
+
+These snapshots can be viewed, managed and rolled back to via the
+`snapper` execution module.
+
 Preserve File Perms in File States
 ----------------------------------
 
