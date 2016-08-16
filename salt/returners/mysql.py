@@ -572,4 +572,3 @@ def clean_old_jobs():
             log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
             log.error(str(e))
             raise salt.exceptions.Salt(str(e))
-
