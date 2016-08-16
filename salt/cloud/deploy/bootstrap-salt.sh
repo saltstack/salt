@@ -18,7 +18,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2016.08.15"
+__ScriptVersion="2016.08.16"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -2270,22 +2270,7 @@ __enable_universe_repository() {
 }
 
 install_ubuntu_deps() {
-    if ([ "${_SLEEP}" -eq "${__DEFAULT_SLEEP}" ] && [ "$DISTRO_MAJOR_VERSION" -lt 15 ]); then
-        # The user did not pass a custom sleep value as an argument, let's increase the default value
-        echodebug "On Ubuntu systems we increase the default sleep value to 10."
-        echodebug "See https://github.com/saltstack/salt/issues/12248 for more info."
-        _SLEEP=10
-    fi
-    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
-    fi
-    # No user interaction, libc6 restart services for example
-    export DEBIAN_FRONTEND=noninteractive
-
     apt-get update
-
-    # Install Keys
-    __apt_get_install_noinput debian-archive-keyring && apt-get update
 
     if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]); then
         # Above Ubuntu 12.04 add-apt-repository is in a different package
@@ -2317,9 +2302,9 @@ install_ubuntu_deps() {
             fi
 
         fi
-    fi
 
-    __PIP_PACKAGES=""
+        apt-get update
+    fi
 
     # Minimal systems might not have upstart installed, install it
     __PACKAGES="upstart"
@@ -2339,21 +2324,12 @@ install_ubuntu_deps() {
     # Additionally install procps and pciutils which allows for Docker bootstraps. See 366#issuecomment-39666813
     __PACKAGES="${__PACKAGES} procps pciutils"
 
-    apt-get update
-    # shellcheck disable=SC2086,SC2090
-    __apt_get_install_noinput ${__PACKAGES} || return 1
-
-    if [ "${__PIP_PACKAGES}" != "" ]; then
-        # shellcheck disable=SC2086,SC2090
-        if [ "$_VIRTUALENV_DIR" != "null" ]; then
-            __activate_virtualenv
-        fi
-        pip install -U "${__PIP_PACKAGES}"
-    fi
-
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
     fi
+
+    # shellcheck disable=SC2086,SC2090
+    __apt_get_install_noinput ${__PACKAGES} || return 1
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
@@ -2365,7 +2341,24 @@ install_ubuntu_deps() {
 }
 
 install_ubuntu_stable_deps() {
-    install_ubuntu_deps || return 1
+    if ([ "${_SLEEP}" -eq "${__DEFAULT_SLEEP}" ] && [ "$DISTRO_MAJOR_VERSION" -lt 15 ]); then
+        # The user did not pass a custom sleep value as an argument, let's increase the default value
+        echodebug "On Ubuntu systems we increase the default sleep value to 10."
+        echodebug "See https://github.com/saltstack/salt/issues/12248 for more info."
+        _SLEEP=10
+    fi
+
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
+
+    # No user interaction, libc6 restart services for example
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
 
     if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
          __get_dpkg_architecture || return 1
@@ -2385,7 +2378,7 @@ install_ubuntu_stable_deps() {
             fi
         fi
 
-        # Versions starting with 2015.5.6 and 2015.8.1 are hosted at repo.saltstack.com
+        # Versions starting with 2015.5.6, 2015.8.1 and 2016.3.0 are hosted at repo.saltstack.com
         if [ "$(echo "$STABLE_REV" | egrep '^(2015\.5|2015\.8|2016\.3|latest|archive\/)')" != "" ]; then
             # Workaround for latest non-LTS ubuntu
             if [ "$DISTRO_MAJOR_VERSION" -eq 15 ]; then
@@ -2400,11 +2393,7 @@ install_ubuntu_stable_deps() {
             # SaltStack's stable Ubuntu repository:
             SALTSTACK_UBUNTU_URL="${HTTP_VAL}://repo.saltstack.com/apt/ubuntu/${UBUNTU_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
 
-            if [ "$(grep -ER 'latest .+ main' /etc/apt)" = "" ]; then
-                set +o nounset
-                echo "deb $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > "/etc/apt/sources.list.d/saltstack.list"
-                set -o nounset
-            fi
+            apt-get update
 
             # Make sure https transport is available
             if [ "$HTTP_VAL" = "https" ] ; then
@@ -2413,6 +2402,12 @@ install_ubuntu_stable_deps() {
 
             # Make sure wget is available
             __apt_get_install_noinput wget
+
+            if [ "$(grep -ER 'latest .+ main' /etc/apt)" = "" ]; then
+                set +o nounset
+                echo "deb $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > "/etc/apt/sources.list.d/saltstack.list"
+                set -o nounset
+            fi
 
             # shellcheck disable=SC2086
             wget $_WGET_ARGS -q $SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub -O - | apt-key add - || return 1
@@ -2436,11 +2431,11 @@ install_ubuntu_stable_deps() {
         fi
     fi
 
-    apt-get update
+    install_ubuntu_deps || return 1
 }
 
 install_ubuntu_daily_deps() {
-    install_ubuntu_deps || return 1
+    install_ubuntu_stable_deps || return 1
 
     if [ "$DISTRO_MAJOR_VERSION" -ge 12 ]; then
         # Above Ubuntu 11.10 add-apt-repository is in a different package
@@ -2476,10 +2471,9 @@ install_ubuntu_git_deps() {
     __git_clone_and_checkout || return 1
 
     __PACKAGES=""
-    __PIP_PACKAGES=""
 
     # See how we are installing packages
-    if [ ${_PIP_ALL} -eq $BS_TRUE ]; then
+    if [ "${_PIP_ALL}" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} python-dev swig libssl-dev libzmq3 libzmq3-dev"
 
         if ! __check_command_exists pip; then
@@ -2492,37 +2486,18 @@ install_ubuntu_git_deps() {
         # Install the pythons from requirements (only zmq for now)
         __install_pip_deps "${_SALT_GIT_CHECKOUT_DIR}/requirements/zeromq.txt" || return 1
     else
-        install_ubuntu_deps || return 1
-        __PACKAGES="${__PACKAGES} python-yaml python-m2crypto python-crypto msgpack-python python-zmq python-jinja2"
+        install_ubuntu_stable_deps || return 1
+
+        __PACKAGES="${__PACKAGES} python-crypto python-jinja2 python-m2crypto python-msgpack python-requests"
+        __PACKAGES="${__PACKAGES} python-tornado python-yaml python-zmq"
 
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             # Install python-libcloud if asked to
             __PACKAGES="${__PACKAGES} python-libcloud"
         fi
 
-        if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-            # We're on the develop branch, install whichever tornado is on the requirements file
-            __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
-
-            if [ "${__REQUIRED_TORNADO}" != "" ]; then
-                __check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
-
-                __PACKAGES="${__PACKAGES} python-dev"
-                __PIP_PACKAGES="${__PIP_PACKAGES} ${__REQUIRED_TORNADO}"
-
-                if ! __check_command_exists pip; then
-                    __PACKAGES="${__PACKAGES} python-setuptools python-pip"
-                fi
-            fi
-        fi
-
         # shellcheck disable=SC2086
         __apt_get_install_noinput ${__PACKAGES} || return 1
-
-        if [ "${__PIP_PACKAGES}" != "" ]; then
-            # shellcheck disable=SC2086,SC2090
-            pip install -U ${__PIP_PACKAGES} || return 1
-        fi
     fi
 
     # Let's trigger config_salt()
@@ -2578,7 +2553,7 @@ install_ubuntu_stable_post() {
     # Workaround for latest LTS packages on latest ubuntu. Normally packages on
     # debian-based systems will automatically start the corresponding daemons
     if [ "$DISTRO_MAJOR_VERSION" -lt 15 ]; then
-       return 0
+        return 0
     fi
 
     for fname in minion master syndic api; do
