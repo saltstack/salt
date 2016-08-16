@@ -211,6 +211,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -229,6 +230,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -434,6 +436,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -472,6 +475,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

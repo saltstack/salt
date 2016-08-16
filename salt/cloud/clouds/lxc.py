@@ -398,6 +398,7 @@ def destroy(vm_, call=None):
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(vm_),
             {'name': vm_, 'instance_id': vm_},
+            opts=__opts__,
             transport=__opts__['transport']
         )
         cret = _salt('lxc.destroy', vm_, stop=True, path=path)
@@ -409,6 +410,7 @@ def destroy(vm_, call=None):
                 'destroyed instance',
                 'salt/cloud/{0}/destroyed'.format(vm_),
                 {'name': vm_, 'instance_id': vm_},
+                opts=__opts__,
                 transport=__opts__['transport']
             )
             if __opts__.get('update_cachedir', False) is True:
@@ -443,6 +445,7 @@ def create(vm_, call=None):
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
          'provider': vm_['driver'], },
+        opts=__opts__,
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
@@ -482,6 +485,7 @@ def create(vm_, call=None):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

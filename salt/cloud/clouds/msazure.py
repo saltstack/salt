@@ -431,6 +431,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -527,6 +528,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         event_kwargs,
+        opts=__opts__,
         transport=__opts__['transport']
     )
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
@@ -643,6 +645,7 @@ def create(vm_):
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
             {'volumes': volumes},
+            opts=__opts__,
             transport=__opts__['transport']
         )
 
@@ -680,6 +683,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

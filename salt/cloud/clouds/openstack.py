@@ -520,6 +520,7 @@ def request_instance(vm_=None, call=None):
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name,
                     'profile': vm_['profile']}},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -591,6 +592,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -793,6 +795,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

@@ -479,6 +479,7 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -516,6 +517,7 @@ def destroy(name, conn=None, call=None):
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            opts=__opts__,
             transport=__opts__['transport']
         )
         if __opts__.get('delete_sshkeys', False) is True:
@@ -631,6 +633,7 @@ def request_instance(vm_=None, call=None):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs.get('image_id', 'Boot From Volume'),
                     'size': kwargs['flavor_id']}},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -693,6 +696,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
     conn = get_conn()
@@ -910,6 +914,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 

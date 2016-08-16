@@ -263,6 +263,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -296,6 +297,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -318,6 +320,7 @@ def create(vm_):
               {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
                           'device': ex_blockdevicemapping['DeviceName'],
                           'size': ex_blockdevicemapping['VolumeSize']}},
+              opts=__opts__,
             )
             try:
                 volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
@@ -396,6 +399,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -417,6 +421,7 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        opts=__opts__,
     )
 
     if not conn:
@@ -441,6 +446,7 @@ def destroy(name, conn=None, call=None):
             'detaching volume',
             'salt/cloud/{0}/detaching'.format(volume.name),
             {'name': volume.name},
+            opts=__opts__,
         )
         if not conn.detach_volume(volume):
             log.error('Failed to Detach volume: {0}'.format(volume.name))
@@ -451,6 +457,7 @@ def destroy(name, conn=None, call=None):
             'detached volume',
             'salt/cloud/{0}/detached'.format(volume.name),
             {'name': volume.name},
+            opts=__opts__,
         )
 
         log.info('Destroying volume: {0}'.format(volume.name))
@@ -459,6 +466,7 @@ def destroy(name, conn=None, call=None):
             'destroying volume',
             'salt/cloud/{0}/destroying'.format(volume.name),
             {'name': volume.name},
+            opts=__opts__,
         )
         if not conn.destroy_volume(volume):
             log.error('Failed to Destroy volume: {0}'.format(volume.name))
@@ -469,6 +477,7 @@ def destroy(name, conn=None, call=None):
             'destroyed volume',
             'salt/cloud/{0}/destroyed'.format(volume.name),
             {'name': volume.name},
+            opts=__opts__,
         )
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
@@ -483,6 +492,7 @@ def destroy(name, conn=None, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        opts=__opts__,
     )
     if __opts__['delete_sshkeys'] is True:
         salt.utils.cloud.remove_sshkey(node.public_ips[0])

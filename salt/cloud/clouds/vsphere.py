@@ -265,6 +265,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -276,6 +277,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': vm_},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -350,6 +352,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        opts=__opts__,
         transport=__opts__['transport']
     )
     return ret
@@ -479,6 +482,7 @@ def _deploy(vm_):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': deploy_kwargs},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -647,6 +651,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        opts=__opts__,
         transport=__opts__['transport']
     )
 
@@ -664,6 +669,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        opts=__opts__,
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:
