@@ -587,8 +587,8 @@ class MinionBase(object):
                                 continue
                             detect_connect = True
                     else:
-                            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
-                            yield pub_channel.connect()
+                        pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                        yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token('salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))

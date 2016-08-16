@@ -7,7 +7,6 @@ This includes client side transport, for the ReqServer and the Publisher
 
 # Import Python Libs
 from __future__ import absolute_import
-import time
 import logging
 
 # Import Salt Libs
