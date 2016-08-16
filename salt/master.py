@@ -1218,10 +1218,9 @@ class AESFuncs(object):
         '''
         if any(key not in load for key in ('id', 'path', 'loc')):
             return False
-        if not self.opts['file_recv'] or os.path.isabs(load['path']):
+        if not isinstance(load['path'], list):
             return False
-        if os.path.isabs(load['path']) or '../' in load['path']:
-            # Can overwrite master files!!
+        if not self.opts['file_recv']:
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
@@ -1258,18 +1257,28 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
-        # Normalize Windows paths
-        normpath = load['path']
-        if ':' in normpath:
-            # make sure double backslashes are normalized
-            normpath = normpath.replace('\\', '/')
-            normpath = os.path.normpath(normpath)
+
+        # Path normalization should have been done by the sending
+        # minion but we can't guarantee it. Re-do it here.
+        normpath = os.path.normpath(os.path.join(*load['path']))
+
+        # Ensure that this safety check is done after the path
+        # have been normalized.
+        if os.path.isabs(normpath) or '../' in load['path']:
+            # Can overwrite master files!!
+            return False
+
         cpath = os.path.join(
             self.opts['cachedir'],
             'minions',
             load['id'],
             'files',
             normpath)
+        # One last safety check here
+        if not os.path.normpath(cpath).startswith(self.opts['cachedir']):
+            log.warning('Attempt to write received file outside of master cache '
+                        'directory! Requested file write: {0}. Access denied.'.format(cpath))
+            return False
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:

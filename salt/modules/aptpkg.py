@@ -618,8 +618,11 @@ def install(name=None,
         else:
             cmd_prefix += ['-o', 'DPkg::Options::=--force-confold']
         cmd_prefix += ['-o', 'DPkg::Options::=--force-confdef']
-        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
-            cmd_prefix.append('--no-install-recommends')
+        if 'install_recommends' in kwargs:
+            if not kwargs['install_recommends']:
+                cmd_prefix.append('--no-install-recommends')
+            else:
+                cmd_prefix.append('--install-recommends')
         if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
             cmd_prefix.append('--only-upgrade')
         if skip_verify:
