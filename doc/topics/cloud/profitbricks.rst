@@ -6,12 +6,12 @@ ProfitBricks provides an enterprise-grade Infrastructure as a Service (IaaS)
 solution that can be managed through a browser-based "Data Center Designer"
 (DCD) tool or via an easy to use API. A unique feature of the ProfitBricks
 platform is that it allows you to define your own settings for cores, memory,
-and disk size without being tied to a particular instance size.
+and disk size without being tied to a particular server size.
 
 Dependencies
 ============
 
-* profitbricks >= 2.3.0
+* profitbricks >= 2.3.4
 
 Configuration
 =============
@@ -23,6 +23,8 @@ Configuration
 .. code-block:: yaml
 
     my-profitbricks-config:
+      driver: profitbricks
+
       # Set the location of the salt-master
       #
       minion:
@@ -38,8 +40,6 @@ Configuration
       public_lan: 1
       ssh_public_key: /path/to/id_rsa.pub
       ssh_private_key: /path/to/id_rsa
-
-      driver: profitbricks
 
 
 .. note::
@@ -78,12 +78,10 @@ Here is an example of a profile:
 
 .. code-block:: yaml
 
-    profitbricks_production:
+    profitbricks_staging
       provider: my-profitbricks-config
       size: Micro Instance
       image: 2f98b678-6e7e-11e5-b680-52540066fee9
-      disk_size: 10
-      disk_type: SSD
       cores: 2
       ram: 4096
       public_lan: 1
@@ -91,6 +89,35 @@ Here is an example of a profile:
       ssh_public_key: /path/to/id_rsa.pub
       ssh_private_key: /path/to/id_rsa
       ssh_interface: private_lan
+
+    profitbricks_production:
+      provider: my-profitbricks-config
+      image: Ubuntu-15.10-server-2016-05-01
+      disk_type: SSD
+      disk_size: 40
+      cores: 8
+      cpu_family: INTEL_XEON
+      ram: 32768
+      public_lan: 1
+      private_lan: 2
+      public_firewall_rules:
+        Allow SSH:
+          protocol: TCP
+          source_ip: 1.2.3.4
+          port_range_start: 22
+          port_range_end: 22
+        Allow Ping:
+          protocol: ICMP
+          icmp_type: 8
+      ssh_public_key: /path/to/id_rsa.pub
+      ssh_private_key: /path/to/id_rsa
+      ssh_interface: private_lan
+      volumes:
+        db_data:
+          disk_size: 500
+        db_log:
+          disk_size: 50
+          disk_type: SSD
 
 The following list explains some of the important properties.
 
@@ -126,14 +153,42 @@ ram
     forth.
 
 public_lan
-    This option will connect the instance to the specified public LAN. If no
+    This option will connect the server to the specified public LAN. If no
     LAN exists, then a new public LAN will be created. The value accepts a LAN
     ID (integer).
+
+public_firewall_rules
+    This option allows for a list of firewall rules assigned to the public
+    network interface.
+     
+    Firewall Rule Name:
+      protocol: <protocol> (TCP, UDP, ICMP)
+      source_mac: <source-mac>
+      source_ip: <source-ip>
+      target_ip: <target-ip>
+      port_range_start: <port-range-start>
+      port_range_end: <port-range-end>
+      icmp_type: <icmp-type>
+      icmp_code: <icmp-code>
     
 private_lan
-    This option will connect the instance to the specified private LAN. If no
+    This option will connect the server to the specified private LAN. If no
     LAN exists, then a new private LAN will be created. The value accepts a LAN
     ID (integer).
+    
+private_firewall_rules
+    This option allows for a list of firewall rules assigned to the private
+    network interface.
+
+    Firewall Rule Name:
+      protocol: <protocol> (TCP, UDP, ICMP)
+      source_mac: <source-mac>
+      source_ip: <source-ip>
+      target_ip: <target-ip>
+      port_range_start: <port-range-start>
+      port_range_end: <port-range-end>
+      icmp_type: <icmp-type>
+      icmp_code: <icmp-code>
 
 ssh_private_key
     Full path to the SSH private key file.
@@ -145,6 +200,15 @@ ssh_interface
     This option will use the private LAN IP for node connections (such as
     as bootstrapping the node) instead of the public LAN IP. The value accepts
     'private_lan'.
+
+cpu_family
+    This option allow the CPU family to be set to AMD_OPTERON or INTEL_XEON.
+    The default is AMD_OPTERON.
+
+volumes:
+    This option allows a list of additional volumes by name that will be
+    created and attached to the server. Each volume requires 'disk_size'
+    and, optionally, 'disk_type'. The default is HDD.
 
 deploy
     Set to False if Salt should not be installed on the node.
