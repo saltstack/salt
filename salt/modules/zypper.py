@@ -34,6 +34,7 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError)
 
@@ -100,6 +101,7 @@ class _Zypper(object):
         self.__no_raise = False
         self.__refresh = False
         self.__ignore_repo_failure = False
+        self.__systemd_scope = False
 
     def __call__(self, *args, **kwargs):
         '''
@@ -110,6 +112,8 @@ class _Zypper(object):
         # Ignore exit code for 106 (repo is not available)
         if 'no_repo_failure' in kwargs:
             self.__ignore_repo_failure = kwargs['no_repo_failure']
+        if 'systemd_scope' in kwargs:
+            self.__systemd_scope = kwargs['systemd_scope']
         return self
 
     def __getattr__(self, item):
@@ -251,8 +255,12 @@ class _Zypper(object):
         # However, Zypper lock needs to be always respected.
         was_blocked = False
         while True:
-            log.debug("Calling Zypper: " + ' '.join(self.__cmd))
-            self.__call_result = __salt__['cmd.run_all'](self.__cmd, **kwargs)
+            cmd = []
+            if self.__systemd_scope:
+                cmd.extend(['systemd-run', '--scope'])
+            cmd.extend(self.__cmd)
+            log.debug("Calling Zypper: " + ' '.join(cmd))
+            self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
 
@@ -293,6 +301,11 @@ class _Zypper(object):
 
 
 __zypper__ = _Zypper()
+
+
+def _systemd_scope():
+    return salt.utils.systemd.has_scope(__context__) \
+        and __salt__['config.get']('systemd.scope', True)
 
 
 def list_upgrades(refresh=True, **kwargs):
@@ -874,6 +887,20 @@ def install(name=None,
             ignore_repo_failure=False,
             **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package(s), add refresh=True to force a 'zypper refresh'
     before package is installed.
 
@@ -1000,10 +1027,11 @@ def install(name=None,
         cmd_install.extend(fromrepoopt)
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
+    systemd_scope = _systemd_scope()
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
-        for line in __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd).splitlines():
+        for line in __zypper__(no_repo_failure=ignore_repo_failure, systemd_scope=systemd_scope).call(*cmd).splitlines():
             match = re.match(r"^The selected package '([^']+)'.+has lower version", line)
             if match:
                 downgrades.append(match.group(1))
@@ -1021,6 +1049,20 @@ def install(name=None,
 
 def upgrade(refresh=True):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Run a full system upgrade, a zypper upgrade
 
     refresh
@@ -1047,7 +1089,7 @@ def upgrade(refresh=True):
     if refresh:
         refresh_db()
     old = list_pkgs()
-    __zypper__.noraise.call('update', '--auto-agree-with-licenses')
+    __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         ret['result'] = False
         ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
@@ -1074,8 +1116,9 @@ def _uninstall(name=None, pkgs=None):
     if not targets:
         return {}
 
+    systemd_scope = _systemd_scope()
     while targets:
-        __zypper__.call('remove', *targets[:500])
+        __zypper__(systemd_scope=systemd_scope).call('remove', *targets[:500])
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
 
@@ -1084,6 +1127,20 @@ def _uninstall(name=None, pkgs=None):
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages with ``zypper -n remove``
 
     name
@@ -1114,6 +1171,20 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper -n remove -u``
 
