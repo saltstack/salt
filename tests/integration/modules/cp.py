@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import hashlib
+import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -322,6 +323,22 @@ class CPModuleTest(integration.ModuleCase):
         finally:
             os.unlink(tgt)
 
+    def test_push(self):
+        log_to_xfer = os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        try:
+            self.run_function('cp.push', log_to_xfer)
+            tgt_cache_file = os.path.join(
+                 integration.TMP,
+                'master-minion-root',
+                'cache',
+                'minions',
+                'minion',
+                'files',
+                tempfile.gettempdir(),
+                'salt-runtests.log')
+            self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
+        finally:
+            os.unlink(tgt_cache_file)
 
 if __name__ == '__main__':
     from integration import run_tests
