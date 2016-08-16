@@ -246,7 +246,8 @@ def get(key, default='', delimiter=':', merge=None):
     - Minion configuration
     - Minion's grains
     - Minion's pillar data
-    - Master configuration
+    - Master configuration (requires :conf_minion:`pillar_opts` to be set to
+      ``True`` in Minion config file in order to work)
 
     This means that if there is a value that is going to be the same for the
     majority of minions, it can be configured in the Master config file, and
