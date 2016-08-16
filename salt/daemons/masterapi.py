@@ -12,11 +12,11 @@ import os
 import re
 import time
 import stat
-import tempfile
 
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.cache
 import salt.client
 import salt.payload
 import salt.pillar
@@ -448,6 +448,7 @@ class RemoteFuncs(object):
                 states=False,
                 rend=False)
         self.__setup_fileserver()
+        self.cache = salt.cache.Cache(opts)
 
     def __setup_fileserver(self):
         '''
@@ -599,18 +600,11 @@ class RemoteFuncs(object):
                 greedy=False
                 )
         for minion in minions:
-            mine = os.path.join(
-                    self.opts['cachedir'],
-                    'minions',
-                    minion,
-                    'mine.p')
-            try:
-                with salt.utils.fopen(mine, 'rb') as fp_:
-                    fdata = self.serial.load(fp_).get(load['fun'])
-                    if fdata:
-                        ret[minion] = fdata
-            except Exception:
-                continue
+            fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
+            if isinstance(fdata, dict):
+                fdata = fdata.get(load['fun'])
+                if fdata:
+                    ret[minion] = fdata
         return ret
 
     def _mine(self, load, skip_verify=False):
@@ -621,19 +615,14 @@ class RemoteFuncs(object):
             if 'id' not in load or 'data' not in load:
                 return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                os.makedirs(cdir)
-            datap = os.path.join(cdir, 'mine.p')
+            cbank = 'minions/{0}'.format(load['id'])
+            ckey = 'mine'
             if not load.get('clear', False):
-                if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        new = self.serial.load(fp_)
-                    if isinstance(new, dict):
-                        new.update(load['data'])
-                        load['data'] = new
-            with salt.utils.fopen(datap, 'w+b') as fp_:
-                fp_.write(self.serial.dumps(load['data']))
+                data = self.cache.fetch(cbank, ckey)
+                if isinstance(data, dict):
+                    data.update(load['data'])
+                    load['data'] = data
+            self.cache.store(cbank, ckey, load['data'])
         return True
 
     def _mine_delete(self, load):
@@ -643,20 +632,17 @@ class RemoteFuncs(object):
         if 'id' not in load or 'fun' not in load:
             return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                return False
-            datap = os.path.join(cdir, 'mine.p')
-            if os.path.isfile(datap):
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        mine_data = self.serial.load(fp_)
-                    if isinstance(mine_data, dict):
-                        if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+b') as fp_:
-                                fp_.write(self.serial.dumps(mine_data))
-                except OSError:
+            cbank = 'minions/{0}'.format(load['id'])
+            ckey = 'mine'
+            try:
+                data = self.cache.fetch(cbank, ckey)
+                if not isinstance(data, dict):
                     return False
+                if load['fun'] in data:
+                    del data[load['fun']]
+                    self.cache.store(cbank, ckey, data)
+            except OSError:
+                return False
         return True
 
     def _mine_flush(self, load, skip_verify=False):
@@ -666,15 +652,7 @@ class RemoteFuncs(object):
         if not skip_verify and 'id' not in load:
             return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                return False
-            datap = os.path.join(cdir, 'mine.p')
-            if os.path.isfile(datap):
-                try:
-                    os.remove(datap)
-                except OSError:
-                    return False
+            return self.cache.flush('minions/{0}'.format(load['id']), 'mine')
         return True
 
     def _file_recv(self, load):
@@ -751,20 +729,9 @@ class RemoteFuncs(object):
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                os.makedirs(cdir)
-            datap = os.path.join(cdir, 'data.p')
-            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-            os.close(tmpfh)
-            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                fp_.write(
-                        self.serial.dumps(
-                            {'grains': load['grains'],
-                             'pillar': data})
-                            )
-            # On Windows, os.rename will fail if the destination file exists.
-            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
+            self.cache.store('minions/{0}'.format(load['id']),
+                             'data',
+                             {'grains': load['grains'], 'pillar': data})
         return data
 
     def _minion_event(self, load):

@@ -898,6 +898,9 @@ VALID_OPTS = {
 
     # Minion de-dup jid cache max size
     'minion_jid_queue_hwm': int,
+
+    # Minion data cache driver (one of satl.cache.* modules)
+    'cache': str,
 }
 
 # default configurations
@@ -1400,6 +1403,7 @@ DEFAULT_MASTER_OPTS = {
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
     'python3_bin': 'python3',
+    'cache': 'localfs',
 }
 
 

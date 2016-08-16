@@ -244,7 +244,7 @@ class Client(object):
             if cachedir is None:
                 cachedir = self.opts['cachedir']
             elif not os.path.isabs(cachedir):
-                cachedir = os.path.join(self.opts['cachdir'], cachedir)
+                cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):

@@ -27,6 +27,7 @@ from datetime import datetime
 
 # Import salt libs
 import salt.config
+import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
@@ -1309,9 +1310,8 @@ class LocalClient(object):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    minion_cache = os.path.join(self.opts['cachedir'], 'minions', id_, 'data.p')
                     if self.opts['minion_data_cache'] \
-                            and os.path.exists(minion_cache) \
+                            and salt.cache.Cache(self.opts).contains('minions/{0}'.format(id_), 'data') \
                             and connected_minions \
                             and id_ not in connected_minions:
 

@@ -633,7 +633,7 @@ def grains(opts, force_refresh=False, proxy=None):
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
-    # if we hae no grains, lets try loading from disk (TODO: move to decorator?)
+    # if we have no grains, lets try loading from disk (TODO: move to decorator?)
     cfn = os.path.join(
         opts['cachedir'],
         'grains.cache.p'

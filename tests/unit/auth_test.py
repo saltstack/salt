@@ -78,7 +78,7 @@ class MasterACLTestCase(integration.ModuleCase):
     @patch('salt.minion.MasterMinion', MagicMock())
     @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        opts = self.get_config('minion', from_scratch=True)
+        opts = self.get_config('master', from_scratch=True)
         opts['client_acl'] = {}
         opts['publisher_acl'] = {}
         opts['client_acl_blacklist'] = {}
@@ -504,7 +504,7 @@ class AuthACLTestCase(integration.ModuleCase):
     @patch('salt.minion.MasterMinion', MagicMock())
     @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        opts = self.get_config('minion', from_scratch=True)
+        opts = self.get_config('master', from_scratch=True)
         opts['client_acl'] = {}
         opts['publisher_acl'] = {}
         opts['client_acl_blacklist'] = {}
