@@ -117,7 +117,7 @@ class LocalClient(object):
 
     ..note::
 
-        The LocalClient uses a tornado IOLoop, this can create issues when
+        The LocalClient uses a Tornado IOLoop, this can create issues when
         using the LocalClient inside an existing IOLoop. If creating the
         LocalClient in partnership with another IOLoop either create the
         IOLoop before creating the LocalClient, or when creating the IOLoop
