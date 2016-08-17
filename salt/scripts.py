@@ -450,6 +450,9 @@ def salt_api():
     '''
     The main function for salt-api
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.api
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
     sapi.run()
