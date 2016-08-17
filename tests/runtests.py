@@ -78,6 +78,9 @@ TEST_SUITES = {
     'renderers':
        {'display_name': 'Renderers',
         'path': 'integration/renderers'},
+    'returners':
+        {'display_name': 'Returners',
+         'path': 'integration/returners'},
     'loader':
        {'display_name': 'Loader',
         'path': 'integration/loader'},
@@ -256,6 +259,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run tests for minion'
+        )
+        self.test_selection_group.add_option(
+            '--returners',
+            dest='returners',
+            default=False,
+            action='store_true',
+            help='Run salt/returners/*.py tests'
         )
         self.test_selection_group.add_option(
             '-l',
