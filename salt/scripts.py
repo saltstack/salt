@@ -275,6 +275,9 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     pid = os.getpid()
     try:
