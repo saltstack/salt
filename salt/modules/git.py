@@ -1391,7 +1391,7 @@ def diff(cwd,
          cached=False,
          paths=None):
     '''
-    .. versionadded:: 2015.8.12,2016.3.3
+    .. versionadded:: 2015.8.12,2016.3.3,Carbon
 
     Interface to `git-diff(1)`_
 
