@@ -533,7 +533,9 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
 def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     Display the low state data from a specific sls or list of sls files on the
-    master
+    master.
+
+    .. versionadded:: 2016.3.2
 
     CLI Example:
 
