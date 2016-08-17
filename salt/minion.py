@@ -582,6 +582,7 @@ class MinionBase(object):
                             yield pub_channel.connect()
                             if not pub_channel.auth.authenticated:
                                 continue
+                            del self.opts['detect_mode']
                             break
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
