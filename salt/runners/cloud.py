@@ -83,7 +83,7 @@ def select_query(query_type='list_nodes_select'):
     return info
 
 
-def profile(prof=None, instances=None, **kwargs):
+def profile(prof=None, instances=None, opts=None, **kwargs):
     '''
     Create a cloud vm with the given profile and instances, instances can be a
     list or comma-delimited string
@@ -107,6 +107,8 @@ def profile(prof=None, instances=None, **kwargs):
         return {'Error': 'One or more instances (comma-delimited) must be set'}
 
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.profile(prof, instances, **kwargs)
     return info
 
@@ -149,7 +151,7 @@ def action(func=None,
     return info
 
 
-def create(provider, instances, **kwargs):
+def create(provider, instances, opts=None, **kwargs):
     '''
     Create an instance using Salt Cloud
 
@@ -166,5 +168,7 @@ def create(provider, instances, **kwargs):
         if not kwarg.startswith('__'):
             create_kwargs[kwarg] = kwargs[kwarg]
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.create(provider, instances, **create_kwargs)
     return info
