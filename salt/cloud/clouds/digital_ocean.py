@@ -39,6 +39,7 @@ import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
+    SaltInvocationError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -861,7 +862,7 @@ def post_dns_record(**kwargs):
             pass
         else:
             error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(i, kwargs[i], str(mandatory_kwargs))
-            raise salt.exceptions.SaltInvocationError(error)
+            raise SaltInvocationError(error)
 
     domain = query(method='domains', droplet_id=kwargs['dns_domain'])
 
