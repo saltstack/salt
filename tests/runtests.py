@@ -139,6 +139,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt/renderers/*.py tests'
         )
         self.test_selection_group.add_option(
+            '--returners',
+            dest='returners',
+            default=False,
+            action='store_true',
+            help='Run salt/returners/*.py tests'
+        )
+        self.test_selection_group.add_option(
             '-l',
             '--loader',
             default=False,
@@ -222,6 +229,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.state,
                 self.options.runners,
                 self.options.renderers,
+                self.options.returners,
                 self.options.loader,
                 self.options.name,
                 self.options.outputter,
@@ -244,7 +252,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
                     self.options.fileserver, self.options.wheel,
-                    self.options.api, self.options.renderers)):
+                    self.options.api, self.options.returners, self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -253,6 +261,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.unit = True
             self.options.runners = True
             self.options.renderers = True
+            self.options.returners = True
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
@@ -372,6 +381,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runners or
                  self.options.renderers or
+                 self.options.returners or
                  self.options.state or
                  self.options.module or
                  self.options.cli or
@@ -406,7 +416,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.shell, self.options.state,
                     self.options.loader, self.options.outputter,
                     self.options.name, self.options.cloud_provider_tests,
-                    self.options.api, self.options.renderers,
+                    self.options.api, self.options.returners, self.options.renderers,
                     self.options.fileserver, self.options.wheel]):
             return status
 
@@ -444,6 +454,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
             if self.options.api:
                 status.append(self.run_integration_suite('netapi', 'NetAPI'))
+            if self.options.returners:
+                status.append(self.run_integration_suite('returners', 'Returners'))
             if self.options.renderers:
                 status.append(self.run_integration_suite('renderers', 'Renderers'))
         return status
