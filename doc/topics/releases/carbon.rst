@@ -343,6 +343,10 @@ Execution Module Deprecations
   - The old style of defining lxc containers has been removed. Please use keys under which
     LXC profiles should be configured such as ``lxc.container_profile.profile_name``.
 
+- The ``env`` and ``activate`` keyword arguments have been removed from the ``install``
+  function in the ``pip`` execution module. The use of ``bin_env`` replaces both of these
+  options.
+
 - ``reg`` execution module
 
   Functions in the ``reg`` execution module had misleading and confusing names
@@ -395,6 +399,10 @@ Runner Module Deprecations
 
 State Module Deprecations
 -------------------------
+
+- The ``env`` and ``activate`` keyword arguments were removed from the ``installed``
+  function in the ``pip`` state module. The use of ``bin_env`` replaces both of these
+  options.
 
 - ``reg`` state module
 

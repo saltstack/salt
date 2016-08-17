@@ -328,7 +328,6 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
-            env=None,
             bin_env=None,
             use_wheel=False,
             no_use_wheel=False,
@@ -358,7 +357,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             user=None,
             no_chown=False,
             cwd=None,
-            activate=False,
             pre_releases=False,
             cert=None,
             allow_all_external=False,
@@ -390,9 +388,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         .. note::
             If installing into a virtualenv, just use the path to the
             virtualenv (e.g. ``/home/code/path/to/virtualenv/``)
-
-    env
-        Deprecated, use bin_env now
 
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
@@ -496,14 +491,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cwd
         Current working directory to run pip from
 
-    activate
-        Activates the virtual environment, if given via bin_env, before running
-        install.
-
-        .. deprecated:: 2014.7.2
-            If `bin_env` is given, pip will already be sourced from that
-            virtualenv, making `activate` effectively a noop.
-
     pre_releases
         Include pre-releases in the available versions
 
@@ -561,28 +548,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    # Switching from using `pip_bin` and `env` to just `bin_env`
-    # cause using an env and a pip bin that's not in the env could
-    # be problematic.
-    # Still using the `env` variable, for backwards compatibility's sake
-    # but going fwd you should specify either a pip bin or an env with
-    # the `bin_env` argument and we'll take care of the rest.
-    if env and not bin_env:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
-            'This functionality will be removed in Salt Carbon.'
-        )
-        bin_env = env
-
-    if activate:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing \'activate\' to the pip module is deprecated. If '
-            'bin_env refers to a virtualenv, there is no need to activate '
-            'that virtualenv before using pip to install packages in it.'
-        )
-
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'install']
