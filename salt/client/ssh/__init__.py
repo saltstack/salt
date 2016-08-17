@@ -288,7 +288,7 @@ class SSH(object):
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
-                    '/tmp',
+                    '/var/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
             self.opts['ssh_wipe'] = 'True'
         self.serial = salt.payload.Serial(opts)
