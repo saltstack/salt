@@ -10,7 +10,19 @@ values are stored and computed, such as averages etc.
 
 # import python libs
 from __future__ import absolute_import
-import statistics
+
+try:
+    import statistics
+    HAS_STATS = True
+except ImportError:
+    HAS_STATS = False
+
+
+def __virtual__():
+    '''
+    The statistics module must be pip installed
+    '''
+    return HAS_STATS
 
 
 def calc(name, num, oper, ref=None):
