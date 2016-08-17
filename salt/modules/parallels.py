@@ -73,7 +73,7 @@ def _find_guids(guid_string):
     for found_guid in re.finditer(GUID_REGEX, guid_string):
         if found_guid.groups():
             guids.append(found_guid.group(0).strip('{}'))
-    return set(sorted(guids))
+    return sorted(list(set(guids)))
 
 
 def prlctl(sub_cmd, args=None, runas=None):
@@ -400,6 +400,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
     # Get a set of all snapshot GUIDs in the string
     snap_ids = _find_guids(info)
+    print(snap_ids)
 
     # Try to match the snapshot name to an ID
     named_ids = []
