@@ -115,6 +115,9 @@ def salt_minion():
     '''
     Start the salt minion.
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
