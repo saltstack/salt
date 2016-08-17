@@ -51,6 +51,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+import salt.utils.systemd
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 from salt.exceptions import (
@@ -1102,6 +1103,20 @@ def install(name=None,
             normalize=True,
             **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any yum/dnf commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
 
@@ -1373,7 +1388,11 @@ def install(name=None,
             cmd.append('--nogpgcheck')
 
     if targets:
-        cmd = [_yum(), '-y']
+        cmd = []
+        if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+            cmd.extend(['systemd-run', '--scope'])
+        cmd.extend([_yum(), '-y'])
         if _yum() == 'dnf':
             cmd.extend(['--best', '--allowerasing'])
         _add_common_args(cmd)
@@ -1387,7 +1406,11 @@ def install(name=None,
         )
 
     if downgrade:
-        cmd = [_yum(), '-y']
+        cmd = []
+        if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+            cmd.extend(['systemd-run', '--scope'])
+        cmd.extend([_yum(), '-y'])
         _add_common_args(cmd)
         cmd.append('downgrade')
         cmd.extend(downgrade)
@@ -1399,7 +1422,11 @@ def install(name=None,
         )
 
     if to_reinstall:
-        cmd = [_yum(), '-y']
+        cmd = []
+        if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+            cmd.extend(['systemd-run', '--scope'])
+        cmd.extend([_yum(), '-y'])
         _add_common_args(cmd)
         cmd.append('reinstall')
         cmd.extend(six.itervalues(to_reinstall))
@@ -1426,9 +1453,22 @@ def install(name=None,
 
 def upgrade(refresh=True, skip_verify=False, **kwargs):
     '''
-    Run a full system upgrade, a yum upgrade
-
     .. versionchanged:: 2014.7.0
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any yum/dnf commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
+    Run a full system upgrade, a yum upgrade
 
     Return a dict containing the new package names and versions::
 
@@ -1458,8 +1498,6 @@ def upgrade(refresh=True, skip_verify=False, **kwargs):
     disableexcludes
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
-
-        .. versionadded:: 2014.7.0
     '''
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
@@ -1469,7 +1507,11 @@ def upgrade(refresh=True, skip_verify=False, **kwargs):
         refresh_db(**kwargs)
 
     old = list_pkgs()
-    cmd = [_yum(), '--quiet', '-y']
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend([_yum(), '--quiet', '-y'])
     for args in (repo_arg, exclude_arg, branch_arg):
         if args:
             cmd.extend(args)
@@ -1488,6 +1530,20 @@ def upgrade(refresh=True, skip_verify=False, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any yum/dnf commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages
 
     name
@@ -1522,7 +1578,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = [_yum(), '-y', 'remove'] + targets
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend([_yum(), '-y', 'remove'] + targets)
     __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1534,6 +1594,20 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any yum/dnf commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Package purges are not supported by yum, this function is identical to
     :mod:`pkg.remove <salt.modules.yumpkg.remove>`.
 

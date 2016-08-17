@@ -22,6 +22,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
@@ -464,6 +465,20 @@ def install(name=None,
             binhost=None,
             **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any emerge commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package(s), add refresh=True to sync the portage tree
     before package is installed.
 
@@ -591,16 +606,16 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
-        emerge_opts = 'tbz2file'
+        emerge_opts = ['tbz2file']
     else:
-        emerge_opts = ''
+        emerge_opts = []
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = ['-g']
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = ['-G']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     changes = {}
 
@@ -627,11 +642,11 @@ def install(name=None,
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
-                        target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                        target = '{0}{1}-{2}'.format(prefix, param, verstr)
                     else:
-                        target = '"{0}{1}"'.format(param, verstr)
+                        target = '{0}{1}'.format(param, verstr)
                 else:
-                    target = '"{0}"'.format(param)
+                    target = '{0}'.format(param)
 
                 if '[' in target:
                     old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
@@ -661,7 +676,15 @@ def install(name=None,
                 targets.append(target)
     else:
         targets = pkg_params
-    cmd = 'emerge --ask n --quiet {0} {1} {2}'.format(bin_opts, emerge_opts, ' '.join(targets))
+
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['emerge', '--ask', 'n', '--quiet'])
+    cmd.extend(bin_opts)
+    cmd.extend(emerge_opts)
+    cmd.extend(targets)
 
     old = list_pkgs()
     call = __salt__['cmd.run_all'](cmd,
@@ -677,6 +700,20 @@ def install(name=None,
 
 def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any emerge commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Updates the passed package (emerge --update package)
 
     slot
@@ -714,14 +751,25 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
         full_atom = '{0}::{1}'.format(full_atom, fromrepo)
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = ['-g']
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = ['-G']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     old = list_pkgs()
-    cmd = 'emerge --ask n --quiet --update --newuse --oneshot {0} {1}'.format(bin_opts, full_atom)
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['emerge',
+                '--ask', 'n',
+                '--quiet',
+                '--update',
+                '--newuse',
+                '--oneshot'])
+    cmd.extend(bin_opts)
+    cmd.append(full_atom)
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
@@ -734,6 +782,20 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
 def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any emerge commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Run a full system upgrade (emerge -uDN @world)
 
     binhost
@@ -775,13 +837,17 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
         bin_opts = ''
 
     old = list_pkgs()
-    cmd = ['emerge',
-           '--ask', 'n',
-           '--quiet',
-           '--backtrack', '{0}'.format(backtrack),
-           '--update',
-           '--newuse',
-           '--deep']
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['emerge',
+                '--ask', 'n',
+                '--quiet',
+                '--backtrack', '{0}'.format(backtrack),
+                '--update',
+                '--newuse',
+                '--deep'])
     if bin_opts:
         cmd.append(bin_opts)
     cmd.append('@world')
@@ -804,6 +870,20 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
 
 def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any emerge commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages via emerge --unmerge.
 
     name
@@ -852,8 +932,17 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --ask n --quiet --unmerge --quiet-unmerge-warn ' \
-          '{0}'.format(' '.join(targets))
+
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['emerge',
+                '--ask', 'n',
+                '--quiet',
+                '--unmerge',
+                '--quiet-unmerge-warn'])
+    cmd.extend(targets)
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
                             python_shell=False)
@@ -864,6 +953,20 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any emerge commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process
 
