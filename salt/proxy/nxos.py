@@ -47,7 +47,7 @@ the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution modul
 
 .. note::
     The option `proxy_merge_grains_in_module: True` is required to have the NXOS
-    grains be availble from the proxy minion, for the Carbon release.  For
+    grains be available from the proxy minion, for the Carbon release.  For
     Nitrogen, the setting will be True by default.
 
 .. note:
