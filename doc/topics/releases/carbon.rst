@@ -292,6 +292,11 @@ General Deprecations
       # will result in refresh evaluating to True and saltenv likely not being a string at all
       fcn('add more salt', 'prod', False)
 
+- Deprecations in ``minion.py``:
+
+  - The ``salt.minion.parse_args_and_kwargs`` function has been removed. Please
+  use the ``salt.minion.load_args_and_kwargs`` function instead.
+
 Cloud Deprecations
 ------------------
 
