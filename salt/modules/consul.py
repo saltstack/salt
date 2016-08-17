@@ -12,6 +12,7 @@ from __future__ import absolute_import
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+import salt.ext.six
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
@@ -973,48 +974,62 @@ def agent_service_register(consul_url=None, **kwargs):
             ret['res'] = False
             return ret
 
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
+    lc_kwargs = dict()
+    for k, v in salt.ext.six.iteritems(kwargs):
+        lc_kwargs[k.lower()] = v
+
+    if 'name' in lc_kwargs:
+        data['Name'] = lc_kwargs['name']
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
 
-    if 'address' in kwargs:
-        data['Address'] = kwargs['address']
+    if 'address' in lc_kwargs:
+        data['Address'] = lc_kwargs['address']
 
-    if 'port' in kwargs:
-        data['Port'] = kwargs['port']
+    if 'port' in lc_kwargs:
+        data['Port'] = lc_kwargs['port']
 
-    if 'id' in kwargs:
-        data['ID'] = kwargs['id']
+    if 'id' in lc_kwargs:
+        data['ID'] = lc_kwargs['id']
 
-    if 'tags' in kwargs:
-        _tags = kwargs['tags']
+    if 'tags' in lc_kwargs:
+        _tags = lc_kwargs['tags']
         if not isinstance(_tags, list):
             _tags = [_tags]
         data['Tags'] = _tags
 
-    check_elements = ('check_script', 'check_http', 'check_ttl')
-    if True in [True for item in check_elements if item in kwargs]:
-        data['Check'] = {}
+    if 'enabletagoverride' in lc_kwargs:
+        data['EnableTagOverride'] = lc_kwargs['enabletagoverride']
 
-        if 'check_script' in kwargs:
-            if 'interval' not in kwargs:
+    if 'check' in lc_kwargs:
+        dd = dict()
+        for k, v in salt.ext.six.iteritems(lc_kwargs['check']):
+            dd[k.lower()] = v
+        interval_required = False
+        check_dd = dict()
+
+        if 'script' in dd:
+            interval_required = True
+            check_dd['Script'] = dd['script']
+        if 'http' in dd:
+            interval_required = True
+            check_dd['HTTP'] = dd['http']
+        if 'ttl' in dd:
+            check_dd['TTL'] = dd['ttl']
+        if 'interval' in dd:
+            check_dd['Interval'] = dd['interval']
+
+        if interval_required:
+            if 'Interval' not in check_dd:
                 ret['message'] = 'Required parameter "interval" is missing.'
                 ret['res'] = False
                 return ret
-            data['Check']['Script'] = kwargs['check_script']
-            data['Check']['Interval'] = kwargs['check_interval']
+        else:
+            if 'Interval' in check_dd:
+                del check_dd['Interval']  # not required, so ignore it
 
-        if 'check_ttl' in kwargs:
-            data['Check']['TTL'] = kwargs['check_ttl']
-
-        if 'check_http' in kwargs:
-            if 'interval' not in kwargs:
-                ret['message'] = 'Required parameter "interval" is missing.'
-                ret['res'] = False
-                return ret
-            data['Check']['HTTP'] = kwargs['check_http']
-            data['Check']['Interval'] = kwargs['check_interval']
+        if len(check_dd) > 0:
+            data['Check'] = check_dd  # if empty, ignore it
 
     function = 'agent/service/register'
     res = _query(consul_url=consul_url,
