@@ -12,7 +12,7 @@ from __future__ import absolute_import
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-from salt.ext.six import iteritems
+import salt.ext.six 
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
@@ -975,7 +975,7 @@ def agent_service_register(consul_url=None, **kwargs):
             return ret
 
     lc_kwargs = dict()
-    for k, v in iteritems(kwargs):
+    for k, v in salt.ext.six.iteritems(kwargs):
         lc_kwargs[k.lower()] = v
 
     if 'name' in lc_kwargs:
@@ -1003,7 +1003,7 @@ def agent_service_register(consul_url=None, **kwargs):
 
     if 'check' in lc_kwargs:
         dd = dict()
-        for k, v in iteritems(lc_kwargs['check']):
+        for k, v in salt.ext.six.iteritems(lc_kwargs['check']):
             dd[k.lower()] = v
         interval_required = False
         check_dd = dict()
