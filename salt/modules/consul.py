@@ -12,7 +12,7 @@ from __future__ import absolute_import
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-import salt.ext.six 
+import salt.ext.six
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
