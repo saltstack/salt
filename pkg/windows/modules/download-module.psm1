@@ -48,5 +48,11 @@ Function DownloadFileWithProgress {
         Remove-Variable eventDataComplete
         Remove-Variable eventDataProgress
         [GC]::Collect()
+        # 2016-07-06  mkr  Errorchecking added. nice-to-have: integration into the above code.
+        If (!((Test-Path "$localfile") -and ((Get-Item "$localfile").length -gt 0kb))) {
+            Write-Error "Exiting because download missing or zero-length:    $localfile"
+            exit 2
+        }
+
     }
 }
