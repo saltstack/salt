@@ -768,7 +768,7 @@ class MultiMinion(MinionBase):
         while True:
             try:
                 minion = Minion(opts,
-                                self.MINION_CONNECT_TIMEOUT,
+                                opts['auth_timeout'],
                                 False,
                                 io_loop=self.io_loop,
                                 loaded_base_name='salt.loader.{0}'.format(opts['master']),
