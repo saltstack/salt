@@ -575,17 +575,14 @@ class MinionBase(object):
                 opts.update(resolve_dns(opts))
                 try:
                     if self.opts['transport'] == 'detect':
-                        detect_connect = False
                         self.opts['detect_mode'] = True
                         for trans in ('tcp', 'zeromq'):
-                            if detect_connect is True:
-                                continue
                             self.opts['transport'] = trans
                             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                             yield pub_channel.connect()
                             if not pub_channel.auth.authenticated:
                                 continue
-                            detect_connect = True
+                            break
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                         yield pub_channel.connect()
