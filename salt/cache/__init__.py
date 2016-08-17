@@ -6,8 +6,8 @@ Loader mechanism for caching data, with data expirations, etc.
 '''
 from __future__ import absolute_import
 import os
+import salt.loader
 import time
-from salt.loader import LazyLoader
 from salt.payload import Serial
 
 
@@ -48,24 +48,13 @@ class Cache(object):
         self.opts = opts
         self.driver = opts['cache']
         self.serial = Serial(opts)
-        self.modules = self._modules()
+        self._modules = None
 
-    def _modules(self, functions=None, whitelist=None):
-        '''
-        Lazy load the cache modules
-        '''
-        codedir = os.path.dirname(os.path.realpath(__file__))
-        return LazyLoader(
-            [codedir],
-            self.opts,
-            tag='cache',
-            pack={
-                '__opts__': self.opts,
-                '__cache__': functions,
-                '__context__': {'serial': self.serial},
-            },
-            whitelist=whitelist,
-        )
+    @property
+    def modules(self):
+        if self._modules is None:
+            self._modules = salt.loader.cache(self.opts, self.serial)
+        return self._modules
 
     def cache(self, bank, key, fun, loop_fun=None, **kwargs):
         '''
