@@ -159,6 +159,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if salt.utils.is_windows() and not os.path.isdir(tgt):
             os.mkdir(tgt)
 
+        # Windows cannot create a symlink if it already exists
+        if salt.utils.is_windows() and self.run_function('file.is_link', [name]):
+            self.run_function('file.remove', [name])
+
         ret = self.run_state('file.symlink', name=name, target=tgt)
         self.assertSaltTrueReturn(ret)
 
