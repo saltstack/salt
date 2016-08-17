@@ -930,6 +930,18 @@ def executors(opts, functions=None, context=None):
     )
 
 
+def cache(opts, serial):
+    '''
+    Returns the returner modules
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'cache', 'cache'),
+        opts,
+        tag='cache',
+        pack={'__opts__': opts, '__context__': {'serial': serial}},
+    )
+
+
 def _generate_module(name):
     if name in sys.modules:
         return
