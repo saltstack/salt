@@ -243,14 +243,39 @@ def get(key, default='', delimiter=':', merge=None):
     This function traverses these data stores in this order, returning the
     first match found:
 
-    - Minion config file
+    - Minion configuration
     - Minion's grains
     - Minion's pillar data
-    - Master config file
+    - Master configuration (requires :conf_minion:`pillar_opts` to be set to
+      ``True`` in Minion config file in order to work)
 
     This means that if there is a value that is going to be the same for the
     majority of minions, it can be configured in the Master config file, and
     then overridden using the grains, pillar, or Minion config file.
+
+    Adding config options to the Master or Minion configuration file is easy:
+
+    .. code-block:: yaml
+
+        my-config-option: value
+        cafe-menu:
+          - egg and bacon
+          - egg sausage and bacon
+          - egg and spam
+          - egg bacon and spam
+          - egg bacon sausage and spam
+          - spam bacon sausage and spam
+          - spam egg spam spam bacon and spam
+          - spam sausage spam spam bacon spam tomato and spam
+
+    .. note::
+        Minion configuration options built into Salt (like those defined
+        :ref:`here <configuration-salt-minion>`) will *always* be defined in
+        the Minion configuration and thus *cannot be overridden by grains or
+        pillar data*. However, additional (user-defined) configuration options
+        (as in the above example) will not be in the Minion configuration by
+        default and thus can be overridden using grains/pillar data by leaving
+        the option out of the minion config file.
 
     **Arguments**
 
