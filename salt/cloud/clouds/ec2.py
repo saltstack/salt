@@ -93,7 +93,6 @@ import decimal
 
 # Import Salt Libs
 import salt.utils
-from salt import syspaths
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -1904,7 +1903,7 @@ def request_instance(vm_=None, call=None):
             '\'del_all_vols_on_destroy\' should be a boolean value.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -1984,7 +1983,7 @@ def request_instance(vm_=None, call=None):
                           'Nothing else we can do here.')
                 return False
 
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
@@ -2048,7 +2047,7 @@ def query_instance(vm_=None, call=None):
 
     instance_id = vm_['instance_id']
     location = vm_.get('location', get_location(vm_))
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
@@ -2155,7 +2154,7 @@ def query_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(str(exc))
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'instance queried',
             'salt/cloud/{0}/query_reactor'.format(vm_['name']),
@@ -2194,7 +2193,7 @@ def wait_for_instance(
         'gateway', get_ssh_gateway_config(vm_)
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
@@ -2374,7 +2373,7 @@ def wait_for_instance(
         )
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'ssh is available',
             'salt/cloud/{0}/ssh_ready_reactor'.format(vm_['name']),
@@ -2447,7 +2446,7 @@ def create(vm_=None, call=None):
                 )
             )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -2459,7 +2458,7 @@ def create(vm_=None, call=None):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    salt.utils.cloud.cachedir_index_add(
+    __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'ec2', vm_['driver']
     )
 
@@ -2549,7 +2548,7 @@ def create(vm_=None, call=None):
 
     tags['Name'] = vm_['name']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
@@ -2619,7 +2618,7 @@ def create(vm_=None, call=None):
         'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
@@ -2659,7 +2658,7 @@ def create(vm_=None, call=None):
             ))
             return {}
 
-    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
+    for key, value in six.iteritems(__utils__['cloud.bootstrap'](vm_, __opts__)):
         ret.setdefault(key, value)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
@@ -2680,7 +2679,7 @@ def create(vm_=None, call=None):
     if ssm_document:
         event_data['ssm_document'] = ssm_document
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -2712,7 +2711,7 @@ def queue_instances(instances):
         node = _get_node(instance_id=instance_id)
         for name in node:
             if instance_id == node[name]['instanceId']:
-                salt.utils.cloud.cache_node(node[name],
+                __utils__['cloud.cache_node'](node[name],
                                             __active_provider_name__,
                                             __opts__)
 
@@ -3103,7 +3102,7 @@ def destroy(name, call=None):
         quiet=True
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -3166,7 +3165,7 @@ def destroy(name, call=None):
                            sigver='4')
         ret['spotInstance'] = result[0]
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -3175,10 +3174,10 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    salt.utils.cloud.cachedir_index_del(name)
+    __utils__['cloud.cachedir_index_del'](name)
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return ret
 
@@ -3266,7 +3265,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     node = _get_node(name=name, instance_id=instance_id)
     for name in node:
-        salt.utils.cloud.cache_node(node[name],
+        __utils__['cloud.cache_node'](node[name],
                                     __active_provider_name__,
                                     __opts__)
     return node
@@ -3434,7 +3433,7 @@ def _list_nodes_full(location=None):
 
     ret = _extract_instance_info(instances)
 
-    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
+    __utils__['cloud.cache_node_list'](ret, provider, __opts__)
     return ret
 
 
@@ -4660,7 +4659,7 @@ def _parse_pricing(url, name):
         regions[region['region']] = sizes
 
     outfile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'cloud', 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
@@ -4724,7 +4723,7 @@ def show_pricing(kwargs=None, call=None):
         name = 'linux'
 
     pricefile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'cloud', 'ec2-pricing-{0}.p'.format(name)
     )
 
     if not os.path.isfile(pricefile):

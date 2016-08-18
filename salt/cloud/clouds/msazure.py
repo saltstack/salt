@@ -399,7 +399,7 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -422,7 +422,7 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -538,7 +538,7 @@ def create(vm_):
     del event_kwargs['vm_kwargs']['system_config']
     del event_kwargs['vm_kwargs']['os_virtual_hard_disk']
     del event_kwargs['vm_kwargs']['network_config']
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -647,14 +647,14 @@ def create(vm_):
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     # Attaching volumes
     volumes = config.get_cloud_config_value(
         'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
@@ -688,7 +688,7 @@ def create(vm_):
 
     ret.update(data)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -957,7 +957,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
         delete_type: {'request_id': result.request_id},
     }
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     cleanup_disks = config.get_cloud_config_value(
         'cleanup_disks',

@@ -31,6 +31,7 @@ import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
 import mmap  # do not remove, used in imported file.py functions
+import glob  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
 import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
