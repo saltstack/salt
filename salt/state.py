@@ -3041,7 +3041,7 @@ class BaseHighState(object):
                 )
                 continue
             skeys = set()
-            for key in state[name]:
+            for key in list(state[name]):
                 if key.startswith('_'):
                     continue
                 if not isinstance(state[name][key], list):
