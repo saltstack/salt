@@ -130,7 +130,7 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     return priv
 
 
-def sign_message(privkey_path, message):
+def sign_message(privkey_path, message, passphrase=None):
     '''
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
@@ -250,9 +250,9 @@ class MasterKeys(dict):
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
-                
+
                 key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
-                
+
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pub')
                 self.rsa_sign_path = os.path.join(self.opts['pki_dir'],

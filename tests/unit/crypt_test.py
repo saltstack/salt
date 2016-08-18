@@ -100,7 +100,6 @@ class CryptTestCase(TestCase):
                     crypt.gen_keys('/keydir', 'keyname', 2048)
                     salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
-
     @patch('os.umask', MagicMock())
     @patch('os.chmod', MagicMock())
     @patch('os.chown', MagicMock())
@@ -125,7 +124,6 @@ class CryptTestCase(TestCase):
     def test_sign_message_with_passphrase(self):
         with patch('salt.utils.fopen', mock_open(read_data=PRIVKEY_DATA)):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
-
 
     def test_verify_signature(self):
         with patch('salt.utils.fopen', mock_open(read_data=PUBKEY_DATA)):
