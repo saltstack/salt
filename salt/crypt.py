@@ -250,7 +250,6 @@ class MasterKeys(dict):
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
-
                 key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
 
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
