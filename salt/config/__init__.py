@@ -1045,7 +1045,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 2048,
     'transport': 'zeromq',
-    'auth_timeout': 60,
+    'auth_timeout': 5,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
     'auth_safemode': False,
