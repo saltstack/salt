@@ -713,11 +713,11 @@ Verifying the Fingerprint
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To verify that the correct fingerprint was added, it is a good idea to look it
-up. One way to do this is to use nmap (as root):
+up. One way to do this is to use ``nmap``:
 
 .. code-block:: bash
 
-    $ sudo nmap github.com --script ssh-hostkey
+    $ nmap -p 22 github.com --script ssh-hostkey
 
     Starting Nmap 5.51 ( http://nmap.org ) at 2014-08-18 17:47 CDT
     Nmap scan report for github.com (192.30.252.129)
