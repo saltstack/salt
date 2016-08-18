@@ -271,7 +271,7 @@ def create(vm_):
         name = '.'.join([name, domain])
         vm_['name'] = name
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
@@ -376,7 +376,7 @@ def create(vm_):
     if post_uri:
         kwargs['postInstallScriptUri'] = post_uri
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
@@ -484,11 +484,11 @@ def create(vm_):
 
     vm_['ssh_host'] = ip_address
     vm_['password'] = passwd
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(response)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
@@ -518,7 +518,7 @@ def list_nodes_full(mask='mask[id]', call=None):
     for node_id in response:
         hostname = node_id['hostname'].split('.')[0]
         ret[hostname] = node_id
-    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
+    __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
@@ -573,7 +573,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -593,7 +593,7 @@ def destroy(name, call=None):
             '-a or --action.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -608,7 +608,7 @@ def destroy(name, call=None):
     conn = get_conn()
     response = conn.deleteObject(id=node['id'])
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -616,7 +616,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return response
 
