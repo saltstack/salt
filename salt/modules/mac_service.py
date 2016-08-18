@@ -102,11 +102,17 @@ def _available_services():
                         plist = plistlib.readPlistFromBytes(
                             salt.utils.to_bytes(plist_xml))
 
-                available_services[plist.Label.lower()] = {
-                    'file_name': file_name,
-                    'file_path': true_path,
-                    'plist': plist,
-                }
+                try:
+                    available_services[plist.Label.lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+                except AttributeError:
+                    # Handle malformed plist files
+                    available_services[os.path.basename(file_name).lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
 
     return available_services
 
