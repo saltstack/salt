@@ -1514,7 +1514,7 @@ class Login(LowDataAdapter):
             perms = eauth.get(token['name'], [])
             perms.extend(eauth.get('*', []))
 
-            if 'groups' in token and token['groups'] is not False:
+            if 'groups' in token and token['groups']:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
@@ -1522,13 +1522,12 @@ class Login(LowDataAdapter):
                     perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
-                raise ValueError("Eauth permission list not found.")
-        except (AttributeError, IndexError, KeyError, ValueError):
+                logger.debug("Eauth permission list not found.")
+        except Exception:
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
-            raise cherrypy.HTTPError(500,
-                'Configuration for external_auth could not be read.')
+            perms = None
 
         return {'return': [{
             'token': cherrypy.session.id,
@@ -1536,7 +1535,7 @@ class Login(LowDataAdapter):
             'start': token['start'],
             'user': token['name'],
             'eauth': token['eauth'],
-            'perms': perms,
+            'perms': perms or {},
         }]}
 
 
