@@ -428,3 +428,87 @@ class _FixedOffset(tzinfo):
 
     def dst(self, dt):  # pylint: disable=W0613
         return timedelta(0)
+
+
+def _strip_quotes(str_q):
+    """
+    Helper function to strip off the ' or " off of a string
+    """
+    if str_q[0] == str_q[-1] and str_q.startswith(("'", '"')):
+        return str_q[1:-1]
+    return str_q
+
+
+def get_computer_desc():
+    """
+    Get PRETTY_HOSTNAME value stored in /etc/machine-info
+    If this file doesn't exist or the variable doesn't exist
+    return False.
+
+    :return: Value of PRETTY_HOSTNAME if this does not exist False.
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_computer_desc
+    """
+    desc = None
+    hostname_cmd = salt.utils.which('hostnamectl')
+    if hostname_cmd:
+        desc = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
+    else:
+        pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
+        try:
+            with open('/etc/machine-info', 'r') as mach_info:
+                for line in mach_info.readlines():
+                    match = pattern.match(line)
+                    if match:
+                        # get rid of whitespace then strip off quotes
+                        desc = _strip_quotes(match.group(1).strip())
+                        break  # Only change first instance
+        except IOError:
+            return False
+    return desc
+
+
+def set_computer_desc(desc):
+    """
+    Set PRETTY_HOSTNAME value stored in /etc/machine-info
+    This will NOT create the file if it does not exist. If
+    it is unable to modify the file or it does not exist
+    returns False.
+
+    :param str desc: The computer description
+    :return: False on failure. New description if successful.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_computer_desc "Michael's laptop"
+    """
+    hostname_cmd = salt.utils.which('hostnamectl')
+    if hostname_cmd:
+        return __salt__['cmd.run']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
+
+    set_pretty_hostname = False
+    pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
+    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
+    try:
+        with open('/etc/machine-info', 'r+') as mach_info:
+            lines = mach_info.readlines()
+            for i, line in enumerate(lines):
+                if pattern.match(line):
+                    set_pretty_hostname = True
+                    lines[i] = new_line
+            if not set_pretty_hostname:
+                lines.append(new_line)
+            # time to write our changes to the file
+            mach_info.seek(0, 0)
+            mach_info.write('\n'.join(lines))
+            mach_info.write('\n')
+            return True
+    except IOError:
+        return False
