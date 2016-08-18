@@ -30,7 +30,7 @@ from salt.ext.six.moves import range
 from salt.config import minion_config
 # pylint: enable=no-name-in-module,redefined-builtin
 
-from salt.loader import LazyLoader, _module_dirs, grains, utils, proxy, minion_mods
+from salt.loader import LazyLoader, module_dirs, grains, utils, proxy, minion_mods
 
 loader_template = '''
 import os
@@ -96,7 +96,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.opts['disable_modules'] = ['pillar']
         self.opts['grains'] = grains(self.opts)
 
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
+        self.loader = LazyLoader(module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='module')
 
@@ -183,7 +183,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.opts['grains'] = grains(self.opts)
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
+        self.loader = LazyLoader(module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='module',
                                  virtual_enable=False)
@@ -198,7 +198,7 @@ class LazyLoaderWhitelistTest(TestCase):
     '''
     def setUp(self):
         self.opts = _config = minion_config(None)
-        self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
+        self.loader = LazyLoader(module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='module',
                                  whitelist=['test', 'pillar'])
@@ -248,7 +248,7 @@ class LazyLoaderReloadingTest(TestCase):
 
         self.count = 0
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs = module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.utils = utils(self.opts)
         self.proxy = proxy(self.opts)
@@ -385,7 +385,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.count = 0
         self.lib_count = 0
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs = module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.utils = utils(self.opts)
         self.proxy = proxy(self.opts)
@@ -534,7 +534,7 @@ class LazyLoaderModulePackageTest(TestCase):
         self.opts['grains'] = grains(self.opts)
         self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs = module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.loader = LazyLoader(dirs,
                                  self.opts,
@@ -647,7 +647,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
             os.makedirs(dir_path)
             self.update_lib(lib_name)
 
-        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs = module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.utils = utils(self.opts)
         self.proxy = proxy(self.opts)
