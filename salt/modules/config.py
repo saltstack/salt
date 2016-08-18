@@ -273,7 +273,7 @@ def get(key, default='', delimiter=':', merge=None):
         :ref:`here <configuration-salt-minion>`) will *always* be defined in
         the Minion configuration and thus *cannot be overridden by grains or
         pillar data*. However, additional (user-defined) configuration options
-        (as in the above example) will not by in the Minion configuration by
+        (as in the above example) will not be in the Minion configuration by
         default and thus can be overridden using grains/pillar data by leaving
         the option out of the minion config file.
 
