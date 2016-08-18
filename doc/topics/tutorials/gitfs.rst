@@ -697,7 +697,7 @@ server via SSH:
 
 .. code-block:: bash
 
-    $ su
+    $ su -
     Password:
     # ssh github.com
     The authenticity of host 'github.com (192.30.252.128)' can't be established.
@@ -713,11 +713,11 @@ Verifying the Fingerprint
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To verify that the correct fingerprint was added, it is a good idea to look it
-up. One way to do this is to use nmap:
+up. One way to do this is to use ``nmap``:
 
 .. code-block:: bash
 
-    $ nmap github.com --script ssh-hostkey
+    $ nmap -p 22 github.com --script ssh-hostkey
 
     Starting Nmap 5.51 ( http://nmap.org ) at 2014-08-18 17:47 CDT
     Nmap scan report for github.com (192.30.252.129)
@@ -733,13 +733,24 @@ up. One way to do this is to use nmap:
 
     Nmap done: 1 IP address (1 host up) scanned in 28.78 seconds
 
-Another way is to check one's own known_hosts file, using this one-liner:
+Another way is to check one's own ``known_hosts`` file, using this one-liner:
 
 .. code-block:: bash
 
-    $ ssh-keygen -l -f /dev/stdin <<<`ssh-keyscan -t rsa github.com 2>/dev/null` | awk '{print $2}'
+    $ ssh-keygen -l -f /dev/stdin <<<`ssh-keyscan github.com 2>/dev/null` | awk '{print $2}'
     16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48
 
+.. warning::
+    AWS tracks usage of nmap and may flag it as abuse. On AWS hosts, the
+    ``ssh-keygen`` method is recommended for host key verification.
+
+.. note::
+    As of `OpenSSH 6.8`_ the SSH fingerprint is now shown as a base64-encoded
+    SHA256 checksum of the host key. So, instead of the fingerprint looking
+    like ``16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48``, it would look
+    like ``SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8``.
+
+.. _`OpenSSH 6.8`: http://www.openssh.com/txt/release-6.8
 
 Refreshing gitfs Upon Push
 ==========================
