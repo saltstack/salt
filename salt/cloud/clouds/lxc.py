@@ -27,7 +27,6 @@ from salt.exceptions import SaltCloudSystemExit
 
 import salt.client
 import salt.runner
-import salt.syspaths
 
 
 # Import 3rd-party libs
@@ -69,7 +68,7 @@ def _minion_opts(cfg='minion'):
     if 'conf_file' in __opts__:
         default_dir = os.path.dirname(__opts__['conf_file'])
     else:
-        default_dir = salt.syspaths.CONFIG_DIR,
+        default_dir = __opts__['config_dir'],
     cfg = os.environ.get(
         'SALT_MINION_CONFIG', os.path.join(default_dir, cfg))
     opts = config.minion_config(cfg)
@@ -80,7 +79,7 @@ def _master_opts(cfg='master'):
     cfg = os.environ.get(
         'SALT_MASTER_CONFIG',
         __opts__.get('conf_file',
-                     os.path.join(salt.syspaths.CONFIG_DIR, cfg)))
+                     os.path.join(__opts__['config_dir'], cfg)))
     opts = config.master_config(cfg)
     return opts
 
@@ -332,7 +331,7 @@ def show_instance(name, call=None):
     if not call:
         call = 'action'
     nodes = list_nodes_full(call=call)
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -393,7 +392,7 @@ def destroy(vm_, call=None):
     ret = {'comment': '{0} was not found'.format(vm_),
            'result': False}
     if _salt('lxc.info', vm_, path=path):
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(vm_),
@@ -404,7 +403,7 @@ def destroy(vm_, call=None):
         ret['result'] = cret['result']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
-            salt.utils.cloud.fire_event(
+            __utils__['cloud.fire_event'](
                 'event',
                 'destroyed instance',
                 'salt/cloud/{0}/destroyed'.format(vm_),
@@ -412,7 +411,7 @@ def destroy(vm_, call=None):
                 transport=__opts__['transport']
             )
             if __opts__.get('update_cachedir', False) is True:
-                salt.utils.cloud.delete_minion_cachedir(vm_, __active_provider_name__.split(':')[0], __opts__)
+                __utils__['cloud.delete_minion_cachedir'](vm_, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
@@ -438,7 +437,7 @@ def create(vm_, call=None):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
@@ -473,7 +472,7 @@ def create(vm_, call=None):
         __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
