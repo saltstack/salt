@@ -3,6 +3,19 @@
 Installation of packages using OS package managers such as yum or apt-get
 =========================================================================
 
+..note::
+    On minions running systemd>=205, as of version 2015.8.12, 2016.3.3, and
+    Carbon, `systemd-run(1)`_ is now used to isolate commands which modify
+    installed packages from the ``salt-minion`` daemon's control group. This is
+    done to keep systemd from killing the package manager commands spawned by
+    Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
+    manpage for more information). If desired, usage of `systemd-run(1)`_ can
+    be suppressed by setting a :mod:`config option <salt.modules.config.get>`
+    called ``systemd.use_scope``, with a value of ``False`` (no quotes).
+
+.. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+.. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
 Salt can manage software packages via the pkg state module, packages can be
 set up to be installed, latest, removed and purged. Package management
 declarations are typically rather simple:

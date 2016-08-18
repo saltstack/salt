@@ -102,6 +102,10 @@ def salt_minion():
     '''
     import signal
     import functools
+
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
@@ -277,6 +281,9 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     pid = os.getpid()
     try:
@@ -449,6 +456,9 @@ def salt_api():
     '''
     The main function for salt-api
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.api
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
     sapi.start()
