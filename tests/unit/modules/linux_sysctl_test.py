@@ -113,7 +113,7 @@ class LinuxSysctlTestCase(TestCase):
                             {'cmd.run_stdout': mock_sys_cmd,
                              'cmd.run_all': mock_asn_cmd}):
                 with patch.dict(systemd.__context__,
-                                {'systemd.sd_booted': True}):
+                                {'salt.utils.systemd.booted': True}):
                     linux_sysctl.persist('net.ipv4.ip_forward', 1)
                     helper_open = m_open()
                     helper_open.write.assert_called_once_with(
@@ -136,7 +136,7 @@ class LinuxSysctlTestCase(TestCase):
                             {'cmd.run_stdout': mock_sys_cmd,
                              'cmd.run_all': mock_asn_cmd}):
                 with patch.dict(systemd.__context__,
-                                {'systemd.sd_booted': True}):
+                                {'salt.utils.systemd.booted': True}):
                     self.assertEqual(linux_sysctl.persist(
                                      'net.ipv4.ip_forward', 1), 'Updated')
 
