@@ -513,7 +513,7 @@ def bootstrap(vm_, opts):
         args={'kwargs': event_kwargs},
         sock_dir=opts.get(
             'sock_dir',
-            os.path.join(syspaths.SOCK_DIR, 'master')),
+            os.path.join(__opts__['sock_dir'], 'master')),
         transport=opts.get('transport', 'zeromq')
     )
 
@@ -1157,7 +1157,7 @@ def deploy_windows(host,
             args={'name': name},
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
@@ -1631,7 +1631,7 @@ def deploy_script(host,
                 },
                 sock_dir=opts.get(
                     'sock_dir',
-                    os.path.join(syspaths.SOCK_DIR, 'master')),
+                    os.path.join(__opts__['sock_dir'], 'master')),
                 transport=opts.get('transport', 'zeromq')
             )
             if file_map_fail or file_map_success:
@@ -2881,7 +2881,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
                     args={'missing node': node},
                     sock_dir=opts.get(
                         'sock_dir',
-                        os.path.join(syspaths.SOCK_DIR, 'master')),
+                        os.path.join(__opts__['sock_dir'], 'master')),
                     transport=opts.get('transport', 'zeromq')
                 )
 
@@ -2917,7 +2917,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             args={'new_data': event_data},
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
         return
@@ -2944,7 +2944,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             },
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
