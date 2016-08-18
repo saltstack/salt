@@ -556,9 +556,9 @@ def create(vm_):
 
         deployed = False
         if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
+            deployed = __utils__['cloud.deploy_windows'](**deploy_kwargs)
         else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
+            deployed = __utils__['cloud.deploy_script'](**deploy_kwargs)
 
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
@@ -827,6 +827,6 @@ def destroy(name):
         )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return ret

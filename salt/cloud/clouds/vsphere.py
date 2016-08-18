@@ -256,7 +256,7 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -271,7 +271,7 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -341,7 +341,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -385,7 +385,7 @@ def _deploy(vm_):
     '''
     run bootstrap script
     '''
-    # TODO: review salt.utils.cloud.bootstrap(vm_, __opts__)
+    # TODO: review __utils__['cloud.bootstrap'](vm_, __opts__)
     # TODO: review salt.utils.cloud.wait_for_ip
     ip_address = wait_for_ip(vm_)
 
@@ -474,7 +474,7 @@ def _deploy(vm_):
             'win_password', vm_, __opts__, default=''
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
@@ -484,9 +484,9 @@ def _deploy(vm_):
 
     deployed = False
     if win_installer:
-        deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
+        deployed = __utils__['cloud.deploy_windows'](**deploy_kwargs)
     else:
-        deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
+        deployed = __utils__['cloud.deploy_script'](**deploy_kwargs)
 
     if deployed:
         log.info('Salt installed on {0}'.format(vm_['name']))
@@ -628,7 +628,7 @@ def show_instance(name, call=None):
     conn = get_conn()
     instance = conn.get_vm_by_name(name, )
     ret = _get_instance_properties(instance)
-    salt.utils.cloud.cache_node(ret, __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](ret, __active_provider_name__, __opts__)
     return ret
 
 
@@ -642,7 +642,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
 
         salt-cloud --destroy mymachine
     '''
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -659,7 +659,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
     except Exception as exc:  # pylint: disable=W0703
         return exc
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -667,7 +667,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return True
 

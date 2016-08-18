@@ -770,7 +770,8 @@ def clouds(opts):
                                            int_type='clouds'),
                               opts,
                               tag='clouds',
-                              pack={'__active_provider_name__': None},
+                              pack={'__utils__': salt.loader.utils(opts),
+                                    '__active_provider_name__': None},
                               )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
