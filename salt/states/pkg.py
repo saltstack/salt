@@ -897,8 +897,6 @@ def installed(
         A list of packages to install from a software repository. All packages
         listed under ``pkgs`` will be installed via a single command.
 
-        Example:
-
         .. code-block:: yaml
 
             mypkgs:
@@ -924,12 +922,10 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
 
-        Additionally, :mod:`ebuild <salt.modules.ebuild>`,
-        :mod:`pacman <salt.modules.pacman>` and
-        :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-        ``>`` operators for more control over what versions will be installed. For
-
-        Example:
+        Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
+        <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support
+        the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over
+        what versions will be installed. For example:
 
         .. code-block:: yaml
 
@@ -946,9 +942,7 @@ def installed(
         With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a
         use flag list and/or if the given packages should be in
         package.accept_keywords file and/or the overlay from which you want the
-        package to be installed.
-
-        For example:
+        package to be installed. For example:
 
         .. code-block:: yaml
 
