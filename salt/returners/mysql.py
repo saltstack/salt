@@ -516,7 +516,6 @@ def _archive_jobs(timestamp):
                 log.error(str(e))
                 raise salt.exceptions.SaltRunnerError(str(e))
 
-    with _get_serv() as cur:
         try:
             sql = 'insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
             cur.execute(sql, (timestamp,))
