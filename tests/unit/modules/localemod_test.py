@@ -43,7 +43,7 @@ class LocalemodTestCase(TestCase):
         '''
         Test for Get the current system locale
         '''
-        with patch.dict(localemod.__context__, {'systemd.sd_booted': True}):
+        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
             localemod.HAS_DBUS = True
             with patch.object(localemod,
                               '_parse_dbus_locale',
@@ -74,7 +74,7 @@ class LocalemodTestCase(TestCase):
         '''
         Test for Sets the current system locale
         '''
-        with patch.dict(localemod.__context__, {'systemd.sd_booted': True}):
+        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
             with patch.object(localemod, '_localectl_set', return_value=True):
                 self.assertTrue(localemod.set_locale('l'))
 
