@@ -389,9 +389,12 @@ def _run(cmd,
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code)[0]
-            import itertools
-            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            if six.PY2:
+                import itertools
+                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            elif six.PY3:
+                env_runas = dict(zip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
