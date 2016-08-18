@@ -360,7 +360,7 @@ def show_instance(name, call=None):
 
     conn = get_conn()
     node = conn.show_instance(name).__dict__
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     return node
 
 
@@ -487,7 +487,7 @@ def destroy(name, conn=None, call=None):
             '-a or --action.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -525,7 +525,7 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
@@ -536,7 +536,7 @@ def destroy(name, conn=None, call=None):
         if __opts__.get('delete_sshkeys', False) is True:
             salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         if __opts__.get('update_cachedir', False) is True:
-            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+            __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
         salt.utils.cloud.cachedir_index_del(name)
         return True
 
@@ -640,7 +640,7 @@ def request_instance(vm_=None, call=None):
 
     kwargs.update(get_block_mapping_opts(vm_))
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -731,7 +731,7 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -968,7 +968,7 @@ def create(vm_):
     vm_['ssh_host'] = ip_address
     vm_['salt_host'] = salt_ip_address
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(data.__dict__)
 
@@ -993,7 +993,7 @@ def create(vm_):
         'public_ips': data.public_ips
     }
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -1103,7 +1103,7 @@ def list_nodes_full(call=None, **kwargs):
         except IndexError as exc:
             ret = {}
 
-    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
+    __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
