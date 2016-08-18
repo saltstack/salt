@@ -394,7 +394,9 @@ def _run(cmd,
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             elif six.PY3:
-                env_runas = dict(zip(*[iter(env_encoded.split(b'\0'))]*2))
+                    if isinstance(env_encoded, str):
+                        env_encoded = env_encoded.encode(__salt_system_encoding__)
+                    env_runas = dict(zip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
