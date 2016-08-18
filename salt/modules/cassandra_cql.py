@@ -249,7 +249,7 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
                                   auth_provider=auth_provider,
                                   protocol_version=protocol_version,
                                   compression=True)
-            for recontimes in [1, 2, 3]:
+            for recontimes in range(1, 4):
                 try:
                     session = cluster.connect()
                     break
