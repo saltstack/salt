@@ -475,7 +475,7 @@ def present(name,
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
             for key, val in iteritems(changes):
-                if key == 'password':
+                if key == 'passwd':
                     val = 'XXX-REDACTED-XXX'
                 ret['comment'] += u'{0}: {1}\n'.format(key, val)
             return ret
