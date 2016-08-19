@@ -11,12 +11,41 @@ Changes for v2015.8.11..v2015.8.12
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-08-19T15:51:29Z*
+*Generated at: 2016-08-19T16:06:27Z*
 
-Total Merges: **41**
+Total Merges: **57**
 
 Changes:
 
+- **PR** `#35599`_: (*rallytime*) Update release notes for 2015.8.12
+- **PR** `#35584`_: (*terminalmage*) Update linux_sysctl tests to reflect new context key
+- **PR** `#35575`_: (*terminalmage*) Add warning about AWS flagging of nmap usage
+- **PR** `#35577`_: (*terminalmage*) Unit file changes for 2015.8.12, 2016.3.3
+- **PR** `#35566`_: (*rallytime*) Back-port `#35545`_ to 2015.8
+- **PR** `#35545`_: (*hu-dabao*) `fix-35384`_, fix cmd.run unless
+- **PR** `#35492`_: (*terminalmage*) Clarify config.get docstring
+- **PR** `#35483`_: (*gtmanfred*) use __utils__ in salt.cloud
+- **PR** `#35546`_: (*whiteinge*) Salt api eauth fail gracefully
+- **PR** `#35525`_: (*UtahDave*) add missing glob import
+- **PR** `#35540`_: (*rallytime*) Whitespace fix for 2015.8
+- **PR** `#35510`_: (*terminalmage*) Better systemd integration
+- **PR** `#35513`_: (*cachedout*) Might be a good idea to be able to download the software we make
+- **PR** `#35302`_: (*Ch3LL*) Add job cache test
+- **PR** `#35512`_: (*cachedout*) Fixup 35419
+- **PR** `#35497`_: (*deepakhj*) Fixes spacing in requirements files
+- **PR** `#35508`_: (*terminalmage*) Add Carbon to versionadded for git.diff
+- **PR** `#35486`_: (*rallytime*) Update bootstrap script to latest stable (2016.08.16)
+- **PR** `#35413`_: (*cachedout*) Resolve path issues with cp.push
+- **PR** `#35476`_: (*cachedout*) Fixup SSH bug where sudo without sudo user would break
+- **PR** `#35471`_: (*terminalmage*) win_pkg: Fix traceback when package is not installed
+- **PR** `#35448`_: (*isbm*) Add ignore_repo_failure option to suppress zypper's exit code 106 on …
+- **PR** `#35451`_: (*isbm*) Bugfix: zypper mod repo unchanged
+- **PR** `#35453`_: (*theothergraham*) fixes `#34279`_ - disk cache ttl expiry
+- **PR** `#35459`_: (*thatch45*) Ensure that output for salt-ssh gets back
+- **PR** `#35460`_: (*rallytime*) [2015.8] Update bootstrap script to latest stable (2016.08.15)
+- **PR** `#35442`_: (*cachedout*) Fix cp.push_dir pushing empty dirs
+- **PR** `#35436`_: (*cachedout*) Minor doc fixup
+- **PR** `#35132`_: (*sjorge*) fixes , causing lots of mayham (onchange) with 2016.3.2 for me
 - **PR** `#35394`_: (*rallytime*) Back-port `#34573`_ to 2015.8
 - **PR** `#34573`_: (*cedwards*) Update freebsd.rst
 - **PR** `#35359`_: (*terminalmage*) Clean up open filehandles
@@ -88,6 +117,7 @@ Changes:
 - **PR** `#34689`_: (*Azidburn*) fix second run problems with pkg.installed using sources
 - **PR** `#34695`_: (*isbm*) Bugfix: Zypper `pkg.list_products` returns False on some empty values (2015.8)
 
+.. _`#18419`: https://github.com/saltstack/salt/issues/18419
 .. _`#24744`: https://github.com/saltstack/salt/issues/24744
 .. _`#25213`: https://github.com/saltstack/salt/issues/25213
 .. _`#25276`: https://github.com/saltstack/salt/pull/25276
@@ -98,8 +128,11 @@ Changes:
 .. _`#31074`: https://github.com/saltstack/salt/issues/31074
 .. _`#32276`: https://github.com/saltstack/salt/issues/32276
 .. _`#32719`: https://github.com/saltstack/salt/issues/32719
+.. _`#33516`: https://github.com/saltstack/salt/issues/33516
 .. _`#33620`: https://github.com/saltstack/salt/issues/33620
+.. _`#33803`: https://github.com/saltstack/salt/issues/33803
 .. _`#33875`: https://github.com/saltstack/salt/pull/33875
+.. _`#34279`: https://github.com/saltstack/salt/issues/34279
 .. _`#34509`: https://github.com/saltstack/salt/issues/34509
 .. _`#34526`: https://github.com/saltstack/salt/issues/34526
 .. _`#34573`: https://github.com/saltstack/salt/pull/34573
@@ -123,6 +156,7 @@ Changes:
 .. _`#34796`: https://github.com/saltstack/salt/issues/34796
 .. _`#34798`: https://github.com/saltstack/salt/issues/34798
 .. _`#34803`: https://github.com/saltstack/salt/pull/34803
+.. _`#34806`: https://github.com/saltstack/salt/issues/34806
 .. _`#34818`: https://github.com/saltstack/salt/pull/34818
 .. _`#34822`: https://github.com/saltstack/salt/pull/34822
 .. _`#34823`: https://github.com/saltstack/salt/pull/34823
@@ -147,6 +181,7 @@ Changes:
 .. _`#34994`: https://github.com/saltstack/salt/pull/34994
 .. _`#34999`: https://github.com/saltstack/salt/issues/34999
 .. _`#35000`: https://github.com/saltstack/salt/pull/35000
+.. _`#35010`: https://github.com/saltstack/salt/issues/35010
 .. _`#35024`: https://github.com/saltstack/salt/pull/35024
 .. _`#35026`: https://github.com/saltstack/salt/pull/35026
 .. _`#35039`: https://github.com/saltstack/salt/pull/35039
@@ -156,6 +191,8 @@ Changes:
 .. _`#35066`: https://github.com/saltstack/salt/pull/35066
 .. _`#35114`: https://github.com/saltstack/salt/pull/35114
 .. _`#35119`: https://github.com/saltstack/salt/pull/35119
+.. _`#35121`: https://github.com/saltstack/salt/issues/35121
+.. _`#35132`: https://github.com/saltstack/salt/pull/35132
 .. _`#35135`: https://github.com/saltstack/salt/pull/35135
 .. _`#35145`: https://github.com/saltstack/salt/pull/35145
 .. _`#35146`: https://github.com/saltstack/salt/pull/35146
@@ -175,14 +212,46 @@ Changes:
 .. _`#35264`: https://github.com/saltstack/salt/issues/35264
 .. _`#35271`: https://github.com/saltstack/salt/pull/35271
 .. _`#35290`: https://github.com/saltstack/salt/pull/35290
+.. _`#35296`: https://github.com/saltstack/salt/issues/35296
 .. _`#35301`: https://github.com/saltstack/salt/pull/35301
+.. _`#35302`: https://github.com/saltstack/salt/pull/35302
 .. _`#35309`: https://github.com/saltstack/salt/pull/35309
 .. _`#35323`: https://github.com/saltstack/salt/pull/35323
 .. _`#35325`: https://github.com/saltstack/salt/pull/35325
 .. _`#35339`: https://github.com/saltstack/salt/pull/35339
 .. _`#35357`: https://github.com/saltstack/salt/pull/35357
 .. _`#35359`: https://github.com/saltstack/salt/pull/35359
+.. _`#35380`: https://github.com/saltstack/salt/issues/35380
+.. _`#35384`: https://github.com/saltstack/salt/issues/35384
+.. _`#35387`: https://github.com/saltstack/salt/issues/35387
 .. _`#35394`: https://github.com/saltstack/salt/pull/35394
+.. _`#35413`: https://github.com/saltstack/salt/pull/35413
+.. _`#35436`: https://github.com/saltstack/salt/pull/35436
+.. _`#35442`: https://github.com/saltstack/salt/pull/35442
+.. _`#35448`: https://github.com/saltstack/salt/pull/35448
+.. _`#35451`: https://github.com/saltstack/salt/pull/35451
+.. _`#35453`: https://github.com/saltstack/salt/pull/35453
+.. _`#35459`: https://github.com/saltstack/salt/pull/35459
+.. _`#35460`: https://github.com/saltstack/salt/pull/35460
+.. _`#35471`: https://github.com/saltstack/salt/pull/35471
+.. _`#35476`: https://github.com/saltstack/salt/pull/35476
+.. _`#35483`: https://github.com/saltstack/salt/pull/35483
+.. _`#35486`: https://github.com/saltstack/salt/pull/35486
+.. _`#35492`: https://github.com/saltstack/salt/pull/35492
+.. _`#35497`: https://github.com/saltstack/salt/pull/35497
+.. _`#35508`: https://github.com/saltstack/salt/pull/35508
+.. _`#35510`: https://github.com/saltstack/salt/pull/35510
+.. _`#35512`: https://github.com/saltstack/salt/pull/35512
+.. _`#35513`: https://github.com/saltstack/salt/pull/35513
+.. _`#35525`: https://github.com/saltstack/salt/pull/35525
+.. _`#35540`: https://github.com/saltstack/salt/pull/35540
+.. _`#35545`: https://github.com/saltstack/salt/pull/35545
+.. _`#35546`: https://github.com/saltstack/salt/pull/35546
+.. _`#35566`: https://github.com/saltstack/salt/pull/35566
+.. _`#35575`: https://github.com/saltstack/salt/pull/35575
+.. _`#35577`: https://github.com/saltstack/salt/pull/35577
+.. _`#35584`: https://github.com/saltstack/salt/pull/35584
+.. _`#35599`: https://github.com/saltstack/salt/pull/35599
 .. _`bp-25276`: https://github.com/saltstack/salt/pull/25276
 .. _`bp-28521`: https://github.com/saltstack/salt/pull/28521
 .. _`bp-33875`: https://github.com/saltstack/salt/pull/33875
@@ -192,3 +261,4 @@ Changes:
 .. _`bp-35119`: https://github.com/saltstack/salt/pull/35119
 .. _`bp-35225`: https://github.com/saltstack/salt/pull/35225
 .. _`fix-34703`: https://github.com/saltstack/salt/issues/34703
+.. _`fix-35384`: https://github.com/saltstack/salt/issues/35384
