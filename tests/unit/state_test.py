@@ -48,7 +48,7 @@ class StateCompilerTestCase(TestCase):
         salt.state.format_log(ret)
 
     @skipIf(sys.version_info < (2, 7), 'Context manager in assertEquals only available in > Py2.7')
-    def test_render_error_on_invalid_requisite(self, state_patch):
+    def test_render_error_on_invalid_requisite(self):
         '''
         Test that the state compiler correctly deliver a rendering
         exception when a requisite cannot be resolved
