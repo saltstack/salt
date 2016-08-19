@@ -6,8 +6,8 @@ Version 2016.3.3 is a bugfix release for :doc:`2016.3.0
 </topics/releases/2016.3.0>`.
 
 
-Changes for v2016.3.2..2016.3
------------------------------
+Changes for v2016.3.2..2016.3.3
+-------------------------------
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
