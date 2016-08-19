@@ -278,7 +278,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest, saltenv='base'):
+def get_url(path, dest, saltenv='base', makedirs=False):
     '''
     Used to get a single file from a URL.
 
@@ -294,9 +294,9 @@ def get_url(path, dest, saltenv='base'):
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
     if dest:
-        return _client().get_url(path, dest, False, saltenv)
+        return _client().get_url(path, dest, makedirs, saltenv)
     else:
-        return _client().get_url(path, None, False, saltenv, no_cache=True)
+        return _client().get_url(path, None, makedirs, saltenv, no_cache=True)
 
 
 def get_file_str(path, saltenv='base'):
