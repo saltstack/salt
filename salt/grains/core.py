@@ -1025,6 +1025,7 @@ _OS_FAMILY_MAP = {
     'Fedora': 'RedHat',
     'Chapeau': 'RedHat',
     'Korora': 'RedHat',
+    'FedBerry': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
