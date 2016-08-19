@@ -117,6 +117,10 @@ def present(name,
         using the crontab format.
         Requires python-croniter.
 
+    run_on_start
+        Whether the job will run when Salt minion start.  Value should be
+        a boolean.
+
     function
         The function that should be executed by the scheduled job.
 
