@@ -2606,7 +2606,10 @@ class BaseHighState(object):
                 )
 
         if found == 0:
-            log.error('No contents found in top file')
+            log.error('No contents found in top file. Please verify '
+                'that the \'file_roots\' specified in \'etc/master\' are '
+                'accessible: {0}'.format(repr(self.state.opts['file_roots']))
+            )
 
         # Search initial top files for includes
         for saltenv, ctops in six.iteritems(tops):
