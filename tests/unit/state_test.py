@@ -59,7 +59,7 @@ class StateCompilerTestCase(TestCase):
             minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
             state_obj = salt.state.State(minion_opts)
             with self.assertRaises(salt.exceptions.SaltRenderError):
-            state_obj.call_high(high_data)
+                state_obj.call_high(high_data)
 
 
 if __name__ == '__main__':
