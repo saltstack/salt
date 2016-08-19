@@ -48,17 +48,17 @@ class StateCompilerTestCase(TestCase):
         salt.state.format_log(ret)
 
     @skipIf(sys.version_info < (2, 7), 'Context manager in assertEquals only available in > Py2.7')
-    @patch('salt.state.State._gather_pillar')
     def test_render_error_on_invalid_requisite(self, state_patch):
         '''
         Test that the state compiler correctly deliver a rendering
         exception when a requisite cannot be resolved
         '''
-        high_data = {'git': OrderedDict([('pkg', [OrderedDict([('require', [OrderedDict([('file', OrderedDict([('test1', 'test')]))])])]), 'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
-        minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
-        state_obj = salt.state.State(minion_opts)
-        with self.assertRaises(salt.exceptions.SaltRenderError):
+        with patch('salt.state.State._gather_pillar'):
+            high_data = {'git': OrderedDict([('pkg', [OrderedDict([('require', [OrderedDict([('file', OrderedDict([('test1', 'test')]))])])]), 'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
+            minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+            minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
+            state_obj = salt.state.State(minion_opts)
+            with self.assertRaises(salt.exceptions.SaltRenderError):
             state_obj.call_high(high_data)
 
 
