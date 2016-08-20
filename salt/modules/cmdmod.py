@@ -29,7 +29,7 @@ import salt.ext.six as six
 from salt.utils import vt
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Only available on POSIX systems, nonfatal on windows
@@ -389,9 +389,14 @@ def _run(cmd,
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code)[0]
-            import itertools
-            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            if six.PY2:
+                import itertools
+                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            elif six.PY3:
+                if isinstance(env_encoded, str):
+                    env_encoded = env_encoded.encode(__salt_system_encoding__)
+                env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
