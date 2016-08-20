@@ -61,7 +61,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
 
-    if not os.path.isfile(name):
+    if not os.path.exists(name):
         ret['comment'] = '{0} does not exist'.format(name)
         ret['result'] = False
         return ret
@@ -130,7 +130,7 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
            'changes': {},
            'comment': ''}
 
-    if not os.path.isfile(name):
+    if not os.path.exists(name):
         ret['comment'] = '{0} does not exist'.format(name)
         ret['result'] = False
         return ret
