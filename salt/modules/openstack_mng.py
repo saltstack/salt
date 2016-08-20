@@ -91,7 +91,7 @@ def restart_service(service_name, minimum_running_time=None):
             boot_time = float(open('/proc/uptime').read().split(' ')[0])
 
             expr_time = int(service_info.get('ExecMainStartTimestampMonotonic', 0)) / 1000000 < boot_time - minimum_running_time
-            expr_active = True if service_info.get('ActiveState') == "active" else False
+            expr_active = service_info.get('ActiveState') == "active"
 
             if expr_time or not expr_active:
                 # restart specific system service
