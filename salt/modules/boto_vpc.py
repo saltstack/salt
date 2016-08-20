@@ -73,12 +73,9 @@ Connection module for Amazon VPC
 
 .. versionadded:: Carbon
 
-Functions to request, accept, delete and describe
-VPC peering connections.
-Named VPC peering connections can be requested using these
-modules.
-VPC owner accounts can accept VPC peering connections (named
-or otherwise).
+Functions to request, accept, delete and describe VPC peering connections.
+Named VPC peering connections can be requested using these modules.
+VPC owner accounts can accept VPC peering connections (named or otherwise).
 
 Examples showing creation of VPC peering connection
 
@@ -731,7 +728,9 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
             keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
                     'dhcp_options_id', 'instance_tenancy')
-            return {'vpc': dict([(k, getattr(vpc, k)) for k in keys])}
+            _r = dict([(k, getattr(vpc, k)) for k in keys])
+            _r.update({'region': getattr(vpc, 'region').name})
+            return {'vpc': _r}
         else:
             return {'vpc': None}
 
@@ -786,10 +785,12 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
         if vpcs:
             ret = []
             for vpc in vpcs:
-                ret.append(dict((k, getattr(vpc, k)) for k in keys))
+                _r = dict([(k, getattr(vpc, k)) for k in keys])
+                _r.update({'region': getattr(vpc, 'region').name})
+                ret.append(_r)
             return {'vpcs': ret}
         else:
-            return {'vpcs': None}
+            return {'vpcs': []}
 
     except BotoServerError as e:
         return {'error': salt.utils.boto.get_error(e)}
