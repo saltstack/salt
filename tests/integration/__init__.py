@@ -507,6 +507,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         self._connectable.clear()
         time.sleep(0.0125)
         self._process.terminate()
+        self._process.join()
 
         if HAS_PSUTIL:
             # Lets log and kill any child processes which salt left behind
