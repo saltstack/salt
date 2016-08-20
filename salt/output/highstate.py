@@ -25,8 +25,8 @@ state_output:
       only one line.
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
-    * If ``mixed_id`` is used, then the mixed form will be used, but the
-      be drawn from the state ID. This is useful for cases where the name
+    * If ``mixed_id`` is used, then the mixed form will be used, but the value for ``name``
+      will be drawn from the state ID. This is useful for cases where the name
       value might be very long and hard to read.
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
