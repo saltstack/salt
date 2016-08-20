@@ -266,19 +266,6 @@ def get_proc_dir(cachedir, **kwargs):
     return fn_
 
 
-def parse_args_and_kwargs(func, args, data=None):
-    '''
-    Wrap load_args_and_kwargs
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'salt.minion.parse_args_and_kwargs() has been renamed to '
-        'salt.minion.load_args_and_kwargs(). Please change this function call '
-        'before the Carbon release of Salt.'
-    )
-    return load_args_and_kwargs(func, args, data=data)
-
-
 def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     '''
     Detect the args and kwargs that need to be passed to a function call, and
