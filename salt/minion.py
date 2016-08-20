@@ -2277,41 +2277,44 @@ class Syndic(Minion):
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
-        tag_parts = event['tag'].split('/')
+        log.trace('Got event {0}'.format(mtag))  # pylint: disable=no-member
+        tag_parts = mtag.split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
             salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-            'return' in event['data']:
-            if 'jid' not in event['data']:
+            'return' in data:
+            if 'jid' not in data:
                 # Not a job return
                 return
-            jdict = self.jids.setdefault(event['data']['jid'], {})
+            jdict = self.jids.setdefault(data['jid'], {})
             if not jdict:
-                jdict['__fun__'] = event['data'].get('fun')
-                jdict['__jid__'] = event['data']['jid']
+                jdict['__fun__'] = data.get('fun')
+                jdict['__jid__'] = data['jid']
                 jdict['__load__'] = {}
                 fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
-                if event['data']['jid'] not in self.jid_forward_cache:
+                if data['jid'] not in self.jid_forward_cache:
                     jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
+                        self.mminion.returners[fstr](data['jid'])
                         )
-                    self.jid_forward_cache.add(event['data']['jid'])
+                    self.jid_forward_cache.add(data['jid'])
                     if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
                         # Pop the oldest jid from the cache
                         tmp = sorted(list(self.jid_forward_cache))
                         tmp.pop(0)
                         self.jid_forward_cache = set(tmp)
-            if 'master_id' in event['data']:
+            if 'master_id' in data:
                 # __'s to make sure it doesn't print out on the master cli
-                jdict['__master_id__'] = event['data']['master_id']
-            jdict[event['data']['id']] = event['data']['return']
+                jdict['__master_id__'] = data['master_id']
+            ret = {}
+            for key in 'return', 'retcode', 'success':
+                if key in data:
+                    ret[key] = data[key]
+            jdict[data['id']] = ret
         else:
             # Add generic event aggregation here
-            if 'retcode' not in event['data']:
-                self.raw_events.append(event)
+            if 'retcode' not in data:
+                self.raw_events.append({'data': data, 'tag': mtag})
 
     @tornado.gen.coroutine
     def _return_pub_multi(self, values):
@@ -2583,34 +2586,33 @@ class MultiSyndic(MinionBase):
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
+        log.trace('Got event {0}'.format(mtag))  # pylint: disable=no-member
 
-        tag_parts = event['tag'].split('/')
+        tag_parts = mtag.split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
             salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-            'return' in event['data']:
-            if 'jid' not in event['data']:
+            'return' in data:
+            if 'jid' not in data:
                 # Not a job return
                 return
-            if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+            if self.syndic_mode == 'cluster' and data.get('master_id', 0) == self.opts.get('master_id', 1):
                 log.debug('Return received with matching master_id, not forwarding')
                 return
 
-            master = event['data'].get('master_id')
-            jdict = self.job_rets.setdefault(master, {}).setdefault(event['tag'], {})
+            master = data.get('master_id')
+            jdict = self.job_rets.setdefault(master, {}).setdefault(mtag, {})
             if not jdict:
-                jdict['__fun__'] = event['data'].get('fun')
-                jdict['__jid__'] = event['data']['jid']
+                jdict['__fun__'] = data.get('fun')
+                jdict['__jid__'] = data['jid']
                 jdict['__load__'] = {}
                 fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
-                if event['data']['jid'] not in self.jid_forward_cache:
+                if data['jid'] not in self.jid_forward_cache:
                     jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
+                        self.mminion.returners[fstr](data['jid'])
                         )
-                    self.jid_forward_cache.add(event['data']['jid'])
+                    self.jid_forward_cache.add(data['jid'])
                     if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
                         # Pop the oldest jid from the cache
                         tmp = sorted(list(self.jid_forward_cache))
@@ -2619,15 +2621,19 @@ class MultiSyndic(MinionBase):
             if master is not None:
                 # __'s to make sure it doesn't print out on the master cli
                 jdict['__master_id__'] = master
-            jdict[event['data']['id']] = event['data']['return']
+            ret = {}
+            for key in 'return', 'retcode', 'success':
+                if key in data:
+                    ret[key] = data[key]
+            jdict[data['id']] = ret
         else:
             # TODO: config to forward these? If so we'll have to keep track of who
             # has seen them
             # if we are the top level masters-- don't forward all the minion events
             if self.syndic_mode == 'sync':
                 # Add generic event aggregation here
-                if 'retcode' not in event['data']:
-                    self.raw_events.append(event)
+                if 'retcode' not in data:
+                    self.raw_events.append({'data': data, 'tag': mtag})
 
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
