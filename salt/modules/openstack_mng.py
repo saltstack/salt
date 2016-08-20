@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 
 # Import third party libs
 import os.path
@@ -88,7 +89,7 @@ def restart_service(service_name, minimum_running_time=None):
         for service in services:
             service_info = __salt__['service.show'](service)
 
-            boot_time = float(open('/proc/uptime').read().split(' ')[0])
+            boot_time = float(salt.utils.fopen('/proc/uptime').read().split(' ')[0])
 
             expr_time = int(service_info.get('ExecMainStartTimestampMonotonic', 0)) / 1000000 < boot_time - minimum_running_time
             expr_active = service_info.get('ActiveState') == "active"
