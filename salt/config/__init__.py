@@ -514,6 +514,10 @@ VALID_OPTS = {
     # The number of hours to keep jobs around in the job cache on the master
     'keep_jobs': int,
 
+    # If the returner supports `clean_old_jobs`, then at cleanup time,
+    # archive the job data before deleting it.
+    'archive_jobs': bool,
+
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
 
@@ -1161,6 +1165,7 @@ DEFAULT_MASTER_OPTS = {
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
+    'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'key_cache': '',
