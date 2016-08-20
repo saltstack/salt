@@ -1366,7 +1366,7 @@ DEFAULT_MASTER_OPTS = {
     'tcp_keepalive_intvl': -1,
     'sign_pub_messages': False,
     'keysize': 2048,
-    'transport': 'tcp',
+    'transport': 'zeromq',
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
