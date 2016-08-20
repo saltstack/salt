@@ -200,6 +200,10 @@ FunctionEnd
 ###############################################################################
 Function pageMinionConfig
 
+    ${If} $CheckBox_Minion_State == 0
+        Abort
+    ${EndIf}
+
     # Set Page Title and Description
     !insertmacro MUI_HEADER_TEXT "Minion Settings" "Set the Minion Master and ID"
     nsDialogs::Create 1018
