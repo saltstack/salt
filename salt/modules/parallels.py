@@ -400,7 +400,6 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
     # Get a set of all snapshot GUIDs in the string
     snap_ids = _find_guids(info)
-    print(snap_ids)
 
     # Try to match the snapshot name to an ID
     named_ids = []
