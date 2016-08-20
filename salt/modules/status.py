@@ -27,7 +27,6 @@ import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
-from salt.utils.decorators import with_deprecated
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
@@ -921,7 +920,7 @@ def all_status():
             'meminfo': meminfo(),
             'netdev': netdev(),
             'netstats': netstats(),
-            'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
+            'uptime': uptime(),
             'vmstats': vmstats(),
             'w': w()}
 
