@@ -1679,7 +1679,11 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         TODO remove after salt-testing PR #74 is merged and deployed
         '''
-        super(ModuleCase, self).runTest()
+        try:
+            super(ModuleCase, self).runTest()
+        except AttributeError:
+            log.error('ModuleCase runTest() could not execute. Requires at least v2016.8.3 of '
+                    'salt-testing package')
 
     def minion_run(self, _function, *args, **kw):
         '''
