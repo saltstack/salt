@@ -83,8 +83,8 @@ class ParallelsTestCase(TestCase):
                                                     {a5b8999f-5d95-4aff-82de-e515b0101b66}
             {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
         ''')
-        guids = set(['a5b8999f-5d95-4aff-82de-e515b0101b66',
-                     'a7345be5-ab66-478c-946e-a6c2caf14909'])
+        guids = ['a5b8999f-5d95-4aff-82de-e515b0101b66',
+                     'a7345be5-ab66-478c-946e-a6c2caf14909']
 
         self.assertEqual(parallels._find_guids(guid_str), guids)
 
@@ -307,7 +307,7 @@ class ParallelsTestCase(TestCase):
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_one_name = MagicMock(side_effect=[u'', u'ν_e'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_one_name):
-                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_id)
+                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_ids[1])
 
         # Validate multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
@@ -351,7 +351,7 @@ class ParallelsTestCase(TestCase):
         # Validate a numerical name
         mock_snap_numb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_numb):
-            self.assertEqual(parallels._validate_snap_name(name, 3.14159), snap_id)
+            self.assertEqual(parallels._validate_snap_name(name, '3.14159'), snap_id)
             mock_snap_numb.assert_called_once_with(name, u'3.14159', strict=True, runas=None)
 
     def test_list_snapshots(self):
