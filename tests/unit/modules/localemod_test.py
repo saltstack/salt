@@ -84,7 +84,9 @@ class LocalemodTestCase(TestCase):
                     self.assertFalse(localemod.set_locale('l'))
 
             with patch.dict(localemod.__grains__, {'os_family': ['A']}):
-                self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
+                with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
+                    with patch('salt.utils.systemd.booted', return_value=False):
+                        self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
 
     def test_avail(self):
         '''
