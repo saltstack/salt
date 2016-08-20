@@ -164,6 +164,24 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
+    def test_get_url_makedirs(self):
+        '''
+        cp.get_url
+        '''
+        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        self.run_function(
+               'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ],
+                makedirs=True
+            )
+        with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
     def test_get_url_https(self):
         '''
         cp.get_url with https:// source
