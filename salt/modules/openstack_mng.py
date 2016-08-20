@@ -17,10 +17,6 @@ import logging
 
 # Import third party libs
 import os.path
-if os.path.isfile('/usr/bin/openstack-service'):
-    HAS_OPENSTACK = True
-else:
-    HAS_OPENSTACK = False
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +28,7 @@ def __virtual__():
     '''
     Only load this module if openstack-service is installed
     '''
-    if HAS_OPENSTACK:
+    if os.path.isfile('/usr/bin/openstack-service'):
         return __virtualname__
     else:
         return (False, 'The openstack-service binary could not be found.')
