@@ -200,103 +200,103 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             'log_level_logfile': 'info',
             'transport': self.master_opts['transport'],
         }
-
-        # Remove existing logfile
-        if os.path.isfile(logfile):
-            os.unlink(logfile)
-
-        start = datetime.now()
-        # Let's first test with a master running
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
-            )
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            )
-        )
         try:
-            self.assertIn('local:', ret)
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
+            # Remove existing logfile
+            if os.path.isfile(logfile):
+                os.unlink(logfile)
 
-            raise
+            start = datetime.now()
+            # Let's first test with a master running
 
-        # Calculate the required timeout, since next will fail.
-        # I needed this because after many attempts, I was unable to catch:
-        #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
-        ellapsed = datetime.now() - start
-        timeout = ellapsed.seconds + 3
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                )
+            )
+            try:
+                self.assertIn('local:', ret)
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
 
-        # Now let's remove the master configuration
-        minion_config.pop('master')
-        minion_config.pop('master_port')
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
+                raise
+
+            # Calculate the required timeout, since next will fail.
+            # I needed this because after many attempts, I was unable to catch:
+            #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
+            ellapsed = datetime.now() - start
+            timeout = ellapsed.seconds + 3
+
+            # Now let's remove the master configuration
+            minion_config.pop('master')
+            minion_config.pop('master_port')
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+
+            out = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=timeout,
             )
 
-        out = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=timeout,
-        )
+            try:
+                self.assertIn(
+                    'Process took more than {0} seconds to complete. '
+                    'Process Killed!'.format(timeout),
+                    out
+                )
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
 
-        try:
-            self.assertIn(
-                'Process took more than {0} seconds to complete. '
-                'Process Killed!'.format(timeout),
-                out
+                raise
+
+            # Should work with --local
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} --local cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=15
             )
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
+            try:
+                self.assertIn('local:', ret)
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
+                raise
 
-            raise
-
-        # Should work with --local
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} --local cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=15
-        )
-        try:
-            self.assertIn('local:', ret)
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
-            raise
-
-        # Should work with local file client
-        minion_config['file_client'] = 'local'
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
+            # Should work with local file client
+            minion_config['file_client'] = 'local'
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=15
             )
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=15
-        )
-        try:
             self.assertIn('local:', ret)
         finally:
             if os.path.isfile(minion_config_file):
@@ -304,6 +304,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             # Let's remove our key from the master
             if os.path.isfile(this_minion_key):
                 os.unlink(this_minion_key)
+
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
