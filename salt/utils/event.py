@@ -814,9 +814,9 @@ class NamespacedEvent(object):
         self.print_func = print_func
 
     def fire_event(self, data, tag):
+        self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
-        self.event.fire_event(data, tagify(tag, base=self.base))
 
 
 class MinionEvent(SaltEvent):
