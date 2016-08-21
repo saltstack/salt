@@ -259,7 +259,7 @@ class CkMinions(object):
             minions = set(minions)
             for id_ in cminions:
                 mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
-                if mdata is None:
+                if mdata is None and id_ in minions:
                     minions.remove(id_)
                     continue
                 search_results = mdata.get(search_type)
