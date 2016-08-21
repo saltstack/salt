@@ -61,14 +61,21 @@ class LocalemodTestCase(TestCase):
         with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
                 with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A')}):
-                    self.assertEqual(localemod.get_locale(), 'A')
+                    with patch.object(localemod,
+                                      '_parse_localectl',
+                                      return_value={'LANG': 'A'}):
+                        self.assertEqual(localemod.get_locale(), 'A')
 
             with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
                 with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A=B')}):
-                    self.assertEqual(localemod.get_locale(), 'B')
+                    with patch.object(localemod,
+                                      '_parse_localectl',
+                                      return_value={'LANG': 'B'}):
+                        self.assertEqual(localemod.get_locale(), 'B')
 
             with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
-                self.assertRaises(CommandExecutionError, localemod.get_locale)
+                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A=B')}):
+                    self.assertRaises(CommandExecutionError, localemod.get_locale)
 
     def test_set_locale(self):
         '''
@@ -81,7 +88,10 @@ class LocalemodTestCase(TestCase):
         with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
                 with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value='A')}):
-                    self.assertFalse(localemod.set_locale('l'))
+                    with patch.object(localemod,
+                                      '_parse_localectl',
+                                      return_value={'LANG': 'B'}):
+                        self.assertFalse(localemod.set_locale('l'))
 
             with patch.dict(localemod.__grains__, {'os_family': ['A']}):
                 with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
