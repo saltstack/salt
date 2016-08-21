@@ -632,16 +632,17 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
                                           **conn_parameters)
         self.assertTrue(result['deleted'])
 
-#    def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(self):
-#        '''
-#        tests True mapping deleted.
-#        '''
-#        self.conn.list_event_source_mappings.return_value = {'EventSourceMappings': [event_source_mapping_ret]}
-#        result = boto_lambda.delete_event_source_mapping(
-#                             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-#                             FunctionName=event_source_mapping_ret['FunctionArn'],
-#                             **conn_parameters)
-#        self.assertTrue(result['deleted'])
+    @skipIf(True, 'This appears to leak memory and crash the unit test suite')
+    def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(self):
+        '''
+        tests True mapping deleted.
+        '''
+        self.conn.list_event_source_mappings.return_value = {'EventSourceMappings': [event_source_mapping_ret]}
+        result = boto_lambda.delete_event_source_mapping(
+                             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
+                             FunctionName=event_source_mapping_ret['FunctionArn'],
+                             **conn_parameters)
+        self.assertTrue(result['deleted'])
 
     def test_that_when_deleting_an_event_source_mapping_without_identifier_the_delete_event_source_mapping_method_raises_saltinvocationexception(self):
         '''
