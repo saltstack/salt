@@ -103,7 +103,10 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout,
             stderr=integration.utils.decode_byte_list(stderr)
         )
-        # master.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -128,7 +131,10 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout,
             stderr=integration.utils.decode_byte_list(stderr)
         )
-        # master.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''

@@ -266,19 +266,6 @@ def get_proc_dir(cachedir, **kwargs):
     return fn_
 
 
-def parse_args_and_kwargs(func, args, data=None):
-    '''
-    Wrap load_args_and_kwargs
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'salt.minion.parse_args_and_kwargs() has been renamed to '
-        'salt.minion.load_args_and_kwargs(). Please change this function call '
-        'before the Carbon release of Salt.'
-    )
-    return load_args_and_kwargs(func, args, data=data)
-
-
 def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     '''
     Detect the args and kwargs that need to be passed to a function call, and
@@ -1198,7 +1185,7 @@ class Minion(MinionBase):
         log.debug('Command details {0}'.format(data))
 
         # Don't duplicate jobs
-        log.debug('Started JIDs: {0}'.format(self.jid_queue))
+        log.trace('Started JIDs: {0}'.format(self.jid_queue))
         if self.jid_queue is not None:
             if data['jid'] in self.jid_queue:
                 return
@@ -2929,10 +2916,6 @@ class ProxyMinion(Minion):
 
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
-
-        # Check config 'add_proxymodule_to_opts'  Remove this in Carbon.
-        if self.opts['add_proxymodule_to_opts']:
-            self.opts['proxymodule'] = self.proxy
 
         # And re-load the modules so the __proxy__ variable gets injected
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()

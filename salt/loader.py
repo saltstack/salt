@@ -894,7 +894,8 @@ def clouds(opts):
                      int_type='clouds'),
         opts,
         tag='clouds',
-        pack={'__active_provider_name__': None},
+        pack={'__utils__': salt.loader.utils(opts),
+              '__active_provider_name__': None},
     )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
@@ -927,6 +928,18 @@ def executors(opts, functions=None, context=None):
         opts,
         tag='executor',
         pack={'__salt__': functions, '__context__': context or {}},
+    )
+
+
+def cache(opts, serial):
+    '''
+    Returns the returner modules
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'cache', 'cache'),
+        opts,
+        tag='cache',
+        pack={'__opts__': opts, '__context__': {'serial': serial}},
     )
 
 

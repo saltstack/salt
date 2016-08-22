@@ -533,6 +533,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                               state=u'available',
                               tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
+                              region=u'us-east-1',
                               instance_tenancy=u'default')
 
         self.assertEqual(describe_vpc, {'vpc': vpc_properties})

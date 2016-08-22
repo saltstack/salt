@@ -73,7 +73,7 @@ class ZypperTestCase(TestCase):
         self.zypper_patcher_config = {
             '_get_configured_repos': Mock(side_effect=side_effect),
             '__zypper__': Mock(),
-            'get_repo': Mock()
+            'get_repo': Mock(return_value={})
         }
 
     def test_list_upgrades(self):
@@ -442,15 +442,22 @@ class ZypperTestCase(TestCase):
                 'stderr': ''
         }
 
-        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=cmd_out)}):
-            with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=parsed_targets)}):
-                with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
-                    with patch('salt.modules.zypper.list_pkgs', ListPackages()):
-                        diff = zypper.remove(name='vim,pico')
-                        for pkg_name in ['vim', 'pico']:
-                            self.assertTrue(diff.get(pkg_name))
-                            self.assertTrue(diff[pkg_name]['old'])
-                            self.assertFalse(diff[pkg_name]['new'])
+        # If config.get starts being used elsewhere, we'll need to write a
+        # side_effect function.
+        patches = {
+            'cmd.run_all': MagicMock(return_value=cmd_out),
+            'pkg_resource.parse_targets': MagicMock(return_value=parsed_targets),
+            'pkg_resource.stringify': MagicMock(),
+            'config.get': MagicMock(return_value=True)
+        }
+
+        with patch.dict(zypper.__salt__, patches):
+            with patch('salt.modules.zypper.list_pkgs', ListPackages()):
+                diff = zypper.remove(name='vim,pico')
+                for pkg_name in ['vim', 'pico']:
+                    self.assertTrue(diff.get(pkg_name))
+                    self.assertTrue(diff[pkg_name]['old'])
+                    self.assertFalse(diff[pkg_name]['new'])
 
     def test_repo_value_info(self):
         '''
@@ -507,17 +514,8 @@ class ZypperTestCase(TestCase):
             'salt.modules.zypper', **self.zypper_patcher_config)
 
         with zypper_patcher:
-            with self.assertRaisesRegexp(
-                Exception,
-                'Specified arguments did not result in modification of repo'
-            ):
-                zypper.mod_repo(name, **{'url': url})
-            with self.assertRaisesRegexp(
-                Exception,
-                'Specified arguments did not result in modification of repo'
-            ):
-                zypper.mod_repo(name, **{'url': url, 'gpgautoimport': 'a'})
-
+            self.assertEqual(zypper.mod_repo(name, **{'url': url}),
+                             {'comment': 'Specified arguments did not result in modification of repo'})
             zypper.__zypper__.xml.call.assert_not_called()
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 

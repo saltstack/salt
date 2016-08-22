@@ -114,6 +114,15 @@ class LocalClient(object):
     running as. (Unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution).
 
+    ..note::
+
+        The LocalClient uses a Tornado IOLoop, this can create issues when
+        using the LocalClient inside an existing IOLoop. If creating the
+        LocalClient in partnership with another IOLoop either create the
+        IOLoop before creating the LocalClient, or when creating the IOLoop
+        use ioloop.current() which will return the ioloop created by
+        LocalClient.
+
     .. code-block:: python
 
         import salt.client
@@ -986,7 +995,14 @@ class LocalClient(object):
                 # if there are no more events, lets stop waiting for the jinfo
                 if raw is None:
                     break
-
+                try:
+                    if raw['data']['retcode'] > 0:
+                        log.error('saltutil returning errors on minion {0}'.format(raw['data']['id']))
+                        minions.remove(raw['data']['id'])
+                        break
+                except KeyError as exc:
+                    # This is a safe pass. We're just using the try/except to avoid having to deep-check for keys
+                    log.debug('Passing on saltutil error. This may be an error in saltclient. {0}'.format(exc))
                 # Keep track of the jid events to unsubscribe from later
                 open_jids.add(jinfo['jid'])
 

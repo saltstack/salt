@@ -1025,6 +1025,7 @@ _OS_FAMILY_MAP = {
     'Fedora': 'RedHat',
     'Chapeau': 'RedHat',
     'Korora': 'RedHat',
+    'FedBerry': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
@@ -1519,7 +1520,6 @@ def os_data():
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
         grains['osmajorrelease'] = str(grains['osrelease_info'][0])  # This will be an integer in the two releases
-        salt.utils.warn_until('Nitrogen', 'The "osmajorrelease" will be a type of an integer.')
         os_name = grains['os' if grains.get('os') in (
             'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(

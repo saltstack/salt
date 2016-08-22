@@ -292,6 +292,11 @@ General Deprecations
       # will result in refresh evaluating to True and saltenv likely not being a string at all
       fcn('add more salt', 'prod', False)
 
+- Deprecations in ``minion.py``:
+
+  - The ``salt.minion.parse_args_and_kwargs`` function has been removed. Please
+  use the ``salt.minion.load_args_and_kwargs`` function instead.
+
 Cloud Deprecations
 ------------------
 
@@ -343,6 +348,10 @@ Execution Module Deprecations
   - The old style of defining lxc containers has been removed. Please use keys under which
     LXC profiles should be configured such as ``lxc.container_profile.profile_name``.
 
+- The ``env`` and ``activate`` keyword arguments have been removed from the ``install``
+  function in the ``pip`` execution module. The use of ``bin_env`` replaces both of these
+  options.
+
 - ``reg`` execution module
 
   Functions in the ``reg`` execution module had misleading and confusing names
@@ -371,6 +380,12 @@ Execution Module Deprecations
 - The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
   module. The ``hash_known_hosts`` option should be used instead.
 
+- The ``human_readable`` option was removed from the ``uptime`` function in the
+  ``status`` execution module. The function was also updated in 2015.8.9 to return
+  a more complete offering of uptime information, formatted as an easy-to-read
+  dictionary. This updated function replaces the need for the ``human_readable``
+  option.
+
 - The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
   instead.
 
@@ -395,6 +410,10 @@ Runner Module Deprecations
 
 State Module Deprecations
 -------------------------
+
+- The ``env`` and ``activate`` keyword arguments were removed from the ``installed``
+  function in the ``pip`` state module. The use of ``bin_env`` replaces both of these
+  options.
 
 - ``reg`` state module
 

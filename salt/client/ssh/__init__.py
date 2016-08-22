@@ -135,8 +135,11 @@ SUDO=""
 if [ -n "{{SUDO}}" ]
     then SUDO="sudo "
 fi
-if [ "$SUDO" ]
+SUDO_USER="{{SUDO_USER}}"
+if [ "$SUDO" ] && [ "$SUDO_USER" ]
 then SUDO="sudo -u {{SUDO_USER}}"
+elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
+then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
@@ -295,7 +298,7 @@ class SSH(object):
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
-                    '/tmp',
+                    '/var/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
             self.opts['ssh_wipe'] = 'True'
         self.serial = salt.payload.Serial(opts)

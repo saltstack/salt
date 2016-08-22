@@ -632,7 +632,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
                                           **conn_parameters)
         self.assertTrue(result['deleted'])
 
-    @skipIf(ON_SUSE, 'Skipping while debugging why the test suite hangs and bails on this test on opensuse')
+    @skipIf(True, 'This appears to leak memory and crash the unit test suite')
     def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(self):
         '''
         tests True mapping deleted.

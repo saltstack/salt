@@ -57,32 +57,6 @@ class StatusTestCase(TestCase):
             with self.assertRaises(CommandExecutionError):
                 status.uptime()
 
-    def test_deprecated_uptime(self):
-        '''
-        test modules.status.uptime function, deprecated version
-        '''
-        mock_uptime = 'very often'
-        mock_run = MagicMock(return_value=mock_uptime)
-        with patch.dict(status.__salt__, {'cmd.run': mock_run}):
-            self.assertEqual(status._uptime(), mock_uptime)
-
-        mock_uptime = 'very idle'
-        mock_run = MagicMock(return_value=mock_uptime)
-        with patch.dict(status.__salt__, {'cmd.run': mock_run}):
-            with patch('os.path.exists', MagicMock(return_value=True)):
-                self.assertEqual(status._uptime(human_readable=False), mock_uptime.split()[0])
-
-        mock_uptime = ''
-        mock_return = 'unexpected format in /proc/uptime'
-        mock_run = MagicMock(return_value=mock_uptime)
-        with patch.dict(status.__salt__, {'cmd.run': mock_run}):
-            with patch('os.path.exists', MagicMock(return_value=True)):
-                self.assertEqual(status._uptime(human_readable=False), mock_return)
-
-        mock_return = 'cannot find /proc/uptime'
-        with patch('os.path.exists', MagicMock(return_value=False)):
-            self.assertEqual(status._uptime(human_readable=False), mock_return)
-
 
 if __name__ == '__main__':
     from integration import run_tests

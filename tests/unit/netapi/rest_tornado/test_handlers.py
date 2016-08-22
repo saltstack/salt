@@ -87,12 +87,21 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
-        super(SaltnadoTestCase, self).setUp()
+        # FIXME
+        # The try/except here and in tearDownis a temporary fix, pending the release of a
+        # new salt version, later than 08.22.16
+        try:
+            super(SaltnadoTestCase, self).setUp()
+        except (NotImplementedError, AttributeError):
+            pass
         self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
 
     def tearDown(self):
-        super(SaltnadoTestCase, self).tearDown()
+        try:
+            super(SaltnadoTestCase, self).tearDown()
+        except AttributeError:
+            pass
         if self.async_timeout_prev is None:
             os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         else:

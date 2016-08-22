@@ -267,7 +267,7 @@ import time
 import uuid
 import base64
 import errno
-from subprocess import list2cmdline
+import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -5698,6 +5698,8 @@ def call(name, function, *args, **kwargs):
     '''
     Executes a salt function inside a container
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion dockerng.call test.ping
@@ -5715,7 +5717,7 @@ def call(name, function, *args, **kwargs):
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
     # put_archive reqires the path to exist
-    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_thin_argv))
+    ret = __salt__['dockerng.run_all'](name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
@@ -5739,7 +5741,7 @@ def call(name, function, *args, **kwargs):
         ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
 
         ret = __salt__['dockerng.run_all'](name,
-                                           list2cmdline(map(str, salt_argv)))
+                                           subprocess.list2cmdline(map(str, salt_argv)))
         # python not found
         if ret['retcode'] != 0:
             raise CommandExecutionError(ret['stderr'])
@@ -5758,7 +5760,7 @@ def call(name, function, *args, **kwargs):
     finally:
         # delete the thin dir so that it does not end in the image
         rm_thin_argv = ['rm', '-rf', thin_dest_path]
-        __salt__['dockerng.run_all'](name, list2cmdline(rm_thin_argv))
+        __salt__['dockerng.run_all'](name, subprocess.list2cmdline(rm_thin_argv))
 
 
 def sls(name, mods=None, saltenv='base', **kwargs):
@@ -5768,6 +5770,8 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     For example, if your master defines the states ``web`` and ``rails``, you
     can apply them to a container:
     states by doing:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5792,7 +5796,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     trans_dest_path = _generate_tmp_path()
     mkdirp_trans_argv = ['mkdir', '-p', trans_dest_path]
     # put_archive requires the path to exist
-    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_trans_argv))
+    ret = __salt__['dockerng.run_all'](name, subprocess.list2cmdline(mkdirp_trans_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
@@ -5810,7 +5814,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     finally:
         # delete the trans dir so that it does not end in the image
         rm_trans_argv = ['rm', '-rf', trans_dest_path]
-        __salt__['dockerng.run_all'](name, list2cmdline(rm_trans_argv))
+        __salt__['dockerng.run_all'](name, subprocess.list2cmdline(rm_trans_argv))
         # delete the local version of the trans tar
         try:
             os.remove(trans_tar)
@@ -5838,6 +5842,8 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
     For example, if your master defines the states ``web`` and ``rails``, you
     can build a docker image inside myminion that results of applying those
     states by doing:
+
+    CLI Example:
 
     .. code-block:: bash
 

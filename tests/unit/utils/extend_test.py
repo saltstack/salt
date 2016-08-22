@@ -20,6 +20,8 @@ from salt.utils import fopen
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import MagicMock, patch
+
 ensure_in_syspath('../../')
 
 
@@ -32,6 +34,7 @@ class ExtendTestCase(TestCase):
             if os.path.exists(self.out):
                 shutil.rmtree(self.out, True)
 
+    @patch('sys.exit', MagicMock)
     def test_run(self):
         out = salt.utils.extend.run('test', 'test', 'this description', '.', False)
         self.out = out

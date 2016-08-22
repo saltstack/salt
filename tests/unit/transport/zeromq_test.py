@@ -52,6 +52,8 @@ class BaseZMQReqCase(TestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'zeromq',
@@ -81,6 +83,8 @@ class BaseZMQReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.process_manager.kill_children()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()

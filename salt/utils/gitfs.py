@@ -367,7 +367,12 @@ class GitProvider(object):
         '''
         Programatically determine config value based on the desired saltenv
         '''
-        def _getconf(self, tgt_env):
+        def _getconf(self, tgt_env='base'):
+            strip_sep = lambda x: x.rstrip(os.sep) \
+                if name in ('root', 'mountpoint') \
+                else x
+            if self.role != 'gitfs':
+                return strip_sep(getattr(self, '_' + name))
             # Get saltenv-specific configuration
             saltenv_conf = self.saltenv.get(tgt_env, {})
             if name == 'ref':
@@ -381,9 +386,6 @@ class GitProvider(object):
                         return self.global_saltenv[tgt_env][name]
                     else:
                         return tgt_env
-            strip_sep = lambda x: x.rstrip(os.sep) \
-                if name in ('root', 'mountpoint') \
-                else x
             if name in saltenv_conf:
                 return strip_sep(saltenv_conf[name])
             elif tgt_env in self.global_saltenv \

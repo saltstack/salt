@@ -17,10 +17,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
-
-# Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 
 # Get logging started
@@ -64,7 +60,7 @@ def create(vm_):
     '''
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     return ret
 

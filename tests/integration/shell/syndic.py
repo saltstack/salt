@@ -109,7 +109,10 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
             message='unknown user not on system',
             stdout=stdout, stderr=stderr
         )
-        # syndic.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        syndic.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -133,7 +136,10 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
             message='unknown argument',
             stdout=stdout, stderr=stderr
         )
-        # syndic.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        syndic.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
