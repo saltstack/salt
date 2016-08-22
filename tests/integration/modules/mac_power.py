@@ -15,12 +15,6 @@ import integration
 import salt.utils
 
 
-def disabled(f):
-    def _decorator(f):
-        print('{0} has been disabled'.format(f.__name__))
-    return _decorator(f)
-
-
 class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
@@ -155,7 +149,6 @@ class MacPowerModuleTest(integration.ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_harddisk_sleep', [True]))
 
-    @disabled
     def test_wake_on_modem(self):
         '''
         Test power.get_wake_on_modem
@@ -169,7 +162,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_wake_on_modem', ['off']))
         self.assertFalse(self.run_function('power.get_wake_on_modem'))
 
-    @disabled
     def test_wake_on_network(self):
         '''
         Test power.get_wake_on_network
@@ -183,7 +175,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_wake_on_network', ['off']))
         self.assertFalse(self.run_function('power.get_wake_on_network'))
 
-    @disabled
     def test_restart_power_failure(self):
         '''
         Test power.get_restart_power_failure
@@ -199,7 +190,6 @@ class MacPowerModuleTest(integration.ModuleCase):
             self.run_function('power.set_restart_power_failure', ['off']))
         self.assertFalse(self.run_function('power.get_restart_power_failure'))
 
-    @disabled
     def test_restart_freeze(self):
         '''
         Test power.get_restart_freeze
@@ -214,7 +204,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_restart_freeze', ['off']))
         self.assertFalse(self.run_function('power.get_restart_freeze'))
 
-    @disabled
     def test_sleep_on_power_button(self):
         '''
         Test power.get_sleep_on_power_button
