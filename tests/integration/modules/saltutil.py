@@ -22,7 +22,7 @@ class SaltUtilModuleTest(integration.ModuleCase):
     '''
 
     def setUp(self):
-        self.run_function('saltutil.refresh_pillar') 
+        self.run_function('saltutil.refresh_pillar')
 
     # Tests for the wheel function
 
@@ -31,7 +31,7 @@ class SaltUtilModuleTest(integration.ModuleCase):
         Tests using the saltutil.wheel function when passing only a function.
         '''
         # Wait for the pillar refresh to kick in, so that grains are ready to go
-        time.sleep(3) 
+        time.sleep(3)
         ret = self.run_function('saltutil.wheel', ['minions.connected'])
         self.assertIn('minion', ret['return'])
         self.assertIn('sub_minion', ret['return'])
