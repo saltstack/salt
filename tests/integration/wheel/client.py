@@ -35,6 +35,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         low = {
             'client': 'wheel',
             'fun': 'key.list_all',
+            'print_event': False
         }
         low.update(self.eauth_creds)
 
@@ -60,12 +61,14 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
             'client': 'wheel',
             'fun': 'key.list_all',
             'token': token['token'],
+            'print_event': False,
         })
 
     def test_cmd_sync(self):
         low = {
             'client': 'wheel',
             'fun': 'key.list_all',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
