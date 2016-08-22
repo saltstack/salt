@@ -255,7 +255,7 @@ class SystemModuleTest(integration.ModuleCase):
         computer_desc = self.run_function('system.get_computer_desc')
 
         self.assertTrue(ret)
-        self.assertEqual(computer_desc, desc)
+        self.assertIn(desc, computer_desc)
 
 if __name__ == '__main__':
     from integration import run_tests
