@@ -18,7 +18,7 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
             self.assertIn(host, ret['minions'])
 
     def test_gen(self):
-        ret = self.wheel.cmd('key.gen', id_='soundtechniciansrock', print_event=False)
+        ret = self.wheel.cmd('key.gen', kwarg={'id_': 'soundtechniciansrock'}, print_event=False)
 
         self.assertIn('pub', ret)
         self.assertIn('priv', ret)
