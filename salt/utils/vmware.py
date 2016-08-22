@@ -302,10 +302,10 @@ def get_service_instance(host, username=None, password=None, protocol=None,
 
     service_instance = GetSi()
     if service_instance:
-        if service_instance._GetStub().host == ':'.join([host, str(port)]):
-            log.trace('Using cached service instance')
-            if salt.utils.is_proxy():
-                service_instance._GetStub().GetConnection()
+        if not salt.utils.is_proxy():
+            stub = GetStub()
+            if stub.host == ':'.join([host, str(port)]):
+                return service_instance
         else:
             # Invalidate service instance
             Disconnect(service_instance)
