@@ -7,6 +7,7 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
@@ -15,6 +16,9 @@ import integration
 import salt.utils
 
 
+@skipIf(not salt.utils.is_darwin() \
+        or not salt.utils.which('systemsetup'\
+        or salt.utils.get_uid(salt.utils.get_user() != 0 )), 'Test requirements not met')
 class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
@@ -32,15 +36,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on Mac OS X')
-
-        if not salt.utils.which('systemsetup'):
-            self.skipTest('Test requires systemsetup binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
         self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
         self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
