@@ -263,7 +263,8 @@ def master_config(opts, vm_):
     # Some default options are Null, let's set a reasonable default
     master.update(
         log_level='info',
-        log_level_logfile='info'
+        log_level_logfile='info',
+        hash_type='sha256'
     )
 
     # Get ANY defined master setting, merging data, in the following order
