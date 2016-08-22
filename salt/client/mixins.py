@@ -259,8 +259,8 @@ class SyncClientMixin(object):
             required:
                 - fun: the name of the function to run
             optional:
-                - args: a list of args to pass to fun
-                - kwargs: kwargs for fun
+                - arg: a list of args to pass to fun
+                - kwarg: kwargs for fun
                 - __user__: user who is running the command
                 - __jid__: jid to run under
                 - __tag__: tag to run under
@@ -272,11 +272,7 @@ class SyncClientMixin(object):
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
-        # This avoids including kwargs dict as args list in low data.
-        # We only need to update event data.
-        fun_args = low.get('args', [])
         data = {'fun': '{0}.{1}'.format(self.client, fun),
-                'fun_args': fun_args + ([low['kwargs']] if low.get('kwargs', False) else []),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
                }
@@ -296,11 +292,13 @@ class SyncClientMixin(object):
             # Suppress printing of return event (this keeps us from printing
             # runner/wheel output during orchestration).
             print_func = None
+
         namespaced_event = salt.utils.event.NamespacedEvent(
             event,
             tag,
             print_func=print_func
         )
+
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
@@ -310,8 +308,6 @@ class SyncClientMixin(object):
                         # teardown of event
                         '__jid_event__': weakref.proxy(namespaced_event),
                         }
-
-        func_globals['__jid_event__'].fire_event(data, 'new')
 
         try:
             salt.utils.lazy.verify_fun(self.functions, fun)
@@ -348,6 +344,7 @@ class SyncClientMixin(object):
                 args = f_call.get('args', ())
             else:
                 args = low['arg']
+
             if 'kwarg' not in low:
                 if f_call is None:
                     f_call = salt.utils.format_call(
@@ -367,6 +364,10 @@ class SyncClientMixin(object):
             else:
                 kwargs = low['kwarg']
 
+            # Update the event data with loaded args and kwargs
+            data['fun_args'] = args + ([kwargs] if kwargs else [])
+            func_globals['__jid_event__'].fire_event(data, 'new')
+
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 data['return'] = self.functions[fun](*args, **kwargs)
@@ -376,26 +377,30 @@ class SyncClientMixin(object):
                 data['return'] = str(ex)
             else:
                 data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                                self.client,
-                                fun,
-                                traceback.format_exc(),
-                                )
+                    self.client,
+                    fun,
+                    traceback.format_exc(),
+                    )
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
+
         try:
             salt.utils.job.store_job(
                 self.opts,
-                {'id': self.opts['id'],
-                 'tgt': self.opts['id'],
-                 'jid': data['jid'],
-                 'return': data,
-                 },
+                {
+                    'id': self.opts['id'],
+                    'tgt': self.opts['id'],
+                    'jid': data['jid'],
+                    'return': data,
+                },
                 event=None,
                 mminion=self.mminion,
                 )
         except salt.exceptions.SaltCacheError:
-            log.error('Could not store job cache info. Job details for this run may be unavailable.')
+            log.error('Could not store job cache info. '
+                      'Job details for this run may be unavailable.')
+
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         log.info('Runner completed: {0}'.format(data['jid']))
