@@ -17,6 +17,9 @@ Total Merges: **57**
 
 Changes:
 
+- **PR** `#35611`_: (rallytime*) Everything in the sample master config file should be commented out
+- **PR** `#35569`_: (*rallytime) Write test for multiple unless commands where 1st cmd passes and 2nd fails
+- **PR** `#35600`_: (*rallytime) Update release notes for 2015.8.12
 - **PR** `#35599`_: (*rallytime*) Update release notes for 2015.8.12
 - **PR** `#35584`_: (*terminalmage*) Update linux_sysctl tests to reflect new context key
 - **PR** `#35575`_: (*terminalmage*) Add warning about AWS flagging of nmap usage
@@ -248,10 +251,13 @@ Changes:
 .. _`#35545`: https://github.com/saltstack/salt/pull/35545
 .. _`#35546`: https://github.com/saltstack/salt/pull/35546
 .. _`#35566`: https://github.com/saltstack/salt/pull/35566
+.. _`#35569`: https://github.com/saltstack/salt/pull/35569
 .. _`#35575`: https://github.com/saltstack/salt/pull/35575
 .. _`#35577`: https://github.com/saltstack/salt/pull/35577
 .. _`#35584`: https://github.com/saltstack/salt/pull/35584
 .. _`#35599`: https://github.com/saltstack/salt/pull/35599
+.. _`#35600`: https://github.com/saltstack/salt/pull/35600
+.. _`#35611`: https://github.com/saltstack/salt/pull/35611
 .. _`bp-25276`: https://github.com/saltstack/salt/pull/25276
 .. _`bp-28521`: https://github.com/saltstack/salt/pull/28521
 .. _`bp-33875`: https://github.com/saltstack/salt/pull/33875
