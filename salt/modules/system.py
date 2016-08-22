@@ -492,7 +492,6 @@ def set_computer_desc(desc):
     hostname_cmd = salt.utils.which('hostnamectl')
     if hostname_cmd:
         result = __salt__['cmd.retcode']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
-        log.debug('set-hostname response code: {0}'.format(result))
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):

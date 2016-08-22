@@ -18,6 +18,7 @@ from __future__ import print_function
 from datetime import date
 import tempfile
 import os
+import sys
 import shutil
 from jinja2 import Template
 
@@ -233,7 +234,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     '''
     if not HAS_CLICK:
         print("click is not installed, please install using pip")
-        exit(1)
+        sys.exit(1)
 
     if salt_dir is None:
         salt_dir = '.'
@@ -247,7 +248,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     else:
         if extension not in list(zip(*MODULE_OPTIONS))[0]:
             print("Module extension option not valid")
-            exit(1)
+            sys.exit(1)
 
         chosen_extension = [m for m in MODULE_OPTIONS if m[0] == extension][0]
 
