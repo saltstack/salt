@@ -259,8 +259,9 @@ class CkMinions(object):
             minions = set(minions)
             for id_ in cminions:
                 mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
-                if mdata is None and id_ in minions:
-                    minions.remove(id_)
+                if mdata is None:
+                    if id_ in minions:
+                        minions.remove(id_)
                     continue
                 search_results = mdata.get(search_type)
                 if not salt.utils.subdict_match(search_results,
