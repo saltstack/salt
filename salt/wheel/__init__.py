@@ -50,7 +50,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         '''
         Backwards compatibility
         '''
-        return self.low(fun, kwargs)
+        return self.low(fun, kwargs, print_event=low.get('print_event', True), full_return=low.get('full_return', False))
 
     # TODO: Inconsistent with runner client-- the runner client's master_call gives
     # an async return, unlike this
