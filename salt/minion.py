@@ -1185,7 +1185,7 @@ class Minion(MinionBase):
         log.debug('Command details {0}'.format(data))
 
         # Don't duplicate jobs
-        log.debug('Started JIDs: {0}'.format(self.jid_queue))
+        log.trace('Started JIDs: {0}'.format(self.jid_queue))
         if self.jid_queue is not None:
             if data['jid'] in self.jid_queue:
                 return
