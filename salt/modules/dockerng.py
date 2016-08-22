@@ -5851,6 +5851,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
 
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
+                                      name=name,
                                       cmd='/usr/bin/sleep infinity',
                                       interactive=True, tty=True)
     id_ = ret['Id']
