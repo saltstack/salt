@@ -211,7 +211,7 @@ def set_state(name, backend, state, socket='/var/run/haproxy.sock'):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' haproxy.set_state my_proxy_server my_backend ready
 
     '''

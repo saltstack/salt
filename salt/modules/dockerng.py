@@ -5697,7 +5697,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
 def call(name, function, *args, **kwargs):
     '''
     Executes a salt function inside a container
-    
+
     CLI Example:
 
     .. code-block:: bash
