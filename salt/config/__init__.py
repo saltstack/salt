@@ -1904,13 +1904,14 @@ def syndic_config(master_config_path,
     )
     opts['_minion_conf_file'] = master_opts['conf_file']
     opts['_master_conf_file'] = minion_opts['conf_file']
-    opts.update(minion_opts)
     opts.update(master_opts)
+    opts.update(minion_opts)
     syndic_opts = {
         '__role': 'syndic',
         'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
+        'log_level':master_opts['log_level'],
         'id': minion_opts['id'],
         'pki_dir': minion_opts['pki_dir'],
         'master': opts['syndic_master'],
