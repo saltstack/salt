@@ -1355,7 +1355,8 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
 
 
 def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
-                       region=None, key=None, keyid=None, profile=None):
+                       region=None, key=None, keyid=None, profile=None,
+                       wait_for_delete_retries=8):
     '''
     Ensure the nat gateway in the named subnet is absent.
 
@@ -1385,6 +1386,13 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    wait_for_delete_retries
+        NAT gateway may take some time to be go into deleted or failed state.
+        During the deletion process, subsequent release of elastic IPs may fail;
+        this state will automatically retry this number of times to ensure
+        the NAT gateway is in deleted or failed state before proceeding.
+
     '''
 
     ret = {'name': name,
@@ -1412,7 +1420,9 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
                                                 release_eips=True,
                                                 region=region,
                                                 key=key, keyid=keyid,
-                                                profile=profile)
+                                                profile=profile,
+                                                wait_for_delete=True,
+                                                wait_for_delete_retries=wait_for_delete_retries)
         if 'error' in r:
             ret['result'] = False
             ret['comment'] = 'Failed to delete nat gateway: {0}'.format(r['error']['message'])
