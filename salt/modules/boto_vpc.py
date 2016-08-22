@@ -1422,7 +1422,7 @@ def delete_nat_gateway(nat_gateway_id,
         if wait_for_delete:
             for retry in range(wait_for_delete_retries, 0, -1):
                 if gwinfo and gwinfo['State'] not in ['deleted', 'failed']:
-                    time.sleep((2 ** (wait_for_delete_retries - retry)) + (random.randint(0, 1000) / 1000))
+                    time.sleep((2 ** (wait_for_delete_retries - retry)) + (random.randint(0, 1000) / 1000.0))
                     gwinfo = conn3.describe_nat_gateways(NatGatewayIds=[nat_gateway_id])
                     if gwinfo:
                         gwinfo = gwinfo.get('NatGateways', [None])[0]
