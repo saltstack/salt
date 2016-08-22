@@ -503,34 +503,29 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                     children = parent.children(recursive=True)
             except psutil.NoSuchProcess:
                 pass
+
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
         self._process.terminate()
         self._process.join()
 
-        if HAS_PSUTIL:
+        if HAS_PSUTIL and children:
             # Lets log and kill any child processes which salt left behind
-            for child in children[:]:
-                try:
-                    if sys.platform.startswith('win'):
-                        child.kill()
-                    else:
-                        child.send_signal(signal.SIGKILL)
-                    log.info('Salt left behind the following child process: %s', child.as_dict())
+            def kill_children():
+                for child in children[:]:
                     try:
-                        child.wait(timeout=5)
-                    except psutil.TimeoutExpired:
+                        cmdline = child.cmdline()
+                        log.warning('Salt left behind the following child process: %s', cmdline)
                         child.kill()
-                except psutil.NoSuchProcess:
-                    children.remove(child)
-            if children:
-                try:
-                    # If we *still* have children, go ahead and attempt to use os.kill() to destroy them
-                    psutil.wait_procs(children, timeout=5, callback=lambda nukeem: [os.kill(child.pid, signal.SIGKILL) for child in children])
-                except Exception:
-                    pass
+                        children.remove(child)
+                    except psutil.NoSuchProcess:
+                        children.remove(child)
 
+            kill_children()
+
+            if children:
+                psutil.wait_procs(children, timeout=5, callback=kill_children)
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
