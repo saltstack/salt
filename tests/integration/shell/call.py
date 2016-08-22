@@ -305,7 +305,6 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             if os.path.isfile(this_minion_key):
                 os.unlink(this_minion_key)
 
-
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
