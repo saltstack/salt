@@ -7,6 +7,7 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
@@ -15,12 +16,9 @@ import integration
 import salt.utils
 
 
-def disabled(f):
-    def _decorator(f):
-        print('{0} has been disabled'.format(f.__name__))
-    return _decorator(f)
-
-
+@skipIf(not salt.utils.is_darwin()
+        or not salt.utils.which('systemsetup'
+        or salt.utils.get_uid(salt.utils.get_user() != 0)), 'Test requirements not met')
 class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
@@ -38,15 +36,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on Mac OS X')
-
-        if not salt.utils.which('systemsetup'):
-            self.skipTest('Test requires systemsetup binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
         self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
         self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
@@ -155,7 +144,6 @@ class MacPowerModuleTest(integration.ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_harddisk_sleep', [True]))
 
-    @disabled
     def test_wake_on_modem(self):
         '''
         Test power.get_wake_on_modem
@@ -169,7 +157,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_wake_on_modem', ['off']))
         self.assertFalse(self.run_function('power.get_wake_on_modem'))
 
-    @disabled
     def test_wake_on_network(self):
         '''
         Test power.get_wake_on_network
@@ -183,7 +170,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_wake_on_network', ['off']))
         self.assertFalse(self.run_function('power.get_wake_on_network'))
 
-    @disabled
     def test_restart_power_failure(self):
         '''
         Test power.get_restart_power_failure
@@ -199,7 +185,6 @@ class MacPowerModuleTest(integration.ModuleCase):
             self.run_function('power.set_restart_power_failure', ['off']))
         self.assertFalse(self.run_function('power.get_restart_power_failure'))
 
-    @disabled
     def test_restart_freeze(self):
         '''
         Test power.get_restart_freeze
@@ -214,7 +199,6 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.set_restart_freeze', ['off']))
         self.assertFalse(self.run_function('power.get_restart_freeze'))
 
-    @disabled
     def test_sleep_on_power_button(self):
         '''
         Test power.get_sleep_on_power_button
