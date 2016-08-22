@@ -1185,7 +1185,7 @@ def os_data():
             os=grains['os'],
             ver=grains['osrelease'])
 
-        grains['init'] = 'windows'
+        grains['init'] = 'Windows'
 
         return grains
     elif salt.utils.is_linux():
