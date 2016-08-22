@@ -65,7 +65,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
     def test_cmd_sync(self):
         low = {
             'client': 'wheel',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
         }
         low.update(self.eauth_creds)
 
@@ -74,7 +74,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
     def test_cmd_async(self):
         low = {
             'client': 'wheel_async',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
         }
         low.update(self.eauth_creds)
 
