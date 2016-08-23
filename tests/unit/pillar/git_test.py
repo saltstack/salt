@@ -109,6 +109,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         git_pillar.__opts__['ext_pillar'] = [
             dict(git=self.conf_line)
         ]
+        git_pillar.__opts__['environment'] = None
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
                      'myminon', None)
@@ -149,6 +150,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
             dict(git=self.conf_line),
             dict(git=conf_line2),
         ]
+        git_pillar.__opts__['environment'] = None
 
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
