@@ -483,7 +483,6 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
-            log.debug(self.auth.authenticated)
             if self.auth.authenticated:
                 self.message_client = SaltMessageClient(
                     self.opts,
