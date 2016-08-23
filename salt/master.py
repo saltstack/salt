@@ -507,21 +507,6 @@ class Master(SMaster):
             log.critical('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    # run_reqserver cannot be defined within a class method in order for it
-    # to be picklable.
-    def run_reqserver(self, **kwargs):
-        secrets = kwargs.pop('secrets', None)
-        if secrets is not None:
-            SMaster.secrets = secrets
-
-        with default_signals(signal.SIGINT, signal.SIGTERM):
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key,
-                **kwargs)
-            reqserv.run()
-
     def start(self):
         '''
         Turn on the master server components
@@ -616,9 +601,11 @@ class Master(SMaster):
             kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
             kwargs['secrets'] = SMaster.secrets
 
-        # No need to call this one under default_signals because that's invoked when
-        # actually starting the ReqServer
-        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
+        self.process_manager.add_process(
+            ReqServer,
+            args=(self.opts, self.key, self.master_key),
+            kwargs=kwargs,
+            name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -676,7 +663,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None):
+    def __init__(self, opts, key, mkey, log_queue=None, secrets=None):
         '''
         Create a request server
 
@@ -692,6 +679,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.secrets = secrets
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -704,6 +692,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         if self.log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        if self.secrets is not None:
+            SMaster.secrets = secrets
 
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
@@ -758,17 +748,6 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.__bind()
 
     def destroy(self, signum=signal.SIGTERM):
-        if hasattr(self, 'clients') and self.clients.closed is False:
-            if HAS_ZMQ:
-                self.clients.setsockopt(zmq.LINGER, 1)
-            self.clients.close()
-        if hasattr(self, 'workers') and self.workers.closed is False:
-            if HAS_ZMQ:
-                self.workers.setsockopt(zmq.LINGER, 1)
-            self.workers.close()
-        if hasattr(self, 'context') and self.context.closed is False:
-            self.context.term()
-        # Also stop the workers
         if hasattr(self, 'process_manager'):
             self.process_manager.stop_restarting()
             self.process_manager.send_signal_to_processes(signum)
