@@ -19,6 +19,7 @@ ensure_in_syspath('../../')
 
 # Globals
 status.__salt__ = {}
+status.__grains__ = {}
 
 
 class StatusTestCase(TestCase):
@@ -54,8 +55,9 @@ class StatusTestCase(TestCase):
         :return:
         '''
         with patch('os.path.exists', MagicMock(return_value=False)):
-            with self.assertRaises(CommandExecutionError):
-                status.uptime()
+            with patch.dict(status.__grains__, {'kernel': 'Linux'}):
+                with self.assertRaises(CommandExecutionError):
+                    status.uptime()
 
 
 if __name__ == '__main__':
