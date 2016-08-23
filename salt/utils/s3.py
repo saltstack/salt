@@ -92,6 +92,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not keyid:
         keyid = salt.utils.aws.IROLE_CODE
 
+    if not location:
+        location = __utils__['aws.get_location']()
+
     data = ''
     payload_hash = None
     if method == 'PUT':

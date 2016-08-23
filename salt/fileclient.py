@@ -29,7 +29,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
-import salt.utils.s3
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
@@ -63,6 +62,7 @@ class Client(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.utils = salt.loader.utils(self.opts)
         self.serial = salt.payload.Serial(self.opts)
 
     def _check_proto(self, path):
@@ -581,17 +581,17 @@ class Client(object):
                         return self.opts['pillar']['s3'][key]
                     except (KeyError, TypeError):
                         return default
-                salt.utils.s3.query(method='GET',
-                                    bucket=url_data.netloc,
-                                    path=url_data.path[1:],
-                                    return_bin=False,
-                                    local_file=dest,
-                                    action=None,
-                                    key=s3_opt('key'),
-                                    keyid=s3_opt('keyid'),
-                                    service_url=s3_opt('service_url'),
-                                    verify_ssl=s3_opt('verify_ssl', True),
-                                    location=s3_opt('location'))
+                self.utils['s3.query'](method='GET',
+                                       bucket=url_data.netloc,
+                                       path=url_data.path[1:],
+                                       return_bin=False,
+                                       local_file=dest,
+                                       action=None,
+                                       key=s3_opt('key'),
+                                       keyid=s3_opt('keyid'),
+                                       service_url=s3_opt('service_url'),
+                                       verify_ssl=s3_opt('verify_ssl', True),
+                                       location=s3_opt('location'))
                 return dest
             except Exception as exc:
                 raise MinionError(

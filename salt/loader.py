@@ -312,7 +312,8 @@ def pillars(opts, functions, context=None):
                      opts,
                      tag='pillar',
                      pack={'__salt__': functions,
-                           '__context__': context})
+                           '__context__': context,
+                           '__utils__': utils(opts)})
     return FilterDictWrapper(ret, '.ext_pillar')
 
 
@@ -388,7 +389,8 @@ def fileserver(opts, backends):
     return LazyLoader(_module_dirs(opts, 'fileserver', 'fileserver'),
                       opts,
                       tag='fileserver',
-                      whitelist=backends)
+                      whitelist=backends,
+                      pack={'__utils__': utils(opts)})
 
 
 def roster(opts, whitelist=None):
