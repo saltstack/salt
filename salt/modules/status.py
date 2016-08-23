@@ -139,6 +139,8 @@ def uptime():
         The uptime function was changed to return a dictionary of easy-to-read
         key/value pairs containing uptime information, instead of the output
         from a ``cmd.run`` call.
+    .. versionchanged:: carbon
+        Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
 
@@ -148,7 +150,12 @@ def uptime():
     '''
     ut_path = "/proc/uptime"
     if not os.path.exists(ut_path):
-        raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+        if __grains__['kernel'] == 'Linux':
+            raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+        elif not salt.utils.which('uptime'):
+            raise CommandExecutionError("No uptime binary available.")
+        else:
+            return __salt__['cmd.run']('uptime')
 
     ut_ret = {
         'seconds': int(float(open(ut_path).read().strip().split()[0]))
