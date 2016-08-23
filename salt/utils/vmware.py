@@ -87,7 +87,7 @@ import salt.utils
 
 # Import Third Party Libs
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect
+    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
