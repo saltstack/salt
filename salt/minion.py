@@ -1675,19 +1675,20 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
-        log.debug('Refreshing pillar')
-        try:
-            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
-            ).compile_pillar()
-        except SaltClientError:
-            # Do not exit if a pillar refresh fails.
-            log.error('Pillar data could not be refreshed. '
-                      'One or more masters may be down!')
+        if self.connected:
+            log.debug('Refreshing pillar')
+            try:
+                self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+                    self.opts,
+                    self.opts['grains'],
+                    self.opts['id'],
+                    self.opts['environment'],
+                    pillarenv=self.opts.get('pillarenv'),
+                ).compile_pillar()
+            except SaltClientError:
+                # Do not exit if a pillar refresh fails.
+                log.error('Pillar data could not be refreshed. '
+                          'One or more masters may be down!')
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, tag, data):
