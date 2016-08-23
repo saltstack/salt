@@ -8,6 +8,7 @@ Unit tests for the Snapper module
 
 # Import Python libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -127,6 +128,13 @@ MODULE_RET = {
             'diff': "--- /.snapshots/55/snapshot/tmp/foo2\n"
                     "+++ /tmp/foo2\n"
                     "@@ -0,0 +1 @@\n"
+                    "+another foobar",
+        },
+        '/tmp/foo26': {
+            'comment': 'text file created',
+            'diff': "--- /.snapshots/55/snapshot/tmp/foo2 \n"
+                    "+++ /tmp/foo2 \n"
+                    "@@ -1,0 +1,1 @@\n"
                     "+another foobar",
         },
         '/tmp/foo3': {
@@ -281,7 +289,10 @@ class SnapperTestCase(TestCase):
     @patch('os.path.isfile', MagicMock(side_effect=[False, True]))
     @patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']))
     def test_diff_text_file(self):
-        self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
+        if sys.version_info < (2, 7):
+            self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
+        else:
+            self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
 
     @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(55, 0)))
     @patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(
