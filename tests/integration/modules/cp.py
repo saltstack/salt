@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import uuid
 import hashlib
 import tempfile
 
@@ -350,7 +351,8 @@ class CPModuleTest(integration.ModuleCase):
             os.unlink(tgt)
 
     def test_push(self):
-        log_to_xfer = os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        log_to_xfer = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex)
+        open(log_to_xfer, 'w').close()
         try:
             self.run_function('cp.push', log_to_xfer)
             tgt_cache_file = os.path.join(
@@ -361,7 +363,7 @@ class CPModuleTest(integration.ModuleCase):
                 'minion',
                 'files',
                 tempfile.gettempdir(),
-                'salt-runtests.log')
+                log_to_xfer)
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)
