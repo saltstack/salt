@@ -1186,6 +1186,8 @@ def os_data():
             os=grains['os'],
             ver=grains['osrelease'])
 
+        grains['init'] = 'Windows'
+
         return grains
     elif salt.utils.is_linux():
         # Add SELinux grain, if you have it
@@ -1456,6 +1458,7 @@ def os_data():
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
+        grains['init'] = 'launchd'
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
