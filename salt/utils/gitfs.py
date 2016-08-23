@@ -153,7 +153,7 @@ class GitProvider(object):
             self.id = next(iter(remote))
             self.get_url()
             per_remote_conf = dict(
-                [(key, six.text_type(val)) for key, val in
+                [(key, str(val)) for key, val in
                  six.iteritems(salt.utils.repack_dictlist(remote[self.id]))]
             )
             if not per_remote_conf:
@@ -2016,7 +2016,7 @@ class GitBase(object):
                     'a bug, please report it.'.format(key)
                 )
                 failhard(self.role)
-            per_remote_defaults[param] = six.text_type(self.opts[key])
+            per_remote_defaults[param] = str(self.opts[key])
 
         self.remotes = []
         for remote in remotes:
@@ -2132,7 +2132,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
+                    if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
@@ -2177,7 +2177,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
+                    if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.lock()
             locked.extend(success)
