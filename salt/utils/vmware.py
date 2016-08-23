@@ -172,6 +172,8 @@ def _get_service_instance(host, username, password, protocol,
     Internal method to authenticate with a vCenter server or ESX/ESXi host
     and return the service instance object.
     '''
+    import pydevd
+    pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
     log.trace('Retrieving new service instance')
     token = None
     if mechanism == 'userpass':
@@ -207,9 +209,16 @@ def _get_service_instance(host, username, password, protocol,
             port=port,
             b64token=token,
             mechanism=mechanism)
-    except Exception as exc:
+    except TypeError as exc:
+        if 'unexpected keyword argument' in exc.message:
+            log.error('Initial connect to the VMware endpoint failed with {0}'.format(exc.message))
+            log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
+            log.error('We recommend updating to that version or later.')
+            raise
+
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
+
         try:
             if (isinstance(exc, vim.fault.HostConnectFault) and
                 '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
