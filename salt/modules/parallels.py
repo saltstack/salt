@@ -152,32 +152,41 @@ def prlctl(sub_cmd, args=None, runas=None):
     return __salt__['cmd.run'](cmd, runas=runas)
 
 
-def list_vms(name=None, info=False, all=False, args=None, runas=None):
+def list_vms(name=None, info=False, all=False, args=None, runas=None, template=False):
     '''
     List information about the VMs
 
     :param str name:
-        Name/ID of VM to list; implies ``info=True``
+        Name/ID of VM to list
+
+        .. versionchanged:: Carbon
+
+            No longer implies ``info=True``
 
     :param str info:
         List extra information
 
     :param bool all:
-        Also list non-running VMs
+        List all non-template VMs
 
     :param tuple args:
-        Additional arguments given to ``prctl list``.  This argument is
-        mutually exclusive with the other arguments
+        Additional arguments given to ``prctl list``
 
     :param str runas:
         The user that the prlctl command will be run as
+
+    :param bool template:
+        List the available virtual machine templates.  The real virtual
+        machines will not be included in the output
+
+        .. versionadded:: Carbon
 
     Example:
 
     .. code-block:: bash
 
         salt '*' parallels.list_vms runas=macdev
-        salt '*' parallels.list_vms name=macvm runas=macdev
+        salt '*' parallels.list_vms name=macvm info=True runas=macdev
         salt '*' parallels.list_vms info=True runas=macdev
         salt '*' parallels.list_vms ' -o uuid,status' all=True runas=macdev
     '''
@@ -188,12 +197,13 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None):
         args = _normalize_args(args)
 
     if name:
-        args.extend(['--info', name])
-    elif info:
+        args.extend([name])
+    if info:
         args.append('--info')
-
     if all:
         args.append('--all')
+    if template:
+        args.append('--template')
 
     # Execute command and return output
     return prlctl('list', args, runas=runas)

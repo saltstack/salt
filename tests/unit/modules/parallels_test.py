@@ -159,8 +159,16 @@ class ParallelsTestCase(TestCase):
         with patch.object(parallels, 'prlctl', mock_name):
             parallels.list_vms(name='macvm', runas=runas)
             mock_name.assert_called_once_with('list',
-                                              ['--info', 'macvm'],
+                                              ['macvm'],
                                               runas=runas)
+
+        # Validate listing templates
+        mock_templ = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_templ):
+            parallels.list_vms(template=True, runas=runas)
+            mock_templ.assert_called_once_with('list',
+                                               ['--template'],
+                                               runas=runas)
 
         # Validate listing extra info
         mock_info = MagicMock()
