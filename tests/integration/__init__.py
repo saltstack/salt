@@ -84,14 +84,97 @@ except ImportError:
 if salt.utils.is_windows():
     import win32api
 
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
 from tornado import gen
 from tornado import ioloop
 
+try:
+    from salttesting.helpers import terminate_process_pid
+except ImportError:
+    # Once the latest salt-testing works against salt's develop branch
+    # uncomment the following 2 lines and delete the function defined
+    # in this except
+    #print('Please upgrade your version of salt-testing')
+    #sys.exit(1)
+
+    import psutil
+
+    def terminate_process_pid(pid, only_children=False):
+        children = []
+        process = None
+
+        # Let's begin the shutdown routines
+        if sys.platform.startswith('win'):
+            sigint = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
+            sigint_name = 'CTRL_BREAK_EVENT'
+        else:
+            sigint = signal.SIGINT
+            sigint_name = 'SIGINT'
+
+        try:
+            process = psutil.Process(pid)
+            if hasattr(process, 'children'):
+                children = process.children(recursive=True)
+        except psutil.NoSuchProcess:
+            log.info('No process with the PID %s was found running', pid)
+
+        if process and only_children is False:
+            cmdline = process.cmdline()
+            if not cmdline:
+                cmdline = process.as_dict()
+
+            log.info('Sending %s to process: %s', sigint_name, cmdline)
+            process.send_signal(sigint)
+            try:
+                process.wait(timeout=10)
+            except psutil.TimeoutExpired:
+                pass
+
+            if psutil.pid_exists(pid):
+                log.info('Terminating process: %s', cmdline)
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except psutil.TimeoutExpired:
+                    pass
+
+            if psutil.pid_exists(pid):
+                log.warning('Killing process: %s', cmdline)
+                process.kill()
+
+            if psutil.pid_exists(pid):
+                log.warning('Process left behind which we were unable to kill: %s', cmdline)
+        if children:
+            # Lets log and kill any child processes which salt left behind
+            def kill_children(_children, terminate=False, kill=False):
+                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
+                    try:
+                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
+                            # Zombie processes will exit once child processes also exit
+                            continue
+                        cmdline = child.cmdline()
+                        if not cmdline:
+                            cmdline = child.as_dict()
+                        if kill:
+                            log.warning('Killing child process left behind: %s', cmdline)
+                            child.kill()
+                        elif terminate:
+                            log.warning('Terminating child process left behind: %s', cmdline)
+                            child.terminate()
+                        else:
+                            log.warning('Sending %s to child process left behind: %s', sigint_name, cmdline)
+                            child.send_signal(sigint)
+                        if not psutil.pid_exists(child.pid):
+                            _children.remove(child)
+                    except psutil.NoSuchProcess:
+                        _children.remove(child)
+
+            kill_children(children)
+
+            if children:
+                psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
+
+            if children:
+                psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
@@ -438,55 +521,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         except (SystemExit, KeyboardInterrupt):
             pass
 
-        # Let's begin the shutdown routines
-        if not sys.platform.startswith('win'):
-            if terminal.poll() is None:
-                try:
-                    log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                    terminal.send_signal(signal.SIGINT)
-                except OSError as exc:
-                    if exc.errno not in (errno.ESRCH, errno.EACCES):
-                        raise
-                timeout = 15
-                log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
-                        timeout,
-                         self.display_name,
-                         self.__class__.__name__)
-                while timeout > 0:
-                    if terminal.poll() is not None:
-                        break
-                    timeout -= 0.0125
-                    time.sleep(0.0125)
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGTERM to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.send_signal(signal.SIGTERM)
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-            timeout = 15
-            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGTERM',
-                    timeout,
-                     self.display_name,
-                     self.__class__.__name__)
-            while timeout > 0:
-                if terminal.poll() is not None:
-                    break
-                timeout -= 0.0125
-                time.sleep(0.0125)
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGKILL to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.kill()
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-        # Let's close the terminal now that we're done with it
-        try:
-            terminal.terminate()
-        except OSError as exc:
-            if exc.errno not in (errno.ESRCH, errno.EACCES):
-                raise
+        terminate_process_pid(terminal.pid)
         terminal.communicate()
 
     def terminate(self):
@@ -494,38 +529,11 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         Terminate the started daemon
         '''
         log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
-
-        children = []
-        if HAS_PSUTIL:
-            try:
-                parent = psutil.Process(self._process.pid)
-                if hasattr(parent, 'children'):
-                    children = parent.children(recursive=True)
-            except psutil.NoSuchProcess:
-                pass
-
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
-        self._process.terminate()
+        terminate_process_pid(self._process.pid)
         self._process.join()
-
-        if HAS_PSUTIL and children:
-            # Lets log and kill any child processes which salt left behind
-            def kill_children():
-                for child in children[:]:
-                    try:
-                        cmdline = child.cmdline()
-                        log.warning('Salt left behind the following child process: %s', cmdline)
-                        child.kill()
-                        children.remove(child)
-                    except psutil.NoSuchProcess:
-                        children.remove(child)
-
-            kill_children()
-
-            if children:
-                psutil.wait_procs(children, timeout=5, callback=kill_children)
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
