@@ -53,15 +53,17 @@ class Batch(object):
 
         ping_gen = self.local.cmd_iter(*args, **self.eauth)
 
+        # Broadcast to targets
         fret = set()
         try:
             for ret in ping_gen:
                 m = next(six.iterkeys(ret))
                 if m is not None:
                     fret.add(m)
-            return (list(fret), ping_gen)
         except StopIteration:
-            raise salt.exceptions.SaltClientError('No minions matched the target.')
+            if not self.quiet:
+                print_cli('No minions matched the target.')
+        return list(fret), ping_gen
 
     def get_bnum(self):
         '''
@@ -101,6 +103,9 @@ class Batch(object):
                 'list',
                 ]
         bnum = self.get_bnum()
+        # No targets to run
+        if not self.minions:
+            return
         to_run = copy.deepcopy(self.minions)
         active = []
         ret = {}
