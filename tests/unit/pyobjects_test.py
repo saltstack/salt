@@ -135,6 +135,9 @@ from salt://password.sls import password
 '''
 
 requisite_implicit_list_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 with Pkg.installed("pkg"):
     Service.running("service", watch=File("file"), require=Cmd("cmd"))
 '''
