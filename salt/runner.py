@@ -184,8 +184,6 @@ class Runner(RunnerClient):
                 low['arg'] = args
                 low['kwarg'] = kwargs
 
-                skip_perm_errors = self.opts.get('eauth', '') != ''
-
                 if self.opts.get('eauth'):
                     if 'token' in self.opts:
                         try:
@@ -214,8 +212,7 @@ class Runner(RunnerClient):
                         low.update(res)
                         low['eauth'] = self.opts['eauth']
                 else:
-                    low['user'] = salt.utils.get_specific_user()
-                    low['key'] = salt.utils.get_master_key(low['user'], self.opts, skip_perm_errors)
+                    user = salt.utils.get_specific_user()
 
                 # Allocate a jid
                 async_pub = self._gen_async_pub()
@@ -237,7 +234,13 @@ class Runner(RunnerClient):
 
                 # Run the runner!
                 if self.opts.get('async', False):
-                    async_pub = self.cmd_async(low)
+                    if self.opts.get('eauth'):
+                        async_pub = self.cmd_async(low)
+                    else:
+                        async_pub = self.async(self.opts['fun'],
+                                               low,
+                                               user=user,
+                                               pub=async_pub)
                     # by default: info will be not enougth to be printed out !
                     log.warning('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
@@ -246,13 +249,21 @@ class Runner(RunnerClient):
                     return async_pub['jid']  # return the jid
 
                 # otherwise run it in the main process
-                ret = self.cmd_sync(low)
-                if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
-                    outputter = ret['outputter']
-                    ret = ret['data']
+                if self.opts.get('eauth'):
+                    ret = self.cmd_sync(low)
+                    if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                        outputter = ret['outputter']
+                        ret = ret['data']
+                    else:
+                        outputter = None
+                    display_output(ret, outputter, self.opts)
                 else:
-                    outputter = None
-                display_output(ret, outputter, self.opts)
+                    ret = self._proc_function(self.opts['fun'],
+                                              low,
+                                              user,
+                                              async_pub['tag'],
+                                              async_pub['jid'],
+                                              daemonize=False)
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
