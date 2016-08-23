@@ -5224,13 +5224,6 @@ def grep(path,
             opt = salt.utils.shlex_split(opt)
         except AttributeError:
             opt = salt.utils.shlex_split(str(opt))
-        if len(opt) > 1:
-            salt.utils.warn_until(
-                'Carbon',
-                'Additional command line options for file.grep should be '
-                'passed one at a time, please do not pass more than one in a '
-                'single argument.'
-            )
         split_opts.extend(opt)
 
     cmd = ['grep'] + split_opts + [pattern, path]

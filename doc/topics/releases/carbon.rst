@@ -332,8 +332,11 @@ Execution Module Deprecations
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
 
-- The ``contains_regex_multiline`` function was removed from the ``file`` execution module.
-  Use ``file.search`` instead.
+- File module deprecations:
+
+  - The ``contains_regex_multiline`` function was removed. Use ``file.search`` instead.
+  - Additional command line options for ``file.grep`` should be passed one at a time.
+    Please do not pass more than one in a single argument.
 
 - The ``lxc`` execution module has the following changes:
 
