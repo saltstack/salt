@@ -483,6 +483,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
+            log.debug(self.auth.authenticated)
             if self.auth.authenticated:
                 self.message_client = SaltMessageClient(
                     self.opts,
@@ -497,7 +498,8 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
+            if '-|RETRY|-' not in exc:
+                raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
         '''

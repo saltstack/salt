@@ -495,7 +495,7 @@ class AsyncAuth(object):
             break
         if not isinstance(creds, dict) or 'aes' not in creds:
             if self.opts.get('detect_mode') is True:
-                self._authenticate_future.set_result(False)
+                error = SaltClientError('-|RETRY|-')
             try:
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
