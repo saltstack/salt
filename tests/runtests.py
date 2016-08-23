@@ -22,6 +22,12 @@ if not salt.utils.is_windows():
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
+try:
+    from salttesting.helpers import terminate_process_pid
+    RUNTESTS_WITH_HARD_KILL = True
+except ImportError:
+    from integration import terminate_process_pid
+    RUNTESTS_WITH_HARD_KILL = False
 
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
@@ -578,6 +584,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
         return status
+
+    def print_overall_testsuite_report(self):
+        if RUNTESTS_WITH_HARD_KILL is False:
+            terminate_process_pid(os.getpid(), only_children=True)
+        SaltCoverageTestingParser.print_overall_testsuite_report(self)
 
 
 def main():
