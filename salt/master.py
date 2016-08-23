@@ -535,7 +535,7 @@ class Master(SMaster):
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
-            self.process_manager = salt.utils.process.ProcessManager()
+            self.process_manager = salt.utils.process.ProcessManager(name='Master_ProcessManager')
             pub_channels = []
             log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
@@ -827,9 +827,14 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
+        self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            # Tornado knows what to do
+            pass
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
