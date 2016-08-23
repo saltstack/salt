@@ -894,7 +894,7 @@ class Minion(MinionBase):
 
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
-            signal.signal(signal.SIGINT, self._handle_signals)
+            signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
