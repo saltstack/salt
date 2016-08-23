@@ -249,8 +249,9 @@ class OptionParser(optparse.OptionParser, object):
             try:
                 mixin_before_exit_func(self)
             except Exception as err:  # pylint: disable=broad-except
-                logging.getLogger(__name__).exception(err)
-                self.error(
+                logger = logging.getLogger(__name__)
+                logger.exception(err)
+                logger.error(
                     'Error while processing {0}: {1}'.format(
                         mixin_before_exit_func, traceback.format_exc(err)
                     )
@@ -872,7 +873,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def _mixin_before_exit(self):
-        if hasattr(self, 'config'):
+        if hasattr(self, 'config') and self.config.get('pidfile', ''):
             # We've loaded and merged options into the configuration, it's safe
             # to query about the pidfile
             if self.check_pidfile():
