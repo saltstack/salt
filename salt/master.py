@@ -624,6 +624,8 @@ class Master(SMaster):
         self.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.process_manager.kill_children()
+        time.sleep(1)
+        sys.exit(0)
 
 
 class Halite(SignalHandlingMultiprocessingProcess):
