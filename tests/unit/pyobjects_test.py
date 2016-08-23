@@ -54,6 +54,10 @@ include('http')
 
 extend_template = '''#!pyobjects
 include('http')
+
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
