@@ -7,6 +7,7 @@ Tests for the file state
 # Import python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion
+import errno
 import glob
 import os
 import re
