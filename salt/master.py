@@ -595,17 +595,17 @@ class Master(SMaster):
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
-        log.info('Creating master request server process')
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
-            kwargs['secrets'] = SMaster.secrets
+            log.info('Creating master request server process')
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['secrets'] = SMaster.secrets
 
-        self.process_manager.add_process(
-            ReqServer,
-            args=(self.opts, self.key, self.master_key),
-            kwargs=kwargs,
-            name='ReqServer')
+            self.process_manager.add_process(
+                ReqServer,
+                args=(self.opts, self.key, self.master_key),
+                kwargs=kwargs,
+                name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -727,18 +727,20 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                             'when using Python 2.')
                 self.opts['worker_threads'] = 1
 
-        for ind in range(int(self.opts['worker_threads'])):
-            name = 'MWorker-{0}'.format(ind)
-            self.process_manager.add_process(MWorker,
-                                            args=(self.opts,
-                                                self.master_key,
-                                                self.key,
-                                                req_channels,
-                                                name
-                                                ),
-                                            kwargs=kwargs,
-                                            name=name
-                                            )
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            for ind in range(int(self.opts['worker_threads'])):
+                name = 'MWorker-{0}'.format(ind)
+                self.process_manager.add_process(MWorker,
+                                                 args=(self.opts,
+                                                       self.master_key,
+                                                       self.key,
+                                                       req_channels,
+                                                       name),
+                                                 kwargs=kwargs,
+                                                 name=name)
         self.process_manager.run()
 
     def run(self):
