@@ -695,7 +695,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
         if self.secrets is not None:
-            SMaster.secrets = secrets
+            SMaster.secrets = self.secrets
 
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
