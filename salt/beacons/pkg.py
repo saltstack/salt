@@ -48,7 +48,7 @@ def beacon(config):
             - refresh: True
     '''
     ret = []
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate[0]:
         return ret
 

@@ -75,7 +75,7 @@ def beacon(config):
 
     global LAST_GRAINS
 
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate[0]:
         log.warning('Beacon {0} configuration invalid, '
                     'not adding. {1}'.format(__virtualname__, _validate[1]))
