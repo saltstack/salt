@@ -17,9 +17,10 @@ log = logging.getLogger(__name__)
 
 def booted(context=None):
     '''
-    Return True if the system was booted with systemd, False otherwise.
-    Pass in the loader context "__context__", this function will set the
-    systemd.sd_booted key to represent if systemd is running
+    Return True if the system was booted with systemd, False otherwise.  If the
+    loader context dict ``__context__`` is passed, this function will set the
+    ``salt.utils.systemd.booted`` key to represent if systemd is running and
+    keep the logic below from needing to be run again during the same salt run.
     '''
     contextkey = 'salt.utils.systemd.booted'
     if isinstance(context, dict):
