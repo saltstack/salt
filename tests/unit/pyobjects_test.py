@@ -58,6 +58,10 @@ Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
 map_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
+
 class Samba(Map):
     __merge__ = 'samba:lookup'
 
