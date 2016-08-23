@@ -494,16 +494,25 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         values relevant to systems matching that grain. For example, a key
         could be the grain for an OS and the value could the name of a package
         on that particular OS.
+
     :param grain: The name of a grain to match with the current system's
         grains. For example, the value of the "os_family" grain for the current
         system could be used to pull values from the ``lookup_dict``
         dictionary.
+
+        .. versionchanged:: Carbon
+
+            The grain value could be a list. The function will return the
+            ``lookup_dict`` value for a first found item in the list matching
+            one of the ``lookup_dict`` keys.
+
     :param merge: A dictionary to merge with the results of the grain selection
         from ``lookup_dict``. This allows Pillar to override the values in the
         ``lookup_dict``. This could be useful, for example, to override the
         values for non-standard package names such as when using a different
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
+
     :param default: default lookup_dict's key used if the grain does not exists
         or if the grain value has no match on lookup_dict.  If unspecified
         the value is "default".
@@ -530,10 +539,20 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
 
-    ret = lookup_dict.get(
-            salt.utils.traverse_dict_and_list(__grains__, grain, None),
-            lookup_dict.get(
-                default, None)
+    ret = None
+    val = salt.utils.traverse_dict_and_list(__grains__, grain, None)
+
+    if isinstance(val, list):
+        for each in val:
+            if each in lookup_dict:
+                ret = lookup_dict[each]
+                break
+        if ret is None:
+            ret = lookup_dict.get(default, None)
+    else:
+        ret = lookup_dict.get(
+            val,
+            lookup_dict.get(default, None)
             )
 
     if base and base in lookup_dict:
@@ -543,7 +562,8 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
 
         elif isinstance(base_values, collections.Mapping):
             if not isinstance(ret, collections.Mapping):
-                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+                raise SaltException(
+                    'filter_by default and look-up values must both be dictionaries.')
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
