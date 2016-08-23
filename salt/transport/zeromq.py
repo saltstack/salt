@@ -502,6 +502,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         if self._closing:
             return
+        log.info('MWorkerQueue under PID %s is closing', os.getpid())
         self._closing = True
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
