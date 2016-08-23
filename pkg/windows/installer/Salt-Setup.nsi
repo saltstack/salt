@@ -1,5 +1,5 @@
-!define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_NAME_OTHER "Salt"
+!define PRODUCT_NAME "Salt"
+!define PRODUCT_NAME_OTHER "Salt Minion"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_CALL_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-call.exe"
@@ -60,6 +60,9 @@ ${StrStrAdv}
 ; License page
 !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
 
+; Choose Install page
+Page custom pageChooseInstall pageChooseInstall_Leave
+
 ; Configure Minion page
 Page custom pageMinionConfig pageMinionConfig_Leave
 
@@ -83,18 +86,121 @@ Page custom pageMinionConfig pageMinionConfig_Leave
 ###############################################################################
 Var Dialog
 Var Label
+Var Warning
 Var CheckBox_Minion
+Var CheckBox_Minion_State
+Var CheckBox_Master
+Var CheckBox_Master_State
 Var MasterHost
 Var MasterHost_State
 Var MinionName
 Var MinionName_State
 Var StartMinion
+Var StartMaster
+
+
+###############################################################################
+# Choose Installation Page
+###############################################################################
+Function pageChooseInstall
+
+    # Set Page Title
+    !insertmacro MUI_HEADER_TEXT "Choose Install" "Select components to install"
+    nsDialogs::Create 1018
+    Pop $Dialog
+
+    ${If} $Dialog == error
+        Abort
+    ${EndIf}
+
+    # Add Label
+    ${NSD_CreateLabel} 0 0 100% 12u "Choose Installation:"
+    Pop $Label
+
+    # Add Install Minion Checkbox
+    ${NSD_CreateCheckBox} 0 13u 100% 12u "Install &Minion"
+    Pop $CheckBox_Minion
+    ${NSD_OnClick} $CheckBox_Minion pageChooseInstall_OnClick
+
+    # Add Install Master Checkbox
+    ${NSD_CreateCheckBox} 0 26u 100% 12u "Install M&aster"
+    Pop $CheckBox_Master
+    ${NSD_OnClick} $CheckBox_Master pageChooseInstall_OnClick
+
+    # Add warning label
+    ${NSD_CreateLabel} 0 50u 100% 12u "You must select at least one item..."
+    Pop $Warning
+    CreateFont $0 "Arial" 9 600 /ITALIC
+    SendMessage $Warning ${WM_SETFONT} $0 1
+    SetCtlColors $Warning 0xBB0000 transparent
+    ShowWindow $Warning ${SW_HIDE}
+
+    # Set the minion to be checked by default if nothing set
+    ${If} $CheckBox_Minion_State != ${BST_CHECKED}
+    ${AndIf} $CheckBox_Master_State != ${BST_CHECKED}
+        StrCpy $CheckBox_Minion_State ${BST_CHECKED}
+    ${EndIf}
+
+    # Load current settings for Minion
+    ${If} $CheckBox_Minion_State == ${BST_CHECKED}
+        ${NSD_Check} $CheckBox_Minion
+    ${EndIf}
+
+    # Load current settings for Master
+    ${If} $CheckBox_Master_State == ${BST_CHECKED}
+        ${NSD_Check} $CheckBox_Master
+    ${EndIf}
+
+    # Show the Page
+    nsDialogs::Show
+
+FunctionEnd
+
+
+Function pageChooseInstall_OnClick
+
+    # You have to pop the top handle to keep the stack clean
+    Pop $R0
+
+    # Assign the current checkbox states to the state variables
+    ${NSD_GetState} $CheckBox_Minion $CheckBox_Minion_State
+    ${NSD_GetState} $CheckBox_Master $CheckBox_Master_State
+
+    # Get the handle to the next button
+    GetDlgItem $0 $HWNDPARENT 1
+
+    # Validate the checkboxes
+    ${If} $CheckBox_Minion_State == 0
+    ${AndIf} $CheckBox_Master_State == 0
+        # Neither is checked, show warning and disable next
+        ShowWindow $Warning ${SW_SHOW}
+        EnableWindow $0 0
+    ${Else}
+        # At least one is checked, clear the warning and enable next
+        ShowWindow $Warning ${SW_HIDE}
+        EnableWindow $0 1
+    ${EndIf}
+
+FunctionEnd
+
+
+Function pageChooseInstall_Leave
+
+    # Set the State Variables when Next is clicked
+    ${NSD_GetState} $CheckBox_Minion $CheckBox_Minion_State
+    ${NSD_GetState} $CheckBox_Master $CheckBox_Master_State
+
+FunctionEnd
 
 
 ###############################################################################
 # Minion Settings Dialog Box
 ###############################################################################
 Function pageMinionConfig
+
+    ${If} $CheckBox_Minion_State == 0
+        Abort
+    ${EndIf}
 
     # Set Page Title and Description
     !insertmacro MUI_HEADER_TEXT "Minion Settings" "Set the Minion Master and ID"
@@ -125,7 +231,10 @@ FunctionEnd
 Function pageMinionConfig_Leave
 
     ${NSD_GetText} $MasterHost $MasterHost_State
+    #MessageBox MB_OK "Master Hostname is:$\n$\n$MasterHost_State"
+
     ${NSD_GetText} $MinionName $MinionName_State
+    #MessageBox MB_OK "Minion name is:$\n$\n$MinionName_State"
 
 FunctionEnd
 
@@ -147,9 +256,31 @@ Function pageFinish_Show
     # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
+    # Create Start Master Checkbox
+    ${NSD_CreateCheckbox} 120u 105u 100% 12u "&Start salt-master"
+    Pop $CheckBox_Master
+    SetCtlColors $CheckBox_Master "" "ffffff"
+    # This command required to bring the checkbox to the front
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Master, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+
     # Load current settings for Minion
-    ${If} $StartMinion == 1
-        ${NSD_Check} $CheckBox_Minion
+    ${If} $CheckBox_Minion_State == ${BST_CHECKED}
+        ${If} $StartMinion == 1
+            ${NSD_Check} $CheckBox_Minion
+        ${EndIf}
+    ${Else}
+        EnableWindow $CheckBox_Minion 0
+        ${NSD_UnCheck} $CheckBox_Minion
+    ${EndIf}
+
+    # Load current settings for Master
+    ${If} $CheckBox_Master_State == ${BST_CHECKED}
+        ${If} $StartMaster == 1
+            ${NSD_Check} $CheckBox_Master
+        ${EndIf}
+    ${Else}
+        EnableWindow $CheckBox_Master 0
+        ${NSD_UnCheck} $CheckBox_Master
     ${EndIf}
 
 FunctionEnd
@@ -159,6 +290,7 @@ Function pageFinish_Leave
 
     # Assign the current checkbox states
     ${NSD_GetState} $CheckBox_Minion $StartMinion
+    ${NSD_GetState} $CheckBox_Master $StartMaster
 
 FunctionEnd
 
@@ -167,7 +299,7 @@ FunctionEnd
 # Installation Settings
 ###############################################################################
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+OutFile "Salt-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -205,7 +337,7 @@ Function .onInit
     Abort
 
     checkOther:
-        ; Check for existing installation of full salt
+        ; Check for existing installation old
         ReadRegStr $R0 HKLM \
             "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}" \
             "UninstallString"
@@ -276,17 +408,61 @@ Section -Post
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" \
         "DependOnService" "nsi"
 
+    # Setup Salt-Minion if Installed
+    ${If} $CheckBox_Minion_State == ${BST_CHECKED}
 
-    ; Commandline Registry Entries
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
+        ; Commandline Registry Entries
+        WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
+        WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
+        WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
+        WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
-    ; Register the Salt-Minion Service
-    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-    nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
-    nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+        ; Register the Salt-Minion Service
+        nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
+        nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+        nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+
+    ${Else}
+
+        # Remove Salt Minion Files
+        Delete "$INSTDIR\salt-call.bat"
+        Delete "$INSTDIR\bin\Scripts\salt-call"
+        Delete "$INSTDIR\salt-minion*"
+        Delete "$INSTDIR\bin\Scripts\salt-minion"
+
+    ${EndIf}
+
+    # Setup Salt-Master if Installed
+    ${If} $CheckBox_Master_State == ${BST_CHECKED}
+
+        ; Command Line Registry Entries
+        WriteRegStr HKLM "${PRODUCT_CP_REGKEY}" "" "$INSTDIR\salt-cp.bat"
+        WriteRegStr HKLM "${PRODUCT_CP_REGKEY}" "Path" "$INSTDIR\bin\"
+        WriteRegStr HKLM "${PRODUCT_KEY_REGKEY}" "" "$INSTDIR\salt-key.bat"
+        WriteRegStr HKLM "${PRODUCT_KEY_REGKEY}" "Path" "$INSTDIR\bin\"
+        WriteRegStr HKLM "${PRODUCT_MASTER_REGKEY}" "" "$INSTDIR\salt-master.bat"
+        WriteRegStr HKLM "${PRODUCT_MASTER_REGKEY}" "Path" "$INSTDIR\bin\"
+        WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "" "$INSTDIR\salt-run.bat"
+        WriteRegStr HKLM "${PRODUCT_RUN_REGKEY}" "Path" "$INSTDIR\bin\"
+
+        ; Register the Salt-Master Service
+        nsExec::Exec "nssm.exe install salt-master $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-master -c $INSTDIR\conf -l quiet"
+        nsExec::Exec "nssm.exe set salt-master AppEnvironmentExtra PYTHONHOME="
+        nsExec::Exec "nssm.exe set salt-master Description Salt Master from saltstack.com"
+
+    ${Else}
+
+        # Remove Salt Master Files
+        Delete "$INSTDIR\salt-cp.bat"
+        Delete "$INSTDIR\bin\Scripts\salt-cp"
+        Delete "$INSTDIR\salt-key.bat"
+        Delete "$INSTDIR\bin\Scripts\salt-key"
+        Delete "$INSTDIR\salt-master.bat"
+        Delete "$INSTDIR\bin\Scripts\salt-master"
+        Delete "$INSTDIR\salt-run.bat"
+        Delete "$INSTDIR\bin\Scripts\salt-run"
+
+    ${EndIf}
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
@@ -303,6 +479,10 @@ Function .onInstSuccess
     ; If start-minion is 1, then start the service
     ${If} $StartMinion == 1
         nsExec::Exec 'net start salt-minion'
+    ${EndIf}
+
+    ${If} $StartMaster == 1
+        nsExec::Exec 'net start salt-master'
     ${EndIf}
 
 FunctionEnd
@@ -322,6 +502,10 @@ Section Uninstall
     nsExec::Exec 'net stop salt-minion'
     nsExec::Exec 'sc delete salt-minion'
 
+    ; Stop and Remove salt-master service
+    nsExec::Exec 'net stop salt-master'
+    nsExec::Exec 'sc delete salt-master'
+
     ; Remove files
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\nssm.exe"
@@ -339,7 +523,11 @@ Section Uninstall
 
     ; Remove Commandline Entries
     DeleteRegKey HKLM "${PRODUCT_CALL_REGKEY}"
+    DeleteRegKey HKLM "${PRODUCT_CP_REGKEY}"
+    DeleteRegKey HKLM "${PRODUCT_KEY_REGKEY}"
+    DeleteRegKey HKLM "${PRODUCT_MASTER_REGKEY}"
     DeleteRegKey HKLM "${PRODUCT_MINION_REGKEY}"
+    DeleteRegKey HKLM "${PRODUCT_RUN_REGKEY}"
 
     ; Remove C:\salt from the Path
     Push "C:\salt"
@@ -354,7 +542,8 @@ SectionEnd
 Function un.onUninstSuccess
     HideWindow
     MessageBox MB_ICONINFORMATION|MB_OK \
-        "$(^Name) was successfully removed from your computer." /SD IDOK
+        "$(^Name) was successfully removed from your computer." \
+        /SD IDOK
 FunctionEnd
 
 
@@ -738,6 +927,16 @@ Function parseCommandLineSwitches
         StrCpy $StartMinion 1
     ${EndIf}
 
+    # Service: Start Salt Master
+    ${GetOptions} $R0 "/start-master=" $R1
+    ${IfNot} $R1 == ""
+        ; If start-master was passed something, then set it
+        StrCpy $StartMaster $R1
+    ${Else}
+        ; Otherwise default to 1
+        StrCpy $StartMaster 1
+    ${EndIf}
+
     # Minion Config: Master IP/Name
     ${GetOptions} $R0 "/master=" $R1
     ${IfNot} $R1 == ""
@@ -753,5 +952,22 @@ Function parseCommandLineSwitches
     ${ElseIf} $MinionName_State == ""
         StrCpy $MinionName_State "hostname"
     ${EndIf}
+
+    # Installation Defaults
+    StrCpy $CheckBox_Master_State 0
+    StrCpy $CheckBox_Minion_State 1
+
+    # Installation: Install Master
+    ${GetOptions} $R0 "/install-master" $R1
+    IfErrors install_master_not_found
+        StrCpy $CheckBox_Master_State 1
+    install_master_not_found:
+
+    # Installation: Install Master Only
+    ${GetOptions} $R0 "/master-only" $R1
+    IfErrors master_only_not_found
+        StrCpy $CheckBox_Master_State 1
+        StrCpy $CheckBox_Minion_State 0
+    master_only_not_found:
 
 FunctionEnd
