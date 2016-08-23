@@ -71,9 +71,15 @@ def _available_services():
     for launch_dir in _launchd_paths():
         for root, dirs, files in os.walk(launch_dir):
             for file_name in files:
-                file_path = os.path.join(root, file_name)
+
+                # Must be a plist file
+                if not file_name.endswith('.plist'):
+                    continue
+
                 # Follow symbolic links of files in _launchd_paths
+                file_path = os.path.join(root, file_name)
                 true_path = os.path.realpath(file_path)
+
                 # ignore broken symlinks
                 if not os.path.exists(true_path):
                     continue
@@ -89,19 +95,24 @@ def _available_services():
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = __salt__['cmd.run'](
-                        cmd, python_shell=False, output_loglevel='trace')
+                    plist_xml = __salt__['cmd.run'](cmd, output_loglevel='quiet')
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
                         plist = plistlib.readPlistFromBytes(
                             salt.utils.to_bytes(plist_xml))
 
-                available_services[plist.Label.lower()] = {
-                    'file_name': file_name,
-                    'file_path': true_path,
-                    'plist': plist,
-                }
+                try:
+                    available_services[plist.Label.lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+                except AttributeError:
+                    # Handle malformed plist files
+                    available_services[os.path.basename(file_name).lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
 
     return available_services
 
