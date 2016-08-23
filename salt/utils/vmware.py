@@ -172,8 +172,6 @@ def _get_service_instance(host, username, password, protocol,
     Internal method to authenticate with a vCenter server or ESX/ESXi host
     and return the service instance object.
     '''
-    import pydevd
-    pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
     log.trace('Retrieving new service instance')
     token = None
     if mechanism == 'userpass':
