@@ -53,7 +53,7 @@ def beacon(config):
     '''
     log.debug('haproxy beacon starting')
     ret = []
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate:
         log.debug('haproxy beacon unable to validate')
         return ret

@@ -74,7 +74,7 @@ def beacon(config):
     log.trace('adb beacon starting')
     ret = []
 
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate[0]:
         return ret
 
