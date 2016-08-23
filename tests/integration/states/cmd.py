@@ -54,8 +54,14 @@ class CMDRunRedirectTest(integration.ModuleCase,
         super(CMDRunRedirectTest, self).setUp()
 
     def tearDown(self):
-        os.remove(self.state_file)
-        os.remove(self.test_file)
+        try:
+            os.remove(self.state_file)
+            os.remove(self.test_file)
+        except OSError:
+            # Not all of the tests leave files around that we want to remove
+            # As some of the tests create the sls files in the test itself,
+            # And some are using files in the integration test file state tree.
+            pass
         super(CMDRunRedirectTest, self).tearDown()
 
     def test_run_unless(self):
