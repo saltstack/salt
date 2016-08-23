@@ -1677,9 +1677,6 @@ class FileTestCase(TestCase):
                 ts = datetime(starting.year, 1, 1)
             elif every.months:
                 ts = datetime(starting.year, starting.month, 1)
-            elif every.weeks:
-                # This breaks if the start of the week is in a previous month.
-                ts = datetime(starting.year, starting.month, starting.day - starting.weekday())
             elif every.days:
                 ts = datetime(starting.year, starting.month, starting.day)
             elif every.hours:
