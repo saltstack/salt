@@ -8,6 +8,7 @@ This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstaley.com>
 
 Dependencies
 ~~~~~~~~~~~~
@@ -79,7 +80,7 @@ import logging
 import time
 
 # Import Salt Libs
-from salt.exceptions import SaltSystemExit
+import salt.exceptions
 import salt.modules.cmdmod
 import salt.utils
 
@@ -91,6 +92,13 @@ try:
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
+
+try:
+    import gssapi
+    import base64
+    HAS_GSSAPI = True
+except ImportError:
+    HAS_GSSAPI = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
@@ -158,7 +166,102 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     return ret
 
 
-def get_service_instance(host, username, password, protocol=None, port=None):
+def _get_service_instance(host, username, password, protocol,
+                          port, mechanism, principal, domain):
+    '''
+    Internal method to authenticate with a vCenter server or ESX/ESXi host
+    and return the service instance object.
+    '''
+    log.trace('Retrieving new service instance')
+    token = None
+    if mechanism == 'userpass':
+        if username is None:
+            raise salt.exceptions.CommandExecutionError(
+                'Login mechanism userpass was specified but the mandatory '
+                'parameter \'username\' is missing')
+        if password is None:
+            raise salt.exceptions.CommandExecutionError(
+                'Login mechanism userpass was specified but the mandatory '
+                'parameter \'password\' is missing')
+    elif mechanism == 'sspi':
+        if principal is not None and domain is not None:
+            try:
+                token = get_gssapi_token(principal, host, domain)
+            except Exception as exc:
+                raise salt.exceptions.VMwareConnectionError(str(exc))
+        else:
+            err_msg = 'Login mechanism \'{0}\' was specified but the' \
+                      ' mandatory parameters are missing'.format(mechanism)
+            raise salt.exceptions.CommandExecutionError(err_msg)
+    else:
+        raise salt.exceptions.CommandExecutionError(
+            'Unsupported mechanism: \'{0}\''.format(mechanism))
+    try:
+        log.trace('Connecting using the \'{0}\' mechanism, with username '
+                  '\'{1}\''.format(mechanism, username))
+        service_instance = SmartConnect(
+            host=host,
+            user=username,
+            pwd=password,
+            protocol=protocol,
+            port=port,
+            b64token=token,
+            mechanism=mechanism)
+    except Exception as exc:
+        default_msg = 'Could not connect to host \'{0}\'. ' \
+                      'Please check the debug log for more information.'.format(host)
+        try:
+            if (isinstance(exc, vim.fault.HostConnectFault) and
+                '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
+               '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
+
+                import ssl
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port,
+                    sslContext=ssl._create_unverified_context(),
+                    b64token=token,
+                    mechanism=mechanism)
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.trace(exc)
+                raise salt.exceptions.VMwareConnectionError(err_msg)
+        except Exception as exc:
+            if 'certificate verify failed' in str(exc):
+                import ssl
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                try:
+                    service_instance = SmartConnect(
+                        host=host,
+                        user=username,
+                        pwd=password,
+                        protocol=protocol,
+                        port=port,
+                        sslContext=context,
+                        b64token=token,
+                        mechanism=mechanism
+                    )
+                except Exception as exc:
+                    err_msg = exc.msg if hasattr(exc, 'msg') else str(exc)
+                    log.trace(err_msg)
+                    raise salt.exceptions.VMwareConnectionError(
+                        'Could not connect to host \'{0}\': '
+                        '{1}'.format(host, err_msg))
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.trace(exc)
+                raise salt.exceptions.VMwareConnectionError(err_msg)
+    atexit.register(Disconnect, service_instance)
+    return service_instance
+
+
+def get_service_instance(host, username=None, password=None, protocol=None,
+                         port=None, mechanism='userpass', principal=None,
+                         domain=None):
     '''
     Authenticate with a vCenter server or ESX/ESXi host and return the service instance object.
 
@@ -167,9 +270,11 @@ def get_service_instance(host, username, password, protocol=None, port=None):
 
     username
         The username used to login to the vCenter server or ESX/ESXi host.
+        Required if mechanism is ``userpass``
 
     password
         The password used to login to the vCenter server or ESX/ESXi host.
+        Required if mechanism is ``userpass``
 
     protocol
         Optionally set to alternate protocol if the vCenter server or ESX/ESXi host is not
@@ -178,7 +283,18 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the vCenter server or ESX/ESXi host is not
         using the default port. Default port is ``443``.
+
+    mechanism
+        pyVmomi connection mechanism. Can either be ``userpass`` or ``sspi``.
+        Default mechanism is ``userpass``.
+
+    principal
+        Kerberos service principal. Required if mechanism is ``sspi``
+
+    domain
+        Kerberos user domain. Required if mechanism is ``sspi``
     '''
+
     if protocol is None:
         protocol = 'https'
     if port is None:
@@ -187,71 +303,61 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     service_instance = GetSi()
     if service_instance:
         if service_instance._GetStub().host == ':'.join([host, str(port)]):
-            return service_instance
-        Disconnect(service_instance)
+            log.trace('Using cached service instance')
+            if salt.utils.is_proxy():
+                service_instance._GetStub().GetConnection()
+        else:
+            # Invalidate service instance
+            Disconnect(service_instance)
+            service_instance = None
 
+    if not service_instance:
+        service_instance = _get_service_instance(host,
+                                                 username,
+                                                 password,
+                                                 protocol,
+                                                 port,
+                                                 mechanism,
+                                                 principal,
+                                                 domain)
+
+    # Test if data can actually be retrieved or connection has gone stale
+    log.trace('Checking connection is still authenticated')
     try:
-        service_instance = SmartConnect(
-            host=host,
-            user=username,
-            pwd=password,
-            protocol=protocol,
-            port=port
-        )
-    except Exception as exc:
-        default_msg = 'Could not connect to host \'{0}\'. ' \
-                      'Please check the debug log for more information.'.format(host)
-        try:
-            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
-                import ssl
-                default_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port
-                )
-                ssl._create_default_https_context = default_context
-            elif (isinstance(exc, vim.fault.HostConnectFault) and 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in exc.msg) or 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in str(exc):
-                import ssl
-                default_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port
-                )
-                ssl._create_default_https_context = default_context
-            else:
-                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-                log.debug(exc)
-                raise SaltSystemExit(err_msg)
-
-        except Exception as exc:
-            if 'certificate verify failed' in str(exc):
-                import ssl
-                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-                context.verify_mode = ssl.CERT_NONE
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port,
-                    sslContext=context
-                )
-            else:
-                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-                log.debug(exc)
-                raise SaltSystemExit(err_msg)
-
-    atexit.register(Disconnect, service_instance)
+        service_instance.CurrentTime()
+    except vim.fault.NotAuthenticated:
+        log.trace('Session no longer authenticating. Reconnecting')
+        Disconnect(service_instance)
+        service_instance = _get_service_instance(host,
+                                                 username,
+                                                 password,
+                                                 protocol,
+                                                 port,
+                                                 mechanism,
+                                                 principal,
+                                                 domain)
 
     return service_instance
+
+
+def is_connection_to_a_vcenter(service_instance):
+    '''
+    Function that returns True if the connection is made to a vCenter Server and
+    False if the connection is made to an ESXi host
+
+    service_instance
+        The Service Instance from which to obtain managed object references.
+    '''
+    api_type = service_instance.content.about.apiType
+    log.trace('api_type = {0}'.format(api_type))
+    if api_type == 'VirtualCenter':
+        return True
+    elif api_type == 'HostAgent':
+        return False
+    else:
+        raise salt.exceptions.VMwareApiError(
+            'Unexpected api type \'{0}\' . Supported types: '
+            '\'VirtualCenter/HostAgent\''.format(api_type))
 
 
 def _get_dvs(service_instance, dvs_name):
@@ -323,6 +429,40 @@ def _get_dvs_uplink_portgroup(dvs, portgroup_name):
             return portgroup
 
     return None
+
+
+def get_gssapi_token(principal, host, domain):
+    '''
+    Get the gssapi token for Kerberos connection
+
+    principal
+       The service principal
+    host
+       Host url where we would like to authenticate
+    domain
+       Kerberos user domain
+    '''
+
+    if not HAS_GSSAPI:
+        raise ImportError('The gssapi library is not imported.')
+
+    service = '{0}/{1}@{2}'.format(principal, host, domain)
+    log.debug('Retrieving gsspi token for service {0}'.format(service))
+    service_name = gssapi.Name(service, gssapi.C_NT_USER_NAME)
+    ctx = gssapi.InitContext(service_name)
+    in_token = None
+    while not ctx.established:
+        out_token = ctx.step(in_token)
+        if out_token:
+            encoded_token = base64.b64encode(out_token)
+            return encoded_token
+        if ctx.established:
+            break
+        if not in_token:
+            raise salt.exceptions.CommandExecutionError(
+                'Can\'t receive token, no response from server')
+    raise salt.exceptions.CommandExecutionError(
+        'Context established, but didn\'t receive token')
 
 
 def get_hardware_grains(service_instance):
