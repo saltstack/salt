@@ -21,7 +21,7 @@ def __virtual__():
     return __virtualname__ if 'pkg.upgrade_available' in __salt__ else False
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

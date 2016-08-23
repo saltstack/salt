@@ -74,7 +74,7 @@ def _get_notifier():
     return __context__['inotify.notifier']
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

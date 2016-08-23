@@ -499,7 +499,7 @@ def beacons(opts, functions, context=None):
         opts,
         tag='beacons',
         pack={'__context__': context, '__salt__': functions},
-        virtual_funcs=['validate'],
+        virtual_funcs=['__validate__'],
     )
 
 
