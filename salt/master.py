@@ -1418,8 +1418,8 @@ class AESFuncs(object):
         # Format individual return loads
         for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
-                   'id': key,
-                   'return': item}
+                   'id': key}
+            ret.update(item)
             if 'master_id' in load:
                 ret['master_id'] = load['master_id']
             if 'fun' in load:

@@ -58,7 +58,7 @@ class LocalemodTestCase(TestCase):
                 self.assertEqual('A', localemod.get_locale())
                 localemod._parse_localectl.assert_called_once_with()
 
-        with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
+        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
                 with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A')}):
                     with patch.object(localemod,
@@ -85,7 +85,7 @@ class LocalemodTestCase(TestCase):
             with patch.object(localemod, '_localectl_set', return_value=True):
                 self.assertTrue(localemod.set_locale('l'))
 
-        with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
+        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
                 with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value='A')}):
                     with patch.object(localemod,
