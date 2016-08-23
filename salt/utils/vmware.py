@@ -309,7 +309,8 @@ def get_service_instance(host, username=None, password=None, protocol=None,
 
     service_instance = GetSi()
     if service_instance:
-        if salt.utils.is_proxy() or GetStub().host != ':'.join([host, str(port)]):
+        stub = GetStub()
+        if salt.utils.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
             # invalidate the service instance to avoid a potential memory leak
