@@ -81,6 +81,7 @@ If Exist "%BinDir%\README.txt" del /q "%BinDir%\README.txt" 1>nul
 @echo Building the installer...
 @echo ----------------------------------------------------------------------
 makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Setup.nsi"
 @echo.
 
 @echo.
