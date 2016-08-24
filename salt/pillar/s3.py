@@ -94,7 +94,6 @@ from salt.ext.six.moves.urllib.parse import quote as _quote
 # Import salt libs
 from salt.pillar import Pillar
 import salt.utils
-import salt.utils.s3 as s3
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -251,7 +250,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     # helper s3 query function
     def __get_s3_meta():
-        return s3.query(
+        return __utils__['s3.query'](
             key=creds.key,
             keyid=creds.keyid,
             bucket=creds.bucket,
@@ -392,7 +391,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
             return
 
     # ... or get the file from S3
-    s3.query(
+    __utils__['s3.query'](
         key=creds.key,
         keyid=creds.keyid,
         bucket=bucket,

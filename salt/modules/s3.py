@@ -56,10 +56,6 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 
-# Import Salt libs
-import salt.utils
-import salt.utils.s3
-
 log = logging.getLogger(__name__)
 
 
@@ -86,16 +82,16 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
     key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
         key, keyid, service_url, verify_ssl, location, role_arn)
 
-    return salt.utils.s3.query(method='DELETE',
-                               bucket=bucket,
-                               path=path,
-                               action=action,
-                               key=key,
-                               keyid=keyid,
-                               service_url=service_url,
-                               verify_ssl=verify_ssl,
-                               location=location,
-                               role_arn=role_arn)
+    return __utils__['s3.query'](method='DELETE',
+                                 bucket=bucket,
+                                 path=path,
+                                 action=action,
+                                 key=key,
+                                 keyid=keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 role_arn=role_arn)
 
 
 def get(bucket=None, path=None, return_bin=False, action=None,
@@ -155,18 +151,18 @@ def get(bucket=None, path=None, return_bin=False, action=None,
     key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
         key, keyid, service_url, verify_ssl, location, role_arn)
 
-    return salt.utils.s3.query(method='GET',
-                               bucket=bucket,
-                               path=path,
-                               return_bin=return_bin,
-                               local_file=local_file,
-                               action=action,
-                               key=key,
-                               keyid=keyid,
-                               service_url=service_url,
-                               verify_ssl=verify_ssl,
-                               location=location,
-                               role_arn=role_arn)
+    return __utils__['s3.query'](method='GET',
+                                 bucket=bucket,
+                                 path=path,
+                                 return_bin=return_bin,
+                                 local_file=local_file,
+                                 action=action,
+                                 key=key,
+                                 keyid=keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 role_arn=role_arn)
 
 
 def head(bucket, path=None, key=None, keyid=None, service_url=None,
@@ -184,16 +180,16 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
     key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
         key, keyid, service_url, verify_ssl, location, role_arn)
 
-    return salt.utils.s3.query(method='HEAD',
-                               bucket=bucket,
-                               path=path,
-                               key=key,
-                               keyid=keyid,
-                               service_url=service_url,
-                               verify_ssl=verify_ssl,
-                               location=location,
-                               full_headers=True,
-                               role_arn=role_arn)
+    return __utils__['s3.query'](method='HEAD',
+                                 bucket=bucket,
+                                 path=path,
+                                 key=key,
+                                 keyid=keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 full_headers=True,
+                                 role_arn=role_arn)
 
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
@@ -217,18 +213,18 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
     key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
         key, keyid, service_url, verify_ssl, location, role_arn)
 
-    return salt.utils.s3.query(method='PUT',
-                               bucket=bucket,
-                               path=path,
-                               return_bin=return_bin,
-                               local_file=local_file,
-                               action=action,
-                               key=key,
-                               keyid=keyid,
-                               service_url=service_url,
-                               verify_ssl=verify_ssl,
-                               location=location,
-                               role_arn=role_arn)
+    return __utils__['s3.query'](method='PUT',
+                                 bucket=bucket,
+                                 path=path,
+                                 return_bin=return_bin,
+                                 local_file=local_file,
+                                 action=action,
+                                 key=key,
+                                 keyid=keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 role_arn=role_arn)
 
 
 def _get_key(key, keyid, service_url, verify_ssl, location, role_arn):
