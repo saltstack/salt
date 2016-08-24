@@ -128,12 +128,16 @@ from __future__ import absolute_import
 import logging
 import socket
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import time
+import random
 
 # Import Salt libs
 import salt.utils.boto
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext.six.moves import range  # pylint: disable=import-error
+
 # from salt.utils import exactly_one
 # TODO: Uncomment this and s/_exactly_one/exactly_one/
 # See note in utils.boto
@@ -1359,7 +1363,8 @@ def create_nat_gateway(subnet_id=None,
 
 def delete_nat_gateway(nat_gateway_id,
                        release_eips=False, region=None,
-                       key=None, keyid=None, profile=None):
+                       key=None, keyid=None, profile=None,
+                       wait_for_delete=False, wait_for_delete_retries=5):
     '''
     Delete a nat gateway (by id).
 
@@ -1368,6 +1373,35 @@ def delete_nat_gateway(nat_gateway_id,
     This function requires boto3 to be installed.
 
     .. versionadded:: Carbon
+
+    nat_gateway_id
+        Id of the NAT Gateway
+
+    releaes_eips
+        whether to release the elastic IPs associated with the given NAT Gateway Id
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    wait_for_delete
+        whether to wait for delete of the NAT gateway to be in failed or deleted
+        state after issuing the delete call.
+
+    wait_for_delete_retries
+        NAT gateway may take some time to be go into deleted or failed state.
+        During the deletion process, subsequent release of elastic IPs may fail;
+        this state will automatically retry this number of times to ensure
+        the NAT gateway is in deleted or failed state before proceeding.
 
     CLI Examples:
 
@@ -1383,6 +1417,18 @@ def delete_nat_gateway(nat_gateway_id,
         if gwinfo:
             gwinfo = gwinfo.get('NatGateways', [None])[0]
         conn3.delete_nat_gateway(NatGatewayId=nat_gateway_id)
+
+        # wait for deleting nat gateway to finish prior to attempt to release elastic ips
+        if wait_for_delete:
+            for retry in range(wait_for_delete_retries, 0, -1):
+                if gwinfo and gwinfo['State'] not in ['deleted', 'failed']:
+                    time.sleep((2 ** (wait_for_delete_retries - retry)) + (random.randint(0, 1000) / 1000.0))
+                    gwinfo = conn3.describe_nat_gateways(NatGatewayIds=[nat_gateway_id])
+                    if gwinfo:
+                        gwinfo = gwinfo.get('NatGateways', [None])[0]
+                        continue
+                break
+
         if release_eips and gwinfo:
             for addr in gwinfo.get('NatGatewayAddresses'):
                 conn3.release_address(AllocationId=addr.get('AllocationId'))
