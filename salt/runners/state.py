@@ -15,7 +15,7 @@ from salt.exceptions import SaltInvocationError
 LOGGER = logging.getLogger(__name__)
 
 
-def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
+def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None, pillarenv=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -53,7 +53,8 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             saltenv,
             test,
             exclude,
-            pillar=pillar)
+            pillar=pillar,
+            pillarenv=pillarenv)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
