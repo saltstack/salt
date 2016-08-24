@@ -213,6 +213,7 @@ def _get_service_instance(host, username, password, protocol,
             log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
             log.error('We recommend updating to that version or later.')
             raise
+    except Exception as exc:
 
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
