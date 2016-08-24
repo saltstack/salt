@@ -22,6 +22,7 @@ The data structure needs to be:
 from __future__ import absolute_import, print_function
 import os
 import time
+import random
 import logging
 from datetime import datetime
 
@@ -375,13 +376,15 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minion_ret = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minions = minion_ret.keys()
+        random.shuffle(minions)
         f_tgt = []
-        for minion, ret in six.iteritems(group):
+        for minion in minions:
+            if fun in minion_ret[minion]:
+                f_tgt.append(minion)
             if len(f_tgt) >= sub:
                 break
-            if fun in ret:
-                f_tgt.append(minion)
         func = self.cmd
         if cli:
             func = self.cmd_cli
