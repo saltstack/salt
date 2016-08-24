@@ -1383,8 +1383,8 @@ CLOUD_CONFIG_DEFAULTS = {
 
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
-    'pidfile': '/var/run/salt-api.pid',
-    'logfile': '/var/log/salt/api',
+    'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
@@ -3273,10 +3273,11 @@ def api_config(path):
     '''
     # Let's grab a copy of salt's master default opts
     defaults = DEFAULT_MASTER_OPTS
+    opts = client_config(path, defaults=defaults)
     # Let's override them with salt-api's required defaults
-    defaults.update(DEFAULT_API_OPTS)
+    opts.update(DEFAULT_API_OPTS)
+    return opts
 
-    return client_config(path, defaults=defaults)
 
 
 def spm_config(path):
