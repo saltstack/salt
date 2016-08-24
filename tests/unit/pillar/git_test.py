@@ -111,7 +111,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         ]
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
-                     'myminon', None)
+                     'myminion', None)
         self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
 
     def test_no_loop(self):
@@ -152,7 +152,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
 
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
-                     'myminon', 'base')
+                     'myminion', 'base')
 
         orig_ext_pillar = pil.ext_pillars['git']
         orig_ext_pillar.count = 0
