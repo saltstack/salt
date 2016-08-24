@@ -43,8 +43,9 @@ import salt.defaults.exitcodes
 
 try:
     import psutil
+    psutil.virtual_memory
     HAS_PSUTIL = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_PSUTIL = False
     import platform
     import salt.grains.core
