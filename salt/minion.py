@@ -1823,15 +1823,21 @@ class Minion(MinionBase):
         tag, data = salt.utils.event.SaltEvent.unpack(package)
         log.debug('Minion of "{0}" is handling event tag \'{1}\''.format(self.opts['master'], tag))
         if tag.startswith('module_refresh'):
-            self.module_refresh(notify=data.get('notify', False))
+            self.module_refresh(
+                force_refresh=data.get('force_refresh', False),
+                notify=data.get('notify', False)
+            )
         elif tag.startswith('pillar_refresh'):
-            yield self.pillar_refresh()
+            yield self.pillar_refresh(
+                force_refresh=data.get('force_refresh', False)
+            )
         elif tag.startswith('manage_schedule'):
             self.manage_schedule(tag, data)
         elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
         elif tag.startswith('grains_refresh'):
-            if self.grains_cache != self.opts['grains']:
+            if (data.get('force_refresh', False) or
+                    self.grains_cache != self.opts['grains']):
                 self.pillar_refresh(force_refresh=True)
                 self.grains_cache = self.opts['grains']
         elif tag.startswith('environ_setenv'):
