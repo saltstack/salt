@@ -6,47 +6,61 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
 .. versionadded:: 2015.8.0
 
-:configuration:
-    This engine can be run on the master or on a minion.
-
-    Example Config:
-        engines:
-          - sqs_events:
-             queue: test
-             profile: my-sqs-profile #optional
-
-    Explicit sqs credentials are accepted but this engine can also utilize
-    IAM roles assigned to the instance through Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
-
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the config file of the master or minion, as appropriate::
-
-        sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
-        sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        sqs.message_format: json
-
-    A region may also be specified in the configuration::
-
-        sqs.region: us-east-1
-
-    If a region is not specified, the default is us-east-1.
-
-    To deserialize the message from json:
-
-        sqs.message_format: json
-
-    It's also possible to specify key, keyid and region via a profile:
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
-
 :depends: boto
+
+Configuration
+=============
+
+This engine can be run on the master or on a minion.
+
+Example Config:
+
+.. code-block:: yaml
+
+    sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
+    sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    sqs.message_format: json
+
+Explicit sqs credentials are accepted but this engine can also utilize
+IAM roles assigned to the instance through Instance Profiles. Dynamic
+credentials are then automatically obtained from AWS API and no further
+configuration is necessary. More Information available at::
+
+   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+
+If IAM roles are not used you need to specify them either in a pillar or
+in the config file of the master or minion, as appropriate:
+
+To deserialize the message from json:
+
+.. code-block:: yaml
+
+    sqs.message_format: json
+
+It's also possible to specify key, keyid and region via a profile:
+
+.. code-block:: yaml
+
+    sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
+    sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+A region may also be specified in the configuration:
+
+.. code-block:: yaml
+
+    sqs.region: us-east-1
+
+If a region is not specified, the default is us-east-1.
+
+It's also possible to specify key, keyid and region via a profile:
+
+.. code-block:: yaml
+
+    myprofile:
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
+
 '''
 
 # Import python libs
