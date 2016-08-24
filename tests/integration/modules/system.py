@@ -225,16 +225,16 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_get_computer_desc(self):
+    def test_get_hostname(self):
         '''
         Test getting the system hostname
         '''
-        res = self.run_function('system.get_computer_desc')
+        res = self.run_function('system.get_hostname')
 
         hostname_cmd = salt.utils.which('hostnamectl')
         if hostname_cmd:
-            desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
-            self.assertEqual(res, desc)
+            hname = self.run_function('cmd.run', ["hostnamectl status --pretty"])
+            self.assertEqual(res, hname)
         else:
             if not os.path.isfile('/etc/machine-info'):
                 self.assertFalse(res)
@@ -245,17 +245,18 @@ class SystemModuleTest(integration.ModuleCase):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_set_computer_desc(self):
+    def test_set_hostname(self):
         '''
         Test setting the system hostname
         '''
         self._save_machine_info()
-        desc = "test"
-        ret = self.run_function('system.set_computer_desc', [desc])
-        computer_desc = self.run_function('system.get_computer_desc')
+        hname = "test"
+        ret = self.run_function('system.set_hostname', [hname])
+        hostname = self.run_function('system.get_hostname')
 
         self.assertTrue(ret)
-        self.assertIn(desc, computer_desc)
+        self.assertEqual(hostname, hname)
+
 
 if __name__ == '__main__':
     from integration import run_tests

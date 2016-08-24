@@ -440,7 +440,7 @@ def _strip_quotes(str_q):
     return str_q
 
 
-def get_computer_desc():
+def get_hostname():
     '''
     Get PRETTY_HOSTNAME value stored in /etc/machine-info
     If this file doesn't exist or the variable doesn't exist
@@ -453,12 +453,12 @@ def get_computer_desc():
 
     .. code-block:: bash
 
-        salt '*' system.get_computer_desc
+        salt '*' system.get_hostname
     '''
-    desc = None
+    hname = None
     hostname_cmd = salt.utils.which('hostnamectl')
     if hostname_cmd:
-        desc = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
+        hname = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
     else:
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
@@ -467,32 +467,32 @@ def get_computer_desc():
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
-                        desc = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
+                        hname = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
                         # no break so we get the last occurance
         except IOError:
             return False
-    return desc
+    return hname
 
 
-def set_computer_desc(desc):
+def set_hostname(hname):
     '''
     Set PRETTY_HOSTNAME value stored in /etc/machine-info
     This will create the file if it does not exist. If
     it is unable to create or modify this file returns False.
 
-    :param str desc: The computer description
+    :param str hname: The computer hostname
     :return: False on failure. True if successful.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.set_computer_desc "Michael's laptop"
+        salt '*' system.set_hostname "Michael's laptop"
     '''
     hostname_cmd = salt.utils.which('hostnamectl')
     if hostname_cmd:
-        result = __salt__['cmd.retcode']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
-        return True if result == 0 else False
+        result = __salt__['cmd.run']('{0} set-hostname --pretty {1}'.format(hostname_cmd, hname))
+        return True if result == '' else False
 
     if not os.path.isfile('/etc/machine-info'):
         f = salt.utils.fopen('/etc/machine-info', 'a')
@@ -500,7 +500,7 @@ def set_computer_desc(desc):
 
     is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc.replace('"', '\\"'))
+    new_line = 'PRETTY_HOSTNAME="{0}"'.format(hname.replace('"', '\\"')) + '\n'
     try:
         with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
@@ -513,7 +513,6 @@ def set_computer_desc(desc):
             # time to write our changes to the file
             mach_info.seek(0, 0)
             mach_info.write(''.join(lines))
-            mach_info.write('\n')
             return True
     except IOError:
         return False
