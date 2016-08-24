@@ -8,8 +8,10 @@ Scheduling can be enabled by multiple methods:
 - ``schedule`` option in either the master or minion config files.  These
   require the master or minion application to be restarted in order for the
   schedule to be implemented.
+
 - Minion pillar data.  Schedule is implemented by refreshing the minion's pillar data,
   for example by using ``saltutil.refresh_pillar``.
+  
 - The :doc:`schedule state</ref/states/all/salt.states.schedule>` or :doc:`schedule module</ref/modules/all/salt.modules.schedule>`
 
 .. note::
