@@ -69,7 +69,6 @@ import logging
 import salt.fileserver as fs
 import salt.modules
 import salt.utils
-import salt.utils.s3 as s3
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -400,7 +399,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     # helper s3 query function
     def __get_s3_meta(bucket, key=key, keyid=keyid):
-        return s3.query(
+        return __utils__['s3.query'](
                 key=key,
                 keyid=keyid,
                 kms_keyid=keyid,
@@ -634,7 +633,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                     log.debug('cached file size equal to metadata size and '
                               'cached file mtime later than metadata last '
                               'modification time.')
-                    ret = s3.query(
+                    ret = __utils__['s3.query'](
                         key=key,
                         keyid=keyid,
                         kms_keyid=keyid,
@@ -665,7 +664,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                             return
 
     # ... or get the file from S3
-    s3.query(
+    __utils__['s3.query'](
         key=key,
         keyid=keyid,
         kms_keyid=keyid,
