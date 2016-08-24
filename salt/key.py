@@ -436,7 +436,8 @@ class Key(object):
                 salt.crypt.gen_keys(self.opts['pki_dir'],
                                     self.opts['master_sign_key_name'],
                                     keysize or self.opts['keysize'],
-                                    self.opts.get('user'))
+                                    self.opts.get('user'),
+                                    self.passphrase)
 
                 priv = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
             else:
