@@ -554,7 +554,7 @@ def get_region_from_metadata():
     return None
 
 
-def get_location(opts, provider=None):
+def get_location(opts=None, provider=None):
     '''
     Return the region to use, in this order:
         opts['location']
@@ -562,6 +562,8 @@ def get_location(opts, provider=None):
         get_region_from_metadata()
         DEFAULT_LOCATION
     '''
+    if opts is None:
+        opts = __opts__
     ret = opts.get('location', provider.get('location'))
     if ret is None:
         ret = get_region_from_metadata()
