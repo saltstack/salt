@@ -413,7 +413,7 @@ class _LegacyGitPillar(object):
         Return boolean whether it worked
         '''
         try:
-            log.debug('Updating fileserver for git_pillar module')
+            log.debug('Legacy git_pillar: Updating \'%s\'', self.rp_location)
             self.repo.git.fetch()
         except git.exc.GitCommandError as exc:
             log.error('Unable to fetch the latest changes from remote '
@@ -421,10 +421,15 @@ class _LegacyGitPillar(object):
             return False
 
         try:
-            self.repo.git.checkout('origin/{0}'.format(self.branch))
+            checkout_ref = 'origin/{0}'.format(self.branch)
+            log.debug('Legacy git_pillar: Checking out %s for \'%s\'',
+                      checkout_ref, self.rp_location)
+            self.repo.git.checkout(checkout_ref)
         except git.exc.GitCommandError as exc:
-            log.error('Unable to checkout branch '
-                      '{0}: {1}'.format(self.branch, exc))
+            log.error(
+                'Legacy git_pillar: Failed to checkout %s for \'%s\': %s',
+                checkout_ref, self.rp_location, exc
+            )
             return False
 
         return True
