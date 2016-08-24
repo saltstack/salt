@@ -172,10 +172,13 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
             if key == 'git.ext_pillar':
                 return ext_pillar_count_calls
             return orig_getitem(self, key)
-        LazyLoader.__getitem__ = __getitem__
 
-        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
-        self.assertTrue(orig_ext_pillar.count < 7)
+        try:
+            LazyLoader.__getitem__ = __getitem__
+            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+            self.assertTrue(orig_ext_pillar.count < 7)
+        finally:
+            LazyLoader.__getitem__ = orig_getitem
 
 
 if __name__ == '__main__':
