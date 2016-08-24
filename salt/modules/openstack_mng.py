@@ -44,11 +44,9 @@ def start_service(service_name):
     .. code-block:: bash
         salt '*' openstack_mng.start_service neutron
     '''
-
-    if __salt__['cmd.retcode'](['/usr/bin/openstack-service', 'start', service_name]) == 0:
-        return True
-
-    return False
+    
+    os_cmd = ['/usr/bin/openstack-service', 'start', service_name]
+    return __salt__['cmd.retcode'](os_cmd) == 0
 
 
 def stop_service(service_name):
@@ -61,10 +59,8 @@ def stop_service(service_name):
         salt '*' openstack_mng.stop_service neutron
     '''
 
-    if __salt__['cmd.retcode'](['/usr/bin/openstack-service', 'stop', service_name]) == 0:
-        return True
-
-    return False
+    os_cmd = ['/usr/bin/openstack-service', 'stop', service_name]
+    return __salt__['cmd.retcode'](os_cmd) == 0
 
 
 def restart_service(service_name, minimum_running_time=None):
@@ -101,7 +97,5 @@ def restart_service(service_name, minimum_running_time=None):
         return ret_code
     else:
         # just restart
-        if __salt__['cmd.retcode'](['/usr/bin/openstack-service', 'restart', service_name]) == 0:
-            return True
-
-    return False
+        os_cmd = ['/usr/bin/openstack-service', 'restart', service_name]
+        return __salt__['cmd.retcode'](os_cmd) == 0
