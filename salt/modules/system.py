@@ -516,3 +516,71 @@ def set_hostname(hname):
             return True
     except IOError:
         return False
+
+
+def get_computer_desc():
+    '''
+    Get COMPUTER_DESCRIPTION value stored in /etc/machine-info
+    If this file doesn't exist or the variable doesn't exist
+    return False.
+
+    :return: Value of COMPUTER_DESCRIPTION if this does not exist False.
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_computer_desc
+    '''
+    pattern = re.compile(r'^\s*COMPUTER_DESCRIPTION=(.*)$')
+    try:
+        with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            for line in mach_info.readlines():
+                match = pattern.match(line)
+                if match:
+                    # get rid of whitespace then strip off quotes
+                    desc = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
+                    # no break so we get the last occurance
+    except IOError:
+        return False
+    return desc
+
+
+def set_computer_desc(desc):
+    '''
+    Set COMPUTER_DESCRIPTION value stored in /etc/machine-info
+    This will create the file if it does not exist. If
+    it is unable to create or modify this file returns False.
+
+    :param str desc: The computer description
+    :return: False on failure. True if successful.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_computer_desc "This computer belongs to Michael!"
+    '''
+    if not os.path.isfile('/etc/machine-info'):
+        f = salt.utils.fopen('/etc/machine-info', 'a')
+        f.close()
+
+    is_computer_desc_found = False
+    pattern = re.compile(r'^\s*COMPUTER_DESCRIPTION=(.*)$')
+    new_line = 'COMPUTER_DESCRIPTION="{0}"'.format(desc.replace('"', '\\"')) + '\n'
+    try:
+        with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
+            lines = mach_info.readlines()
+            for i, line in enumerate(lines):
+                if pattern.match(line):
+                    is_computer_desc_found = True
+                    lines[i] = new_line
+            if not is_computer_desc_found:
+                lines.append(new_line)
+            # time to write our changes to the file
+            mach_info.seek(0, 0)
+            mach_info.write(''.join(lines))
+            return True
+    except IOError:
+        return False

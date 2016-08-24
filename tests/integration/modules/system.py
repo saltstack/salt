@@ -257,6 +257,33 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
         self.assertEqual(hostname, hname)
 
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_get_computer_desc(self):
+        '''
+        Test getting the system computer description
+        '''
+        res = self.run_function('system.get_computer_desc')
+
+        if not os.path.isfile('/etc/machine-info'):
+            self.assertFalse(res)
+        else:
+            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                data = mach_info.read()
+                self.assertIn(res, data.decode('string_escape'))
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_set_computer_desc(self):
+        '''
+        Test setting the system computer description
+        '''
+        self._save_machine_info()
+        desc = "test description"
+        ret = self.run_function('system.set_computer_desc', [desc])
+        description = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertEqual(description, desc)
 
 if __name__ == '__main__':
     from integration import run_tests
