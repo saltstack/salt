@@ -233,7 +233,7 @@ def list_targets(Rule,
             keys = ('Id', 'Arn', 'Input',
                     'InputPath')
             for target in targets.get('Targets'):
-                ret.append(dict([(k, target.get(k)) for k in keys]))
+                ret.append(dict([(k, target.get(k)) for k in keys if k in target]))
             return {'targets': ret}
         else:
             return {'targets': None}
