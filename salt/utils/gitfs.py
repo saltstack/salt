@@ -2110,7 +2110,7 @@ class GitBase(object):
                 failhard(self.role)
             # ssl_verify should be a bool, everything else a string
             per_remote_defaults[param] = \
-                six.text_type(self.opts[key]) if param not in BOOL_PARAMS \
+                str(self.opts[key]) if param not in BOOL_PARAMS \
                 else self.opts[key]
 
         self.remotes = []
@@ -2266,7 +2266,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
+                    if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
@@ -2311,7 +2311,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
+                    if not fnmatch.fnmatch(repo.url, str(remote)):
                         continue
             success, failed = repo.lock()
             locked.extend(success)
