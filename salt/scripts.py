@@ -320,7 +320,7 @@ def salt_key():
             err,
             hardcrash, trace=trace)
     except Exception as err:
-        sys.stderr.write("Error: {0}\n".format(err.message))
+        sys.stderr.write("Error: {0}\n".format(err))
 
 
 def salt_cp():

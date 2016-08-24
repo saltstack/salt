@@ -38,7 +38,7 @@ def list_all():
     return skey.all_keys()
 
 
-def list_match(match):
+def name_match(match):
     '''
     List all the keys based on a glob match
     '''
@@ -169,54 +169,5 @@ def gen_signature(priv, pub, signature_path, auto_create=False, keysize=None):
     '''
     Generate master public-key-signature
     '''
-    # check given pub-key
-    if pub:
-        if not os.path.isfile(pub):
-            return 'Public-key {0} does not exist'.format(pub)
-    # default to master.pub
-    else:
-        mpub = __opts__['pki_dir'] + '/' + 'master.pub'
-        if os.path.isfile(mpub):
-            pub = mpub
-
-    # check given priv-key
-    if priv:
-        if not os.path.isfile(priv):
-            return 'Private-key {0} does not exist'.format(priv)
-    # default to master_sign.pem
-    else:
-        mpriv = __opts__['pki_dir'] + '/' + 'master_sign.pem'
-        if os.path.isfile(mpriv):
-            priv = mpriv
-
-    if not priv:
-        if auto_create:
-            log.debug('Generating new signing key-pair {0}.* in {1}'
-                  ''.format(__opts__['master_sign_key_name'],
-                            __opts__['pki_dir']))
-            salt.crypt.gen_keys(__opts__['pki_dir'],
-                                __opts__['master_sign_key_name'],
-                                keysize or __opts__['keysize'],
-                                __opts__.get('user'))
-
-            priv = __opts__['pki_dir'] + '/' + __opts__['master_sign_key_name'] + '.pem'
-        else:
-            return 'No usable private-key found'
-
-    if not pub:
-        return 'No usable public-key found'
-
-    log.debug('Using public-key {0}'.format(pub))
-    log.debug('Using private-key {0}'.format(priv))
-
-    if signature_path:
-        if not os.path.isdir(signature_path):
-            log.debug('target directory {0} does not exist'
-                  ''.format(signature_path))
-    else:
-        signature_path = __opts__['pki_dir']
-
-    sign_path = signature_path + '/' + __opts__['master_pubkey_signature']
-
     skey = get_key(__opts__)
-    return skey.gen_signature(priv, pub, sign_path)
+    return skey.gen_keys_signature(priv, pub, signature_path, auto_create, keysize)
