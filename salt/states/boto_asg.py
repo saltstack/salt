@@ -231,6 +231,7 @@ def present(
         subnet_names=None,
         tags=None,
         termination_policies=None,
+        termination_policies_from_pillar='boto_asg_termination_policies',
         suspended_processes=None,
         scaling_policies=None,
         scaling_policies_from_pillar='boto_asg_scaling_policies',
@@ -341,6 +342,10 @@ def present(
         * ``Default``
 
         If no value is specified, the ``Default`` value is used.
+
+    termination_policies_from_pillar:
+        name of pillar dict that contains termination policy settings.   Termination policies
+        defined for this specific state will override those from pillar.
 
     suspended_processes
         List of processes to be suspended. see
@@ -517,6 +522,10 @@ def present(
                 ret['changes']['launch_config'] = lc_ret['changes']
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
+    termination_policies = _determine_termination_policies(
+        termination_policies,
+        termination_policies_from_pillar
+    )
     scaling_policies = _determine_scaling_policies(
         scaling_policies,
         scaling_policies_from_pillar
@@ -590,6 +599,9 @@ def present(
             'scaling_policies': scaling_policies,
             'scheduled_actions': scheduled_actions
         }
+        #ensure that we reset termination_policies to default if none are specified
+        if not termination_policies:
+            config['termination_policies'] = ['Default']
         if suspended_processes is None:
             config['suspended_processes'] = []
         # ensure that we delete scaling_policies if none are specified
@@ -691,6 +703,18 @@ def present(
     if not _ret['result']:
         ret['result'] = _ret['result']
     return ret
+
+
+def _determine_termination_policies(termination_policies, termination_policies_from_pillar):
+    '''
+    helper method for present.  ensure that termination_policies are set
+    '''
+    pillar_termination_policies = copy.deepcopy(
+        __salt__['config.option'](termination_policies_from_pillar, [])
+    )
+    if not termination_policies and len(pillar_termination_policies) > 0:
+        termination_policies = pillar_termination_policies
+    return termination_policies
 
 
 def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
