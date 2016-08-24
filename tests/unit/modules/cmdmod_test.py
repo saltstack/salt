@@ -139,7 +139,6 @@ class CMDMODTestCase(TestCase):
                               'foo', 'bar', runas='baz')
 
     @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
-    @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.access', MagicMock(return_value=True))
     def test_run_user_not_available(self):
