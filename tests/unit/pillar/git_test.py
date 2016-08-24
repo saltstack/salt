@@ -149,6 +149,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
             dict(git=self.conf_line),
             dict(git=conf_line2),
         ]
+        git_pillar._update(*conf_line2.split(None, 1))
 
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
