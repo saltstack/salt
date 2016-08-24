@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
+import salt.utils
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -228,6 +229,7 @@ class CMDMODTestCase(TestCase):
         '''
         self.assertTrue(cmdmod._is_valid_shell('foo'))
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     @patch('os.path.exists', MagicMock(return_value=False))
     def test_is_valid_shell_none(self):
         '''
@@ -243,6 +245,7 @@ class CMDMODTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
             self.assertTrue(cmdmod._is_valid_shell('/bin/bash'))
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_is_valid_shell_unavailable(self):
         '''
