@@ -1,13 +1,36 @@
 # -*- coding: utf-8 -*-
 '''
+.. versionadded:: Carbon
+
 Manage Local Policy on Windows
 
-Administrative template policies are dynamically read from admx/adml files.  Other
-policies must be statically set in the _policy_info class object.
+This module allows configuring local group policy (i.e. gpedit.msc) on a Windows server.
+
+Administrative Templates
+========================
+    Administrative template policies are dynamically read from admx/adml files on the server.
+
+
+Windows Settings
+================
+    Policies contained in the "Windows Settings" section of the gpedit.msc gui are statically
+    defined in this module.  Each policy is configured for the section (Machine/User) in the
+    module's _policy_info class.  The _policy_info class contains data on how the module will
+    configure the policy, where the policy resides in the gui (for display purposes), data
+    validation data, data transformation data, etc.
+
+Current known limitations
+=========================
+    At this time, start/shutdown scripts policies are displayed, but are not configurable.
+
 
 :depends:
   - pywin32 Python module
-  - xmltodict
+  - lxml
+  - uuid
+  - codecs
+  - struct
+  - salt.modules.reg
 
 '''
 
@@ -30,6 +53,7 @@ try:
     import uuid
     import codecs
     import lxml
+    import struct
     from lxml import etree
     from salt.modules.reg import Registry as Registry
     HAS_WINDOWS_MODULES = True
@@ -38,6 +62,27 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
+adm_policy_name_map = {True: {}, False: {}}
+# pre-compile some xpath searches to attempt to be more efficient
+TRUE_VALUE_XPATH = etree.XPath('.//*[local-name() = "trueValue"]')
+FALSE_VALUE_XPATH = etree.XPath('.//*[local-name() = "falseValue"]')
+ELEMENTS_XPATH = etree.XPath('.//*[local-name() = "elements"]')
+ENABLED_VALUE_XPATH = etree.XPath('.//*[local-name() = "enabledValue"]')
+DISABLED_VALUE_XPATH = etree.XPath('.//*[local-name() = "disabledValue"]')
+ENABLED_LIST_XPATH = etree.XPath('.//*[local-name() = "enabledList"]')
+DISABLED_LIST_XPATH = etree.XPath('.//*[local-name() = "disabledList"]')
+VALUE_XPATH = etree.XPath('.//*[local-name() = "value"]')
+TRUE_LIST_XPATH = etree.XPath('.//*[local-name() = "trueList"]')
+FALSE_LIST_XPATH = etree.XPath('.//*[local-name() = "falseList"]')
+REGKEY_XPATH = etree.XPath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = $keyvalue]')
+POLICY_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "policy"]')
+ALL_CLASS_POLICY_XPATH = etree.XPath('//*[local-name() = "policy" and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
+ADML_DISPLAY_NAME_XPATH = etree.XPath('//*[local-name() = $displayNameType and @*[local-name() = "id"] = $displayNameId]')
+VALUE_LIST_XPATH = etree.XPath('.//*[local-name() = "valueList"]')
+ENUM_ITEM_DISPLAY_NAME_XPATH = etree.XPath('.//*[local-name() = "item" and @*[local-name() = "displayName" = $display_name]]')
+ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
+ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
+ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
 
 
 class _policy_info(object):
@@ -46,1391 +91,1400 @@ class _policy_info(object):
     '''
     def __init__(self):
         self.policies = {
-            'StartupScripts': {
-                'Policy': 'Startup Scripts',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Startup'],
-                'ScriptIni': {
-                    'Section': 'Startup',
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'scripts.ini'),
-                },
-            },
-            'StartupPowershellScripts': {
-                'Policy': 'Startup Powershell Scripts',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Startup'],
-                'ScriptIni': {
-                    'Section': 'Startup',
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'psscripts.ini'),
-                },
-            },
-            'StartupPowershellScriptOrder': {
-                'Policy': 'Startup - For this GPO, run scripts in the following order',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Startup'],
-                'ScriptIni': {
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'psscripts.ini'),
-                    'Section': 'ScriptsConfig',
-                    'SettingName': 'StartExecutePSFirst',
-                    'Settings': ['true', 'false', None],
-                },
-                'Transform': {
-                    'Get': '_powershell_script_order_conversion',
-                    'Put': '_powershell_script_order_reverse_conversion',
-                },
-            },
-            'ShutdownScripts': {
-                'Policy': 'Shutdown Scripts',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Shutdown'],
-                'ScriptIni': {
-                    'Section': 'Shutdown',
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'scripts.ini'),
-                },
-            },
-            'ShutdownPowershellScripts': {
-                'Policy': 'Shutdown Powershell Scripts',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Shutdown'],
-                'ScriptIni': {
-                    'Section': 'Shutdown',
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'psscripts.ini'),
-                },
-            },
-            'ShutdownPowershellScriptOrder': {
-                'Policy': 'Shutdown - For this GPO, run scripts in the following order',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Scripts (Startup/Shutdown)',
-                                 'Shutdown'],
-                'ScriptIni': {
-                    'IniPath': os.path.join(os.getenv('WINDIR'),
-                                            'System32',
-                                            'GroupPolicy',
-                                            'Machine',
-                                            'Scripts',
-                                            'psscripts.ini'),
-                    'Section': 'ScriptsConfig',
-                    'SettingName': 'EndExecutePSFirst',
-                    'Settings': ['true', 'false', None],
-                },
-                'Transform': {
-                    'Get': '_powershell_script_order_conversion',
-                    'Put': '_powershell_script_order_reverse_conversion',
-                },
-            },
-            'RestrictAnonymous': {
-                'Policy': 'Network Access: Do not allow anonymous enumeration of SAM accounts and shares',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Settings': [0, 1],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
-                    'Value': 'RestrictAnonymous',
-                    'Type': 'REG_DWORD'
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'PasswordHistory': {
-                'Policy': 'Enforce password history',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 24}
-                },
-                'NetUserModal': {
-                    'Modal': 0,
-                    'Option': 'password_hist_len'
-                },
-            },
-            'MaxPasswordAge': {
-                'Policy': 'Maximum password age',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 86313600}
-                },
-                'NetUserModal': {
-                    'Modal': 0,
-                    'Option': 'max_passwd_age',
-                },
-                'Transform': {
-                    'Get': '_seconds_to_days',
-                    'Put': '_days_to_seconds'
-                },
-            },
-            'MinPasswordAge': {
-                'Policy': 'Minimum password age',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 86313600}
-                },
-                'NetUserModal': {
-                    'Modal': 0,
-                    'Option': 'min_passwd_age',
-                },
-                'Transform': {
-                    'Get': '_seconds_to_days',
-                    'Put': '_days_to_seconds'
-                },
-            },
-            'MinPasswordLen': {
-                'Policy': 'Minimum password length',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 14}
-                },
-                'NetUserModal': {
-                    'Modal': 0,
-                    'Option': 'min_passwd_len',
-                },
-            },
-            'PasswordComplexity': {
-                'Policy': 'Passwords must meet complexity requirements',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': [0, 1],
-                'Secedit': {
-                    'Option': 'PasswordComplexity',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'ClearTextPasswords': {
-                'Policy': 'Store passwords using reversible encryption',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Password Policy'],
-                'Settings': [0, 1],
-                'Secedit': {
-                    'Option': 'ClearTextPassword',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'AdminAccountStatus': {
-                'Policy': 'Accounts: Administrator account status',
-                'Settings': [0, 1],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Secedit': {
-                    'Option': 'EnableAdminAccount',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'GuestAccountStatus': {
-                'Policy': 'Accounts: Guest account status',
-                'Settings': [0, 1],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Secedit': {
-                    'Option': 'EnableGuestAccount',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'LimitBlankPasswordUse': {
-                'Policy': 'Accounts: Limit local account use of blank passwords to console logon only',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Settings': [0, 1],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
-                    'Value': 'limitblankpassworduse',
-                    'Type': 'REG_DWORD',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'RenameAdministratorAccount': {
-                'Policy': 'Accounts: Rename administrator account',
-                'Settings': None,
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Secedit': {
-                    'Option': 'NewAdministratorName',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_strip_quotes',
-                    'Put': '_add_quotes',
-                },
-            },
-            'RenameGuestAccount': {
-                'Policy': 'Accounts: Rename guest account',
-                'Settings': None,
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Secedit': {
-                    'Option': 'NewGuestName',
-                    'Section': 'System Access',
-                },
-                'Transform': {
-                    'Get': '_strip_quotes',
-                    'Put': '_add_quotes',
-                },
-            },
-            'AuditBaseObjects': {
-                'Policy': 'Audit: Audit the access of global system objects',
-                'Settings': [0, 1],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
-                    'Value': 'AuditBaseObjects',
-                    'Type': 'REG_DWORD',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'FullPrivilegeAuditing': {
-                'Policy': 'Audit: Audit the use of Backup and Restore privilege',
-                'Settings': [chr(0), chr(1)],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'System\\CurrentControlSet\\Control\\Lsa',
-                    'Value': 'FullPrivilegeAuditing',
-                    'Type': 'REG_BINARY',
-                },
-                'Transform': {
-                    'Get': '_binary_enable0_disable1_conversion',
-                    'Put': '_binary_enable0_disable1_reverse_conversion',
-                },
-            },
-            'CrashOnAuditFail': {
-                'Policy': 'Audit: Shut down system immediately if unable to log security audits',
-                'Settings': [0, 1],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
-                    'Value': 'CrashOnAuditFail',
-                    'Type': 'REG_DWORD',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'UndockWithoutLogon': {
-                'Policy': 'Devices: Allow undock without having to log on',
-                'Settings': [0, 1],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
-                    'Value': 'UndockWithoutLogon',
-                    'Type': 'REG_DWORD',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                },
-            },
-            'AllocateDASD': {
-                'Policy': 'Devices: Allowed to format and eject removable media',
-                'Settings': ["", "0", "1", "2"],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
-                    'Value': 'AllocateDASD',
-                    'Type': 'REG_SZ',
-                },
-                'Transform': {
-                    'Get': '_dasd_conversion',
-                    'Put': '_dasd_reverse_conversion',
-                },
-            },
-            'AllocateCDRoms': {
-                'Policy': 'Devices: Restrict CD-ROM access to locally logged-on user only',
-                'Settings': ["0", "1"],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
-                    'Value': 'AllocateCDRoms',
-                    'Type': 'REG_SZ',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                    'PutArgs': {'return_string': True}
-                },
-            },
-            'AllocateFloppies': {
-                'Policy': 'Devices: Restrict floppy access to locally logged-on user only',
-                'Settings': ["0", "1"],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Registry': {
-                    'Hive': 'HKEY_LOCAL_MACHINE',
-                    'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
-                    'Value': 'AllocateFloppies',
-                    'Type': 'REG_SZ',
-                },
-                'Transform': {
-                    'Get': '_enable1_disable0_conversion',
-                    'Put': '_enable1_disable0_reverse_conversion',
-                    'PutArgs': {'return_string': True}
-                },
-            },
-            # see KB298503 why we aren't just doing this one via the registry
-            'DriverSigningPolicy': {
-                'Policy': 'Devices: Unsigned driver installation behavior',
-                'Settings': ['3,0', '3,' + chr(1), '3,' + chr(2)],
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Security Options'],
-                'Secedit': {
-                    'Option': 'MACHINE\\Software\\Microsoft\\Driver Signing\\Policy',
-                    'Section': 'Registry Values',
-                },
-                'Transform': {
-                    'Get': '_driver_signing_reg_conversion',
-                    'Put': '_driver_signing_reg_reverse_conversion',
-                },
-            },
-            'LockoutDuration': {
-                'Policy': 'Account lockout duration',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Account Lockout Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 6000000}
-                },
-                'NetUserModal': {
-                    'Modal': 3,
-                    'Option': 'lockout_duration',
-                },
-                'Transform': {
-                    'Get': '_seconds_to_minutes',
-                    'Put': '_minutes_to_seconds',
-                },
-            },
-            'LockoutThreshold': {
-                'Policy': 'Account lockout threshold',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Account Lockout Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 1000}
-                },
-                'NetUserModal': {
-                    'Modal': 3,
-                    'Option': 'lockout_threshold',
+            'Machine': {
+                'lgpo_section': 'Computer Configuration',
+                'policies': {
+                    'StartupScripts': {
+                        'Policy': 'Startup Scripts',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Startup'],
+                        'ScriptIni': {
+                            'Section': 'Startup',
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'scripts.ini'),
+                        },
+                    },
+                    'StartupPowershellScripts': {
+                        'Policy': 'Startup Powershell Scripts',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Startup'],
+                        'ScriptIni': {
+                            'Section': 'Startup',
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'psscripts.ini'),
+                        },
+                    },
+                    'StartupPowershellScriptOrder': {
+                        'Policy': 'Startup - For this GPO, run scripts in the following order',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Startup'],
+                        'ScriptIni': {
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'psscripts.ini'),
+                            'Section': 'ScriptsConfig',
+                            'SettingName': 'StartExecutePSFirst',
+                            'Settings': ['true', 'false', None],
+                        },
+                        'Transform': {
+                            'Get': '_powershell_script_order_conversion',
+                            'Put': '_powershell_script_order_reverse_conversion',
+                        },
+                    },
+                    'ShutdownScripts': {
+                        'Policy': 'Shutdown Scripts',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Shutdown'],
+                        'ScriptIni': {
+                            'Section': 'Shutdown',
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'scripts.ini'),
+                        },
+                    },
+                    'ShutdownPowershellScripts': {
+                        'Policy': 'Shutdown Powershell Scripts',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Shutdown'],
+                        'ScriptIni': {
+                            'Section': 'Shutdown',
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'psscripts.ini'),
+                        },
+                    },
+                    'ShutdownPowershellScriptOrder': {
+                        'Policy': 'Shutdown - For this GPO, run scripts in the following order',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Scripts (Startup/Shutdown)',
+                                         'Shutdown'],
+                        'ScriptIni': {
+                            'IniPath': os.path.join(os.getenv('WINDIR'),
+                                                    'System32',
+                                                    'GroupPolicy',
+                                                    'Machine',
+                                                    'Scripts',
+                                                    'psscripts.ini'),
+                            'Section': 'ScriptsConfig',
+                            'SettingName': 'EndExecutePSFirst',
+                            'Settings': ['true', 'false', None],
+                        },
+                        'Transform': {
+                            'Get': '_powershell_script_order_conversion',
+                            'Put': '_powershell_script_order_reverse_conversion',
+                        },
+                    },
+                    'RestrictAnonymous': {
+                        'Policy': 'Network Access: Do not allow anonymous enumeration of SAM accounts and shares',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Settings': [0, 1],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictAnonymous',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'PasswordHistory': {
+                        'Policy': 'Enforce password history',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 24}
+                        },
+                        'NetUserModal': {
+                            'Modal': 0,
+                            'Option': 'password_hist_len'
+                        },
+                    },
+                    'MaxPasswordAge': {
+                        'Policy': 'Maximum password age',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 86313600}
+                        },
+                        'NetUserModal': {
+                            'Modal': 0,
+                            'Option': 'max_passwd_age',
+                        },
+                        'Transform': {
+                            'Get': '_seconds_to_days',
+                            'Put': '_days_to_seconds'
+                        },
+                    },
+                    'MinPasswordAge': {
+                        'Policy': 'Minimum password age',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 86313600}
+                        },
+                        'NetUserModal': {
+                            'Modal': 0,
+                            'Option': 'min_passwd_age',
+                        },
+                        'Transform': {
+                            'Get': '_seconds_to_days',
+                            'Put': '_days_to_seconds'
+                        },
+                    },
+                    'MinPasswordLen': {
+                        'Policy': 'Minimum password length',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 14}
+                        },
+                        'NetUserModal': {
+                            'Modal': 0,
+                            'Option': 'min_passwd_len',
+                        },
+                    },
+                    'PasswordComplexity': {
+                        'Policy': 'Passwords must meet complexity requirements',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': [0, 1],
+                        'Secedit': {
+                            'Option': 'PasswordComplexity',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'ClearTextPasswords': {
+                        'Policy': 'Store passwords using reversible encryption',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Password Policy'],
+                        'Settings': [0, 1],
+                        'Secedit': {
+                            'Option': 'ClearTextPassword',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'AdminAccountStatus': {
+                        'Policy': 'Accounts: Administrator account status',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Secedit': {
+                            'Option': 'EnableAdminAccount',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'GuestAccountStatus': {
+                        'Policy': 'Accounts: Guest account status',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Secedit': {
+                            'Option': 'EnableGuestAccount',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'LimitBlankPasswordUse': {
+                        'Policy': 'Accounts: Limit local account use of blank passwords to console logon only',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Settings': [0, 1],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'limitblankpassworduse',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'RenameAdministratorAccount': {
+                        'Policy': 'Accounts: Rename administrator account',
+                        'Settings': None,
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Secedit': {
+                            'Option': 'NewAdministratorName',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_strip_quotes',
+                            'Put': '_add_quotes',
+                        },
+                    },
+                    'RenameGuestAccount': {
+                        'Policy': 'Accounts: Rename guest account',
+                        'Settings': None,
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Secedit': {
+                            'Option': 'NewGuestName',
+                            'Section': 'System Access',
+                        },
+                        'Transform': {
+                            'Get': '_strip_quotes',
+                            'Put': '_add_quotes',
+                        },
+                    },
+                    'AuditBaseObjects': {
+                        'Policy': 'Audit: Audit the access of global system objects',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'AuditBaseObjects',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'FullPrivilegeAuditing': {
+                        'Policy': 'Audit: Audit the use of Backup and Restore privilege',
+                        'Settings': [chr(0), chr(1)],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'FullPrivilegeAuditing',
+                            'Type': 'REG_BINARY',
+                        },
+                        'Transform': {
+                            'Get': '_binary_enable_zero_disable_one_conversion',
+                            'Put': '_binary_enable_zero_disable_one_reverse_conversion',
+                        },
+                    },
+                    'CrashOnAuditFail': {
+                        'Policy': 'Audit: Shut down system immediately if unable to log security audits',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'CrashOnAuditFail',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'UndockWithoutLogon': {
+                        'Policy': 'Devices: Allow undock without having to log on',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'UndockWithoutLogon',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'AllocateDASD': {
+                        'Policy': 'Devices: Allowed to format and eject removable media',
+                        'Settings': ["", "0", "1", "2"],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'AllocateDASD',
+                            'Type': 'REG_SZ',
+                        },
+                        'Transform': {
+                            'Get': '_dasd_conversion',
+                            'Put': '_dasd_reverse_conversion',
+                        },
+                    },
+                    'AllocateCDRoms': {
+                        'Policy': 'Devices: Restrict CD-ROM access to locally logged-on user only',
+                        'Settings': ["0", "1"],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'AllocateCDRoms',
+                            'Type': 'REG_SZ',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'PutArgs': {'return_string': True}
+                        },
+                    },
+                    'AllocateFloppies': {
+                        'Policy': 'Devices: Restrict floppy access to locally logged-on user only',
+                        'Settings': ["0", "1"],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'AllocateFloppies',
+                            'Type': 'REG_SZ',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'PutArgs': {'return_string': True}
+                        },
+                    },
+                    # see KB298503 why we aren't just doing this one via the registry
+                    'DriverSigningPolicy': {
+                        'Policy': 'Devices: Unsigned driver installation behavior',
+                        'Settings': ['3,0', '3,' + chr(1), '3,' + chr(2)],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Secedit': {
+                            'Option': 'MACHINE\\Software\\Microsoft\\Driver Signing\\Policy',
+                            'Section': 'Registry Values',
+                        },
+                        'Transform': {
+                            'Get': '_driver_signing_reg_conversion',
+                            'Put': '_driver_signing_reg_reverse_conversion',
+                        },
+                    },
+                    'LockoutDuration': {
+                        'Policy': 'Account lockout duration',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Account Lockout Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 6000000}
+                        },
+                        'NetUserModal': {
+                            'Modal': 3,
+                            'Option': 'lockout_duration',
+                        },
+                        'Transform': {
+                            'Get': '_seconds_to_minutes',
+                            'Put': '_minutes_to_seconds',
+                        },
+                    },
+                    'LockoutThreshold': {
+                        'Policy': 'Account lockout threshold',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Account Lockout Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 1000}
+                        },
+                        'NetUserModal': {
+                            'Modal': 3,
+                            'Option': 'lockout_threshold',
+                        }
+                    },
+                    'LockoutWindow': {
+                        'Policy': 'Reset account lockout counter after',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Account Lockout Policy'],
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 6000000}
+                        },
+                        'NetUserModal': {
+                            'Modal': 3,
+                            'Option': 'lockout_observation_window',
+                        },
+                        'Transform': {
+                            'Get': '_seconds_to_minutes',
+                            'Put': '_minutes_to_seconds'
+                        },
+                    },
+                    'AuditAccountLogon': {
+                        'Policy': 'Audit account logon events',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Account Policies',
+                                         'Account Lockout Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditAccountLogon',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditAccountManage': {
+                        'Policy': 'Audit account management',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditAccountManage',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditDSAccess': {
+                        'Policy': 'Audit directory service access',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditDSAccess',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditLogonEvents': {
+                        'Policy': 'Audit logon events',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditLogonEvents',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditObjectAccess': {
+                        'Policy': 'Audit object access',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditObjectAccess',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditPolicyChange': {
+                        'Policy': 'Audit policy change',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditPolicyChange',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditPrivilegeUse': {
+                        'Policy': 'Audit privilege use',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditPrivilegeUse',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditProcessTracking': {
+                        'Policy': 'Audit process tracking',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditProcessTracking',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'AuditSystemEvents': {
+                        'Policy': 'Audit system events',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Audit Policy'],
+                        'Settings': [0, 1, 2, 3],
+                        'Secedit': {
+                            'Option': 'AuditSystemEvents',
+                            'Section': 'Event Audit',
+                        },
+                        'Transform': {
+                            'Get': '_event_audit_conversion',
+                            'Put': '_event_audit_reverse_conversion',
+                        },
+                    },
+                    'SeTrustedCredManAccessPrivilege': {
+                        'Policy': 'Access Credential Manager as a trusted caller',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeTrustedCredManAccessPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeNetworkLogonRight': {
+                        'Policy': 'Access this computer from the network',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeNetworkLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeTcbPrivilege': {
+                        'Policy': 'Act as part of the operating system',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeTcbPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeMachineAccountPrivilege': {
+                        'Policy': 'Add workstations to domain',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeMachineAccountPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeIncreaseQuotaPrivilege': {
+                        'Policy': 'Adjust memory quotas for a process',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeIncreaseQuotaPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeInteractiveLogonRight': {
+                        'Policy': 'Allow logon locally',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeInteractiveLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeRemoteInteractiveLogonRight': {
+                        'Policy': 'Allow logon through Remote Desktop Services',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeRemoteInteractiveLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeBackupPrivilege': {
+                        'Policy': 'Backup files and directories',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeBackupPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeChangeNotifyPrivilege': {
+                        'Policy': 'Bypass traverse checking',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeChangeNotifyPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeSystemtimePrivilege': {
+                        'Policy': 'Change the system time',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeSystemtimePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeTimeZonePrivilege': {
+                        'Policy': 'Change the time zone',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeTimeZonePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeCreatePagefilePrivilege': {
+                        'Policy': 'Create a pagefile',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeCreatePagefilePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeCreateTokenPrivilege': {
+                        'Policy': 'Create a token object',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeCreateTokenPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeCreateGlobalPrivilege': {
+                        'Policy': 'Create global objects',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeCreateGlobalPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeCreatePermanentPrivilege': {
+                        'Policy': 'Create permanent shared objects',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeCreatePermanentPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeCreateSymbolicLinkPrivilege': {
+                        'Policy': 'Create symbolic links',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeCreateSymbolicLinkPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDebugPrivilege': {
+                        'Policy': 'Debug programs',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDebugPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDenyNetworkLogonRight': {
+                        'Policy': 'Deny access to this computer from the network',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDenyNetworkLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDenyBatchLogonRight': {
+                        'Policy': 'Deny log on as a batch job',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDenyBatchLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDenyServiceLogonRight': {
+                        'Policy': 'Deny log on as a service',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDenyServiceLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDenyInteractiveLogonRight': {
+                        'Policy': 'Deny log on locally',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDenyInteractiveLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeDenyRemoteInteractiveLogonRight': {
+                        'Policy': 'Deny log on through Remote Desktop Services',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeDenyRemoteInteractiveLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeEnableDelegationPrivilege': {
+                        'Policy': 'Enable computer and user accounts to be trusted for delegation',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeEnableDelegationPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeRemoteShutdownPrivilege': {
+                        'Policy': 'Force shutdown from a remote system',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeRemoteShutdownPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeAuditPrivilege': {
+                        'Policy': 'Generate security audits',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeAuditPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeImpersonatePrivilege': {
+                        'Policy': 'Impersonate a client after authentication',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeImpersonatePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeIncreaseWorkingSetPrivilege': {
+                        'Policy': 'Increase a process working set',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeIncreaseWorkingSetPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeIncreaseBasePriorityPrivilege': {
+                        'Policy': 'Increase scheduling priority',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeIncreaseBasePriorityPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeLoadDriverPrivilege': {
+                        'Policy': 'Load and unload device drivers',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeLoadDriverPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeLockMemoryPrivilege': {
+                        'Policy': 'Lock pages in memory',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeLockMemoryPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeBatchLogonRight': {
+                        'Policy': 'Log on as a batch job',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeBatchLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeServiceLogonRight': {
+                        'Policy': 'Log on as a service',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeServiceLogonRight'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeSecurityPrivilege': {
+                        'Policy': 'Manage auditing and security log',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeSecurityPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeRelabelPrivilege': {
+                        'Policy': 'Modify an object label',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeRelabelPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeSystemEnvironmentPrivilege': {
+                        'Policy': 'Modify firmware environment values',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeSystemEnvironmentPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeManageVolumePrivilege': {
+                        'Policy': 'Perform volume maintenance tasks',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeManageVolumePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeProfileSingleProcessPrivilege': {
+                        'Policy': 'Profile single process',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeProfileSingleProcessPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeSystemProfilePrivilege': {
+                        'Policy': 'Profile system performance',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeSystemProfilePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeUndockPrivilege': {
+                        'Policy': 'Remove computer from docking station',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeUndockPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeAssignPrimaryTokenPrivilege': {
+                        'Policy': 'Replace a process level token',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeAssignPrimaryTokenPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeRestorePrivilege': {
+                        'Policy': 'Restore files and directories',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeRestorePrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeShutdownPrivilege': {
+                        'Policy': 'Shut down the system',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeShutdownPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeSyncAgentPrivilege': {
+                        'Policy': 'Synchronize directory service data',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeSyncAgentPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
+                    'SeTakeOwnershipPrivilege': {
+                        'Policy': 'Take ownership of files and other objects',
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'User Rights Assignment'],
+                        'Settings': None,
+                        'LsaRights': {
+                            'Option': 'SeTakeOwnershipPrivilege'
+                        },
+                        'Transform': {
+                            'Get': '_sidConversion',
+                            'Put': '_usernamesToSidObjects',
+                        },
+                    },
                 }
             },
-            'LockoutWindow': {
-                'Policy': 'Reset account lockout counter after',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Account Lockout Policy'],
-                'Settings': {
-                    'Function': '_in_range_inclusive',
-                    'Args': {'min': 0, 'max': 6000000}
-                },
-                'NetUserModal': {
-                    'Modal': 3,
-                    'Option': 'lockout_observation_window',
-                },
-                'Transform': {
-                    'Get': '_seconds_to_minutes',
-                    'Put': '_minutes_to_seconds'
-                },
-            },
-            'AuditAccountLogon': {
-                'Policy': 'Audit account logon events',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Account Policies',
-                                 'Account Lockout Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditAccountLogon',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditAccountManage': {
-                'Policy': 'Audit account management',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditAccountManage',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditDSAccess': {
-                'Policy': 'Audit directory service access',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditDSAccess',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditLogonEvents': {
-                'Policy': 'Audit logon events',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditLogonEvents',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditObjectAccess': {
-                'Policy': 'Audit object access',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditObjectAccess',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditPolicyChange': {
-                'Policy': 'Audit policy change',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditPolicyChange',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditPrivilegeUse': {
-                'Policy': 'Audit privilege use',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditPrivilegeUse',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditProcessTracking': {
-                'Policy': 'Audit process tracking',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditProcessTracking',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'AuditSystemEvents': {
-                'Policy': 'Audit system events',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'Audit Policy'],
-                'Settings': [0, 1, 2, 3],
-                'Secedit': {
-                    'Option': 'AuditSystemEvents',
-                    'Section': 'Event Audit',
-                },
-                'Transform': {
-                    'Get': '_event_audit_conversion',
-                    'Put': '_event_audit_reverse_conversion',
-                },
-            },
-            'SeTrustedCredManAccessPrivilege': {
-                'Policy': 'Access Credential Manager as a trusted caller',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeTrustedCredManAccessPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeNetworkLogonRight': {
-                'Policy': 'Access this computer from the network',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeNetworkLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeTcbPrivilege': {
-                'Policy': 'Act as part of the operating system',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeTcbPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeMachineAccountPrivilege': {
-                'Policy': 'Add workstations to domain',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeMachineAccountPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeIncreaseQuotaPrivilege': {
-                'Policy': 'Adjust memory quotas for a process',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeIncreaseQuotaPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeInteractiveLogonRight': {
-                'Policy': 'Allow logon locally',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeInteractiveLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeRemoteInteractiveLogonRight': {
-                'Policy': 'Allow logon through Remote Desktop Services',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeRemoteInteractiveLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeBackupPrivilege': {
-                'Policy': 'Backup files and directories',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeBackupPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeChangeNotifyPrivilege': {
-                'Policy': 'Bypass traverse checking',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeChangeNotifyPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeSystemtimePrivilege': {
-                'Policy': 'Change the system time',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeSystemtimePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeTimeZonePrivilege': {
-                'Policy': 'Change the time zone',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeTimeZonePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeCreatePagefilePrivilege': {
-                'Policy': 'Create a pagefile',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeCreatePagefilePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeCreateTokenPrivilege': {
-                'Policy': 'Create a token object',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeCreateTokenPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeCreateGlobalPrivilege': {
-                'Policy': 'Create global objects',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeCreateGlobalPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeCreatePermanentPrivilege': {
-                'Policy': 'Create permanent shared objects',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeCreatePermanentPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeCreateSymbolicLinkPrivilege': {
-                'Policy': 'Create symbolic links',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeCreateSymbolicLinkPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDebugPrivilege': {
-                'Policy': 'Debug programs',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDebugPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDenyNetworkLogonRight': {
-                'Policy': 'Deny access to this computer from the network',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDenyNetworkLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDenyBatchLogonRight': {
-                'Policy': 'Deny log on as a batch job',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDenyBatchLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDenyServiceLogonRight': {
-                'Policy': 'Deny log on as a service',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDenyServiceLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDenyInteractiveLogonRight': {
-                'Policy': 'Deny log on locally',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDenyInteractiveLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeDenyRemoteInteractiveLogonRight': {
-                'Policy': 'Deny log on through Remote Desktop Services',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeDenyRemoteInteractiveLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeEnableDelegationPrivilege': {
-                'Policy': 'Enable computer and user accounts to be trusted for delegation',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeEnableDelegationPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeRemoteShutdownPrivilege': {
-                'Policy': 'Force shutdown from a remote system',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeRemoteShutdownPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeAuditPrivilege': {
-                'Policy': 'Generate security audits',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeAuditPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeImpersonatePrivilege': {
-                'Policy': 'Impersonate a client after authentication',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeImpersonatePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeIncreaseWorkingSetPrivilege': {
-                'Policy': 'Increase a process working set',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeIncreaseWorkingSetPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeIncreaseBasePriorityPrivilege': {
-                'Policy': 'Increase scheduling priority',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeIncreaseBasePriorityPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeLoadDriverPrivilege': {
-                'Policy': 'Load and unload device drivers',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeLoadDriverPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeLockMemoryPrivilege': {
-                'Policy': 'Lock pages in memory',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeLockMemoryPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeBatchLogonRight': {
-                'Policy': 'Log on as a batch job',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeBatchLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeServiceLogonRight': {
-                'Policy': 'Log on as a service',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeServiceLogonRight'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeSecurityPrivilege': {
-                'Policy': 'Manage auditing and security log',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeSecurityPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeRelabelPrivilege': {
-                'Policy': 'Modify an object label',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeRelabelPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeSystemEnvironmentPrivilege': {
-                'Policy': 'Modify firmware environment values',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeSystemEnvironmentPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeManageVolumePrivilege': {
-                'Policy': 'Perform volume maintenance tasks',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeManageVolumePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeProfileSingleProcessPrivilege': {
-                'Policy': 'Profile single process',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeProfileSingleProcessPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeSystemProfilePrivilege': {
-                'Policy': 'Profile system performance',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeSystemProfilePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeUndockPrivilege': {
-                'Policy': 'Remove computer from docking station',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeUndockPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeAssignPrimaryTokenPrivilege': {
-                'Policy': 'Replace a process level token',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeAssignPrimaryTokenPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeRestorePrivilege': {
-                'Policy': 'Restore files and directories',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeRestorePrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeShutdownPrivilege': {
-                'Policy': 'Shut down the system',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeShutdownPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeSyncAgentPrivilege': {
-                'Policy': 'Synchronize directory service data',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeSyncAgentPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
-            },
-            'SeTakeOwnershipPrivilege': {
-                'Policy': 'Take ownership of files and other objects',
-                'lgpo_section': ['Computer Configuration',
-                                 'Windows Settings',
-                                 'Security Settings',
-                                 'Local Policies',
-                                 'User Rights Assignment'],
-                'Settings': None,
-                'LsaRights': {
-                    'Option': 'SeTakeOwnershipPrivilege'
-                },
-                'Transform': {
-                    'Get': '_sidConversion',
-                    'Put': '_usernamesToSidObjects',
-                },
+            'User': {
+                'lgpo_section': 'User Configuration',
+                'policies': {}
             },
         }
         self.admx_registry_classes = {
@@ -1447,30 +1501,8 @@ class _policy_info(object):
         }
         self.reg_pol_header = u'\u5250\u6765\x01\x00'
 
-    def _admTemplateSimple(self, val, **kwargs):
-        '''
-        Simple adm template verification for an Enabled/Disabled template setting
-        '''
-        if isinstance(val, string_types):
-            if val.upper() in ['ENABLED', 'DISABLED', 'NOT CONFIGURED']:
-                return True
-        return False
-
-    def _admTemplateSimpleReverse(self, val, admPolicy=None, **kwargs):
-        '''
-        Convert an enable value from a template to the string representation
-        '''
-        if val.upper() == 'DISABLED' or val.upper() == 'NOT CONFIGURED':
-            return val
-        elif 'EnableValue' in self.policies[admPolicy]['AdmRegistry']:
-            if not isinstance(self.policies[admPolicy]['AdmRegistry']['EnableValue'], string_types):
-                val = ord(val)
-            if self.policies[admPolicy]['AdmRegistry']['EnableValue'] == val:
-                return 'Enabled'
-        else:
-            return 'Unexpected setting of {0}'.format(val)
-
-    def _notEmpty(self, val, **kwargs):
+    @classmethod
+    def _notEmpty(cls, val, **kwargs):
         '''
         ensures a value is not empty
         '''
@@ -1479,34 +1511,8 @@ class _policy_info(object):
         else:
             return False
 
-    def _admTemplateParentSetting(self, val, parent_policy_name=None, **kwargs):
-        '''
-        verifies an adm 'parent' template setting value is either 'enabled', 'disabled', or 'not configured'
-        '''
-        log.debug('validating {0}'.format(val))
-        if isinstance(val, dict):
-            log.debug('we have a dict value for the adm template val')
-            log.debug('we have parent_policy_name of {0}'.format(parent_policy_name))
-            if parent_policy_name:
-                if parent_policy_name in self.policies:
-                    for _k in self.policies[parent_policy_name]['Children'].keys():
-                        if _k not in val:
-                            return False
-                    log.debug('we have all the required child entries in the dict')
-                    return True
-                else:
-                    return False
-        elif isinstance(val, string_types):
-            log.debug('we have just a string')
-            if val.upper() in ['ENABLED', 'DISABLED', 'NOT CONFIGURED']:
-                return True
-            else:
-                return False
-        else:
-            return False
-        return False
-
-    def _enable1_disable0_conversion(self, val, **kwargs):
+    @classmethod
+    def _enable_one_disable_zero_conversion(cls, val, **kwargs):
         '''
         converts a reg dword 1/0 value to the strings enable/disable
         '''
@@ -1522,7 +1528,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _enable1_disable0_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _enable_one_disable_zero_reverse_conversion(cls, val, **kwargs):
         '''
         converts Enable/Disable to 1/0
         '''
@@ -1545,7 +1552,8 @@ class _policy_info(object):
         else:
             return None
 
-    def _event_audit_conversion(self, val, **kwargs):
+    @classmethod
+    def _event_audit_conversion(cls, val, **kwargs):
         '''
         converts an audit setting # (0, 1, 2, 3) to the string text
         '''
@@ -1563,7 +1571,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _event_audit_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _event_audit_reverse_conversion(cls, val, **kwargs):
         '''
         converts audit strings to numerical values
         '''
@@ -1579,7 +1588,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _seconds_to_days(self, val, **kwargs):
+    @classmethod
+    def _seconds_to_days(cls, val, **kwargs):
         '''
         converts a number of seconds to days
         '''
@@ -1588,7 +1598,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _days_to_seconds(self, val, **kwargs):
+    @classmethod
+    def _days_to_seconds(cls, val, **kwargs):
         '''
         converts a number of days to seconds
         '''
@@ -1597,7 +1608,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _seconds_to_minutes(self, val, **kwargs):
+    @classmethod
+    def _seconds_to_minutes(cls, val, **kwargs):
         '''
         converts a number of seconds to minutes
         '''
@@ -1606,7 +1618,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _minutes_to_seconds(self, val, **kwargs):
+    @classmethod
+    def _minutes_to_seconds(cls, val, **kwargs):
         '''
         converts number of minutes to seconds
         '''
@@ -1615,19 +1628,22 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _strip_quotes(self, val, **kwargs):
+    @classmethod
+    def _strip_quotes(cls, val, **kwargs):
         '''
         strips quotes from a string
         '''
         return val.replace('"', '')
 
-    def _add_quotes(self, val, **kwargs):
+    @classmethod
+    def _add_quotes(cls, val, **kwargs):
         '''
         add quotes around the string
         '''
         return '"{0}"'.format(val)
 
-    def _binary_enable0_disable1_conversion(self, val, **kwargs):
+    @classmethod
+    def _binary_enable_zero_disable_one_conversion(cls, val, **kwargs):
         '''
         converts a binary 0/1 to Disabled/Enabled
         '''
@@ -1641,7 +1657,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _binary_enable0_disable1_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _binary_enable_zero_disable_one_reverse_conversion(cls, val, **kwargs):
         '''
         converts Enabled/Disabled to unicode char to write to a REG_BINARY value
         '''
@@ -1655,7 +1672,8 @@ class _policy_info(object):
         else:
             return None
 
-    def _dasd_conversion(self, val, **kwargs):
+    @classmethod
+    def _dasd_conversion(cls, val, **kwargs):
         '''
         converts 0/1/2 for dasd reg key
         '''
@@ -1671,7 +1689,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _dasd_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _dasd_reverse_conversion(cls, val, **kwargs):
         '''
         converts DASD String values to the reg_sz value
         '''
@@ -1691,25 +1710,27 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _in_range_inclusive(self, val, **kwargs):
+    @classmethod
+    def _in_range_inclusive(cls, val, **kwargs):
         '''
         checks that a value is in an inclusive range
         '''
-        min = 0
-        max = 1
+        minimum = 0
+        maximum = 1
         if 'min' in kwargs:
-            min = kwargs['min']
+            minimum = kwargs['min']
         if 'max' in kwargs:
-            max = kwargs['max']
+            maximum = kwargs['max']
         if val is not None:
-            if val >= min and val <= max:
+            if val >= minimum and val <= maximum:
                 return True
             else:
                 return False
         else:
             return False
 
-    def _driver_signing_reg_conversion(self, val, **kwargs):
+    @classmethod
+    def _driver_signing_reg_conversion(cls, val, **kwargs):
         '''
         converts the binary value in the registry for driver signing into the correct string representation
         '''
@@ -1733,7 +1754,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _driver_signing_reg_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _driver_signing_reg_reverse_conversion(cls, val, **kwargs):
         '''
         converts the string value seen in the gui to the correct registry value for seceit
         '''
@@ -1749,7 +1771,8 @@ class _policy_info(object):
         else:
             return 'Not Defined'
 
-    def _sidConversion(self, val, **kwargs):
+    @classmethod
+    def _sidConversion(cls, val, **kwargs):
         '''
         converts a list of pysid objects to string representations
         '''
@@ -1768,7 +1791,8 @@ class _policy_info(object):
             usernames.append(userSid)
         return usernames
 
-    def _usernamesToSidObjects(self, val, **kwargs):
+    @classmethod
+    def _usernamesToSidObjects(cls, val, **kwargs):
         '''
         converts a list of usernames to sid objects
         '''
@@ -1787,7 +1811,8 @@ class _policy_info(object):
                     ).format(_user, e))
         return sids
 
-    def _powershell_script_order_conversion(self, val, **kwargs):
+    @classmethod
+    def _powershell_script_order_conversion(cls, val, **kwargs):
         '''
         converts true/false/None to the GUI representation of the powershell startup/shutdown script order
         '''
@@ -1801,7 +1826,11 @@ class _policy_info(object):
         else:
             return 'Invalid Value'
 
-    def _powershell_script_order_reverse_conversion(self, val, **kwargs):
+    @classmethod
+    def _powershell_script_order_reverse_conversion(cls, val, **kwargs):
+        '''
+        converts powershell script GUI strings representations to True/False/None
+        '''
         if val.upper() == 'Run Windows PowerShell scripts first'.upper():
             return 'true'
         elif val.upper() == 'Run Windows PowerShell scripts last'.upper():
@@ -1821,7 +1850,7 @@ def __virtual__():
     return False
 
 
-def _updateNamespace(item, newNamespace):
+def _updateNamespace(item, new_namespace):
     '''
     helper function to recursively update the namespaces of an item
     '''
@@ -1831,7 +1860,7 @@ def _updateNamespace(item, newNamespace):
         temp_item = item.tag[i+1:]
     else:
         temp_item = item.tag
-    item.tag = '{{{0}}}{1}'.format(newNamespace, temp_item)
+    item.tag = '{{{0}}}{1}'.format(new_namespace, temp_item)
     for child in item.getiterator():
         if isinstance(child.tag, string_types):
             temp_item = ''
@@ -1840,13 +1869,14 @@ def _updateNamespace(item, newNamespace):
                 temp_item = child.tag[i+1:]
             else:
                 temp_item = child.tag
-            child.tag = '{{{0}}}{1}'.format(newNamespace, temp_item)
+            child.tag = '{{{0}}}{1}'.format(new_namespace, temp_item)
     return item
 
 
 def _updatePolicyElements(policy_item, regkey):
     '''
-    helper function to add the reg key to each policies element definitions if the key attribute is not defined to make xpath searching easier
+    helper function to add the reg key to each policies element definitions if the key
+    attribute is not defined to make xpath searching easier
     for each child in the policy <elements> item
     '''
     for child in policy_item.getiterator():
@@ -1856,78 +1886,95 @@ def _updatePolicyElements(policy_item, regkey):
     return policy_item
 
 
-def _processPolicyDefinitions(polDefPath='c:\\Windows\\PolicyDefinitions', display_language='en-US'):
+def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', display_language='en-US'):
     '''
-    helper function to process all ADMX files in the specified polDefPath
+    helper function to process all ADMX files in the specified policy_def_path
     and build a single XML doc that we can search/use for admx polic processing
     '''
     display_language_fallback = 'en-US'
-    t_PolicyDefinitions = lxml.etree.Element('policyDefinitions')
-    t_PolicyDefinitions.append(lxml.etree.Element('categories'))
-    t_PolicyDefinitions.append(lxml.etree.Element('policies'))
-    t_PolicyDefinitions.append(lxml.etree.Element('policyNamespaces'))
-    t_PolicyDefinitionResources = lxml.etree.Element('policyDefinitionResources')
-    for root, dirs, files in os.walk(polDefPath):
-        if root == polDefPath:
-            for t_admFile in files:
-                admFile = os.path.join(root, t_admFile)
-                xmltree = lxml.etree.parse(admFile)
+    t_policy_definitions = lxml.etree.Element('policyDefinitions')
+    t_policy_definitions.append(lxml.etree.Element('categories'))
+    t_policy_definitions.append(lxml.etree.Element('policies'))
+    t_policy_definitions.append(lxml.etree.Element('policyNamespaces'))
+    t_policy_definition_resources = lxml.etree.Element('policyDefinitionResources')
+    policydefs_policies_xpath = etree.XPath('/policyDefinitions/policies')
+    policydefs_categories_xpath = etree.XPath('/policyDefinitions/categories')
+    policydefs_policyns_xpath = etree.XPath('/policyDefinitions/policyNamespaces')
+    policydefs_resources_localname_xpath = etree.XPath('//*[local-name() = "policyDefinitionResources"]/*')
+    policydef_resources_xpath = etree.XPath('/policyDefinitionResources')
+    for root, dirs, files in os.walk(policy_def_path):
+        if root == policy_def_path:
+            for t_admfile in files:
+                admfile = os.path.join(root, t_admfile)
+                parser = lxml.etree.XMLParser(remove_comments=True)
+                xmltree = lxml.etree.parse(admfile, parser=parser)
                 namespaces = xmltree.getroot().nsmap
-                namespaceString = ''
+                namespace_string = ''
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
-                    namespaceString = 'None:'
-                thisPrefix = xmltree.xpath('/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespaceString),
-                                           namespaces=namespaces)[0]
-                thisNamespace = xmltree.xpath('/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespaceString),
-                                              namespaces=namespaces)[0]
-                categories = xmltree.xpath('/{0}policyDefinitions/{0}categories/{0}category'.format(namespaceString),
-                                           namespaces=namespaces)
+                    namespace_string = 'None:'
+                this_prefix = xmltree.xpath(
+                        '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespace_string),
+                        namespaces=namespaces)[0]
+                this_namespace = xmltree.xpath(
+                        '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespace_string),
+                        namespaces=namespaces)[0]
+                categories = xmltree.xpath(
+                        '/{0}policyDefinitions/{0}categories/{0}category'.format(namespace_string),
+                        namespaces=namespaces)
                 for category in categories:
-                    tCat = category
-                    tCat = _updateNamespace(tCat, thisNamespace)
-                    t_PolicyDefinitions.xpath('/policyDefinitions/categories')[0].append(tCat)
-                policies = xmltree.xpath('/{0}policyDefinitions/{0}policies/{0}policy'.format(namespaceString),
+                    temp_cat = category
+                    temp_cat = _updateNamespace(temp_cat, this_namespace)
+                    policydefs_categories_xpath(t_policy_definitions)[0].append(temp_cat)
+                policies = xmltree.xpath('/{0}policyDefinitions/{0}policies/{0}policy'.format(namespace_string),
                                          namespaces=namespaces)
                 for policy in policies:
-                    tPol = policy
-                    tPol = _updateNamespace(tPol, thisNamespace)
-                    if 'key' in tPol.attrib:
-                        tPol = _updatePolicyElements(tPol, tPol.attrib['key'])
-                    t_PolicyDefinitions.xpath('/policyDefinitions/policies')[0].append(tPol)
-                policyNamespaces = xmltree.xpath('/{0}policyDefinitions/{0}policyNamespaces/{0}*'.format(namespaceString),
-                                                 namespaces=namespaces)
-                for policyNamespace in policyNamespaces:
-                    tPolNs = policyNamespace
-                    tPolNs = _updateNamespace(tPolNs, thisNamespace)
-                    t_PolicyDefinitions.xpath('/policyDefinitions/policyNamespaces')[0].append(tPolNs)
-                admlFile = os.path.join(root, display_language, os.path.splitext(t_admFile)[0] + '.adml')
-                if not __salt__['file.file_exists'](admlFile):
-                    log.info('An adml file in the specified adml language "{0}" does not exist for the admx "{1}", the fallback languange will be tried.'.format(display_language, t_admFile))
-                    admlFile = os.path.join(root, displayLanguageFallback, os.path.splitext(t_admFile)[0] + '.adml')
-                    if not __salt__['file.file_exists'](admlFile):
-                        msg = 'An adml file in the specified adml language "{0}" and the fallback language "{1}" do not exist for the admx "{2}".'.format(display_language, displayLanguageFallback, t_admFile)
-                        raise SaltInvocationError(msg)
-                xmltree = lxml.etree.parse(admlFile)
+                    temp_pol = policy
+                    temp_pol = _updateNamespace(temp_pol, this_namespace)
+                    if 'key' in temp_pol.attrib:
+                        temp_pol = _updatePolicyElements(temp_pol, temp_pol.attrib['key'])
+                    policydefs_policies_xpath(t_policy_definitions)[0].append(temp_pol)
+                policy_namespaces = xmltree.xpath(
+                        '/{0}policyDefinitions/{0}policyNamespaces/{0}*'.format(namespace_string),
+                        namespaces=namespaces)
+                for policy_ns in policy_namespaces:
+                    temp_ns = policy_ns
+                    temp_ns = _updateNamespace(temp_ns, this_namespace)
+                    policydefs_policyns_xpath(t_policy_definitions)[0].append(temp_ns)
+                adml_file = os.path.join(root, display_language, os.path.splitext(t_admfile)[0] + '.adml')
+                if not __salt__['file.file_exists'](adml_file):
+                    msg = 'An adml file in the specified adml language "{0}" does not '
+                    msg = msg + 'exist for the admx "{1}", the fallback languange will be tried.'
+                    log.info(msg.format(display_language, t_admfile))
+                    adml_file = os.path.join(root,
+                                             display_language_fallback,
+                                             os.path.splitext(t_admfile)[0] + '.adml')
+                    if not __salt__['file.file_exists'](adml_file):
+                        msg = 'An adml file in the specified adml language "{0}" and the fallback '
+                        msg = msg + 'language "{1}" do not exist for the admx "{2}".'
+                        raise SaltInvocationError(msg.format(display_language,
+                                                             display_language_fallback,
+                                                             t_admfile))
+                xmltree = lxml.etree.parse(adml_file)
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
-                    namespaceString = 'None:'
-                polDefResources = xmltree.xpath('//*[local-name() = "policyDefinitionResources"]/*')
-                for polDefResource in polDefResources:
-                    tPolDef = polDefResource
-                    tPolDef = _updateNamespace(tPolDef, thisNamespace)
-                    t_PolicyDefinitionResources.xpath('/policyDefinitionResources')[0].append(tPolDef)
-    return (t_PolicyDefinitions, t_PolicyDefinitionResources)
+                    namespace_string = 'None:'
+                policydefs_resources = policydefs_resources_localname_xpath(xmltree)
+                for policydefs_resource in policydefs_resources:
+                    t_poldef = policydefs_resource
+                    t_poldef = _updateNamespace(t_poldef, this_namespace)
+                    policydef_resources_xpath(t_policy_definition_resources)[0].append(t_poldef)
+    return (t_policy_definitions, t_policy_definition_resources)
 
 
-def _buildElementNsmap(usingElements):
+def _buildElementNsmap(using_elements):
     '''
     build a namespace map for an ADMX element
     '''
     thisMap = {}
-    for e in usingElements:
+    for e in using_elements:
         thisMap[e.attrib['prefix']] = e.attrib['namespace']
     return thisMap
 
@@ -1954,7 +2001,7 @@ def _findOptionValueInSeceditFile(option):
         return False, None
 
 
-def _importSeceditConfig(infData):
+def _importSeceditConfig(infdata):
     '''
     helper function to write data to a temp file/run secedit to import policy/cleanup
     '''
@@ -1967,7 +2014,7 @@ def _importSeceditConfig(infData):
         _ret = __salt__['file.remove'](_tInfFile)
         # add the inf data to the file, win_file sure could use the write() function
         _ret = __salt__['file.touch'](_tInfFile)
-        _ret = __salt__['file.append'](_tInfFile, infData)
+        _ret = __salt__['file.append'](_tInfFile, infdata)
         # run secedit to make the change
         _ret = __salt__['cmd.run']('secedit /configure /db {0} /cfg {1}'.format(_tSdbfile, _tInfFile))
         # cleanup our temp files
@@ -1979,17 +2026,18 @@ def _importSeceditConfig(infData):
         return False
 
 
-def _transformValue(value, policy, transformType):
+def _transformValue(value, policy, transform_type):
     '''
-    helper function to transform the policy value into something that more closely matches how the policy is displayed in the gpedit gui
+    helper function to transform the policy value into something that more closely matches
+    how the policy is displayed in the gpedit gui
     '''
     t_kwargs = {}
     if 'Transform' in policy:
-        if transformType in policy['Transform']:
+        if transform_type in policy['Transform']:
             _policydata = _policy_info()
-            if transformType + 'Args' in policy['Transform']:
-                t_kwargs = policy['Transform'][transformType + 'Args']
-            return getattr(_policydata, policy['Transform'][transformType])(value, **t_kwargs)
+            if transform_type + 'Args' in policy['Transform']:
+                t_kwargs = policy['Transform'][transform_type + 'Args']
+            return getattr(_policydata, policy['Transform'][transform_type])(value, **t_kwargs)
         else:
             return value
     else:
@@ -2001,7 +2049,8 @@ def _validateSetting(value, policy):
     helper function to validate specified value is appropriate for the policy
     if the 'Settings' key is a list, the value will checked that it is in the list
     if the 'Settings' key is a dict
-        we will try to execute the function name from the 'Function' key, passing the value and additional arguments from the 'Args' dict
+        we will try to execute the function name from the 'Function' key, passing the value
+        and additional arguments from the 'Args' dict
     if the 'Settings' key is None, we won't do any validation and just return True
     if the Policy has 'Children', we'll validate their settings too
     '''
@@ -2021,56 +2070,60 @@ def _validateSetting(value, policy):
     return True
 
 
-def _addAccountRights(sidObject, userRight):
+def _addAccountRights(sidObject, user_right):
     '''
     helper function to add an account right to a user
     '''
     try:
         if sidObject:
             _polHandle = win32security.LsaOpenPolicy(None, win32security.POLICY_ALL_ACCESS)
-            userRightsList = [userRight]
-            _ret = win32security.LsaAddAccountRights(_polHandle, sidObject, userRightsList)
+            user_rights_list = [user_right]
+            _ret = win32security.LsaAddAccountRights(_polHandle, sidObject, user_rights_list)
         return True
     except Exception as e:
         log.error('Error attempting to add account right, exception was {0}'.format(e))
         return False
 
 
-def _delAccountRights(sidObject, userRight):
+def _delAccountRights(sidObject, user_right):
     '''
     helper function to remove an account right from a user
     '''
     try:
         _polHandle = win32security.LsaOpenPolicy(None, win32security.POLICY_ALL_ACCESS)
-        userRightsList = [userRight]
-        _ret = win32security.LsaRemoveAccountRights(_polHandle, sidObject, False, userRightsList)
+        user_rights_list = [user_right]
+        _ret = win32security.LsaRemoveAccountRights(_polHandle, sidObject, False, user_rights_list)
         return True
     except Exception as e:
         log.error('Error attempting to delete account right, exception was {0}'.format(e))
         return False
 
 
-def _getRightsAssignments(userRight):
+def _getRightsAssignments(user_right):
     '''
     helper function to return all the user rights assignments/users
     '''
     sids = []
-    _polHandle = win32security.LsaOpenPolicy(None, win32security.POLICY_ALL_ACCESS)
-    _sids = win32security.LsaEnumerateAccountsWithUserRight(_polHandle, userRight)
-    return _sids
+    polHandle = win32security.LsaOpenPolicy(None, win32security.POLICY_ALL_ACCESS)
+    sids = win32security.LsaEnumerateAccountsWithUserRight(polHandle, user_right)
+    return sids
 
 
-def _getAdmlDisplayName(admlXmlData, displayNameAttributeValue):
+def _getAdmlDisplayName(adml_xml_data, display_name):
     '''
     helper function to take the 'displayName' attribute of an element and find the value from the ADML data
+
+    adml_xml_data :: XML data of all adml files to search
+    display_name :: the value of the displayName attribute from the admx entry to search the adml data for
     '''
-    if displayNameAttributeValue.startswith('$(') and displayNameAttributeValue.endswith(')'):
-        displayNameAttributeValue = re.sub(r'(^\$\(|\)$)', '', displayNameAttributeValue)
-        log.debug('I would search for {0}'.format(displayNameAttributeValue))
-        displayNameAttributeValue = displayNameAttributeValue.split('.')
-        displayNameType = displayNameAttributeValue[0]
-        displayNameId = displayNameAttributeValue[1]
-        search_results = admlXmlData.xpath('//*[local-name() = "{0}" and @*[local-name() = "id"] = "{1}"]'.format(displayNameType, displayNameId))
+    if display_name.startswith('$(') and display_name.endswith(')'):
+        display_name = re.sub(r'(^\$\(|\)$)', '', display_name)
+        display_name = display_name.split('.')
+        displayname_type = display_name[0]
+        displayname_id = display_name[1]
+        search_results = ADML_DISPLAY_NAME_XPATH(adml_xml_data,
+                                                 displayNameType=displayname_type,
+                                                 displayNameId=displayname_id)
         if search_results:
             for result in search_results:
                 return result.text
@@ -2078,201 +2131,808 @@ def _getAdmlDisplayName(admlXmlData, displayNameAttributeValue):
     return None
 
 
-def _getFullPolicyName(polItem, policyName, return_full_policy_names, admlPolicyData):
+def _getAdmlPresentationRefId(adml_data, ref_id):
+    '''
+    helper function to check for a presentation label for a policy element
+    '''
+    search_results = adml_data.xpath('//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id))
+    if search_results:
+        for result in search_results:
+            the_localname = etree.QName(result.tag).localname
+            if the_localname == 'textBox' \
+                    or the_localname == 'comboBox':
+                label_items = result.xpath('.//*[local-name() = "label"]')
+                for label_item in label_items:
+                    if label_item.text:
+                        return label_item.text.rstrip().rstrip(':')
+            elif the_localname == 'decimalTextBox' \
+                    or the_localname == 'longDecimalTextBox' \
+                    or the_localname == 'dropdownList' \
+                    or the_localname == 'listBox' \
+                    or the_localname == 'checkBox' \
+                    or the_localname == 'text' \
+                    or the_localname == 'multiTextBox':
+                if result.text:
+                    return result.text.rstrip().rstrip(':')
+    return None
+
+
+def _getFullPolicyName(policy_item, policy_name, return_full_policy_names, adml_data):
     '''
     helper function to retrieve the full policy name if needed
     '''
-    if return_full_policy_names and 'displayName' in polItem.attrib:
-        fullPolicyName = _getAdmlDisplayName(admlPolicyData, polItem.attrib['displayName'])
+    if policy_name in adm_policy_name_map[return_full_policy_names]:
+        return adm_policy_name_map[return_full_policy_names][policy_name]
+    if return_full_policy_names and 'displayName' in policy_item.attrib:
+        fullPolicyName = _getAdmlDisplayName(adml_data, policy_item.attrib['displayName'])
         if fullPolicyName:
-            policyName = fullPolicyName
-    elif return_full_policy_names and 'valueName' in polItem.attrib:
-        # some policies don't have a display name, but instead use the 'valueName' in the gui
-        policyName = polItem.attrib['valueName']
+            adm_policy_name_map[return_full_policy_names][policy_name] = fullPolicyName
+            policy_name = fullPolicyName
+    elif return_full_policy_names and 'id' in policy_item.attrib:
+        fullPolicyName = _getAdmlPresentationRefId(adml_data, policy_item.attrib['id'])
+        if fullPolicyName:
+            adm_policy_name_map[return_full_policy_names][policy_name] = fullPolicyName
+            policy_name = fullPolicyName
+    policy_name = policy_name.rstrip(':').rstrip()
+    return policy_name
 
-    return policyName
 
-
-def _getAllAdminTemplateSettingsFromRegPolFile(policyClass,
-                                               return_full_policy_names=False,
-                                               heirarchical_return=False,
-                                               display_language='en-US'):
-    u'''
-    helper function to get all ADM teplate settings from the registry.pol file
-
-    each file begins with REGFILE_SIGNATURE (u'\u5250\u6765') and REGISTRY_FILE_VERSION (u'\x01\00')
-
-    https://msdn.microsoft.com/en-us/library/aa374407(VS.85).aspx
-    [Registry Path<NULL>;Reg Value<NULL>;Reg Type<NULL>;SizeInBytes<NULL>;Data<NULL>]
+def _regexSearchRegPolData(search_string, policy_data):
     '''
-    _existingData = None
-    _policyData = _policy_info()
-    admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions(display_language=display_language)
-    _val = {}
-    registry = Registry()
-    heirarchy = {}
-    try:
-        log.debug('working with policyClass :: {0}'.format(policyClass))
-        log.debug('reg pol file: {0}'.format(_policyData.admx_registry_classes[policyClass]['policy_path']))
-        polFileData = _readRegPolFile(_policyData.admx_registry_classes[policyClass]['policy_path'])
-        specialValueRegex = r'(\*\*DeleteValues|\*\*Del\.|\*\*DelVals\.|\*\*DeleteKeys)'
-        if polFileData:
-            polFileData = re.sub(r'\]$', '', re.sub(r'^\[', '', polFileData.replace(_policyData.reg_pol_header, ''))).split('][')
-            if polFileData:
-                for polItem in polFileData:
-                    if polItem:
-                        disabledPolicy = False
-                        polItem = polItem.split('{0};'.format(chr(0)))
-                        key = polItem[0]
-                        value = polItem[1]
-                        regtype = polItem[2]
-                        log.debug('working with regpol data key :: {0} value :: {1}'.format(key, value))
-                        if re.match(specialValueRegex, value, re.IGNORECASE):
-                            log.debug('is a special meaning value that the policy is disabled')
-                            disabledPolicy = True
-                            value = re.sub(specialValueRegex, '', value, flags=re.IGNORECASE)
-                            log.debug('value is now {0}'.format(value))
-                        search_results = admxPolicyDefinitions.xpath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "{0}" and @*[local-name() = "valueName"] = "{1}"]'.format(key.lower(), value))
-                        if search_results:
-                            for thisPolicyDef in search_results:
-                                setting = polItem[4].rstrip(chr(0))
-                                parentPolicyName = None
-                                parentPolicyElement = None
-                                policyName = None
-                                if etree.QName(thisPolicyDef.tag).localname == 'policy':
-                                    policyName = _getFullPolicyName(thisPolicyDef,
-                                                                    thisPolicyDef.attrib['name'],
-                                                                    return_full_policy_names,
-                                                                    admlPolicyResources)
-                                    # this is a value based enable/disable policy
-                                    log.debug('value based enabled/disabled policy')
-                                    if _checkPolicyEnableDisableElement(thisPolicyDef,
-                                                                        '*[local-name() = "enabledValue" or local-name() = "enabledList"]',
-                                                                        setting):
-                                        _val[policyName] = 'Enabled'
-                                    else:
-                                        if _checkPolicyEnableDisableElement(thisPolicyDef,
-                                                                            '*[local-name() = "disabledValue" or local-name() = "disabledList"]',
-                                                                            setting):
-                                            _val[policyName] = 'Disabled'
-                                        else:
-                                            log.debug('unable to match enabled or disabled settings for {0}'.format(policyName))
-                                elif etree.QName(thisPolicyDef.tag).localname == 'item':
-                                    policyName = _getFullPolicyName(thisPolicyDef,
-                                                                    thisPolicyDef.attrib['name'],
-                                                                    return_full_policy_names,
-                                                                    admlPolicyResources)
-                                    # this is a enable/disableList item
-                                    log.debug('enabled/disabled list item')
-                                    if _checkPolicyEnableDisableElement(thisPolicyDef, '*[local-name() = "value"]', setting):
-                                        parentPolicyName, parentPolicyElement = _getParentPolicyName(thisPolicyDef,
-                                                                                                     admlPolicyResources,
-                                                                                                     return_full_policy_names)
-                                        if etree.QName(thisPolicyDef.getparent()).localname == 'enabledList':
-                                            setting = 'Enabled'
-                                        elif etree.QName(thisPolicyDef.getparent()).localname == 'disabledList':
-                                            setting = 'Disabled'
-                                        if parentPolicyName not in _val:
-                                            _val[parentPolicyName] = setting
-                                else:
-                                    policyName = _getFullPolicyName(thisPolicyDef,
-                                                                    thisPolicyDef.attrib['id'],
-                                                                    return_full_policy_names,
-                                                                    admlPolicyResources)
-                                    log.debug('{0} looks to be an element of a policy:: {1}'.format(policyName,
-                                                                                                    thisPolicyDef.tag))
-                                    parentPolicyName, parentPolicyElement = _getParentPolicyName(thisPolicyDef,
-                                                                                                 admlPolicyResources,
-                                                                                                 return_full_policy_names)
-                                    if parentPolicyName not in _val:
-                                        if disabledPolicy:
-                                            _val[parentPolicyName] = 'Disabled'
-                                        else:
-                                            _val[parentPolicyName] = {'state': 'Enabled'}
-                                    log.debug('found policyDefinition :: {0}'.format(thisPolicyDef.attrib))
-                                    if not disabledPolicy:
-                                        if registry.vtype_reverse[ord(regtype)] == 'REG_DWORD':
-                                            if not setting:
-                                                setting = chr(0)
-                                            setting = ord(setting)
-                                        if parentPolicyName:
-                                            _val[parentPolicyName][policyName] = setting
-                                if heirarchical_return:
-                                    # may or may not have a parent policy
-                                    if parentPolicyName:
-                                        log.debug('building parent list for parent policy {0}'.format(parentPolicyName))
-                                        heirarchy[parentPolicyName] = _buildParentList(parentPolicyElement,
-                                                                                       admxPolicyDefinitions,
-                                                                                       return_full_policy_names,
-                                                                                       admlPolicyResources)
-                                    else:
-                                        log.debug('building heirarcy for policy {0}'.format(policyName))
-                                        heirarchy[policyName] = _buildParentList(thisPolicyDef,
-                                                                                 admxPolicyDefinitions,
-                                                                                 return_full_policy_names,
-                                                                                 admlPolicyResources)
-                        else:
-                            setting = polItem[4].rstrip(chr(0))
-                            log.debug('no search results, checking if it is an explicit value list for key {0}'.format(key))
-                            # make sure this key doesn't exist in a explicit value list
-                            search_results = admxPolicyDefinitions.xpath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "{0}" and @*[local-name() = "explicitValue"] = "true"]'.format(key.lower()))
+    helper function to do a search of Policy data from a registry.pol file
+    returns True if the regex search_string is found, otherwise False
+    '''
+    if policy_data:
+        if search_string:
+            match = re.search(search_string, policy_data, re.IGNORECASE)
+            if match:
+                return True
+    return False
 
-                            log.debug('explicitValue search results == {0}'.format(search_results))
-                            for thisPolicyDef in search_results:
-                                policyName = _getFullPolicyName(thisPolicyDef,
-                                                                thisPolicyDef.attrib['id'],
-                                                                return_full_policy_names,
-                                                                admlPolicyResources)
-                                parentPolicyName, parentPolicyElement = _getParentPolicyName(thisPolicyDef,
-                                                                                             admlPolicyResources,
-                                                                                             return_full_policy_names)
-                                if parentPolicyName not in _val:
-                                    # TODO handle disabled policy
-                                    _val[parentPolicyName] = {'state': 'Enabled'}
+
+def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
+    '''
+    helper function to do a search of Policy data from a registry.pol file
+    returns the "data" field
+    https://msdn.microsoft.com/en-us/library/aa374407(VS.85).aspx
+    [key;value;type;size;data]
+    '''
+    value = None
+    values = []
+    if return_value_name:
+        values = {}
+    if search_string:
+        registry = Registry()
+        if len(search_string.split('{0};'.format(chr(0)))) >= 3:
+            vtype = registry.vtype_reverse[ord(search_string.split('{0};'.format(chr(0)))[2])]
+        else:
+            vtype = None
+        search_string = re.escape(search_string)
+        matches = re.finditer(search_string, policy_data, re.IGNORECASE)
+        matches = [m for m in matches]
+        if matches:
+            for match in matches:
+                pol_entry = policy_data[match.start():(policy_data.index(']',
+                                                                         match.end())
+                                                       )
+                                        ].split('{0};'.format(chr(0)))
+                if len(pol_entry) >= 2:
+                    valueName = pol_entry[1]
+                if len(pol_entry) >= 5:
+                    value = pol_entry[4]
+                    if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
+                        value = value.replace(chr(0), '')
+                        if value:
+                            value = ord(value)
+                        else:
+                            value = 0
+                    elif vtype == 'REG_MULTI_SZ':
+                        value = value.rstrip(chr(0)).split(chr(0))
+                    else:
+                        value = value.rstrip(chr(0))
+                if return_value_name:
+                    log.debug('we want value names and the value')
+                    values[valueName] = value
+                elif len(matches) > 1:
+                    log.debug('we have multiple matches, we will return a list')
+                    values.append(value)
+    if values:
+        value = values
+
+    return value
+
+
+def _checkListItem(policy_element, policy_name, policy_key, xpath_object, policy_file_data, test_items=True):
+    '''
+    helper function to process an enabled/Disabled/true/falseList set
+    if test_items is True, it will determine if the policy is enabled or disabled
+    returning True if all items are configured in the registry.pol file and false if they are not
+
+    if test_items is False, the expected strings for the items will be returned as a list
+
+    returns True if the enabled/disabledList is 100% configured in the registry.pol file, otherwise returns False
+    '''
+    xpath_string = './/*[local-name() = "decimal" or local-name() = "delete"'
+    xpath_string = xpath_string + ' or local-name() = "longDecimal" or local-name() = "string"]'
+    value_item_child_xpath = etree.XPath(xpath_string)
+    expected_strings = []
+    for list_element in xpath_object(policy_element):
+        configured_items = 0
+        required_items = 0
+        for item in list_element.getchildren():
+            required_items = required_items + 1
+            if 'key' in item.attrib:
+                item_key = item.attrib['key']
+            else:
+                item_key = policy_key
+            if 'valueName' in item.attrib:
+                item_valuename = item.attrib['valueName']
+            else:
+                msg = '{2} item with attributes {0} in policy {1} does not have the required "valueName" attribute'
+                log.error(msg.format(item.attrib, policy_element.attrib, etree.QName(list_element).localname))
+                break
+            for value_item in value_item_child_xpath(item):
+                search_string = _processValueItem(value_item,
+                                                  item_key,
+                                                  item_valuename,
+                                                  policy_element,
+                                                  item)
+                if test_items:
+                    if _regexSearchRegPolData(re.escape(search_string), policy_file_data):
+                        configured_items = configured_items + 1
+                        msg = 'found the search string in the pol file, {0} of {1} '
+                        msg = msg + 'items for policy {2} are configured in registry.pol'
+                        log.debug(msg.format(configured_items, required_items, policy_name))
+                else:
+                    expected_strings.append(search_string)
+        if test_items:
+            if required_items > 0 and required_items == configured_items:
+                log.debug('{0} all items are set'.format(policy_name))
+                return True
+    if test_items:
+        return False
+    else:
+        return expected_strings
+
+
+def _checkValueItemParent(policy_element, policy_name, policy_key,
+                          policy_valueName, xpath_object, policy_file_data,
+                          check_deleted=False, test_item=True):
+    '''
+    helper function to process the parent of a value item object
+    if test_item is True, it will determine if the policy is enabled/disabled
+    returns True if the value is configured in the registry.pol file, otherwise returns False
+
+    if test_item is False, the expected search string will be returned
+
+    value type parents:
+        boolean: https://msdn.microsoft.com/en-us/library/dn606009(v=vs.85).aspx
+        enabledValue: https://msdn.microsoft.com/en-us/library/dn606006(v=vs.85).aspx
+        disabledValue: https://msdn.microsoft.com/en-us/library/dn606001(v=vs.85).aspx
+
+    '''
+    for element in xpath_object(policy_element):
+        for value_item in element.getchildren():
+            search_string = _processValueItem(value_item,
+                                              policy_key,
+                                              policy_valueName,
+                                              policy_element,
+                                              element,
+                                              check_deleted=check_deleted)
+            if not test_item:
+                return search_string
+            if _regexSearchRegPolData(re.escape(search_string), policy_file_data):
+                log.debug('found the search string in the pol file, {0} is configured'.format(policy_name))
+                return True
+    return False
+
+
+def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data, check_deleted=False):
+    '''
+    helper function similar to _processValueItem to build a search string for a known key/value/type/data
+    '''
+    registry = Registry()
+    this_element_value = None
+    expected_string = ''
+    if reg_data and not check_deleted:
+        if reg_vtype == 'REG_DWORD':
+            this_element_value = ''
+            for v in struct.unpack('2H', struct.pack('I', int(reg_data))):
+                this_element_value = this_element_value + unichr(v)
+        elif reg_vtype == 'REG_QWORD':
+            this_element_value = ''
+            for v in struct.unpack('4H', struct.pack('I', int(reg_data))):
+                this_element_value = this_element_value + unichr(v)
+        elif reg_vtype == 'REG_SZ':
+            this_element_value = '{0}{1}'.format(reg_data, chr(0))
+    if check_deleted:
+        reg_vtype = 'REG_SZ'
+        expected_string = u'[{1}{0};**del.{2}{0};{3}{0};{4}{0};{5}{0}]'.format(
+                                chr(0),
+                                reg_key,
+                                reg_valueName,
+                                chr(registry.vtype[reg_vtype]),
+                                unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                ' ')
+    else:
+        expected_string = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'.format(
+                                chr(0),
+                                reg_key,
+                                reg_valueName,
+                                chr(registry.vtype[reg_vtype]),
+                                unichr(len(this_element_value.encode('utf-16-le'))),
+                                this_element_value)
+    return expected_string
+
+
+def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
+                      check_deleted=False, this_element_value=None):
+    '''
+    helper function to process an value type item and generate the expected string in the Registry.pol file
+
+    element - the element to process
+    reg_key - the registry key associated with the element (some inherit from their parent policy)
+    reg_valuename - the registry valueName associated with the element (some inherit from their parent policy)
+    policy - the parent policy element
+    parent_element - the parent element (primarily passed in to differentiate children of "elements" objects
+    check_deleted - if the returned expected string should be for a deleted value
+    this_element_value - a specific value to place into the expected string returned
+        for "elements" children whose values are specified by the user
+    '''
+    registry = Registry()
+    expected_string = None
+    # https://msdn.microsoft.com/en-us/library/dn606006(v=vs.85).aspx
+    this_vtype = 'REG_SZ'
+    standard_layout = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'
+    if etree.QName(element).localname == 'decimal' and etree.QName(parent_element).localname != 'elements':
+        this_vtype = 'REG_DWORD'
+        if 'value' in element.attrib:
+            this_element_value = ''
+            for val in struct.unpack('2H', struct.pack('I', int(element.attrib['value']))):
+                this_element_value = this_element_value + unichr(val)
+        else:
+            msg = 'The {2} child {1} element for the policy with attributes: {0} does not have the required'
+            msg = ' "value" attribute.  The elment attributes are: {3}'
+            log.error(msg.format(policy.attrib,
+                                 etree.QName(element).localname,
+                                 etree.QName(parent_element).localname,
+                                 element.attrib))
+            return None
+    elif etree.QName(element).localname == 'longDecimal' and etree.QName(parent_element).localname != 'elements':
+        # WARNING: no longDecimals in current ADMX files included with 2012 server, so untested/assumed
+        this_vtype = 'REG_QWORD'
+        if 'value' in element.attrib:
+            this_element_value = ''
+            for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
+                this_element_value = this_element_value + unichr(val)
+        else:
+            msg = 'The {2} child {1} element for the policy with attributes: {0} does not have the required'
+            msg = msg + ' "value" attribute.  The elment attributes are: {3}'
+            log.error(msg.format(policy.attrib,
+                                 etree.QName(element).localname,
+                                 etree.QName(parent_element).localname,
+                                 element.attrib))
+            return None
+    elif etree.QName(element).localname == 'string':
+        this_vtype = 'REG_SZ'
+        this_element_value = '{0}{1}'.format(element.text, chr(0))
+    elif etree.QName(parent_element).localname == 'elements':
+        standard_element_expected_string = True
+        if etree.QName(element).localname == 'boolean':
+            # a boolean element that has no children will add a REG_DWORD == 1 on true
+            # or delete the value on false
+            # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
+            if this_element_value is False:
+                check_deleted = True
+            if not check_deleted:
+                this_vtype = 'REG_DWORD'
+            this_element_value = chr(1)
+            standard_element_expected_string = False
+        elif etree.QName(element).localname == 'decimal':
+            # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
+            this_vtype = 'REG_DWORD'
+            if this_element_value is not None:
+                temp_val = ''
+                for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
+                    temp_val = temp_val + unichr(v)
+                this_element_value = temp_val
+            if 'storeAsText' in element.attrib:
+                if element.attrib['storeAsText'].lower() == 'true':
+                    this_vtype = 'REG_SZ'
+                    if this_element_value is not None:
+                        this_element_value = str(this_element_value)
+            if check_deleted:
+                this_vtype = 'REG_SZ'
+        elif etree.QName(element).localname == 'longDecimal':
+            # https://msdn.microsoft.com/en-us/library/dn606015(v=vs.85).aspx
+            this_vtype = 'REG_QWORD'
+            if this_element_value is not None:
+                temp_val = ''
+                for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
+                    temp_val = temp_val + unichr(v)
+                this_element_value = temp_val
+            if 'storeAsText' in element.attrib:
+                if element.attrib['storeAsText'].lower() == 'true':
+                    this_vtype = 'REG_SZ'
+                    if this_element_value is not None:
+                        this_element_value = str(this_element_value)
+        elif etree.QName(element).localname == 'text':
+            # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
+            this_vtype = 'REG_SZ'
+            if 'expandable' in element.attrib:
+                if element.attrib['expandable'].lower() == 'true':
+                    this_vtype = 'REG_EXPAND_SZ'
+            if this_element_value is not None:
+                this_element_value = '{0}{1}'.format(this_element_value, chr(0))
+        elif etree.QName(element).localname == 'multiText':
+            this_vtype = 'REG_MULTI_SZ'
+            if this_element_value is not None:
+                this_element_value = '{0}{1}{1}'.format(chr(0).join(this_element_value), chr(0))
+        elif etree.QName(element).localname == 'list':
+            standard_element_expected_string = False
+            del_keys = ''
+            element_valuenames = []
+            element_values = this_element_value
+            if this_element_value is not None:
+                element_valuenames = range(1, len(this_element_value) + 1)
+            if 'additive' in element.attrib:
+                if element.attrib['additive'].lower() == 'false':
+                    # a delete values will be added before all the other
+                    # value = data pairs
+                    del_keys = u'[{1}{0};**delvals.{0};{2}{0};{3}{0};{4}{0}]'.format(
+                                    chr(0),
+                                    reg_key,
+                                    chr(registry.vtype[this_vtype]),
+                                    chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                    ' ')
+            if 'expandable' in element.attrib:
+                this_vtype = 'REG_EXPAND_SZ'
+            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+                if this_element_value is not None:
+                    element_valuenames = this_element_value.keys()
+                    element_values = this_element_value.values()
+
+            if 'valuePrefix' in element.attrib and element.attrib['valuePrefix'] != '':
+                if this_element_value is not None:
+                    element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
+                                                          k) for k in element_valuenames]
+            if not check_deleted:
+                if this_element_value is not None:
+                    log.debug('_processValueItem has an explicit element_value of {0}'.format(this_element_value))
+                    expected_string = del_keys
+                    log.debug('element_valuenames == {0} and element_values == {1}'.format(element_valuenames,
+                                                                                           element_values))
+                    for i in range(len(element_valuenames)):
+                        expected_string = expected_string + standard_layout.format(
+                                                chr(0),
+                                                reg_key,
+                                                element_valuenames[i],
+                                                chr(registry.vtype[this_vtype]),
+                                                unichr(len('{0}{1}'.format(element_values[i],
+                                                                           chr(0)).encode('utf-16-le'))),
+                                                '{0}{1}'.format(element_values[i], chr(0)))
+                else:
+                    expected_string = del_keys + r'[{1}{0};'.format(chr(0),
+                                                                    reg_key)
+            else:
+                expected_string = u'[{1}{0};**delvals.{0};{2}{0};{3}{0};{4}{0}]'.format(
+                                        chr(0),
+                                        reg_key,
+                                        chr(registry.vtype[this_vtype]),
+                                        chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                        ' ')
+        elif etree.QName(element).localname == 'enum':
+            if this_element_value is not None:
+                pass
+
+        if standard_element_expected_string and not check_deleted:
+            if this_element_value is not None:
+                expected_string = standard_layout.format(
+                                        chr(0),
+                                        reg_key,
+                                        reg_valuename,
+                                        chr(registry.vtype[this_vtype]),
+                                        unichr(len(this_element_value.encode('utf-16-le'))),
+                                        this_element_value)
+            else:
+                expected_string = u'[{1}{0};{2}{0};{3}{0};'.format(chr(0),
+                                                                   reg_key,
+                                                                   reg_valuename,
+                                                                   chr(registry.vtype[this_vtype]))
+
+    if not expected_string:
+        if etree.QName(element).localname == "delete" or check_deleted:
+            # delete value
+            expected_string = u'[{1}{0};**del.{2}{0};{3}{0};{4}{0};{5}{0}]'.format(
+                                    chr(0),
+                                    reg_key,
+                                    reg_valuename,
+                                    chr(registry.vtype[this_vtype]),
+                                    unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                    ' ')
+        else:
+            expected_string = standard_layout.format(
+                                    chr(0),
+                                    reg_key,
+                                    reg_valuename,
+                                    chr(registry.vtype[this_vtype]),
+                                    unichr(len(this_element_value.encode('utf-16-le'))),
+                                    this_element_value)
+    return expected_string
+
+
+def _checkAllAdmxPolicies(policy_class,
+                          admx_policy_definitions,
+                          adml_policy_resources,
+                          return_full_policy_names=False,
+                          heirarchical_return=False,
+                          return_not_configured=False):
+    '''
+    rewrite of _getAllAdminTemplateSettingsFromRegPolFile where instead of looking only
+    at the contents of the file, we're going to loop through every policy and look
+    in the registry.pol file to determine if it is enabled/disabled/not configured
+    '''
+    log.debug('POLICY CLASS == {0}'.format(policy_class))
+    module_policy_data = _policy_info()
+    policy_filedata = _read_regpol_file(module_policy_data.admx_registry_classes[policy_class]['policy_path'])
+    admx_policies = []
+    policy_vals = {}
+    heirarchy = {}
+    if policy_filedata:
+        log.debug('POLICY CLASS {0} has file data'.format(policy_class))
+        policy_filedata_split = re.sub(r'\]$',
+                                       '',
+                                       re.sub(r'^\[',
+                                              '',
+                                              policy_filedata.replace(module_policy_data.reg_pol_header, ''))
+                                       ).split('][')
+
+        for policy_item in policy_filedata_split:
+            policy_item_key = policy_item.split('{0};'.format(chr(0)))[0]
+            if policy_item_key:
+                for admx_item in REGKEY_XPATH(admx_policy_definitions, keyvalue=policy_item_key.lower()):
+                    if etree.QName(admx_item).localname == 'policy':
+                        if admx_item not in admx_policies:
+                            admx_policies.append(admx_item)
+                    else:
+                        for policy_item in POLICY_ANCESTOR_XPATH(admx_item):
+                            if policy_item not in admx_policies:
+                                admx_policies.append(policy_item)
+
+        log.debug('{0} policies to examine'.format(len(admx_policies)))
+        if return_not_configured:
+            log.debug('returning non configured policies')
+            not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
+            for policy_item in admx_policies:
+                not_configured_policies.remove(policy_item)
+
+            for not_configured_policy in not_configured_policies:
+                this_policyname = _getFullPolicyName(not_configured_policy,
+                                                     not_configured_policy.attrib['name'],
+                                                     return_full_policy_names,
+                                                     adml_policy_resources)
+                policy_vals[this_policyname] = 'Not Configured'
+        for admx_policy in admx_policies:
+            this_key = None
+            this_valuename = None
+            this_policyname = None
+            this_policy_setting = 'Not Configured'
+            element_only_enabled_disabled = True
+            explicit_enable_disable_value_setting = False
+
+            if 'key' in admx_policy.attrib:
+                this_key = admx_policy.attrib['key']
+            else:
+                log.error('policy item {0} does not have the required "key" attribute'.format(admx_policy.attrib))
+                break
+            if 'valueName' in admx_policy.attrib:
+                this_valuename = admx_policy.attrib['valueName']
+            if 'name' in admx_policy.attrib:
+                this_policyname = _getFullPolicyName(admx_policy,
+                                                     admx_policy.attrib['name'],
+                                                     return_full_policy_names,
+                                                     adml_policy_resources)
+            else:
+                log.error('policy item {0} does not have the required "name" attribute'.format(admx_policy.attrib))
+                break
+            if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+                element_only_enabled_disabled = False
+                explicit_enable_disable_value_setting = True
+                if _checkValueItemParent(admx_policy,
+                                         this_policyname,
+                                         this_key,
+                                         this_valuename,
+                                         ENABLED_VALUE_XPATH,
+                                         policy_filedata):
+                    this_policy_setting = 'Enabled'
+                    log.debug('{0} is enabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+            if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+                element_only_enabled_disabled = False
+                explicit_enable_disable_value_setting = True
+                if _checkValueItemParent(admx_policy,
+                                         this_policyname,
+                                         this_key,
+                                         this_valuename,
+                                         DISABLED_VALUE_XPATH,
+                                         policy_filedata):
+                    this_policy_setting = 'Disabled'
+                    log.debug('{0} is disabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+            if ENABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+                element_only_enabled_disabled = False
+                explicit_enable_disable_value_setting = True
+                if _checkListItem(admx_policy, this_policyname, this_key, ENABLED_LIST_XPATH, policy_filedata):
+                    this_policy_setting = 'Enabled'
+                    log.debug('{0} is enabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+            if DISABLED_LIST_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+                element_only_enabled_disabled = False
+                explicit_enable_disable_value_setting = True
+                if _checkListItem(admx_policy, this_policyname, this_key, DISABLED_LIST_XPATH, policy_filedata):
+                    this_policy_setting = 'Disabled'
+                    log.debug('{0} is disabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+
+            if not explicit_enable_disable_value_setting and this_valuename:
+                # the policy has a key/valuename but no explicit enabled/Disabled Value or List
+                # these seem to default to a REG_DWORD 1 = "Enabled" **del. = "Disabled"
+                if _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(this_key,
+                                                                                this_valuename,
+                                                                                'REG_DWORD',
+                                                                                '1')),
+                                          policy_filedata):
+                    this_policy_setting = 'Enabled'
+                    log.debug('{0} is enabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+                elif _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(this_key,
+                                                                                  this_valuename,
+                                                                                  'REG_DWORD',
+                                                                                  None,
+                                                                                  check_deleted=True)),
+                                            policy_filedata):
+                    this_policy_setting = 'Disabled'
+                    log.debug('{0} is disabled'.format(this_policyname))
+                    policy_vals[this_policyname] = this_policy_setting
+
+            if ELEMENTS_XPATH(admx_policy):
+                if element_only_enabled_disabled or this_policy_setting == 'Enabled':
+                    # TODO should we even bother looking at this if we detect the policy is "Disabled" above?
+                    # TODO does this need to be modified based on the 'required' attribute?
+                    required_elements = {}
+                    configured_elements = {}
+                    policy_disabled_elements = 0
+                    for elements_item in ELEMENTS_XPATH(admx_policy):
+                        for child_item in elements_item.getchildren():
+                            this_element_name = _getFullPolicyName(child_item,
+                                                                   child_item.attrib['id'],
+                                                                   return_full_policy_names,
+                                                                   adml_policy_resources)
+                            required_elements[this_element_name] = None
+                            child_key = this_key
+                            child_valuename = this_valuename
+                            if 'key' in child_item.attrib:
+                                child_key = child_item.attrib['key']
+                            if 'valueName' in child_item.attrib:
+                                child_valuename = child_item.attrib['valueName']
+
+                            if etree.QName(child_item).localname == 'boolean':
+                                # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
+                                if child_item.getchildren():
+                                    if TRUE_VALUE_XPATH(child_item) and this_element_name not in configured_elements:
+                                        if _checkValueItemParent(child_item,
+                                                                 this_policyname,
+                                                                 child_key,
+                                                                 child_valuename,
+                                                                 TRUE_VALUE_XPATH,
+                                                                 policy_filedata):
+                                            configured_elements[this_element_name] = True
+                                            msg = 'element {0} is configured true'
+                                            log.debug(msg.format(child_item.attrib['id']))
+                                    if FALSE_VALUE_XPATH(child_item) and this_element_name not in configured_elements:
+                                        if _checkValueItemParent(child_item,
+                                                                 this_policyname,
+                                                                 child_key,
+                                                                 child_valuename,
+                                                                 FALSE_VALUE_XPATH,
+                                                                 policy_filedata):
+                                            configured_elements[this_element_name] = False
+                                            policy_disabled_elements = policy_disabled_elements + 1
+                                            msg = 'element {0} is configured false'
+                                            log.debug(msg.format(child_item.attrib['id']))
+                                    # WARNING - no standard admx files use true/falseList
+                                    # so this hasn't actually been tested
+                                    if TRUE_LIST_XPATH(child_item) and this_element_name not in configured_elements:
+                                        log.debug('checking trueList')
+                                        if _checkListItem(child_item,
+                                                          this_policyname,
+                                                          this_key,
+                                                          TRUE_LIST_XPATH,
+                                                          policy_filedata):
+                                            configured_elements[this_element_name] = True
+                                            msg = 'element {0} is configured true'
+                                            log.debug(msg.format(child_item.attrib['id']))
+                                    if FALSE_LIST_XPATH(child_item) and this_element_name not in configured_elements:
+                                        log.debug('checking falseList')
+                                        if _checkListItem(child_item,
+                                                          this_policyname,
+                                                          this_key,
+                                                          FALSE_LIST_XPATH,
+                                                          policy_filedata):
+                                            configured_elements[this_element_name] = False
+                                            policy_disabled_elements = policy_disabled_elements + 1
+                                            msg = 'element {0} is configured false'
+                                            log.debug(msg.format(child_item.attrib['id']))
                                 else:
-                                    if isinstance(_val[parentPolicyName], string_types):
-                                        _val[parentPolicyName] = {'state': 'Enabled'}
-                                if not disabledPolicy:
-                                    if policyName in _val[parentPolicyName]:
-                                        _val[parentPolicyName][policyName][value] = setting
-                                    else:
-                                        _val[parentPolicyName][policyName] = {value: setting}
-                                if heirarchical_return:
-                                    # only a parent policy is applicable here
-                                    log.debug('building parent list for {0}'.format(parentPolicyName))
-                                    heirarchy[parentPolicyName] = _buildParentList(parentPolicyElement,
-                                                                                   admxPolicyDefinitions,
-                                                                                   return_full_policy_names,
-                                                                                   admlPolicyResources)
-    except Exception as e:
-        msg = 'Unhandled exception {0} occurred while attempting to read Adm Template Policy File'.format(e)
-        raise CommandExecutionError(msg)
-    if _val and heirarchical_return:
+                                    if _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                          child_key,
+                                                                                          child_valuename,
+                                                                                          admx_policy,
+                                                                                          elements_item,
+                                                                                          check_deleted=True)),
+                                                              policy_filedata):
+                                        configured_elements[this_element_name] = False
+                                        policy_disabled_elements = policy_disabled_elements + 1
+                                        log.debug('element {0} is configured false'.format(child_item.attrib['id']))
+                                    elif _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                            child_key,
+                                                                                            child_valuename,
+                                                                                            admx_policy,
+                                                                                            elements_item,
+                                                                                            check_deleted=False)),
+                                                                policy_filedata):
+                                        configured_elements[this_element_name] = True
+                                        log.debug('element {0} is configured true'.format(child_item.attrib['id']))
+                            elif etree.QName(child_item).localname == 'decimal' \
+                                    or etree.QName(child_item).localname == 'text' \
+                                    or etree.QName(child_item).localname == 'longDecimal' \
+                                    or etree.QName(child_item).localname == 'multiText':
+                                # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
+                                if _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                      child_key,
+                                                                                      child_valuename,
+                                                                                      admx_policy,
+                                                                                      elements_item,
+                                                                                      check_deleted=True)),
+                                                          policy_filedata):
+                                    configured_elements[this_element_name] = 'Disabled'
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                    log.debug('element {0} is disabled'.format(child_item.attrib['id']))
+                                elif _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                        child_key,
+                                                                                        child_valuename,
+                                                                                        admx_policy,
+                                                                                        elements_item,
+                                                                                        check_deleted=False)),
+                                                            policy_filedata):
+                                    configured_value = _getDataFromRegPolData(_processValueItem(child_item,
+                                                                                                child_key,
+                                                                                                child_valuename,
+                                                                                                admx_policy,
+                                                                                                elements_item,
+                                                                                                check_deleted=False),
+                                                                              policy_filedata)
+                                    configured_elements[this_element_name] = configured_value
+                                    log.debug('element {0} is enabled, value == {1}'.format(
+                                            child_item.attrib['id'],
+                                            configured_value))
+                            elif etree.QName(child_item).localname == 'enum':
+                                if _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                      child_key,
+                                                                                      child_valuename,
+                                                                                      admx_policy,
+                                                                                      elements_item,
+                                                                                      check_deleted=True)),
+                                                          policy_filedata):
+                                    log.debug('enum element {0} is disabled'.format(child_item.attrib['id']))
+                                    configured_elements[this_element_name] = 'Disabled'
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                else:
+                                    for enum_item in child_item.getchildren():
+                                        if _checkValueItemParent(enum_item,
+                                                                 child_item.attrib['id'],
+                                                                 child_key,
+                                                                 child_valuename,
+                                                                 VALUE_XPATH,
+                                                                 policy_filedata):
+                                            if VALUE_LIST_XPATH(enum_item):
+                                                log.debug('enum item has a valueList')
+                                                if _checkListItem(enum_item,
+                                                                  this_policyname,
+                                                                  child_key,
+                                                                  VALUE_LIST_XPATH,
+                                                                  policy_filedata):
+                                                    log.debug('all valueList items exist in file')
+                                                    configured_elements[this_element_name] = _getAdmlDisplayName(
+                                                            adml_policy_resources,
+                                                            enum_item.attrib['displayName'])
+                                                    break
+                                            else:
+                                                configured_elements[this_element_name] = _getAdmlDisplayName(
+                                                        adml_policy_resources,
+                                                        enum_item.attrib['displayName'])
+                                                break
+                            elif etree.QName(child_item).localname == 'list':
+                                return_value_name = False
+                                if 'explicitValue' in child_item.attrib \
+                                        and child_item.attrib['explicitValue'].lower() == 'true':
+                                    log.debug('explicitValue list, we will return value names')
+                                    return_value_name = True
+                                if _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                      child_key,
+                                                                                      child_valuename,
+                                                                                      admx_policy,
+                                                                                      elements_item,
+                                                                                      check_deleted=False)
+                                                                    ) + r'(?!\*\*delvals\.)',
+                                                          policy_filedata):
+                                    configured_value = _getDataFromRegPolData(_processValueItem(child_item,
+                                                                                                child_key,
+                                                                                                child_valuename,
+                                                                                                admx_policy,
+                                                                                                elements_item,
+                                                                                                check_deleted=False),
+                                                                              policy_filedata,
+                                                                              return_value_name=return_value_name)
+                                    configured_elements[this_element_name] = configured_value
+                                    log.debug('element {0} is enabled values: {1}'.format(child_item.attrib['id'],
+                                                                                          configured_value))
+                                elif _regexSearchRegPolData(re.escape(_processValueItem(child_item,
+                                                                                        child_key,
+                                                                                        child_valuename,
+                                                                                        admx_policy,
+                                                                                        elements_item,
+                                                                                        check_deleted=True)),
+                                                            policy_filedata):
+                                    configured_elements[this_element_name] = "Disabled"
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                    log.debug('element {0} is disabled'.format(child_item.attrib['id']))
+                    if element_only_enabled_disabled:
+                        if len(required_elements.keys()) > 0 \
+                                    and len(configured_elements.keys()) == len(required_elements.keys()):
+                            if policy_disabled_elements == len(required_elements.keys()):
+                                log.debug('{0} is disabled by all enum elements'.format(this_policyname))
+                                policy_vals[this_policyname] = 'Disabled'
+                            else:
+                                policy_vals[this_policyname] = configured_elements
+                                log.debug('{0} is enabled by enum elements'.format(this_policyname))
+                    else:
+                        if this_policy_setting == 'Enabled':
+                            policy_vals[this_policyname] = configured_elements
+            if heirarchical_return and this_policyname in policy_vals:
+                heirarchy[this_policyname] = _build_parent_list(admx_policy,
+                                                                admx_policy_definitions,
+                                                                return_full_policy_names,
+                                                                adml_policy_resources)
+
+    if policy_vals and heirarchical_return:
         if heirarchy:
-            log.debug('heirarchy == {0}'.format(heirarchy))
             for heirarchy_item in heirarchy.keys():
-                if heirarchy_item in _val:
+                if heirarchy_item in policy_vals:
                     tdict = {}
                     first_item = True
                     for item in heirarchy[heirarchy_item]:
                         newdict = {}
                         if first_item:
-                            newdict[item] = {heirarchy_item: _val.pop(heirarchy_item)}
+                            newdict[item] = {heirarchy_item: policy_vals.pop(heirarchy_item)}
                             first_item = False
                         else:
                             newdict[item] = tdict
                         tdict = newdict
                     if tdict:
-                        _val = dictupdate.update(_val, tdict)
-        _val = {_policyData.admx_registry_classes[policyClass]['lgpo_section']: {'Administrative Templates': _val}}
+                        policy_vals = dictupdate.update(policy_vals, tdict)
+        policy_vals = {
+                        module_policy_data.admx_registry_classes[policy_class]['lgpo_section']: {
+                            'Administrative Templates': policy_vals
+                        }
+                      }
+    return policy_vals
 
-    return _val
 
-
-def _buildParentList(policy_definition,
-                     admxPolicyDefinitions,
-                     return_full_policy_names,
-                     admlPolicyData):
+def _build_parent_list(policy_definition,
+                       admx_policy_definitions,
+                       return_full_policy_names,
+                       adml_policy_resources):
     '''
     helper functioon to build a list containing parent elements of the ADMX policy
     '''
@@ -2282,269 +2942,486 @@ def _buildParentList(policy_definition,
                                               namespaces=policy_definition.nsmap)
     if parent_category:
         parent_category = parent_category[0]
-        this_namespace_map = _buildElementNsmap(admxPolicyDefinitions.xpath('/policyDefinitions/policyNamespaces/{0}:*'.format(policy_namespace),
-                                                                            namespaces=policy_definition.nsmap))
+        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*'.format(policy_namespace)
+        this_namespace_map = _buildElementNsmap(admx_policy_definitions.xpath(nsmap_xpath,
+                                                                              namespaces=policy_definition.nsmap))
         this_namespace_map = dictupdate.update(this_namespace_map, policy_definition.nsmap)
-        parent_list = _admxPolicyParentWalk(parent_list,
-                                            policy_namespace,
-                                            parent_category,
-                                            this_namespace_map,
-                                            admxPolicyDefinitions,
-                                            return_full_policy_names,
-                                            admlPolicyData)
+        parent_list = _admx_policy_parent_walk(parent_list,
+                                               policy_namespace,
+                                               parent_category,
+                                               this_namespace_map,
+                                               admx_policy_definitions,
+                                               return_full_policy_names,
+                                               adml_policy_resources)
     return parent_list
 
 
-def _admxPolicyParentWalk(path,
-                          policy_namespace,
-                          parent_category,
-                          policy_nsmap,
-                          admxPolicyDefinitions,
-                          return_full_policy_names,
-                          admlPolicyData):
+def _admx_policy_parent_walk(path,
+                             policy_namespace,
+                             parent_category,
+                             policy_nsmap,
+                             admx_policy_definitions,
+                             return_full_policy_names,
+                             adml_policy_resources):
     '''
     helper function to recursively walk up the ADMX namespaces and build the heirarchy for the policy
     '''
+    category_xpath_string = '/policyDefinitions/categories/{0}:category[@name="{1}"]'
+    using_xpath_string = '/policyDefinitions/policyNamespaces/{0}:using'
     if parent_category.find(':') >= 0:
         # the parent is in another namespace
         policy_namespace = parent_category.split(':')[0]
         parent_category = parent_category.split(':')[1]
+        using_xpath_string = using_xpath_string.format(policy_namespace)
         policy_nsmap = dictupdate.update(policy_nsmap,
-                                         _buildElementNsmap(admxPolicyDefinitions.xpath('/policyDefinitions/policyNamespaces/{0}:using'.format(policy_namespace), namespaces=policy_nsmap)))
-    if admxPolicyDefinitions.xpath('/policyDefinitions/categories/{0}:category[@name="{1}"]'.format(policy_namespace, parent_category), namespaces=policy_nsmap):
-        this_parent_category = admxPolicyDefinitions.xpath('/policyDefinitions/categories/{0}:category[@name="{1}"]'.format(policy_namespace, parent_category), namespaces=policy_nsmap)[0]
-        this_parent_name = _getFullPolicyName(this_parent_category,
-                                              this_parent_category.attrib['name'],
+                                         _buildElementNsmap(admx_policy_definitions.xpath(using_xpath_string,
+                                                                                          namespaces=policy_nsmap)))
+    category_xpath_string = category_xpath_string.format(policy_namespace, parent_category)
+    if admx_policy_definitions.xpath(category_xpath_string, namespaces=policy_nsmap):
+        tparent_category = admx_policy_definitions.xpath(category_xpath_string,
+                                                         namespaces=policy_nsmap)[0]
+        this_parent_name = _getFullPolicyName(tparent_category,
+                                              tparent_category.attrib['name'],
                                               return_full_policy_names,
-                                              admlPolicyData)
+                                              adml_policy_resources)
         path.append(this_parent_name)
-        if this_parent_category.xpath('{0}:parentCategory/@ref'.format(policy_namespace), namespaces=policy_nsmap):
+        if tparent_category.xpath('{0}:parentCategory/@ref'.format(policy_namespace), namespaces=policy_nsmap):
             # parent has a parent
-            path = _admxPolicyParentWalk(path,
-                                         policy_namespace,
-                                         this_parent_category.xpath('{0}:parentCategory/@ref'.format(policy_namespace),
-                                         namespaces=policy_nsmap)[0],
-                                         policy_nsmap,
-                                         admxPolicyDefinitions,
-                                         return_full_policy_names,
-                                         admlPolicyData)
+            path = _admx_policy_parent_walk(path,
+                                            policy_namespace,
+                                            tparent_category.xpath('{0}:parentCategory/@ref'.format(policy_namespace),
+                                                                   namespaces=policy_nsmap)[0],
+                                            policy_nsmap,
+                                            admx_policy_definitions,
+                                            return_full_policy_names,
+                                            adml_policy_resources)
     return path
 
 
-def _getParentPolicyName(element, admlXmlData, return_full_policy_names=False):
-    '''
-    helper function to find the policy parent of the element
-    '''
-    parentPolicy = element.getparent()
-    # walk up the xml until we find the parent policy
-    while etree.QName(parentPolicy.tag).localname != 'policy':
-        parentPolicy = parentPolicy.getparent()
-    parentPolicyName = parentPolicy.attrib['name']
-    if return_full_policy_names and 'displayName' in parentPolicy.attrib:
-        parentPolicyName = _getAdmlDisplayName(admlXmlData, parentPolicy.attrib['displayName'])
-
-    return (parentPolicyName, parentPolicy)
-
-
-def _checkPolicyEnableDisableElement(policy_element, xpath_query, setting):
-    '''
-    helper function to query a policy and get the enabled/disable elements
-    '''
-    element = policy_element.xpath(xpath_query)
-    if element and element[0].getchildren():
-        log.debug('we have an element matching the xpath query, time to compare the enable/disable value to the registry setting {0}'.format(setting))
-        element_type = etree.QName(element[0].getchildren()[0]).localname
-#        if element_type != 'item':
-#            # enabledValue/disabledValue child
-        element_enableDisable_value = element[0].getchildren()[0].attrib['value']
-        if element_type == 'decimal':
-            log.debug('checking decimal value')
-            if not setting:
-                setting = chr(0)
-            if ord(setting) == int(element_enableDisable_value):
-                return True
-            # int numeric value
-        elif element_type == 'delete':
-            log.debug('checking delete value')
-            # deleted key/value
-        elif element_type == 'longDecimal':
-            log.debug('checking longDecimal value')
-            # long numeric value
-            if not setting:
-                setting = chr(0)
-            if long(ord(setting)) == long(element_enableDisable_value):
-                return True
-        elif element_type == 'string':
-            log.debug('checking string value')
-            if setting.lower() == element_enableDisable_value.lower():
-                return True
-
-    return False
-
-
-def _readRegPolFile(regPolPath):
+def _read_regpol_file(reg_pol_path):
     '''
     helper function to read a reg policy file and return decoded data
     '''
-    returnData = None
-    if os.path.exists(regPolPath):
-        with open(regPolPath, 'r') as _h:
-            returnData = _h.read()
-        returnData = returnData.decode('utf-16-le')
-    return returnData
+    returndata = None
+    if os.path.exists(reg_pol_path):
+        with open(reg_pol_path, 'rb') as pol_file:
+            returndata = pol_file.read()
+        returndata = returndata.decode('utf-16-le')
+    return returndata
 
 
-def _searchRegPolData(regPolData, policyToSearchFor, searchForDisabledPolicy=False):
+def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     '''
     helper function to do a search of Policy data from a registry.pol file
+    for a policy_regpath and policy_regkey combo
     '''
-    _thisSearch = u'[{1}{0};{3}{2}{0};'.format(
-            chr(0),
-            policyToSearchFor['AdmRegistry']['Path'],
-            policyToSearchFor['AdmRegistry']['Value'],
-            '**del.' if searchForDisabledPolicy else '')
-    if _thisSearch in regPolData:
-        _rData = regPolData[regPolData.index(_thisSearch):(regPolData.index(']', regPolData.index(_thisSearch)) + 1)]
-        log.debug(_rData)
-        return _rData
+    if policy_data:
+        specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
+        _thisSearch = r'\[{1}{0};{3}{2}{0};'.format(
+                chr(0),
+                re.escape(policy_regpath),
+                re.escape(policy_regkey),
+                specialValueRegex)
+        match = re.search(_thisSearch, policy_data, re.IGNORECASE)
+        if match:
+            return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
+
     return None
 
 
-def _writeRegPolicyData(dataToWrite, policyFilePath):
+def _write_regpol_data(data_to_write, policy_file_path):
     '''
     helper function to actually write the data to a Registry.pol file
     '''
     try:
-        if dataToWrite:
+        if data_to_write:
             reg_pol_header = u'\u5250\u6765\x01\x00'
-            with open(policyFilePath, 'w') as _h:
-                if not dataToWrite.startswith(reg_pol_header):
-                    _h.write(reg_pol_header.encode('utf-16-le'))
-                _h.write(dataToWrite.encode('utf-16-le'))
+            with open(policy_file_path, 'wb') as pol_file:
+                if not data_to_write.startswith(reg_pol_header):
+                    pol_file.write(reg_pol_header.encode('utf-16-le'))
+                pol_file.write(data_to_write.encode('utf-16-le'))
     except Exception as e:
-        msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policyFilePath, e)
+        msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
         raise CommandExecutionError(msg)
 
 
-def _writeAdminTemplateRegPolFile(admTemplateData):
+def _policyFileReplaceOrAppendList(string_list, policy_data):
+    '''
+    helper function to take a list of strings for registry.pol file data
+    and update existing strings or append the strings
+    '''
+    if not policy_data:
+        policy_data = ''
+    # we are going to clean off the special pre-fixes, so we get only the valuename
+    specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
+    for this_string in string_list:
+        list_item_key = this_string.split('{0};'.format(chr(0)))[0].lstrip('[')
+        list_item_value_name = re.sub(specialValueRegex,
+                                      '', this_string.split('{0};'.format(chr(0)))[1],
+                                      flags=re.IGNORECASE)
+        log.debug('item value name is {0}'.format(list_item_value_name))
+        data_to_replace = _regexSearchKeyValueCombo(policy_data,
+                                                    list_item_key,
+                                                    list_item_value_name)
+        if data_to_replace:
+            log.debug('replacing {0} with {1}'.format([data_to_replace], [this_string]))
+            policy_data = policy_data.replace(data_to_replace, this_string)
+        else:
+            log.debug('appending {0}'.format([this_string]))
+            policy_data = ''.join([policy_data, this_string])
+    return policy_data
+
+
+def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
+    '''
+    helper function to take a admx policy string for registry.pol file data
+    and update existing string or append the string to the data
+    '''
+    # we are going to clean off the special pre-fixes, so we get only the valuename
+    if not policy_data:
+        policy_data = ''
+    specialValueRegex = r'(\*\*Del\.|\*\*DelVals\.){0,1}'
+    item_key = None
+    item_value_name = None
+    data_to_replace = None
+    if not append_only:
+        item_key = this_string.split('{0};'.format(chr(0)))[0].lstrip('[')
+        item_value_name = re.sub(specialValueRegex,
+                                 '',
+                                 this_string.split('{0};'.format(chr(0)))[1],
+                                 flags=re.IGNORECASE)
+        log.debug('item value name is {0}'.format(item_value_name))
+        data_to_replace = _regexSearchKeyValueCombo(policy_data, item_key, item_value_name)
+    if data_to_replace:
+        log.debug('replacing {0} with {1}'.format([data_to_replace], [this_string]))
+        policy_data = policy_data.replace(data_to_replace, this_string)
+    else:
+        log.debug('appending {0}'.format([this_string]))
+        policy_data = ''.join([policy_data, this_string])
+
+    return policy_data
+
+
+def _writeAdminTemplateRegPolFile(admtemplate_data,
+                                  admx_policy_definitions=None,
+                                  adml_policy_resources=None,
+                                  display_language='en-US',
+                                  registry_class='Machine'):
     u'''
     helper function to prep/write adm template data to the Registry.pol file
-
-    admin template registry files are ascii encoded files w/utf-16-le data in them from what I can tell:/
 
     each file begins with REGFILE_SIGNATURE (u'\u5250\u6765') and REGISTRY_FILE_VERSION (u'\x01\00')
 
     https://msdn.microsoft.com/en-us/library/aa374407(VS.85).aspx
     [Registry Path<NULL>;Reg Value<NULL>;Reg Type<NULL>;SizeInBytes<NULL>;Data<NULL>]
     '''
-    _existingMachineData = None
-    _existingUserData = None
-
-    registry = Registry()
-    _policyData = _policy_info()
-
-    _machinePolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'Machine', 'Registry.pol')
-    _userPolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'User', 'Registry.pol')
+    existing_data = ''
+    base_policy_settings = {}
+    policy_data = _policy_info()
+    policySearchXpath = etree.XPath('//*[@*[local-name() = "id"] = $id or @*[local-name() = "name"] = $id]')
     try:
-        for admTemplate in admTemplateData.keys():
-            thisData = None
-            if _policyData.policies[admTemplate]['AdmRegistry']['Hive'] == 'HKEY_LOCAL_MACHINE':
-                if not _existingMachineData:
-                    _existingMachineData = _readRegPolFile(_machinePolicyPath)
-                thisData = _existingMachineData
-            elif _policyData.policies[admTemplate]['AdmRegistry']['Hive'] == 'HKEY_USERS':
-                if not _existingUserData:
-                    _existingUserData = _readRegPolFile(_userPolicyPath)
-                thisData = _existingUserData
-            # if admTemplate[admTemplate] == 'Not Cofigured' we need to remove it from the pol file (regardless of disabled/enabled)
-            # if adminTemplate[admTemplate] == 'Disabled' we need to add it to the pol file w/the **del. prepended to the value name and a ' ' for the value
-            # otherwise, set the value in the pol file to the passed value
-            if str(admTemplateData[admTemplate]).upper() == 'DISABLED':
-                # disable it
-                # search for it and replace it w/the disabled version or add the disabled version
-                _admsToDisable = {}
-                if 'Children' in _policyData.policies[admTemplate]:
-                    for _child in _policyData.policies[admTemplate]['Children'].keys():
-                        _admsToDisable[_child] = _policyData.policies[admTemplate]['Children'][_child]
-                else:
-                    _admsToDisable[admTemplate] = _policyData.policies[admTemplate]
-                for _admToDisable in _admsToDisable.keys():
-                    _disabledString = u'[{1}{0};{2}{3}{0};{4}{0};{5}{0};{6}{0}]'.format(
-                            chr(0),
-                            _admsToDisable[_admToDisable]['AdmRegistry']['Path'],
-                            '**del.',
-                            _admsToDisable[_admToDisable]['AdmRegistry']['Value'],
-                            chr(registry.vtype_reverse(_admsToDisable[admTemplate]['AdmRegistry']['Type'])),
-                            chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
-                            ' ')
-                    _searchResult = _searchRegPolData(thisData, _admsToDisable[_admToDisable])
-                    if _searchResult:
-                        thisData = thisData.replace(_searchResult, _disabledString)
-                    else:
-                        _searchResult = _searchRegPolData(thisData, _admsToDisable[_admToDisable], True)
-                        if not _searchResult:
-                            thisData = ''.join([thisData, _disabledString])
-            elif str(admTemplateData[admTemplate]).upper() == 'NOT CONFIGURED':
-                # search for either disabled or enabled version and remove it
-                _admsToNotConfigure = {}
-                if 'Children' in _policyData.policies[admTemplate]:
-                    for _child in _policyData.policies[admTemplate]['Children'].keys():
-                        _admsToNotConfigure[_child] = _policyData.policies[admTemplate]['Children'][_child]
-                else:
-                    _admsToNotConfigure[admTemplate] = _policyData.policies[admTemplate]
-                for _admToNotConfigure in _admsToNotConfigure:
-                    _searchResult = _searchRegPolData(thisData, _admsToNotConfigure[_admToNotConfigure])
-                    if _searchResult:
-                        thisData = thisData.replace(_searchResult, '')
-                    else:
-                        _searchResult = _searchRegPolData(thisData, _admsToNotConfigure[_admToNotConfigure], True)
-                        if _searchResult:
-                            thisData = thisData.replace(_searchResult, '')
+        if admx_policy_definitions is None or adml_policy_resources is None:
+            admx_policy_definitions, adml_policy_resources = _processPolicyDefinitions(
+                    display_language=display_language)
+        base_policy_settings = _checkAllAdmxPolicies(registry_class,
+                                                     admx_policy_definitions,
+                                                     adml_policy_resources,
+                                                     return_full_policy_names=False,
+                                                     heirarchical_return=False,
+                                                     return_not_configured=False)
+        log.debug('preparing to loop through policies requested to be configured')
+        for adm_policy in admtemplate_data.keys():
+            if str(admtemplate_data[adm_policy]).lower() == 'not configured':
+                if adm_policy in base_policy_settings:
+                    base_policy_settings.pop(adm_policy)
             else:
-                _admsToSet = {}
-                _admValues = {}
-                if 'Children' in _policyData.policies[admTemplate]:
-                    for _child in _policyData.policies[admTemplate]['Children'].keys():
-                        _admsToSet[_child] = _policyData.policies[admTemplate]['Children'][_child]
-                        _admValues[_child] = admTemplateData[admTemplate][_child]
-                else:
-                    _admsToSet[admTemplate] = _policyData.policies[admTemplate]
-                    if 'EnableValue' not in _policyData.policies[admTemplate]['AdmRegistry']:
-                        _admValues[admTemplate] = admTemplateData[admTemplate]
-                    else:
-                        _admValues[admTemplate] = _policyData.policies[admTemplate]['AdmRegistry']['EnableValue']
-                for _admToSet in _admsToSet:
-                    if not isinstance(_admValues[_admToSet], string_types):
-                        _admValues[_admToSet] = chr(_admValues[_admToSet])
-                    log.debug('working with policy setting {0}'.format(_admToSet))
-                    _thisString = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}{0}]'.format(
-                            chr(0),
-                            _admsToSet[_admToSet]['AdmRegistry']['Path'],
-                            _admsToSet[_admToSet]['AdmRegistry']['Value'],
-                            # TODO: change to this after upgrading to 2015.5.5+
-                            # chr(registry.vtype_reverse(_policyData.policies[admTemplate]['AdmRegistry']['Type'])),
-                            chr(registry.vtype_reverse(_policyData.policies[admTemplate]['AdmRegistry']['Type'])),
-                            chr(len('{0}{1}'.format(_admValues[_admToSet], chr(0)).encode('utf-16-le'))),
-                            _admValues[_admToSet])
-                    _searchResult = _searchRegPolData(thisData, _admsToSet[_admToSet])
-                    if _searchResult:
-                        if _searchResult != _thisString:
-                            log.debug('value in the reg pol file for {0} matches what we would insert'.format(_admToSet))
-                            thisData = thisData.replace(_searchResult, _thisString)
-                    else:
-                        _searchResult = _searchRegPolData(thisData, _admsToSet[_admToSet], True)
-                        if _searchResult:
-                            log.debug('found the setting {0} hard disabled, we will replace that with our new data'.format(_admToSet))
-                            thisData = thisData.replace(_searchResult, _thisString)
+                base_policy_settings[adm_policy] = admtemplate_data[adm_policy]
+        for admPolicy in base_policy_settings.keys():
+            log.debug('working on admPolicy {0}'.format(admPolicy))
+            explicit_enable_disable_value_setting = False
+            this_key = None
+            this_valuename = None
+            if str(base_policy_settings[admPolicy]).lower() == 'disabled':
+                log.debug('time to disable {0}'.format(admPolicy))
+                this_policy = policySearchXpath(admx_policy_definitions, id=admPolicy)
+                if this_policy:
+                    this_policy = this_policy[0]
+                    if 'class' in this_policy.attrib:
+                        if this_policy.attrib['class'] == registry_class or this_policy.attrib['class'] == 'Both':
+                            if 'key' in this_policy.attrib:
+                                this_key = this_policy.attrib['key']
+                            else:
+                                msg = 'policy item {0} does not have the required "key" attribute'
+                                log.error(msg.format(this_policy.attrib))
+                                break
+                            if 'valueName' in this_policy.attrib:
+                                this_valuename = this_policy.attrib['valueName']
+                            if DISABLED_VALUE_XPATH(this_policy):
+                                # set the disabled value in the registry.pol file
+                                explicit_enable_disable_value_setting = True
+                                disabled_value_string = _checkValueItemParent(this_policy,
+                                                                              admPolicy,
+                                                                              this_key,
+                                                                              this_valuename,
+                                                                              DISABLED_VALUE_XPATH,
+                                                                              None,
+                                                                              check_deleted=False,
+                                                                              test_item=False)
+                                existing_data = _policyFileReplaceOrAppend(disabled_value_string,
+                                                                           existing_data)
+                            if DISABLED_LIST_XPATH(this_policy):
+                                explicit_enable_disable_value_setting = True
+                                disabled_list_strings = _checkListItem(this_policy,
+                                                                       admPolicy,
+                                                                       this_key,
+                                                                       DISABLED_LIST_XPATH,
+                                                                       None,
+                                                                       test_items=False)
+                                log.debug('working with disabledList portion of {0}'.format(admPolicy))
+                                existing_data = _policyFileReplaceOrAppendList(disabled_list_strings,
+                                                                               existing_data)
+                            if not explicit_enable_disable_value_setting and this_valuename:
+                                disabled_value_string = _buildKnownDataSearchString(this_key,
+                                                                                    this_valuename,
+                                                                                    'REG_DWORD',
+                                                                                    None,
+                                                                                    check_deleted=True)
+                                existing_data = _policyFileReplaceOrAppend(disabled_value_string,
+                                                                           existing_data)
+                            if ELEMENTS_XPATH(this_policy):
+                                log.debug('checking elements of {0}'.format(admPolicy))
+                                for elements_item in ELEMENTS_XPATH(this_policy):
+                                    for child_item in elements_item.getchildren():
+                                        child_key = this_key
+                                        child_valuename = this_valuename
+                                        if 'key' in child_item.attrib:
+                                            child_key = child_item.attrib['key']
+                                        if 'valueName' in child_item.attrib:
+                                            child_valuename = child_item.attrib['valueName']
+                                        if etree.QName(child_item).localname == 'boolean' \
+                                                and (TRUE_LIST_XPATH(child_item) or FALSE_LIST_XPATH(child_item)):
+                                            # WARNING: no OOB adm files use true/falseList items
+                                            # this has not been fully vetted
+                                            temp_dict = {'trueList': TRUE_LIST_XPATH, 'falseList': FALSE_LIST_XPATH}
+                                            for this_list in temp_dict.keys():
+                                                disabled_list_strings = _checkListItem(
+                                                        child_item,
+                                                        admPolicy,
+                                                        child_key,
+                                                        temp_dict[this_list],
+                                                        None,
+                                                        test_items=False)
+                                                log.debug('working with {1} portion of {0}'.format(
+                                                        admPolicy,
+                                                        this_list))
+                                                existing_data = _policyFileReplaceOrAppendList(
+                                                        disabled_list_strings,
+                                                        existing_data)
+                                        elif etree.QName(child_item).localname == 'boolean' \
+                                                or etree.QName(child_item).localname == 'decimal' \
+                                                or etree.QName(child_item).localname == 'text' \
+                                                or etree.QName(child_item).localname == 'longDecimal' \
+                                                or etree.QName(child_item).localname == 'multiText' \
+                                                or etree.QName(child_item).localname == 'enum':
+                                            disabled_value_string = _processValueItem(child_item,
+                                                                                      child_key,
+                                                                                      child_valuename,
+                                                                                      this_policy,
+                                                                                      elements_item,
+                                                                                      check_deleted=True)
+                                            msg = 'I have disabled value string of {0}'
+                                            log.debug(msg.format(disabled_value_string))
+                                            existing_data = _policyFileReplaceOrAppend(
+                                                    disabled_value_string,
+                                                    existing_data)
+                                        elif etree.QName(child_item).localname == 'list':
+                                            disabled_value_string = _processValueItem(child_item,
+                                                                                      child_key,
+                                                                                      child_valuename,
+                                                                                      this_policy,
+                                                                                      elements_item,
+                                                                                      check_deleted=True)
+                                            msg = 'I have disabled value string of {0}'
+                                            log.debug(msg.format(disabled_value_string))
+                                            existing_data = _policyFileReplaceOrAppend(
+                                                    disabled_value_string,
+                                                    existing_data)
                         else:
-                            log.debug('setting {0} not found in the policy file, we will append it'.format(_admToSet))
-                            thisData = ''.join([thisData, _thisString])
-            if _policyData.policies[admTemplate]['AdmRegistry']['Hive'] == 'HKEY_LOCAL_MACHINE':
-                _existingMachineData = thisData
-            elif _policyData.policies[admTemplate]['AdmRegistry']['Hive'] == 'HKEY_USERS':
-                _existingUserData = thisData
-        _writeRegPolicyData(_existingUserData, _userPolicyPath)
-        _writeRegPolicyData(_existingMachineData, _machinePolicyPath)
+                            msg = 'policy {0} was found but it does not appear to be valid for the class {1}'
+                            log.error(msg.format(admPolicy, registry_class))
+                    else:
+                        msg = 'policy item {0} does not have the requried "class" attribute'
+                        log.error(msg.format(this_policy.attrib))
+            else:
+                log.debug('time to enable and set the policy "{0}"'.format(admPolicy))
+                this_policy = policySearchXpath(admx_policy_definitions, id=admPolicy)
+                if this_policy:
+                    this_policy = this_policy[0]
+                    if 'class' in this_policy.attrib:
+                        if this_policy.attrib['class'] == registry_class or this_policy.attrib['class'] == 'Both':
+                            if 'key' in this_policy.attrib:
+                                this_key = this_policy.attrib['key']
+                            else:
+                                msg = 'policy item {0} does not have the required "key" attribute'
+                                log.error(msg.format(this_policy.attrib))
+                                break
+                            if 'valueName' in this_policy.attrib:
+                                this_valuename = this_policy.attrib['valueName']
+
+                            if ENABLED_VALUE_XPATH(this_policy):
+                                explicit_enable_disable_value_setting = True
+                                enabled_value_string = _checkValueItemParent(this_policy,
+                                                                             admPolicy,
+                                                                             this_key,
+                                                                             this_valuename,
+                                                                             ENABLED_VALUE_XPATH,
+                                                                             None,
+                                                                             check_deleted=False,
+                                                                             test_item=False)
+                                existing_data = _policyFileReplaceOrAppend(
+                                        enabled_value_string,
+                                        existing_data)
+                            if ENABLED_LIST_XPATH(this_policy):
+                                explicit_enable_disable_value_setting = True
+                                enabled_list_strings = _checkListItem(this_policy,
+                                                                      admPolicy,
+                                                                      this_key,
+                                                                      ENABLED_LIST_XPATH,
+                                                                      None,
+                                                                      test_items=False)
+                                log.debug('working with enabledList portion of {0}'.format(admPolicy))
+                                existing_data = _policyFileReplaceOrAppendList(
+                                        enabled_list_strings,
+                                        existing_data)
+                            if not explicit_enable_disable_value_setting and this_valuename:
+                                enabled_value_string = _buildKnownDataSearchString(this_key,
+                                                                                   this_valuename,
+                                                                                   'REG_DWORD',
+                                                                                   '1',
+                                                                                   check_deleted=False)
+                                existing_data = _policyFileReplaceOrAppend(
+                                        enabled_value_string,
+                                        existing_data)
+                            if ELEMENTS_XPATH(this_policy):
+                                for elements_item in ELEMENTS_XPATH(this_policy):
+                                    for child_item in elements_item.getchildren():
+                                        child_key = this_key
+                                        child_valuename = this_valuename
+                                        if 'key' in child_item.attrib:
+                                            child_key = child_item.attrib['key']
+                                        if 'valueName' in child_item.attrib:
+                                            child_valuename = child_item.attrib['valueName']
+                                        if child_item.attrib['id'] in base_policy_settings[admPolicy]:
+                                            if etree.QName(child_item).localname == 'boolean' and (
+                                                    TRUE_LIST_XPATH(child_item) or FALSE_LIST_XPATH(child_item)):
+                                                list_strings = []
+                                                if base_policy_settings[admPolicy][child_item.attrib['id']]:
+                                                    list_strings = _checkListItem(child_item,
+                                                                                  admPolicy,
+                                                                                  child_key,
+                                                                                  TRUE_LIST_XPATH,
+                                                                                  None,
+                                                                                  test_items=False)
+                                                    log.debug('working with trueList portion of {0}'.format(admPolicy))
+                                                else:
+                                                    list_strings = _checkListItem(child_item,
+                                                                                  admPolicy,
+                                                                                  child_key,
+                                                                                  FALSE_LIST_XPATH,
+                                                                                  None,
+                                                                                  test_items=False)
+                                                existing_data = _policyFileReplaceOrAppendList(
+                                                        list_strings,
+                                                        existing_data)
+                                            if etree.QName(child_item).localname == 'boolean' and (
+                                                    TRUE_VALUE_XPATH(child_item) or FALSE_VALUE_XPATH(child_item)):
+                                                value_string = ''
+                                                if base_policy_settings[admPolicy][child_item.attrib['id']]:
+                                                    value_string = _checkValueItemParent(child_item,
+                                                                                         admPolicy,
+                                                                                         child_key,
+                                                                                         child_valuename,
+                                                                                         TRUE_VALUE_XPATH,
+                                                                                         None,
+                                                                                         check_deleted=False,
+                                                                                         test_item=False)
+                                                else:
+                                                    value_string = _checkValueItemParent(child_item,
+                                                                                         admPolicy,
+                                                                                         child_key,
+                                                                                         child_valuename,
+                                                                                         FALSE_VALUE_XPATH,
+                                                                                         None,
+                                                                                         check_deleted=False,
+                                                                                         test_item=False)
+                                                existing_data = _policyFileReplaceOrAppend(
+                                                        value_string,
+                                                        existing_data)
+                                            if etree.QName(child_item).localname == 'boolean' \
+                                                    or etree.QName(child_item).localname == 'decimal' \
+                                                    or etree.QName(child_item).localname == 'text' \
+                                                    or etree.QName(child_item).localname == 'longDecimal' \
+                                                    or etree.QName(child_item).localname == 'multiText':
+                                                enabled_value_string = _processValueItem(
+                                                        child_item,
+                                                        child_key,
+                                                        child_valuename,
+                                                        this_policy,
+                                                        elements_item,
+                                                        check_deleted=False,
+                                                        this_element_value=base_policy_settings[admPolicy][child_item.attrib['id']])
+                                                msg = 'I have enabled value string of {0}'
+                                                log.debug(msg.format([enabled_value_string]))
+                                                existing_data = _policyFileReplaceOrAppend(
+                                                        enabled_value_string,
+                                                        existing_data)
+                                            elif etree.QName(child_item).localname == 'enum':
+                                                for enum_item in child_item.getchildren():
+                                                    if base_policy_settings[admPolicy][child_item.attrib['id']] == \
+                                                            _getAdmlDisplayName(adml_policy_resources,
+                                                                                enum_item.attrib['displayName']
+                                                                                ).strip():
+                                                        enabled_value_string = _checkValueItemParent(
+                                                                enum_item,
+                                                                child_item.attrib['id'],
+                                                                child_key,
+                                                                child_valuename,
+                                                                VALUE_XPATH,
+                                                                None,
+                                                                check_deleted=False,
+                                                                test_item=False)
+                                                        existing_data = _policyFileReplaceOrAppend(
+                                                                enabled_value_string,
+                                                                existing_data)
+                                                        if VALUE_LIST_XPATH(enum_item):
+                                                            enabled_list_strings = _checkListItem(enum_item,
+                                                                                                  admPolicy,
+                                                                                                  child_key,
+                                                                                                  VALUE_LIST_XPATH,
+                                                                                                  None,
+                                                                                                  test_items=False)
+                                                            msg = 'working with valueList portion of {0}'
+                                                            log.debug(msg.format(child_item.attrib['id']))
+                                                            existing_data = _policyFileReplaceOrAppendList(
+                                                                    enabled_list_strings,
+                                                                    existing_data)
+                                                        break
+                                            elif etree.QName(child_item).localname == 'list':
+                                                enabled_value_string = _processValueItem(
+                                                        child_item,
+                                                        child_key,
+                                                        child_valuename,
+                                                        this_policy,
+                                                        elements_item,
+                                                        check_deleted=False,
+                                                        this_element_value=base_policy_settings[admPolicy][child_item.attrib['id']])
+                                                msg = 'I have enabled value string of {0}'
+                                                log.debug(msg.format([enabled_value_string]))
+                                                existing_data = _policyFileReplaceOrAppend(
+                                                        enabled_value_string,
+                                                        existing_data,
+                                                        append_only=True)
+        _write_regpol_data(existing_data, policy_data.admx_registry_classes[registry_class]['policy_path'])
     except Exception as e:
         log.error('Unhandled exception {0} occurred while attempting to write Adm Template Policy File'.format(e))
         return False
@@ -2555,7 +3432,7 @@ def _getScriptSettingsFromIniFile(policy_info):
     '''
     helper function to parse/read a GPO Startup/Shutdown script file
     '''
-    _existingData = _readRegPolFile(policy_info['ScriptIni']['IniPath'])
+    _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
     _existingData = _existingData.split('\r\n')
     script_settings = {}
     this_section = None
@@ -2607,27 +3484,58 @@ def _writeGpoScript(psscript=False):
     these can be set to true/false to denote if the powershell startup/shutdown scripts execute
     first (true) or last (false), if the value isn't set, then it is 'Not Configured' in the GUI
     '''
-    _machineScriptPolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'Machine', 'Scripts', 'scripts.ini')
-    _machinePowershellScriptPolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'Machine', 'Scripts', 'psscripts.ini')
-    _userScriptPolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'User', 'Scripts', 'scripts.ini')
-    _userPowershellScriptPolicyPath = os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'User', 'Scripts', 'psscripts.ini')
+    _machineScriptPolicyPath = os.path.join(os.getenv('WINDIR'),
+                                            'System32',
+                                            'GroupPolicy',
+                                            'Machine',
+                                            'Scripts',
+                                            'scripts.ini')
+    _machinePowershellScriptPolicyPath = os.path.join(os.getenv('WINDIR'),
+                                                      'System32',
+                                                      'GroupPolicy',
+                                                      'Machine',
+                                                      'Scripts',
+                                                      'psscripts.ini')
+    _userScriptPolicyPath = os.path.join(os.getenv('WINDIR'),
+                                         'System32',
+                                         'GroupPolicy',
+                                         'User',
+                                         'Scripts',
+                                         'scripts.ini')
+    _userPowershellScriptPolicyPath = os.path.join(os.getenv('WINDIR'),
+                                                   'System32',
+                                                   'GroupPolicy',
+                                                   'User',
+                                                   'Scripts',
+                                                   'psscripts.ini')
 
 
-def get(policy_names=None, return_full_policy_names=False, heirarchical_return=False, adml_language='en-US'):
+def get(policy_class=None, return_full_policy_names=True,
+        heirarchical_return=False, adml_language='en-US',
+        return_not_configured=False):
     '''
     Get a policy value
 
-    :param list policy_names:
-        A list of policy_names to display the values of.  A string of policy names will be split on commas
+    :param string policy_class:
+        Some policies are both user and computer, by default all policies will be pulled,
+        but this can be used to retrieve only a specific policy class
+        User/USER/user = retrieve user policies
+        Machine/MACHINE/machine/Computer/COMPUTER/computer = retrieve machine/computer policies
 
     :param boolean return_full_policy_names:
-        True/False to return the policy name as it is seen in the gpedit.msc GUI
+        True/False to return the policy name as it is seen in the gpedit.msc GUI or
+        to only return the policy key/id.
 
     :param boolean heirarchical_return:
         True/False to return the policy data in the heirarchy as seen in the gpedit.msc gui
+        The default of False will return data split only into User/Computer configuration sections
 
     :param str adml_language:
-        The adml language to use for processing display/descriptive names of admx template data, defaults to en-US
+        The adml language to use for processing display/descriptive names
+        and enumeration values of admx template data, defaults to en-US
+
+    :param boolean return_not_configured:
+        Include Administrative Template policies that are 'Not Configured' in the return data
 
     :rtype: dict
 
@@ -2636,102 +3544,146 @@ def get(policy_names=None, return_full_policy_names=False, heirarchical_return=F
     .. code-block:: bash
 
         salt '*' gpedit.get return_full_policy_names=True
-
-        salt '*' gpedit.get RestrictAnonymous,LockoutDuration
     '''
 
     vals = {}
     modal_returns = {}
     _policydata = _policy_info()
 
-    if policy_names:
-        if isinstance(policy_names, string_types):
-            policy_names = policy_names.split(',')
+    if policy_class:
+        if policy_class.lower() == 'both':
+            policy_class = _policydata.policies.keys()
+        elif policy_class.lower() not in _policydata.policies.keys():
+            msg = 'The policy_class {0} is not an available policy class, please use one of the following: {1}'
+            raise SaltInvocationError(msg.format(policy_class,
+                                                 ', '.join(_policydata.policies.keys().append('Both'))))
+        else:
+            policy_class = [policy_class.title()]
     else:
-        policy_names = _policydata.policies.keys()
+        policy_class = _policydata.policies.keys()
+    admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions(display_language=adml_language)
 
-    # handle statically configured policies
-    for policy_name in policy_names:
-        _pol = None
-        if policy_name in _policydata.policies:
-            _pol = _policydata.policies[policy_name]
-        else:
-            for p in _policydata.policies.keys():
-                if _policydata.policies[p]['Policy'].upper() == policy_name.upper():
-                    _pol = _policydata.policies[p]
-                    policy_name = p
-        if _pol:
-            vals_key_name = policy_name
-            if 'Registry' in _pol:
-                # get value from registry
-                vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
-                                                               _pol['Registry']['Path'],
-                                                               _pol['Registry']['Value'])['vdata']
-                log.debug('Value {0} found for reg policy {1}'.format(vals[policy_name], policy_name))
-            elif 'Secedit' in _pol:
-                # get value from secedit
-                _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])
-                if _ret:
-                    vals[policy_name] = _val
-                else:
-                    msg = 'An error occurred attempting to get the value of policy {0} from secedit.'.format(policy_name)
-                    raise CommandExecutionError(msg)
-            elif 'NetUserModal' in _pol:
-                # get value from UserNetMod
-                if _pol['NetUserModal']['Modal'] not in modal_returns:
-                    modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(None,
-                                                                                             _pol['NetUserModal']['Modal'])
-                vals[policy_name] = vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
-            elif 'LsaRights' in _pol:
-                vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
-            elif 'ScriptIni' in _pol:
-                log.debug('Working with ScriptIni setting {0}'.format(policy_name))
-                vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
-            if policy_name in vals:
-                vals[policy_name] = _transformValue(vals[policy_name], _policydata.policies[policy_name], 'Get')
-            if return_full_policy_names:
-                vals[_pol['Policy']] = vals.pop(policy_name)
-                vals_key_name = _pol['Policy']
-            if heirarchical_return:
-                if 'lgpo_section' in _pol:
-                    firstItem = True
-                    tdict = {}
-                    for level in reversed(_pol['lgpo_section']):
-                        newdict = {}
-                        if firstItem:
-                            newdict[level] = {vals_key_name: vals.pop(vals_key_name)}
-                            firstItem = False
-                        else:
-                            newdict[level] = tdict
-                        tdict = newdict
-                    if tdict:
-                        vals = dictupdate.update(vals, tdict)
-        else:
-            msg = 'The specified policy {0} is not currently available to be configured via this module'.format(policy_name)
-            raise SaltInvocationError(msg)
-
-    # read registry pol files for current settings
-    for regClass in _policydata.admx_registry_classes.keys():
-        ret = _getAllAdminTemplateSettingsFromRegPolFile(regClass, return_full_policy_names, heirarchical_return, adml_language)
-        vals = dictupdate.update(vals, ret)
+    # handle policies statically defined in this module
+    for p_class in policy_class:
+        this_class_policy_names = _policydata.policies[p_class]['policies']
+        class_vals = {}
+        for policy_name in this_class_policy_names:
+            _pol = None
+            if policy_name in _policydata.policies[p_class]['policies']:
+                _pol = _policydata.policies[p_class]['policies'][policy_name]
+            else:
+                for policy in _policydata.policies[p_class]['policies'].keys():
+                    if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
+                        _pol = _policydata.policies[p_class]['policies'][policy]
+                        policy_name = policy
+            if _pol:
+                vals_key_name = policy_name
+                if 'Registry' in _pol:
+                    # get value from registry
+                    class_vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
+                                                                         _pol['Registry']['Path'],
+                                                                         _pol['Registry']['Value'])['vdata']
+                    log.debug('Value {0} found for reg policy {1}'.format(class_vals[policy_name], policy_name))
+                elif 'Secedit' in _pol:
+                    # get value from secedit
+                    _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])
+                    if _ret:
+                        class_vals[policy_name] = _val
+                    else:
+                        msg = 'An error occurred attempting to get the value of policy {0} from secedit'
+                        raise CommandExecutionError(msg.format(policy_name))
+                elif 'NetUserModal' in _pol:
+                    # get value from UserNetMod
+                    if _pol['NetUserModal']['Modal'] not in modal_returns:
+                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
+                                None,
+                                _pol['NetUserModal']['Modal'])
+                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
+                elif 'LsaRights' in _pol:
+                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
+                elif 'ScriptIni' in _pol:
+                    log.debug('Working with ScriptIni setting {0}'.format(policy_name))
+                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
+                if policy_name in class_vals:
+                    class_vals[policy_name] = _transformValue(class_vals[policy_name],
+                                                              _policydata.policies[p_class]['policies'][policy_name],
+                                                              'Get')
+                if return_full_policy_names:
+                    class_vals[_pol['Policy']] = class_vals.pop(policy_name)
+                    vals_key_name = _pol['Policy']
+                if heirarchical_return:
+                    if 'lgpo_section' in _pol:
+                        firstItem = True
+                        tdict = {}
+                        for level in reversed(_pol['lgpo_section']):
+                            newdict = {}
+                            if firstItem:
+                                newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
+                                firstItem = False
+                            else:
+                                newdict[level] = tdict
+                            tdict = newdict
+                        if tdict:
+                            class_vals = dictupdate.update(class_vals, tdict)
+            else:
+                msg = 'The specified policy {0} is not currently available to be configured via this module'
+                raise SaltInvocationError(msg.format(policy_name))
+        class_vals = dictupdate.update(class_vals,
+                                       _checkAllAdmxPolicies(p_class,
+                                                             admxPolicyDefinitions,
+                                                             admlPolicyResources,
+                                                             return_full_policy_names=return_full_policy_names,
+                                                             heirarchical_return=heirarchical_return,
+                                                             return_not_configured=return_not_configured))
+        if _policydata.policies[p_class]['lgpo_section'] not in class_vals:
+            temp_dict = {}
+            temp_dict[_policydata.policies[p_class]['lgpo_section']] = class_vals
+            class_vals = temp_dict
+        vals = dictupdate.update(vals, class_vals)
 
     return vals
 
 
-def set(cumulative_rights_assignments=True, adml_language='en-US', **kwargs):
+def set(computer_policy=None, user_policy=None,
+        cumulative_rights_assignments=True,
+        adml_language='en-US'):
     '''
-    Set a local server policy
+    Set a local server policy.
+
+    :param dict computer_policy:
+        A dictionary of "policyname: value" pairs of computer policies to set
+        'value' should be how it is displayed in the gpedit gui, i.e. if a setting can
+        be 'Enabled'/'Disabled', then that should be passed
+
+        Administrative Template data may require dicts within dicts, to specify each element
+        of the Administrative Template policy.  Administrative Templates policies are always cumulative.
+
+        Policy names can be specified in a number of ways based on the type of policy:
+            Windows Settings Policies:
+                These policies can be specified using the GUI display name or the key name from
+                the _policy_info class in this module.  The GUI display name is also contained in
+                the _policy_info class in this module.
+            Administrative Template Policies:
+                These can be specified using the policy name as displayed in the GUI (case sensitive).
+                Some policies have the same name, but a different location (for example, "Access data
+                sources across domains").  These can be differentiated by the "path" in the GUI
+                (for example, "Windows Components\\Internet Explorer\\Internet Control Panel\\Security Page\\Internet Zone\\Access data sources across domains").
+                Additionally, policies can be specified using the "name" and "id" attributes from the
+                admx files.
+
+    :param dict user_policy:
+       The same setup as the computer_policy, except with data to configure the local
+       user policy.
 
     :param boolean cumulative_rights_assignments:
+        Determine how user rights assignment policies are configured.
+
         If True, user right assignment specifications are simply added to the existing policy
-        If False, only the users specified will get the right (any existing will have the right revoked
+        If False, only the users specified will get the right (any existing will have the right revoked)
 
     :param str adml_language:
-        Language to use for descriptive/long admx file processing, defaults to en-US
-
-    :param str kwargs:
-        policyname=value kwargs for all the policies you want to set
-        the 'value' should be how it is displayed in the gpedit gui, i.e. if a setting can be 'Enabled'/'Disabled', then that should be passed
+        The language files to use for looking up Administrative Template policy data (i.e. how the policy is
+        displayed in the GUI).  Defaults to 'en-US' (U.S. English).
 
     :rtype: boolean
 
@@ -2739,110 +3691,339 @@ def set(cumulative_rights_assignments=True, adml_language='en-US', **kwargs):
 
     .. code-block:: bash
 
-        salt '*' gpedit.set LockoutDuration=2 RestrictAnonymous=Enabled AuditProcessTracking='Succes, Failure'
+        salt '*' gpedit.set computer_policy="{'LockoutDuration': 2, 'RestrictAnonymous': 'Enabled', 'AuditProcessTracking': 'Succes, Failure'}"
     '''
 
-    if kwargs:
-        _secedits = {}
-        _modal_sets = {}
-        _admTemplateData = {}
-        _policydata = _policy_info()
-        admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions()
-        log.debug('KWARGS keys = {0}'.format(kwargs.keys()))
-        for policy_name in kwargs.keys():
-            if not policy_name.startswith('__pub_'):
-                _pol = None
-                if policy_name in _policydata.policies:
-                    _pol = _policydata.policies[policy_name]
-                else:
-                    for p in _policydata.policies.keys():
-                        if _policydata.policies[p]['Policy'].upper().replace(' ', '_') == policy_name.upper():
-                            _pol = _policydata.policies[p]
-                            policy_name = p
-                if _pol:
-                    # transform and validate the setting
-                    _value = _transformValue(kwargs[policy_name], _policydata.policies[policy_name], 'Put')
-                    if not _validateSetting(_value, _policydata.policies[policy_name]):
-                        msg = 'The specified value {0} is not an acceptable setting for policy {1}.'.format(kwargs[policy_name], policy_name)
-                        raise SaltInvocationError(msg)
-                    if 'Registry' in _pol:
-                        # set value in registry
+    if computer_policy and not isinstance(computer_policy, dict):
+        msg = 'computer_policy must be specified as a dict'
+        raise SaltInvocationError(msg)
+    if user_policy and not isinstance(user_policy, dict):
+        msg = 'user_policy must be specified as a dict'
+        raise SaltInvocationError(msg)
+    policies = {}
+    policies['User'] = user_policy
+    policies['Machine'] = computer_policy
+    if policies:
+        for p_class in policies.keys():
+            _secedits = {}
+            _modal_sets = {}
+            _admTemplateData = {}
+            _regedits = {}
+            _lsarights = {}
+            _policydata = _policy_info()
+            admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions(display_language=adml_language)
+            if policies[p_class]:
+                for policy_name in policies[p_class].keys():
+                    _pol = None
+                    policy_key_name = policy_name
+                    if policy_name in _policydata.policies[p_class]['policies']:
+                        _pol = _policydata.policies[p_class]['policies'][policy_name]
+                    else:
+                        for policy in _policydata.policies[p_class]['policies'].keys():
+                            if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == \
+                                    policy_name.upper():
+                                _pol = _policydata.policies[p_class]['policies'][policy]
+                                policy_key_name = policy
+                    if _pol:
+                        # transform and validate the setting
+                        _value = _transformValue(policies[p_class][policy_name],
+                                                 _policydata.policies[p_class]['policies'][policy_key_name],
+                                                 'Put')
+                        if not _validateSetting(_value, _policydata.policies[p_class]['policies'][policy_key_name]):
+                            msg = 'The specified value {0} is not an acceptable setting for policy {1}.'
+                            raise SaltInvocationError(msg.format(policies[p_class][policy_name], policy_name))
+                        if 'Registry' in _pol:
+                            # set value in registry
+                            log.debug('{0} is a registry policy'.format(policy_name))
+                            _regedits[policy_name] = {'policy': _pol, 'value': _value}
+                        elif 'Secedit' in _pol:
+                            # set value with secedit
+                            log.debug('{0} is a Secedit policy'.format(policy_name))
+                            if _pol['Secedit']['Section'] not in _secedits:
+                                _secedits[_pol['Secedit']['Section']] = []
+                            _secedits[_pol['Secedit']['Section']].append(
+                                    ' '.join([_pol['Secedit']['Option'],
+                                             '=', str(_value)]))
+                        elif 'NetUserModal' in _pol:
+                            # set value via NetUserModal
+                            log.debug('{0} is a NetUserModal policy'.format(policy_name))
+                            if _pol['NetUserModal']['Modal'] not in _modal_sets:
+                                _modal_sets[_pol['NetUserModal']['Modal']] = {}
+                            _modal_sets[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']] = _value
+                        elif 'LsaRights' in _pol:
+                            log.debug('{0} is a LsaRights policy'.format(policy_name))
+                            _lsarights[policy_name] = {'policy': _pol, 'value': _value}
+                    else:
+                        _value = policies[p_class][policy_name]
+                        log.debug('searching for "{0}" in admx data'.format(policy_name))
+                        admxSearchResults = ADMX_SEARCH_XPATH(admxPolicyDefinitions,
+                                                              policy_name=policy_name,
+                                                              registry_class=p_class)
+                        the_policy = None
+                        if admxSearchResults:
+                            if len(admxSearchResults) == 1:
+                                _admTemplateData[policy_name] = _value
+                                the_policy = admxSearchResults[0]
+                            else:
+                                msg = 'Admx policy name/id "{0}" is used in multiple admx files'
+                                raise CommandExecutionError(msg.format(policy_name))
+                        else:
+                            admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
+                                                                  policy_name=policy_name)
+                            heirarchy = []
+                            heirarchy_policy_name = policy_name
+                            if not admlSearchResults:
+                                if '\\' in policy_name:
+                                    heirarchy = policy_name.split('\\')
+                                    policy_name = heirarchy.pop()
+                                    admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
+                                                                          policy_name=policy_name)
+                            if admlSearchResults:
+                                for adml_search_result in admlSearchResults:
+                                    msg = 'found an adml entry matching the string! {0} -- {1}'
+                                    log.debug(msg.format(adml_search_result.tag,
+                                                         adml_search_result.attrib))
+                                    display_name_searchval = '$({0}.{1})'.format(
+                                            adml_search_result.tag.split('}')[1],
+                                            adml_search_result.attrib['id'])
+                                    log.debug('searching for displayName == {0}'.format(display_name_searchval))
+                                    admxSearchResults = ADMX_DISPLAYNAME_SEARCH_XPATH(
+                                            admxPolicyDefinitions,
+                                            display_name=display_name_searchval,
+                                            registry_class=p_class)
+                                    if admxSearchResults:
+                                        if len(admxSearchResults) == 1 or heirarchy:
+                                            found = False
+                                            for search_result in admxSearchResults:
+                                                found = False
+                                                if heirarchy:
+                                                    this_heirarchy = _build_parent_list(search_result,
+                                                                                        admxPolicyDefinitions,
+                                                                                        True,
+                                                                                        admlPolicyResources)
+                                                    this_heirarchy.reverse()
+                                                    if heirarchy == this_heirarchy:
+                                                        found = True
+                                                else:
+                                                    found = True
+                                                if found:
+                                                    msg = 'found the admx policy matching '
+                                                    msg = msg + 'the display name {1} -- {0}'
+                                                    log.debug(msg.format(search_result, policy_name))
+                                                    if 'name' in search_result.attrib:
+                                                        # this is a policy
+                                                        policy_name = search_result.attrib['name']
+                                                    else:
+                                                        msg = 'Admx policy with the display name {0} does not'
+                                                        msg = msg + ' have the required name attribtue'
+                                                        raise SaltInvocationError(msg.format(policy_name))
+                                                    _admTemplateData[policy_name] = _value
+                                                    the_policy = search_result
+                                                    break
+                                            if not found:
+                                                msg = 'Unable to correlate {0} to any policy'
+                                                raise SaltInvocationError(msg.format(heirarchy_policy_name))
+                                        else:
+                                            msg = 'Adml policy name "{0}" is used as the display name'
+                                            msg = msg + ' for multiple policies.'
+                                            msg = msg + '  These policies matched: {1}'
+                                            msg = msg + '.  You can utilize these long names to'
+                                            msg = msg + ' specify the correct policy'
+                                            suggested_policies = ''
+                                            for possible_policy in admxSearchResults:
+                                                this_parent_list = _build_parent_list(possible_policy,
+                                                                                      admxPolicyDefinitions,
+                                                                                      True,
+                                                                                      admlPolicyResources)
+                                                this_parent_list.reverse()
+                                                this_parent_list.append(policy_name)
+                                                if suggested_policies:
+                                                    suggested_policies = ', '.join([suggested_policies,
+                                                                                   '\\'.join(this_parent_list)])
+                                                else:
+                                                    suggested_policies = '\\'.join(this_parent_list)
+                                            raise SaltInvocationError(msg.format(policy_name,
+                                                                                 suggested_policies))
+                                    else:
+                                        msg = 'Unable to find a policy with the name "{0}".'
+                                        raise SaltInvocationError(msg.format(policy_name))
+                            else:
+                                msg = 'Unable to find the policy "{0}"'.format(policy_name)
+                                raise SaltInvocationError(msg)
+                        if policy_name in _admTemplateData and the_policy is not None:
+                            log.debug('setting == {0}'.format(_admTemplateData[policy_name]).lower())
+                            log.debug('{0}'.format(str(_admTemplateData[policy_name]).lower()))
+                            if str(_admTemplateData[policy_name]).lower() != 'disabled' \
+                                    and str(_admTemplateData[policy_name]).lower() != 'not configured':
+                                if ELEMENTS_XPATH(the_policy):
+                                    if isinstance(_admTemplateData[policy_name], dict):
+                                        for elements_item in ELEMENTS_XPATH(the_policy):
+                                            for child_item in elements_item.getchildren():
+                                                # check each element
+                                                log.debug('checking element {0}'.format(child_item.attrib['id']))
+                                                temp_element_name = None
+                                                this_element_name = _getFullPolicyName(child_item,
+                                                                                       child_item.attrib['id'],
+                                                                                       True,
+                                                                                       admlPolicyResources)
+                                                log.debug('id attribute == "{0}"  this_element_name == "{1}"'.format(child_item.attrib['id'], this_element_name))
+                                                if this_element_name in _admTemplateData[policy_name]:
+                                                    temp_element_name = this_element_name
+                                                elif child_item.attrib['id'] in _admTemplateData[policy_name]:
+                                                    temp_element_name = child_item.attrib['id']
+                                                else:
+                                                    msg = 'Element "{0}" must be included'
+                                                    msg = msg + ' in the policy configuration'
+                                                    raise SaltInvocationError(msg.format(this_element_name))
+                                                if 'required' in child_item.attrib \
+                                                        and child_item.attrib['required'].lower() == 'true':
+                                                    if not _admTemplateData[policy_name][temp_element_name]:
+                                                        msg = 'Element "{0}" requires a value to be specified'
+                                                        raise SaltInvocationError(msg.format(temp_element_name))
+                                                if etree.QName(child_item).localname == 'boolean':
+                                                    if not isinstance(
+                                                            _admTemplateData[policy_name][temp_element_name],
+                                                            bool):
+                                                        msg = 'Element {0} requires a boolean True or False'
+                                                        raise SaltInvocationError(msg.format(temp_element_name))
+                                                elif etree.QName(child_item).localname == 'decimal' or \
+                                                        etree.QName(child_item).localname == 'longDecimal':
+                                                    min_val = 0
+                                                    max_val = 9999
+                                                    if 'minValue' in child_item.attrib:
+                                                        min_val = int(child_item.attrib['minValue'])
+                                                    if 'maxValue' in child_item.attrib:
+                                                        max_val = int(child_item.attrib['maxValue'])
+                                                    if int(_admTemplateData[policy_name][temp_element_name]) \
+                                                            < min_val or \
+                                                            int(_admTemplateData[policy_name][temp_element_name]) \
+                                                            > max_val:
+                                                        msg = 'Element "{0}" value must be between {1} and {2}'
+                                                        raise SaltInvocationError(msg.format(temp_element_name,
+                                                                                             min_val,
+                                                                                             max_val))
+                                                elif etree.QName(child_item).localname == 'enum':
+                                                    # make sure the value is in the enumeration
+                                                    found = False
+                                                    for enum_item in child_item.getchildren():
+                                                        if _admTemplateData[policy_name][temp_element_name] == \
+                                                                _getAdmlDisplayName(
+                                                                admlPolicyResources,
+                                                                enum_item.attrib['displayName']).strip():
+                                                            found = True
+                                                            break
+                                                    if not found:
+                                                        msg = 'Element "{0}" does not have a valid value'
+                                                        raise SaltInvocationError(msg.format(temp_element_name))
+                                                elif etree.QName(child_item).localname == 'list':
+                                                    if 'explicitValue' in child_item.attrib \
+                                                                and child_item.attrib['explicitValue'].lower() == \
+                                                                'true':
+                                                        if not isinstance(
+                                                                _admTemplateData[policy_name][temp_element_name],
+                                                                dict):
+                                                            msg = 'Each list item of element "{0}" '
+                                                            msg = msg + 'requires a dict value'
+                                                            msg = msg.format(temp_element_name)
+                                                            raise SaltInvocationError(msg)
+                                                    elif not isinstance(
+                                                            _admTemplateData[policy_name][temp_element_name],
+                                                            list):
+                                                        msg = 'Element "{0}" requires a list value'
+                                                        msg = msg.format(temp_element_name)
+                                                        raise SaltInvocationError(msg)
+                                                elif etree.QName(child_item).localname == 'multiText':
+                                                    if not isinstance(
+                                                            _admTemplateData[policy_name][temp_element_name],
+                                                            list):
+                                                        msg = 'Element "{0}" requires a list value'
+                                                        msg = msg.format(temp_element_name)
+                                                        raise SaltInvocationError(msg)
+                                                _admTemplateData[policy_name][child_item.attrib['id']] = \
+                                                    _admTemplateData[policy_name].pop(temp_element_name)
+                                    else:
+                                        msg = 'The policy "{0}" has elements which must be configured'
+                                        msg = msg.format(policy_name)
+                                        raise SaltInvocationError(msg)
+                                else:
+                                    if str(_admTemplateData[policy_name]).lower() != 'enabled':
+                                        msg = 'The policy {0} must either be "Enabled", '
+                                        msg = msg + '"Disabled", or "Not Configured"'
+                                        msg = msg.format(policy_name)
+                                        raise SaltInvocationError(msg)
+                if _regedits:
+                    for regedit in _regedits.keys():
                         log.debug('{0} is a Registry policy'.format(policy_name))
-                        _ret = __salt__['reg.set_key'](_pol['Registry']['Hive'], _pol['Registry']['Path'], _pol['Registry']['Value'], _value, _pol['Registry']['Type'])
+                        _ret = __salt__['reg.set_key'](
+                                _regedits[regedit]['policy']['Registry']['Hive'],
+                                _regedits[regedit]['policy']['Registry']['Path'],
+                                _regedits[regedit]['policy']['Registry']['Value'],
+                                _regedits[regedit]['value'],
+                                _regedits[regedit]['policy']['Registry']['Type'])
                         if not _ret:
-                            msg = 'Error while attempting to set policy {0} via the registry.  Some changes may not be applied as expected.'.format(policy_name)
-                            raise CommandExecutionError(msg)
-                    elif 'Secedit' in _pol:
-                        # set value with secedit
-                        log.debug('{0} is a Secedit policy'.format(policy_name))
-                        if _pol['Secedit']['Section'] not in _secedits:
-                            _secedits[_pol['Secedit']['Section']] = []
-                        _secedits[_pol['Secedit']['Section']].append(' '.join([_pol['Secedit']['Option'], '=', str(_value)]))
-                    elif 'NetUserModal' in _pol:
-                        # set value via NetUserModal
-                        log.debug('{0} is a NetUserModal policy'.format(policy_name))
-                        if _pol['NetUserModal']['Modal'] not in _modal_sets:
-                            _modal_sets[_pol['NetUserModal']['Modal']] = {}
-                        _modal_sets[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']] = _value
-                    elif 'LsaRights' in _pol:
+                            msg = 'Error while attempting to set policy {0} via the registry.'
+                            msg = msg + '  Some changes may not be applied as expected'
+                            raise CommandExecutionError(msg.format(policy_name))
+                if _lsarights:
+                    for lsaright in _lsarights.keys():
                         _existingUsers = None
                         if not cumulative_rights_assignments:
-                            _existingUsers = _getRightsAssignments(_pol['LsaRights']['Option'])
-                        if _value:
-                            for _u in _value:
-                                _ret = _addAccountRights(_u, _pol['LsaRights']['Option'])
+                            _existingUsers = _getRightsAssignments(
+                                    _lsarights[lsaright]['policy']['LsaRights']['Option'])
+                        if _lsarights[lsaright]['value']:
+                            for acct in _lsarights[lsaright]['value']:
+                                _ret = _addAccountRights(acct, _lsarights[lsaright]['policy']['LsaRights']['Option'])
                                 if not _ret:
-                                    msg = 'An error occurred attempting to configure the user right {0}.'.format(policy_name)
-                                    raise SaltInvocationError(msg)
+                                    msg = 'An error occurred attempting to configure the user right {0}.'
+                                    raise SaltInvocationError(msg.format(policy_name))
                         if _existingUsers:
-                            for _u in _existingUsers:
-                                _ret = _delAccountRights(_u, _pol['LsaRights']['Option'])
-                                if not _ret:
-                                    msg = 'An error occurred attempting to remove previously configured users with right {0}.'.format(policy_name)
-                                    raise SaltInvocationError(msg)
-                else:
-                    # look in discovered admx data for the policy name
-                    admxSearchResults = admxPolicyDefinitions.xpath('//*[@*[local-name() = "id"] = "{0}" or @*[local-name() = "name"] = "{0}"]'.format(policy_name))
-                    if admxSearchResults:
-                        if len(admxSearchResults) == 1:
-                            _admTemplateData[policy_name] = admxSearchResults[0]
-                        else:
-                            msg = 'Admx policy name/id "{0}" is used in multiple admx files, you should switch to using the descriptive string version from the adml file.'.format(policy_name)
-                            raise SaltInvocationError(msg)
-                    else:
-                        msg = 'The specified policy {0} is not currently available to be configured via this module'.format(policy_name)
-                        raise SaltInvocationError(msg)
-        if _secedits:
-            # we've got secedits to make
-            log.debug(_secedits)
-            _iniData = '\r\n'.join(['[Unicode]', 'Unicode=yes'])
-            _seceditSections = ['System Access', 'Event Audit', 'Registry Values', 'Privilege Rights']
-            for _seceditSection in _seceditSections:
-                if _seceditSection in _secedits:
-                    _iniData = '\r\n'.join([_iniData, ''.join(['[', _seceditSection, ']']), '\r\n'.join(_secedits[_seceditSection])])
-            _iniData = '\r\n'.join([_iniData, '[Version]', 'signature="$CHICAGO$"', 'Revision=1'])
-            log.debug('_iniData == {0}'.format(_iniData))
-            _ret = _importSeceditConfig(_iniData)
-            if not _ret:
-                msg = 'Error while attempting to set policies via secedit.  Some changes may not be applied as expected.'
-                raise CommandExecutionError(msg)
-        if _modal_sets:
-            # we've got modalsets to make
-            log.debug(_modal_sets)
-            for _modal_set in _modal_sets.keys():
-                try:
-                    _existingModalData = win32net.NetUserModalsGet(None, _modal_set)
-                    _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])
-                    log.debug('NEW MODAL SET = {0}'.format(_newModalSetData))
-                    _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
-                except:
-                    msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
-                    raise CommandExecutionError(msg)
-        if _admTemplateData:
-            _ret = _writeAdminTemplateRegPolFile(_admTemplateData)
-            if not _ret:
-                msg = 'Error while attempting to write Administrative Template Policy data.  Some changes may not be applied as expected.'
-                raise CommandExecutionError(msg)
+                            for acct in _existingUsers:
+                                if acct not in _lsarights[lsaright]['value']:
+                                    _ret = _delAccountRights(
+                                            acct, _lsarights[lsaright]['policy']['LsaRights']['Option'])
+                                    if not _ret:
+                                        msg = 'An error occurred attempting to remove previously'
+                                        msg = msg + 'configured users with right {0}.'
+                                        raise SaltInvocationError(msg.format(policy_name))
+                if _secedits:
+                    # we've got secedits to make
+                    log.debug(_secedits)
+                    _iniData = '\r\n'.join(['[Unicode]', 'Unicode=yes'])
+                    _seceditSections = ['System Access', 'Event Audit', 'Registry Values', 'Privilege Rights']
+                    for _seceditSection in _seceditSections:
+                        if _seceditSection in _secedits:
+                            _iniData = '\r\n'.join([_iniData, ''.join(['[', _seceditSection, ']']),
+                                                   '\r\n'.join(_secedits[_seceditSection])])
+                    _iniData = '\r\n'.join([_iniData, '[Version]', 'signature="$CHICAGO$"', 'Revision=1'])
+                    log.debug('_iniData == {0}'.format(_iniData))
+                    _ret = _importSeceditConfig(_iniData)
+                    if not _ret:
+                        msg = 'Error while attempting to set policies via secedit.'
+                        msg = msg + '  Some changes may not be applied as expected'
+                        raise CommandExecutionError(msg)
+                if _modal_sets:
+                    # we've got modalsets to make
+                    log.debug(_modal_sets)
+                    for _modal_set in _modal_sets.keys():
+                        try:
+                            _existingModalData = win32net.NetUserModalsGet(None, _modal_set)
+                            _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])
+                            log.debug('NEW MODAL SET = {0}'.format(_newModalSetData))
+                            _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
+                        except:
+                            msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
+                            raise CommandExecutionError(msg)
+                if _admTemplateData:
+                    _ret = False
+                    log.debug('going to write some adm template data :: {0}'.format(_admTemplateData))
+                    _ret = _writeAdminTemplateRegPolFile(_admTemplateData,
+                                                         admxPolicyDefinitions,
+                                                         admlPolicyResources,
+                                                         registry_class=p_class)
+                    if not _ret:
+                        msg = 'Error while attempting to write Administrative Template Policy data.'
+                        msg = msg + '  Some changes may not be applied as expected'
+                        raise CommandExecutionError(msg)
         return True
     else:
         msg = 'You have to specify something!'
