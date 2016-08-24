@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import datetime
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the the config is a dict
     '''
