@@ -210,6 +210,7 @@ class CMDMODTestCase(TestCase):
         '''
         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows'
     @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
     @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
