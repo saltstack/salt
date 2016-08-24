@@ -404,6 +404,9 @@ Runner Module Deprecations
 - The ``fileserver`` runner no longer accepts the ``outputter`` keyword argument. Users will
   need to specify an outputter using the ``--out`` option.
 
+- The ``jobs`` runner no longer accepts the ``ouputter`` keyword argument. Users will need to
+  specify an outputter using the ``--out`` option.
+
 - ``virt`` runner module:
 
   - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
