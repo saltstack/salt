@@ -464,6 +464,8 @@ def present(name,
             for key, val in iteritems(changes):
                 if key == 'password':
                     val = 'XXX-REDACTED-XXX'
+                elif key == 'group' and not remove_groups:
+                    key = 'ensure groups'
                 ret['comment'] += u'{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
