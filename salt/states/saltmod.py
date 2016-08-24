@@ -73,6 +73,7 @@ def state(
         saltenv=None,
         test=False,
         pillar=None,
+        pillarenv=None,
         expect_minions=False,
         fail_minions=None,
         allow_fail=0,
@@ -119,6 +120,9 @@ def state(
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
+
+    pillarenv
+        The pillar environment to grab pillars from
 
     saltenv
         The default salt environment to pull sls files from
@@ -229,6 +233,13 @@ def state(
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
+
+    # If pillarenv is directly defined, use it
+    if pillarenv:
+        cmd_kw['kwarg']['pillarenv'] = pillarenv
+    # Use pillarenv if it's passed from __opts__ (via state.orchestrate for example)
+    elif __opts__.get('pillarenv'):
+        cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
 
     cmd_kw['kwarg']['saltenv'] = __env__
     cmd_kw['kwarg']['queue'] = queue
