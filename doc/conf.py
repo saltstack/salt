@@ -15,31 +15,40 @@ from sphinx.directives import TocTree
 # pylint: disable=R0903
 class Mock(object):
     '''
-    Mock out specified imports
+    Mock out specified imports.
 
     This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
+    This Mock class can be configured to return a specific values at specific names, if required.
+
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, mapping=None, *args, **kwargs):
+        """
+        Mapping allows to bypass the Mock object, but actually assign
+        a specific value, expected by a specific attribute returned.
+        """
+        self.__mapping = mapping or {}
 
     __all__ = []
 
     def __call__(self, *args, **kwargs):
-        ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
         # if args and callable(args[-1]):
         #     functools.update_wrapper(ret, args[0])
-        return ret
+        return Mock(mapping=self.__mapping)
 
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
+    def __getattr__(self, name):
+        #__mapping = {'total': 0}
+        data = None
+        if name in self.__mapping:
+            data = self.__mapping.get(name)
+        elif name in ('__file__', '__path__'):
+            data = '/dev/null'
         else:
-            return Mock()
+            data = Mock(mapping=self.__mapping)
+        return data
 # pylint: enable=R0903
 
 MOCK_MODULES = [
