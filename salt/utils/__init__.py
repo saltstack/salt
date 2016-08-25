@@ -1056,6 +1056,17 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
+    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        'Carbon',
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -1079,8 +1090,20 @@ def format_call(fun,
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
-        raise SaltInvocationError(msg)
 
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
+            '{0}. If you were trying to pass additional data to be used '
+            'in a template context, please populate \'context\' with '
+            '\'key: value\' pairs. Your approach will work until Salt '
+            'Carbon is out.{1}'.format(
+                msg,
+                '' if 'full' not in ret else ' Please update your state files.'
+            )
+        )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
