@@ -141,7 +141,11 @@ MOCK_MODULES = [
 ]
 
 for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
+    if mod_name == 'psutil':
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+    else:
+        mock = Mock()
+    sys.modules[mod_name] = mock
 
 def mock_decorator_with_params(*oargs, **okwargs):
     '''
