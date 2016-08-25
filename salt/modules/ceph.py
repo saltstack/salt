@@ -96,7 +96,7 @@ def partition_is(dev):
     return ceph_cfg.partition_is(dev)
 
 
-def zap(dev=None, **kwargs):
+def zap(target=None, **kwargs):
     '''
     Destroy the partition table and content of a given disk.
 
@@ -118,11 +118,10 @@ def zap(dev=None, **kwargs):
         Set the cluster date will be added too. Defaults to the value found in
         local config.
     '''
-
-    if dev is not None:
+    if target is not None:
         log.warning("Depricated use of function, use kwargs")
-    dev = kwargs.get("dev", dev)
-    kwargs["dev"] = dev
+    target = kwargs.get("dev", target)
+    kwargs["dev"] = target
     return ceph_cfg.zap(**kwargs)
 
 
