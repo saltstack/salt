@@ -159,6 +159,11 @@ def present(name, Name,
             return ret
         _describe = __salt__['boto_cloudwatch_event.describe'](Name,
                                    region=region, key=key, keyid=keyid, profile=profile)
+        if 'error' in _describe:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create event rule: {0}.'.format(_describe['error']['message'])
+            ret['changes'] = {}
+            return ret
         ret['changes']['old'] = {'rule': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'CloudTrail {0} created.'.format(Name)
@@ -189,6 +194,11 @@ def present(name, Name,
 
     r = __salt__['boto_cloudwatch_event.list_targets'](Rule=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to update event rule: {0}.'.format(r['error']['message'])
+        ret['changes'] = {}
+        return ret
     _describe['Targets'] = r.get('targets', [])
 
     need_update = False
@@ -305,7 +315,7 @@ def absent(name, Name,
     r = __salt__['boto_cloudwatch_event.list_targets'](Rule=Name,
                                     region=region, key=key,
                                     keyid=keyid, profile=profile)
-    if not r['targets']:
+    if not r.get('targets'):
         ret['result'] = False
         ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['error']['message'])
         return ret
