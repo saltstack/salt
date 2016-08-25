@@ -306,7 +306,7 @@ def _compare_acl(current, desired, region, key, keyid, profile):
 
 def _compare_policy(current, desired, region, key, keyid, profile):
     '''
-    Policy discription is always returned as a JSON string. Comparison
+    Policy description is always returned as a JSON string. Comparison
     should be object-to-object, since order is not significant in JSON
     '''
     if isinstance(desired, string_types):
