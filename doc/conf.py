@@ -120,6 +120,7 @@ MOCK_MODULES = [
     'MySQLdb',
     'MySQLdb.cursors',
     'nagios_json',
+    'psutil',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
