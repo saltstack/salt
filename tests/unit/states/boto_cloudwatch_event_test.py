@@ -2,7 +2,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import random
 import string
 
@@ -26,6 +25,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # pylint: disable=import-error,no-name-in-module
 from unit.modules.boto_cloudwatch_event_test import BotoCloudWatchEventTestCaseMixin
 
+# pylint: disable=unused-import
 # Import 3rd-party libs
 try:
     import boto3
@@ -33,6 +33,7 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+# pylint: enable=unused-import
 
 from salt.ext.six.moves import range
 
@@ -310,7 +311,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
         self.conn.list_rules.return_value = {'Rules': []}
         self.conn.put_rule.return_value = rule_ret
         self.conn.describe_rule.return_value = rule_ret
-        self.conn.list_targets.return_value = {'Targets': [{'Id': 'target1', 'Id': 'target2'}]}
+        self.conn.list_targets.return_value = {'Targets': [{'Id': 'target1'}, {'Id': 'target2'}]}
         self.conn.put_targets.return_value = {'FailedEntryCount': 0}
         result = salt_states['boto_cloudwatch_event.present'](
                              name='test present',
