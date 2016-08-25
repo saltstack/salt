@@ -80,7 +80,7 @@ class HighStateTestCase(TestCase):
         self.config['file_roots'] = dict(base=[self.state_tree_dir])
         self.config['cachedir'] = self.cache_dir
         self.config['test'] = False
-        self.highstate = HighState(self.config)
+        self.highstate = salt.state.HighState(self.config)
         self.highstate.push_active()
 
     def tearDown(self):
@@ -125,7 +125,7 @@ class TopFileMergeTestCase(TestCase):
         self.env2 = {'base': {'*': ['e2_a', 'e2_b', 'e2_c']}}
         self.env3 = {'base': {'*': ['e3_a', 'e3_b', 'e3_c']}}
         self.config = self._make_default_config()
-        self.highstate = HighState(self.config)
+        self.highstate = salt.state.HighState(self.config)
 
     def _make_default_config(self):
         config = salt.config.minion_config(None)
@@ -143,8 +143,9 @@ class TopFileMergeTestCase(TestCase):
 
     def _get_tops(self):
         '''
-        A test helper to emulate HighState.get_tops() but just to construct
-        an appropriate data structure for top files from multiple environments
+        A test helper to emulate salt.state.HighState.get_tops() but just to
+        construct an appropriate data structure for top files from multiple
+        environments
         '''
         tops = DefaultOrderedDict(list)
 
@@ -175,7 +176,7 @@ class TopFileMergeTestCase(TestCase):
         config = self._make_default_config()
         config['top_file_merging_strategy'] = 'same'
         config['environment'] = 'b'
-        highstate = HighState(config)
+        highstate = salt.state.HighState(config)
         ret = highstate.get_tops()
         self.assertEqual(ret, OrderedDict([('b', [{}])]))
 
@@ -188,7 +189,7 @@ class TopFileMergeTestCase(TestCase):
         config['top_file_merging_strategy'] = 'merge'
         config['env_order'] = ['b', 'a', 'c']
         with patch('salt.fileclient.FSClient.envs', MagicMock(return_value=['a', 'b', 'c'])):
-            highstate = HighState(config)
+            highstate = salt.state.HighState(config)
             ret = highstate.get_tops()
         self.assertEqual(ret, OrderedDict([('a', [{}]), ('c', [{}]), ('b', [{}])]))
 
