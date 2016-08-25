@@ -57,10 +57,10 @@ from __future__ import absolute_import
 import logging
 import os
 import os.path
+import json
 
 # Import Salt Libs
 import salt.ext.six as six
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def present(name, Name,
         Name of the event rule.
 
     ScheduleExpression
-        The scheduling expression. For example, "cron(0 20 * * ? *)", 
+        The scheduling expression. For example, "cron(0 20 * * ? *)",
         "rate(5 minutes)"
 
     EventPattern
@@ -240,9 +240,9 @@ def present(name, Name,
             log.error(Targets)
             if bool(Targets):
                 for target in Targets:
-                    id = target.get('Id', None)
-                    if id is not None and id in removes:
-                        ix = removes.index(id)
+                    tid = target.get('Id', None)
+                    if tid is not None and tid in removes:
+                        ix = removes.index(tid)
                         removes.pop(ix)
                 r = __salt__['boto_cloudwatch_event.put_targets'](Rule=Name,
                    Targets=Targets,

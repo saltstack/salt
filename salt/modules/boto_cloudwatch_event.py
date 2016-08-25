@@ -49,9 +49,7 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import json
-import yaml
 import salt.utils.compat
-import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +102,7 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
         events = conn.list_rules(NamePrefix=Name)
         if len(events) == 0:
             return {'exists': False}
-        for rule in events.get('Rules',[]):
+        for rule in events.get('Rules', []):
             if rule.get('Name', None) == Name:
                 return {'exists': True}
         return {'exists': False}
@@ -243,6 +241,7 @@ def list_targets(Rule,
             return {'error': "Rule {0} not found".format(Rule)}
         return {'error': __utils__['boto3.get_error'](e)}
 
+
 def put_targets(Rule, Targets,
              region=None, key=None, keyid=None, profile=None):
     '''
@@ -271,6 +270,7 @@ def put_targets(Rule, Targets,
         if e.response.get('Error', {}).get('Code') == 'RuleNotFoundException':
             return {'error': "Rule {0} not found".format(Rule)}
         return {'error': __utils__['boto3.get_error'](e)}
+
 
 def remove_targets(Rule, Ids,
              region=None, key=None, keyid=None, profile=None):
