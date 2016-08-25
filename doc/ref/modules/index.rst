@@ -214,7 +214,7 @@ Strings and Unicode
 
 An execution  module author should always assume that strings fed to the module
 have already decoded from strings into Unicode. In Python 2, these will
-be of type 'Unicode' and in Python 3 they will be of type 'bytes'. Calling
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
 from a state to other Salt sub-systems, should pass Unicode (or bytes if passing binary data). In the
 rare event that a state needs to write directly to disk, Unicode should be
 encoded to a string immediately before writing to disk. An author may use
