@@ -36,6 +36,8 @@ def enabled(name):
     '''
     Ensure an Apache module is enabled.
 
+    .. versionadded:: 2016.3.0
+
     name
         Name of the Apache module
     '''
