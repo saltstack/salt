@@ -362,20 +362,24 @@ class Pillar(object):
         # Gather initial top files
         try:
             if self.opts['pillarenv']:
-                tops[self.opts['pillarenv']] = [
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                self.opts['pillarenv']
-                                ),
-                            self.rend,
-                            self.opts['renderer'],
-                            self.opts['renderer_blacklist'],
-                            self.opts['renderer_whitelist'],
-                            self.opts['pillarenv'],
-                            _pillar_rend=True,
-                            )
-                        ]
+                # If file roots environment for the pillar does not match pillarenv, dont look for top file
+                if self.opts['pillarenv'] not in self.opts['file_roots']:
+                    log.debug("Pillarenv NOT equal to file_roots")
+                else:
+                    tops[self.opts['pillarenv']] = [
+                            compile_template(
+                                self.client.cache_file(
+                                    self.opts['state_top'],
+                                    self.opts['pillarenv']
+                                    ),
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                self.opts['pillarenv'],
+                                _pillar_rend=True,
+                                )
+                            ]
             else:
                 for saltenv in self._get_envs():
                     top = self.client.cache_file(
