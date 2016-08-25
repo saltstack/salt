@@ -21,7 +21,7 @@ ensure_in_syspath('../')
 import salt.state
 import salt.config
 import salt.exceptions
-from salt.utils.odict import OrderedDict
+from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
