@@ -53,7 +53,7 @@ class LocalClientTestCase(TestCase,
 
     @patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
                                                         'minion2': ['first.func', 'second.func']})
-    def test_cmd_subset(self):
+    def test_cmd_subset(self, cmd_mock):
         with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
             self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
             try:
