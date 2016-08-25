@@ -678,7 +678,7 @@ Changes:
 
 - **PR** `#33961`_: (*jacobhammons*) 2016.3.0 known issues update
 
-- **PR** `#33908`_: (*ticosax*) [boto_lambda] handle ommitted Permissions parameter
+- **PR** `#33908`_: (*ticosax*) [boto_lambda] handle omitted Permissions parameter
 
 - **PR** `#33896`_: (*DmitryKuzmenko*) Don't deep copy context dict values.
 

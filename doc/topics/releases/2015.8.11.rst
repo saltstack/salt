@@ -289,7 +289,7 @@ Changes:
 
 - **PR** `#33474`_: (*cachedout*) Fix diskusage beacon
 
-- **PR** `#33465`_: (*meaksh*) jobs.exit_success allow to check if a job has executed and exit successfully
+- **PR** `#33465`_: (*meaksh*) jobs.exit_success allow one to check if a job has executed and exit successfully
 
 - **PR** `#33487`_: (*jtand*) Add docstring examples to glance.py and nova.py [2015.8]
 
@@ -333,7 +333,7 @@ Changes:
 
 * c9d0de4 Documentation update in file.serialize. (`#33421`_)
 
-* f8a90eb Fix LVM parameter devices as a pure list. Comma seperated lists are câ¦ (`#33398`_)
+* f8a90eb Fix LVM parameter devices as a pure list. Comma separated lists are câ¦ (`#33398`_)
 
 * 3989e5b Spelling correction. (`#33406`_)
 
