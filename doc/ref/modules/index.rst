@@ -336,7 +336,7 @@ in the minion config file:
       pkg: aptpkg
 
 The above example will force the minion to use the :py:mod:`systemd
-<salt.modules.systemd>` module to provide service mangement, and the
+<salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
 .. __: https://github.com/saltstack/salt/issues/new

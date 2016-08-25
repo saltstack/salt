@@ -13,7 +13,7 @@ filesystem is within the specified limits.
       disk.status:
         - name: /dev/xda1
         - maximum: 79%
-        - minumum: 11%
+        - minimum: 11%
 
 It can be used with an ``onfail`` requisite, for example, to take additional
 action in response to or in preparation for other states.
