@@ -261,9 +261,17 @@ def chshell(name, shell):
     return info(name).get('shell') == shell
 
 
-def chhome(name, home):
+def chhome(name, home, persist=False):
     '''
     Change the home directory of the user
+
+    Args:
+        name (str): The name of the user to change
+        home (str): The new location of the home directory
+        persist (bool): True to copy files from the old to the new directory
+
+    Returns:
+        bool: True for success, False otherwise
 
     CLI Example:
 
@@ -284,6 +292,11 @@ def chhome(name, home):
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
+
+    # If persist, move the home directory contents to the new location
+    if persist:
+        __salt__['cmd.run'](['mv', pre_info['home'], home])
+
     return info(name).get('home') == home
 
 
