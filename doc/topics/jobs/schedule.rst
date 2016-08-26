@@ -3,11 +3,16 @@ In Salt versions greater than 0.12.0, the scheduling system allows incremental
 executions on minions or the master. The schedule system exposes the execution
 of any execution function on minions or any runner on the master.
 
-Scheduling is enabled via the ``schedule`` option on either the master or minion
-config files, or via a minion's pillar data. Schedules that are impletemented via
-pillar data, only need to refresh the minion's pillar data, for example by using
-``saltutil.refresh_pillar``. Schedules implemented in the master or minion config
-have to restart the application in order for the schedule to be implemented.
+Scheduling can be enabled by multiple methods:
+
+- ``schedule`` option in either the master or minion config files.  These
+  require the master or minion application to be restarted in order for the
+  schedule to be implemented.
+
+- Minion pillar data.  Schedule is implemented by refreshing the minion's pillar data,
+  for example by using ``saltutil.refresh_pillar``.
+  
+- The :doc:`schedule state</ref/states/all/salt.states.schedule>` or :doc:`schedule module</ref/modules/all/salt.modules.schedule>`
 
 .. note::
 
