@@ -474,11 +474,11 @@ def update_one(objects, collection, user=None, password=None,
     database, authdb)
     if not isinstance(test_f, list):
         return "The find result is not well formatted. An error "+ \
-        "appear; cannot update."
+        "appears; cannot update."
     elif len(test_f) < 1:
         return "Did not find any result. You should try an insert before"
     elif len(test_f) > 1:
-        return "Too much results... Try to more specific."
+        return "Too much results... Try to be more specific."
     else:
         try:
             log.info("Updating %r into %s.%s", _id_field, database, \
