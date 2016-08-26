@@ -106,6 +106,7 @@ MOCK_MODULES = [
     'tornado.stack_context',
     'tornado.web',
     'tornado.websocket',
+    'tornado.locks',
 
     'ws4py',
     'ws4py.server',
