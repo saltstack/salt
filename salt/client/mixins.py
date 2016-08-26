@@ -358,7 +358,7 @@ class SyncClientMixin(object):
                 # kwargs using the old mechanism
                 if kwargs:
                     salt.utils.warn_until(
-                        'Carbon',
+                        'Nitrogen',
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:
