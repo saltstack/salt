@@ -1035,6 +1035,20 @@ environments is to isolate via the top file.
 
     environment: dev
 
+.. conf_minion:: state_top_saltenv
+
+``state_top_saltenv``
+---------------------
+
+Default: not set
+
+Set this option to an environment name, to ensure that *only* the top file from
+that environment is considered during a :ref:`highstate <running-highstate>`.
+
+.. code-block:: yaml
+
+    state_top_saltenv: base
+
 .. conf_minion:: top_file_merging_strategy
 
 ``top_file_merging_strategy``
@@ -1047,11 +1061,11 @@ for a :ref:`highstate <running-highstate>`, all environments' top files are
 inspected. This config option determines how the SLS targets in those top files
 are handled.
 
-When set to ``merge``, the targets for all SLS files in all environments are
-merged together. A given environment's SLS targets for the highstate will
-consist of the collective SLS targets specified for that environment in all top
-files. The environments will be merged in no specific order, for greater
-control over the order in which the environments are merged use
+When set to the default value of ``merge``, all SLS files are interpreted. The
+first target expression for a given environment is kept, and when the same
+target expression is used in a different top file evaluated later, it is
+ignored. The environments will be evaluated in no specific order, for greater
+control over the order in which the environments are evaluated use
 :conf_minion:`env_order`.
 
 When set to ``same``, then for each environment, only that environment's top
@@ -1075,7 +1089,7 @@ Default: ``[]``
 
 When :conf_minion:`top_file_merging_strategy` is set to ``merge``, and no
 environment is specified for a :ref:`highstate <running-highstate>`, this
-config option allows for the order in which top files are merged to be
+config option allows for the order in which top files are evaluated to be
 explicitly defined.
 
 .. code-block:: yaml
