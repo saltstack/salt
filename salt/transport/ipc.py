@@ -696,21 +696,27 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: {0}'.format(exc))
 
+    @tornado.gen.coroutine
+    def _connect_and_read(self, callback):
+        while not self.connected():
+            try:
+                yield self.connect(timeout=5)
+            except tornado.iostream.StreamClosedError:
+                log.trace('Subscriber closed stream on IPC {0} before connect'.format(self.socket_path))
+                yield tornado.gen.sleep(1)
+            except Exception as exc:
+                log.error('Exception occurred while Subscriber connecting: {0}'.format(exc))
+                yield tornado.gen.sleep(1)
+        yield self._read_async(callback)
+
     def read_async(self, callback):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
         :param callback: A callback with the received data
         '''
-        while not self.connected():
-            try:
-                self.connect()
-            except tornado.iostream.StreamClosedError:
-                log.trace('Subscriber closed stream on IPC {0} before connect'.format(self.socket_path))
-            except Exception as exc:
-                log.error('Exception occurred while Subscriber connecting: {0}'.format(exc))
-
-        self.io_loop.spawn_callback(self._read_async, callback)
+        future = self._connect_and_read(callback)
+        return future
 
     def close(self):
         '''
