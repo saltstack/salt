@@ -270,6 +270,9 @@ class IPCClient(object):
         if hasattr(self, '_connecting_future') and not self._connecting_future.done():  # pylint: disable=E0203
             future = self._connecting_future  # pylint: disable=E0203
         else:
+            if hasattr(self, '_connecting_future'):
+                # read previous future result to prevent the "unhandled future exception" error
+                self._connecting_future.exc_info()  # pylint: disable=E0203
             future = tornado.concurrent.Future()
             self._connecting_future = future
             self._connect(timeout=timeout)
