@@ -750,7 +750,7 @@ def installed(
         package version will be installed à la ``pkg.latest``.
 
     :param bool refresh:
-        This parameter controls whether or not the packge repo database is
+        This parameter controls whether or not the package repo database is
         updated prior to installing the requested package(s).
 
         If ``True``, the package database will be refreshed (``apt-get
@@ -1682,7 +1682,7 @@ def latest(
         Skip the GPG verification check for the package to be installed
 
     refresh
-        This parameter controls whether or not the packge repo database is
+        This parameter controls whether or not the package repo database is
         updated prior to checking for the latest available version of the
         requested packages.
 
