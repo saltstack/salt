@@ -39,14 +39,12 @@ from __future__ import absolute_import
 import os
 import logging
 import re
-
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
-
 try:
     import win32net
     import win32security
@@ -1996,7 +1994,7 @@ def _findOptionValueInSeceditFile(option):
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
         return True, 'Not Defined'
-    except:
+    except Exception as e:
         log.debug('error occurred while trying to get secedit data')
         return False, None
 
@@ -2021,7 +2019,7 @@ def _importSeceditConfig(infdata):
         _ret = __salt__['file.remove'](_tSdbfile)
         _ret = __salt__['file.remove'](_tInfFile)
         return True
-    except:
+    except Exception as e:
         log.debug('error occurred while trying to import secedit data')
         return False
 
@@ -2474,7 +2472,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = range(1, len(this_element_value) + 1)
+                element_valuenames = list(range(1, len(this_element_value) + 1))
             if 'additive' in element.attrib:
                 if element.attrib['additive'].lower() == 'false':
                     # a delete values will be added before all the other
@@ -2502,7 +2500,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                     expected_string = del_keys
                     log.debug('element_valuenames == {0} and element_values == {1}'.format(element_valuenames,
                                                                                            element_values))
-                    for i in range(len(element_valuenames)):
+                    for i, item in enumerate(element_valuenames):
                         expected_string = expected_string + standard_layout.format(
                                                 chr(0),
                                                 reg_key,
@@ -3553,10 +3551,10 @@ def get(policy_class=None, return_full_policy_names=True,
     if policy_class:
         if policy_class.lower() == 'both':
             policy_class = _policydata.policies.keys()
-        elif policy_class.lower() not in _policydata.policies.keys():
-            msg = 'The policy_class {0} is not an available policy class, please use one of the following: {1}'
+        elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
+            msg = 'The policy_class {0} is not an available policy class, please use one of the following: {1}, Both'
             raise SaltInvocationError(msg.format(policy_class,
-                                                 ', '.join(_policydata.policies.keys().append('Both'))))
+                                                 ', '.join(_policydata.policies.keys())))
         else:
             policy_class = [policy_class.title()]
     else:
