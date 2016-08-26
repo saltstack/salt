@@ -307,7 +307,7 @@ class GitProvider(object):
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         self.hash = hash_type(self.id).hexdigest()
         self.cachedir_basename = getattr(self, 'name', self.hash)
-        self.cachedir = os.path.join(cache_root, self.cachedir_basename)
+        self.cachedir = salt.utils.path_join(cache_root, self.cachedir_basename)
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -360,7 +360,7 @@ class GitProvider(object):
         return ret
 
     def _get_lock_file(self, lock_type='update'):
-        return os.path.join(self.gitdir, lock_type + '.lk')
+        return salt.utils.path_join(self.gitdir, lock_type + '.lk')
 
     @classmethod
     def add_conf_overlay(cls, name):
@@ -404,7 +404,7 @@ class GitProvider(object):
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = os.path.join(self.cachedir, self.root()).rstrip(os.sep)
+        root_dir = salt.utils.path_join(self.cachedir, self.root).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -809,7 +809,7 @@ class GitPython(GitProvider):
                 log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
-        self.gitdir = os.path.join(self.repo.working_dir, '.git')
+        self.gitdir = salt.utils.path_join(self.repo.working_dir, '.git')
 
         if not self.repo.remotes:
             try:
@@ -844,7 +844,7 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
@@ -920,7 +920,7 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
@@ -962,9 +962,7 @@ class GitPython(GitProvider):
                     stream.seek(0)
                     link_tgt = stream.read()
                     stream.close()
-                    path = os.path.normpath(
-                        os.path.join(os.path.dirname(path), link_tgt)
-                    )
+                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = file_blob
                     break
@@ -1291,7 +1289,7 @@ class Pygit2(GitProvider):
                 log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
-        self.gitdir = os.path.join(self.repo.workdir, '.git')
+        self.gitdir = salt.utils.path_join(self.repo.workdir, '.git')
 
         if not self.repo.remotes:
             try:
@@ -1332,9 +1330,9 @@ class Pygit2(GitProvider):
                 blob = self.repo[entry.oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
-                blobs.append(os.path.join(prefix, entry.name))
+                blobs.append(salt.utils.path_join(prefix, entry.name))
                 if len(blob):
-                    _traverse(blob, blobs, os.path.join(prefix, entry.name))
+                    _traverse(blob, blobs, salt.utils.path_join(prefix, entry.name))
 
         ret = set()
         tree = self.get_tree(tgt_env)
@@ -1354,7 +1352,7 @@ class Pygit2(GitProvider):
         blobs = []
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -1442,13 +1440,13 @@ class Pygit2(GitProvider):
                     continue
                 obj = self.repo[entry.oid]
                 if isinstance(obj, pygit2.Blob):
-                    repo_path = os.path.join(prefix, entry.name)
+                    repo_path = salt.utils.path_join(prefix, entry.name)
                     blobs.setdefault('files', []).append(repo_path)
                     if stat.S_ISLNK(tree[entry.name].filemode):
                         link_tgt = self.repo[tree[entry.name].oid].data
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, pygit2.Tree):
-                    _traverse(obj, blobs, os.path.join(prefix, entry.name))
+                    _traverse(obj, blobs, salt.utils.path_join(prefix, entry.name))
 
         files = set()
         symlinks = {}
@@ -1472,7 +1470,7 @@ class Pygit2(GitProvider):
         blobs = {}
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1504,9 +1502,7 @@ class Pygit2(GitProvider):
                     # the symlink and set path to the location indicated
                     # in the blob data.
                     link_tgt = self.repo[entry.oid].data
-                    path = os.path.normpath(
-                        os.path.join(os.path.dirname(path), link_tgt)
-                    )
+                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = self.repo[entry.oid]
                     break
@@ -1687,9 +1683,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     continue
                 if not isinstance(obj, dulwich.objects.Tree):
                     continue
-                blobs.append(os.path.join(prefix, item.path))
+                blobs.append(salt.utils.path_join(prefix, item.path))
                 if len(self.repo.get_object(item.sha)):
-                    _traverse(obj, blobs, os.path.join(prefix, item.path))
+                    _traverse(obj, blobs, salt.utils.path_join(prefix, item.path))
 
         ret = set()
         tree = self.get_tree(tgt_env)
@@ -1703,7 +1699,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -1804,14 +1800,14 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     # Entry is a submodule, skip it
                     continue
                 if isinstance(obj, dulwich.objects.Blob):
-                    repo_path = os.path.join(prefix, item.path)
+                    repo_path = salt.utils.path_join(prefix, item.path)
                     blobs.setdefault('files', []).append(repo_path)
                     mode, oid = tree[item.path]
                     if stat.S_ISLNK(mode):
                         link_tgt = self.repo.get_object(oid).as_raw_string()
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, dulwich.objects.Tree):
-                    _traverse(obj, blobs, os.path.join(prefix, item.path))
+                    _traverse(obj, blobs, salt.utils.path_join(prefix, item.path))
 
         files = set()
         symlinks = {}
@@ -1826,7 +1822,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: os.path.join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1862,9 +1858,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     # symlink. Follow the symlink and set path to the
                     # location indicated in the blob data.
                     link_tgt = self.repo.get_object(oid).as_raw_string()
-                    path = os.path.normpath(
-                        os.path.join(os.path.dirname(path), link_tgt)
-                    )
+                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = self.repo.get_object(oid)
                     break
@@ -1880,7 +1874,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Returns a dulwich.config.ConfigFile object for the specified repo
         '''
         return dulwich.config.ConfigFile().from_path(
-            os.path.join(self.repo.controldir(), 'config')
+            salt.utils.path_join(self.repo.controldir(), 'config')
         )
 
     def get_remote_url(self, repo):
@@ -1994,7 +1988,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                 log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
-        self.gitdir = os.path.join(self.repo.path, '.git')
+        self.gitdir = salt.utils.path_join(self.repo.path, '.git')
 
         # Read in config file and look for the remote
         try:
@@ -2059,11 +2053,11 @@ class GitBase(object):
         if cache_root is not None:
             self.cache_root = cache_root
         else:
-            self.cache_root = os.path.join(self.opts['cachedir'], self.role)
-        self.env_cache = os.path.join(self.cache_root, 'envs.p')
-        self.hash_cachedir = os.path.join(
+            self.cache_root = salt.utils.path_join(self.opts['cachedir'], self.role)
+        self.env_cache = salt.utils.path_join(self.cache_root, 'envs.p')
+        self.hash_cachedir = salt.utils.path_join(
             self.cache_root, 'hash')
-        self.file_list_cachedir = os.path.join(
+        self.file_list_cachedir = salt.utils.path_join(
             self.opts['cachedir'], 'file_lists', self.role)
 
     def init_remotes(self, remotes, per_remote_overrides,
@@ -2110,7 +2104,7 @@ class GitBase(object):
                 failhard(self.role)
             # ssl_verify should be a bool, everything else a string
             per_remote_defaults[param] = \
-                str(self.opts[key]) if param not in BOOL_PARAMS \
+                six.text_type(self.opts[key]) if param not in BOOL_PARAMS \
                 else self.opts[key]
 
         self.remotes = []
@@ -2211,7 +2205,7 @@ class GitBase(object):
         for item in cachedir_ls:
             if item in ('hash', 'refs'):
                 continue
-            path = os.path.join(self.cache_root, item)
+            path = salt.utils.path_join(self.cache_root, item)
             if os.path.isdir(path):
                 to_remove.append(path)
         failed = []
@@ -2266,7 +2260,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, str(remote)):
+                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
                         continue
             success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
@@ -2311,7 +2305,7 @@ class GitBase(object):
                         continue
                 except TypeError:
                     # remote was non-string, try again
-                    if not fnmatch.fnmatch(repo.url, str(remote)):
+                    if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
                         continue
             success, failed = repo.lock()
             locked.extend(success)
@@ -2578,7 +2572,7 @@ class GitBase(object):
         '''
         Write the remote_map.txt
         '''
-        remote_map = os.path.join(self.cache_root, 'remote_map.txt')
+        remote_map = salt.utils.path_join(self.cache_root, 'remote_map.txt')
         try:
             with salt.utils.fopen(remote_map, 'w+') as fp_:
                 timestamp = \
@@ -2680,16 +2674,16 @@ class GitFS(GitBase):
                 (not salt.utils.is_hex(tgt_env) and tgt_env not in self.envs()):
             return fnd
 
-        dest = os.path.join(self.cache_root, 'refs', tgt_env, path)
-        hashes_glob = os.path.join(self.hash_cachedir,
-                                   tgt_env,
-                                   '{0}.hash.*'.format(path))
-        blobshadest = os.path.join(self.hash_cachedir,
-                                   tgt_env,
-                                   '{0}.hash.blob_sha1'.format(path))
-        lk_fn = os.path.join(self.hash_cachedir,
-                             tgt_env,
-                             '{0}.lk'.format(path))
+        dest = salt.utils.path_join(self.cache_root, 'refs', tgt_env, path)
+        hashes_glob = salt.utils.path_join(self.hash_cachedir,
+                                           tgt_env,
+                                           '{0}.hash.*'.format(path))
+        blobshadest = salt.utils.path_join(self.hash_cachedir,
+                                           tgt_env,
+                                           '{0}.hash.blob_sha1'.format(path))
+        lk_fn = salt.utils.path_join(self.hash_cachedir,
+                                     tgt_env,
+                                     '{0}.lk'.format(path))
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
@@ -2713,7 +2707,7 @@ class GitFS(GitBase):
                 continue
             repo_path = path[len(repo.mountpoint(tgt_env)):].lstrip(os.sep)
             if repo.root(tgt_env):
-                repo_path = os.path.join(repo.root(tgt_env), repo_path)
+                repo_path = salt.utils.path_join(repo.root(tgt_env), repo_path)
 
             blob, blob_hexsha, blob_mode = repo.find_file(repo_path, tgt_env)
             if blob is None:
@@ -2819,10 +2813,10 @@ class GitFS(GitBase):
         ret = {'hash_type': self.opts['hash_type']}
         relpath = fnd['rel']
         path = fnd['path']
-        hashdest = os.path.join(self.hash_cachedir,
-                                load['saltenv'],
-                                '{0}.hash.{1}'.format(relpath,
-                                                      self.opts['hash_type']))
+        hashdest = salt.utils.path_join(self.hash_cachedir,
+                                        load['saltenv'],
+                                        '{0}.hash.{1}'.format(relpath,
+                                                              self.opts['hash_type']))
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
@@ -2858,11 +2852,11 @@ class GitFS(GitBase):
                     )
                 )
                 return []
-        list_cache = os.path.join(
+        list_cache = salt.utils.path_join(
             self.file_list_cachedir,
             '{0}.p'.format(load['saltenv'].replace(os.path.sep, '_|-'))
         )
-        w_lock = os.path.join(
+        w_lock = salt.utils.path_join(
             self.file_list_cachedir,
             '.{0}.w'.format(load['saltenv'].replace(os.path.sep, '_|-'))
         )
