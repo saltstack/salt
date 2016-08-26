@@ -2485,6 +2485,10 @@ class SyndicManager(MinionBase):
                 break
             master_id = masters.pop(0)
 
+    def reconnect_event_bus(self, something):
+        future = self.local.event.set_event_handler(self._process_event)
+        self.io_loop.add_future(future, self.reconnect_event_bus)
+
     # Syndic Tune In
     def tune_in(self):
         '''
@@ -2501,7 +2505,8 @@ class SyndicManager(MinionBase):
         # register the event sub to the poller
         self.job_rets = {}
         self.raw_events = []
-        self.local.event.set_event_handler(self._process_event)
+        future = self.local.event.set_event_handler(self._process_event)
+        self.io_loop.add_future(future, self.reconnect_event_bus)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
