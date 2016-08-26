@@ -283,7 +283,7 @@ def managed(name, ppa=None, **kwargs):
 
     if 'enabled' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
+            'Nitrogen',
             'The `enabled` argument has been deprecated in favor of '
             '`disabled`.'
         )
