@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 __testcontext__ = {}
 
 _PKG_TARGETS = {
-    'Arch': ['python2-django', 'libpng'],
+    'Arch': ['python2-django', 'tcping'],
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
@@ -232,6 +232,11 @@ class PkgTest(integration.ModuleCase,
                              version=version,
                              refresh=False)
         self.assertSaltTrueReturn(ret)
+        ret = self.run_state('pkg.installed',
+                             name=target,
+                             version=version,
+                             refresh=False)
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
@@ -259,6 +264,11 @@ class PkgTest(integration.ModuleCase,
         # packages need to not be installed before we run the states below
         self.assertFalse(any(version.values()))
 
+        ret = self.run_state('pkg.installed',
+                             name=None,
+                             pkgs=pkg_targets,
+                             refresh=False)
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.installed',
                              name=None,
                              pkgs=pkg_targets,
@@ -313,6 +323,11 @@ class PkgTest(integration.ModuleCase,
                              pkgs=pkgs,
                              refresh=False)
         self.assertSaltTrueReturn(ret)
+        ret = self.run_state('pkg.installed',
+                             name=None,
+                             pkgs=pkgs,
+                             refresh=False)
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
 
@@ -346,6 +361,10 @@ class PkgTest(integration.ModuleCase,
             # below
             self.assertFalse(bool(version))
 
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.installed',
                                  name=target,
                                  refresh=False)
@@ -397,6 +416,11 @@ class PkgTest(integration.ModuleCase,
                                  version=version,
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
@@ -423,6 +447,8 @@ class PkgTest(integration.ModuleCase,
             # the target needs to not be installed before we run the
             # pkg.installed state below
             self.assertTrue(bool(version))
+            ret = self.run_state('pkg.installed', name=target, refresh=False)
+            self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.installed', name=target, refresh=False)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
@@ -456,6 +482,11 @@ class PkgTest(integration.ModuleCase,
                                  version=version,
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
@@ -471,6 +502,9 @@ class PkgTest(integration.ModuleCase,
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
+        ret = self.run_state('pkg.installed',
+                             name='bash-completion',
+                             refresh=False)
         ret = self.run_state('pkg.installed',
                              name='bash-completion',
                              refresh=False)
@@ -493,6 +527,8 @@ class PkgTest(integration.ModuleCase,
         package = 'bash-completion'
         pkgquery = 'version'
 
+        ret = self.run_function('pkg.info_installed', [package])
+        self.assertTrue(pkgquery in str(ret))
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
@@ -523,6 +559,8 @@ class PkgTest(integration.ModuleCase,
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
+        ret = self.run_state('pkg.latest', name=target, refresh=False)
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.latest', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
