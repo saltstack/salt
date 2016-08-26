@@ -1261,7 +1261,7 @@ def list_nodes_min(kwargs=None, call=None):
     vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        ret[vm["name"]] = True
+        ret[vm['name']] = {'state': 'Running', 'id': vm['name']}
 
     return ret
 
