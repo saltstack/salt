@@ -2575,7 +2575,7 @@ def _checkAllAdmxPolicies(policy_class,
     policy_filedata = _read_regpol_file(module_policy_data.admx_registry_classes[policy_class]['policy_path'])
     admx_policies = []
     policy_vals = {}
-    heirarchy = {}
+    hierarchy = {}
     if policy_filedata:
         log.debug('POLICY CLASS {0} has file data'.format(policy_class))
         policy_filedata_split = re.sub(r'\]$',
@@ -2898,21 +2898,21 @@ def _checkAllAdmxPolicies(policy_class,
                         if this_policy_setting == 'Enabled':
                             policy_vals[this_policyname] = configured_elements
             if hierarchical_return and this_policyname in policy_vals:
-                heirarchy[this_policyname] = _build_parent_list(admx_policy,
+                hierarchy[this_policyname] = _build_parent_list(admx_policy,
                                                                 admx_policy_definitions,
                                                                 return_full_policy_names,
                                                                 adml_policy_resources)
 
     if policy_vals and hierarchical_return:
-        if heirarchy:
-            for heirarchy_item in heirarchy.keys():
-                if heirarchy_item in policy_vals:
+        if hierarchy:
+            for hierarchy_item in hierarchy.keys():
+                if hierarchy_item in policy_vals:
                     tdict = {}
                     first_item = True
-                    for item in heirarchy[heirarchy_item]:
+                    for item in hierarchy[hierarchy_item]:
                         newdict = {}
                         if first_item:
-                            newdict[item] = {heirarchy_item: policy_vals.pop(heirarchy_item)}
+                            newdict[item] = {hierarchy_item: policy_vals.pop(hierarchy_item)}
                             first_item = False
                         else:
                             newdict[item] = tdict
@@ -2962,7 +2962,7 @@ def _admx_policy_parent_walk(path,
                              return_full_policy_names,
                              adml_policy_resources):
     '''
-    helper function to recursively walk up the ADMX namespaces and build the heirarchy for the policy
+    helper function to recursively walk up the ADMX namespaces and build the hierarchy for the policy
     '''
     category_xpath_string = '/policyDefinitions/categories/{0}:category[@name="{1}"]'
     using_xpath_string = '/policyDefinitions/policyNamespaces/{0}:using'
@@ -3525,7 +3525,7 @@ def get(policy_class=None, return_full_policy_names=True,
         to only return the policy key/id.
 
     :param boolean hierarchical_return:
-        True/False to return the policy data in the heirarchy as seen in the gpedit.msc gui
+        True/False to return the policy data in the hierarchy as seen in the gpedit.msc gui
         The default of False will return data split only into User/Computer configuration sections
 
     :param str adml_language:
@@ -3768,12 +3768,12 @@ def set(computer_policy=None, user_policy=None,
                         else:
                             admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
                                                                   policy_name=policy_name)
-                            heirarchy = []
-                            heirarchy_policy_name = policy_name
+                            hierarchy = []
+                            hierarchy_policy_name = policy_name
                             if not admlSearchResults:
                                 if '\\' in policy_name:
-                                    heirarchy = policy_name.split('\\')
-                                    policy_name = heirarchy.pop()
+                                    hierarchy = policy_name.split('\\')
+                                    policy_name = hierarchy.pop()
                                     admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
                                                                           policy_name=policy_name)
                             if admlSearchResults:
@@ -3790,17 +3790,17 @@ def set(computer_policy=None, user_policy=None,
                                             display_name=display_name_searchval,
                                             registry_class=p_class)
                                     if admxSearchResults:
-                                        if len(admxSearchResults) == 1 or heirarchy:
+                                        if len(admxSearchResults) == 1 or hierarchy:
                                             found = False
                                             for search_result in admxSearchResults:
                                                 found = False
-                                                if heirarchy:
-                                                    this_heirarchy = _build_parent_list(search_result,
+                                                if hierarchy:
+                                                    this_hierarchy = _build_parent_list(search_result,
                                                                                         admxPolicyDefinitions,
                                                                                         True,
                                                                                         admlPolicyResources)
-                                                    this_heirarchy.reverse()
-                                                    if heirarchy == this_heirarchy:
+                                                    this_hierarchy.reverse()
+                                                    if hierarchy == this_hierarchy:
                                                         found = True
                                                 else:
                                                     found = True
@@ -3820,7 +3820,7 @@ def set(computer_policy=None, user_policy=None,
                                                     break
                                             if not found:
                                                 msg = 'Unable to correlate {0} to any policy'
-                                                raise SaltInvocationError(msg.format(heirarchy_policy_name))
+                                                raise SaltInvocationError(msg.format(hierarchy_policy_name))
                                         else:
                                             msg = 'Adml policy name "{0}" is used as the display name'
                                             msg = msg + ' for multiple policies.'
