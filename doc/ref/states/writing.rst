@@ -151,7 +151,7 @@ A State Module must return a dict containing the following keys/values:
 
 - **comment:** A string containing a summary of the result.
 
-The return data can also, include the **pchanges** key, this statnds for
+The return data can also, include the **pchanges** key, this stands for
 `predictive changes`. The **pchanges** key informs the State system what
 changes are predicted to occur.
 

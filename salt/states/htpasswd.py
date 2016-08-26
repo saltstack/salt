@@ -68,9 +68,9 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['changes'] = {name: True}
             return ret
 
-        useradd_ret = __salt__['webutil.useradd_all'](htpasswd_file, name,
-                                                      password, opts=options,
-                                                      runas=runas)
+        useradd_ret = __salt__['webutil.useradd'](htpasswd_file, name,
+                                                  password, opts=options,
+                                                  runas=runas)
         if useradd_ret['retcode'] == 0:
             ret['result'] = True
             ret['comment'] = useradd_ret['stderr']
