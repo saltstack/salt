@@ -430,7 +430,7 @@ Scenario 2 - No Environment Specified, :conf_minion:`top_file_merging_strategy` 
 ------------------------------------------------------------------------------------------
 
 .. versionchanged:: Carbon
-    The default merging strategy has been renamed to from ``merge`` to
+    The default merging strategy has been renamed from ``merge`` to
     ``default`` to reflect the fact that SLS names from identical targets in
     matching environments from multiple top files are not actually merged.
 
