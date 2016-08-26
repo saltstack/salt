@@ -2563,7 +2563,7 @@ def _checkAllAdmxPolicies(policy_class,
                           admx_policy_definitions,
                           adml_policy_resources,
                           return_full_policy_names=False,
-                          heirarchical_return=False,
+                          hierarchical_return=False,
                           return_not_configured=False):
     '''
     rewrite of _getAllAdminTemplateSettingsFromRegPolFile where instead of looking only
@@ -2897,13 +2897,13 @@ def _checkAllAdmxPolicies(policy_class,
                     else:
                         if this_policy_setting == 'Enabled':
                             policy_vals[this_policyname] = configured_elements
-            if heirarchical_return and this_policyname in policy_vals:
+            if hierarchical_return and this_policyname in policy_vals:
                 heirarchy[this_policyname] = _build_parent_list(admx_policy,
                                                                 admx_policy_definitions,
                                                                 return_full_policy_names,
                                                                 adml_policy_resources)
 
-    if policy_vals and heirarchical_return:
+    if policy_vals and hierarchical_return:
         if heirarchy:
             for heirarchy_item in heirarchy.keys():
                 if heirarchy_item in policy_vals:
@@ -3125,7 +3125,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                      admx_policy_definitions,
                                                      adml_policy_resources,
                                                      return_full_policy_names=False,
-                                                     heirarchical_return=False,
+                                                     hierarchical_return=False,
                                                      return_not_configured=False)
         log.debug('preparing to loop through policies requested to be configured')
         for adm_policy in admtemplate_data.keys():
@@ -3509,7 +3509,7 @@ def _writeGpoScript(psscript=False):
 
 
 def get(policy_class=None, return_full_policy_names=True,
-        heirarchical_return=False, adml_language='en-US',
+        hierarchical_return=False, adml_language='en-US',
         return_not_configured=False):
     '''
     Get a policy value
@@ -3524,7 +3524,7 @@ def get(policy_class=None, return_full_policy_names=True,
         True/False to return the policy name as it is seen in the gpedit.msc GUI or
         to only return the policy key/id.
 
-    :param boolean heirarchical_return:
+    :param boolean hierarchical_return:
         True/False to return the policy data in the heirarchy as seen in the gpedit.msc gui
         The default of False will return data split only into User/Computer configuration sections
 
@@ -3609,7 +3609,7 @@ def get(policy_class=None, return_full_policy_names=True,
                 if return_full_policy_names:
                     class_vals[_pol['Policy']] = class_vals.pop(policy_name)
                     vals_key_name = _pol['Policy']
-                if heirarchical_return:
+                if hierarchical_return:
                     if 'lgpo_section' in _pol:
                         firstItem = True
                         tdict = {}
@@ -3631,7 +3631,7 @@ def get(policy_class=None, return_full_policy_names=True,
                                                              admxPolicyDefinitions,
                                                              admlPolicyResources,
                                                              return_full_policy_names=return_full_policy_names,
-                                                             heirarchical_return=heirarchical_return,
+                                                             hierarchical_return=hierarchical_return,
                                                              return_not_configured=return_not_configured))
         if _policydata.policies[p_class]['lgpo_section'] not in class_vals:
             temp_dict = {}
