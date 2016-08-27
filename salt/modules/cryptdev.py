@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'cryptdev'
 
+
 def __virtual__():
     '''
     Only load on POSIX-like systems
@@ -30,6 +31,7 @@ def __virtual__():
         return (False, 'The cryptdev module cannot be loaded: not a POSIX-like system')
     else:
         return True
+
 
 class _crypttab_entry(object):
     '''
@@ -42,7 +44,7 @@ class _crypttab_entry(object):
         '''Error raised when a line isn't parsible as a crypttab entry'''
 
     crypttab_keys = ('name', 'device', 'password', 'options')
-    crypttab_format = '{name}\t\t{device}\t\t\t\t{password}\t\t\t{options}'
+    crypttab_format = '{name: <12} {device: <44} {password: <22} {options}\n'
 
     @classmethod
     def dict_from_line(cls, line, keys=crypttab_keys):
@@ -131,6 +133,7 @@ def crypttab(config='/etc/crypttab'):
 
     return ret
 
+
 def rm_crypttab(name, device, config='/etc/crypttab'):
     '''
     Remove the device point from the crypttab
@@ -173,3 +176,104 @@ def rm_crypttab(name, device, config='/etc/crypttab'):
 
     # If we reach this point, the changes were successful
     return True
+
+
+def set_crypttab(
+        name,
+        device,
+        password='none',
+        options='',
+        config='/etc/crypttab',
+        test=False,
+        match_on='name',
+        **kwargs):
+    '''
+    Verify that this device is represented in the crypttab, change the device to
+    match the name passed, or add the name if it is not present.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cryptdev.set_crypttab foo /dev/sdz1 mypassword swap,size=256
+    '''
+
+    # Fix the options type if it is a list
+    if isinstance(options, list):
+        options = ','.join(options)
+
+    # preserve arguments for updating
+    entry_args = {
+        'name': name,
+        'device': device,
+        'password': password,
+        'options': options,
+    }
+
+    lines = []
+    ret = None
+
+    # Transform match_on into list--items will be checked later
+    if isinstance(match_on, list):
+        pass
+    elif not isinstance(match_on, six.string_types):
+        msg = 'match_on must be a string or list of strings'
+        raise CommandExecutionError(msg)
+    else:
+        match_on = [match_on]
+
+    # generate entry and criteria objects, handle invalid keys in match_on
+    entry = _crypttab_entry(**entry_args)
+    try:
+        criteria = entry.pick(match_on)
+
+    except KeyError:
+        filterFn = lambda key: key not in _crypttab_entry.crypttab_keys
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        raise CommandExecutionError(msg)
+
+    # parse file, use ret to cache status
+    if not os.path.isfile(config):
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                try:
+                    if criteria.match(line):
+                        # Note: If ret isn't None here,
+                        # we've matched multiple lines
+                        ret = 'present'
+                        if entry.match(line):
+                            lines.append(line)
+                        else:
+                            ret = 'change'
+                            lines.append(str(entry))
+                    else:
+                        lines.append(line)
+
+                except _crypttab_entry.ParseError:
+                    lines.append(line)
+
+    except (IOError, OSError) as exc:
+        msg = 'Couldn\'t read from {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # add line if not present or changed
+    if ret is None:
+        lines.append(str(entry))
+        ret = 'new'
+
+    if ret != 'present':  # ret in ['new', 'change']:
+        if not salt.utils.test_mode(test=test, **kwargs):
+            try:
+                with salt.utils.fopen(config, 'w+') as ofile:
+                    # The line was changed, commit it!
+                    ofile.writelines(lines)
+            except (IOError, OSError):
+                msg = 'File not writable {0}'
+                raise CommandExecutionError(msg.format(config))
+
+    return ret
