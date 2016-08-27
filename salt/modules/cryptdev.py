@@ -130,3 +130,46 @@ def crypttab(config='/etc/crypttab'):
                 pass
 
     return ret
+
+def rm_crypttab(name, device, config='/etc/crypttab'):
+    '''
+    Remove the device point from the crypttab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cryptdev.rm_crypttab foo /dev/sdg
+    '''
+    modified = False
+    criteria = _crypttab_entry(name=name, device=device)
+
+    # For each line in the config that does not match the criteria, add it to
+    # the list. At the end, re-create the config from just those lines.
+    lines = []
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                try:
+                    if criteria.match(line):
+                        modified = True
+                    else:
+                        lines.append(line)
+
+                except _crypttab_entry.ParseError:
+                    lines.append(line)
+
+    except (IOError, OSError) as exc:
+        msg = "Couldn't read from {0}: {1}"
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    if modified:
+        try:
+            with salt.utils.fopen(config, 'w+') as ofile:
+                ofile.writelines(lines)
+        except (IOError, OSError) as exc:
+            msg = "Couldn't write to {0}: {1}"
+            raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # If we reach this point, the changes were successful
+    return True
