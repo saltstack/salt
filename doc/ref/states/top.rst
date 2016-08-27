@@ -437,9 +437,8 @@ Scenario 2 - No Environment Specified, :conf_minion:`top_file_merging_strategy` 
 In this scenario, assuming that the ``base`` environment's top file was
 evaluated first, the ``base1``, ``dev1``, and ``qa1`` states would be applied
 to all minions. If, for instance, the ``qa`` environment is not defined in
-**/srv/salt/base/top.sls**, then the ``qa`` section in
-**/srv/salt/dev/top.sls** would be used and the ``qa2`` states would be applied
-to all minions.
+**/srv/salt/base/top.sls**, then because there is no top file for the ``qa``
+environment, no states from the ``qa`` environment would be applied.
 
 Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "same"
 -----------------------------------------------------------------------------------------
