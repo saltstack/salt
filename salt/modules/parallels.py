@@ -266,6 +266,58 @@ def delete(name, runas=None):
     return prlctl('delete', _sdecode(name), runas=runas)
 
 
+def exists(name, runas=None):
+    '''
+    Query whether a VM exists
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.exists macvm runas=macdev
+    '''
+    vm_info = list_vms(name, info=True, runas=runas).splitlines()
+    for info_line in vm_info:
+        if 'Name: {0}'.format(name) in info_line:
+            return True
+    return False
+
+
+def state(name, runas=None):
+    '''
+    Return the state of the VM
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.state macvm runas=macdev
+    '''
+    vm_info = list_vms(name, info=True, runas=runas).splitlines()
+    for info_line in vm_info:
+        if 'State: ' in info_line:
+            return info_line.split('State: ')[1]
+
+    log.error('Cannot find state of VM named {0}'.format(name))
+    return ''
+
+
 def start(name, runas=None):
     '''
     Start a VM
@@ -454,7 +506,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
         data = yaml.safe_load(info)
     except yaml.YAMLError as err:
         log.warning(
-            'Could not interpret snapshot data returned from parallels deskop: '
+            'Could not interpret snapshot data returned from prlctl: '
             '{0}'.format(err)
         )
         data = {}
@@ -467,7 +519,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
             snap_name = ''
     else:
         log.warning(
-            u'Could not interpret snapshot data returned from parallels deskop: '
+            u'Could not interpret snapshot data returned from prlctl: '
             u'data is not formed as a dictionary: {0}'.format(data)
         )
         snap_name = ''
