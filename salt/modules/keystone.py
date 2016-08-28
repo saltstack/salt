@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for handling openstack keystone calls.
+Module for handling openstack keystone calls
 
 :optdepends:    - keystoneclient Python adapter
 :configuration: This module is not usable until the following are specified
