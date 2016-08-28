@@ -86,10 +86,12 @@ def _api_version(**connection_args):
     '''
     global _TENANT_ID
     global _OS_IDENTITY_API_VERSION
-    if __salt__['keystone.api_version'](**connection_args) >= 'v3':
-        _TENANT_ID = 'project_id'
-        _OS_IDENTITY_API_VERSION = 3
-
+    try:
+        if __salt__['keystone.api_version'](**connection_args) >= 'v3':
+            _TENANT_ID = 'project_id'
+            _OS_IDENTITY_API_VERSION = 3
+    except KeyError:
+        pass
 
 def user_present(name,
                  password,

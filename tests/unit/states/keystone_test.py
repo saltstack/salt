@@ -214,8 +214,7 @@ class KeystoneTestCase(TestCase):
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Role "{0}" will be added'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Role': 'Will be created'}})
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.role_present(name), ret)
 
     # 'role_absent' function tests: 1
@@ -261,8 +260,7 @@ class KeystoneTestCase(TestCase):
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Service "{0}" will be added'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Service': 'Will be created'}})
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.service_present(name,
                                                               service_type),
                                      ret)
