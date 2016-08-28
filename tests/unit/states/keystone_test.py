@@ -124,9 +124,8 @@ class KeystoneTestCase(TestCase):
             self.assertDictEqual(keystone.user_absent(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
-                comt = ('User "{0}" will be deleted'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'User': 'Will be deleted'}})
+                comt = 'User "{0}" will be deleted'.format(name)
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.user_absent(name), ret)
 
     # 'tenant_present' function tests: 1
@@ -185,16 +184,15 @@ class KeystoneTestCase(TestCase):
         ret = {'name': name,
                'changes': {},
                'result': True,
-               'comment': 'Tenant "{0}" is already absent'.format(name)}
+               'comment': 'Tenant / project "{0}" is already absent'.format(name)}
 
         mock_lst = MagicMock(side_effect=[['Error'], []])
         with patch.dict(keystone.__salt__, {'keystone.tenant_get': mock_lst}):
             self.assertDictEqual(keystone.tenant_absent(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
-                comt = ('Tenant "{0}" will be deleted'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Tenant': 'Will be deleted'}})
+                comt = 'Tenant / project "{0}" will be deleted'.format(name)
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.tenant_absent(name), ret)
 
     # 'role_present' function tests: 1
@@ -238,9 +236,8 @@ class KeystoneTestCase(TestCase):
             self.assertDictEqual(keystone.role_absent(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
-                comt = ('Role "{0}" will be deleted'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Role': 'Will be deleted'}})
+                comt = 'Role "{0}" will be deleted'.format(name)
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.role_absent(name), ret)
 
     # 'service_present' function tests: 1
@@ -288,9 +285,8 @@ class KeystoneTestCase(TestCase):
             self.assertDictEqual(keystone.service_absent(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
-                comt = ('Service "{0}" will be deleted'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Service': 'Will be deleted'}})
+                comt = 'Service "{0}" will be deleted'.format(name)
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.service_absent(name), ret)
 
     # 'endpoint_present' function tests: 1
@@ -360,8 +356,7 @@ class KeystoneTestCase(TestCase):
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Endpoint for service "{0}" will be deleted'
                         .format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'endpoint': 'Will be deleted'}})
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(keystone.endpoint_absent(name), ret)
 
 
