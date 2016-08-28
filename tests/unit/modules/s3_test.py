@@ -19,10 +19,10 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-import salt.utils.s3
 from salt.modules import s3
 
 s3.__salt__ = {}
+s3.__utils__ = {'s3.query': MagicMock(return_value='A')}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -47,8 +47,7 @@ class S3TestCase(TestCase):
                           return_value=('key', 'keyid', 'service_url',
                                         'verify_ssl', 'kms_keyid', 'location',
                                         'role_arn')):
-            with patch.object(salt.utils.s3, 'query', return_value='A'):
-                self.assertEqual(s3.delete('bucket'), 'A')
+            self.assertEqual(s3.delete('bucket'), 'A')
 
     def test_get(self):
         '''
@@ -59,8 +58,7 @@ class S3TestCase(TestCase):
                           return_value=('key', 'keyid', 'service_url',
                                         'verify_ssl', 'kms_keyid', 'location',
                                         'role_arn')):
-            with patch.object(salt.utils.s3, 'query', return_value='A'):
-                self.assertEqual(s3.get(), 'A')
+            self.assertEqual(s3.get(), 'A')
 
     def test_head(self):
         '''
@@ -70,8 +68,7 @@ class S3TestCase(TestCase):
                           return_value=('key', 'keyid', 'service_url',
                                         'verify_ssl', 'kms_keyid', 'location',
                                         'role_arn')):
-            with patch.object(salt.utils.s3, 'query', return_value='A'):
-                self.assertEqual(s3.head('bucket'), 'A')
+            self.assertEqual(s3.head('bucket'), 'A')
 
     def test_put(self):
         '''
@@ -81,8 +78,7 @@ class S3TestCase(TestCase):
                           return_value=('key', 'keyid', 'service_url',
                                         'verify_ssl', 'kms_keyid', 'location',
                                         'role_arn')):
-            with patch.object(salt.utils.s3, 'query', return_value='A'):
-                self.assertEqual(s3.put('bucket'), 'A')
+            self.assertEqual(s3.put('bucket'), 'A')
 
 
 if __name__ == '__main__':

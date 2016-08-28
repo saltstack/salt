@@ -136,7 +136,7 @@ def present(
         The ID of the VPC to create the security group in, if any. Exclusive with vpc_name.
 
     vpc_name
-        The name of the VPC to create the security group in, if any. Exlusive with vpc_id.
+        The name of the VPC to create the security group in, if any. Exclusive with vpc_id.
 
         .. versionadded:: 2016.3.0
 

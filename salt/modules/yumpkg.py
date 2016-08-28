@@ -824,7 +824,7 @@ def refresh_db(**kwargs):
         Do not refresh the specified repo
 
     enablerepo
-        Refesh a disabled repo using this option
+        Refresh a disabled repo using this option
 
     branch
         Add the specified branch when refreshing
