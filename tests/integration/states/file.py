@@ -109,11 +109,12 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         mode=oct(initial_mode),
         source=grail,
     )
+
     if IS_WINDOWS:
         testcase.assertSaltFalseReturn(ret)
         return
-    else:
-        testcase.assertSaltTrueReturn(ret)
+
+    testcase.assertSaltTrueReturn(ret)
 
     try:
         # Update the mode on the fileserver (pass 1)
@@ -273,12 +274,13 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             expected = 'The \'mode\' option is not supported on Windows'
             self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
-        else:
-            resulting_mode = stat.S_IMODE(
-                os.stat(name).st_mode
-            )
-            self.assertEqual(oct(desired_mode), oct(resulting_mode))
-            self.assertSaltTrueReturn(ret)
+            return
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
 
     def test_managed_file_mode_keep(self):
         '''
@@ -308,21 +310,22 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             expected = 'The \'mode\' option is not supported on Windows'
             self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
-        else:
-            resulting_mode = stat.S_IMODE(
-                os.stat(name).st_mode
-            )
-            self.assertEqual(oct(initial_mode), oct(resulting_mode))
+            return
 
-            name = os.path.join(integration.TMP, 'grail_scene33')
-            ret = self.run_state(
-                'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
-            )
-            resulting_mode = stat.S_IMODE(
-                os.stat(name).st_mode
-            )
-            self.assertEqual(oct(desired_mode), oct(resulting_mode))
-            self.assertSaltTrueReturn(ret)
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
 
     def test_managed_file_mode_file_exists_noreplace(self):
         '''
@@ -339,16 +342,16 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             expected = 'The \'mode\' option is not supported on Windows'
             self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
-        else:
+            return
 
-            ret = self.run_state(
-                'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
-            )
-            resulting_mode = stat.S_IMODE(
-                os.stat(name).st_mode
-            )
-            self.assertEqual(oct(desired_mode), oct(resulting_mode))
-            self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     def test_managed_file_with_grains_data(self):
@@ -416,7 +419,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertTrue(check_file)
 
     @skipIf(not IS_ADMIN, 'you must be root to run this test')
-    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -434,6 +436,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             user=desired_owner,
             dir_mode=oct(desired_mode)  # 0777
         )
+        if IS_WINDOWS:
+            expected = 'The \'mode\' option is not supported on Windows'
+            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertSaltFalseReturn(ret)
+            return
+
         resulting_mode = stat.S_IMODE(
             os.stat(os.path.join(integration.TMP, 'a')).st_mode
         )
