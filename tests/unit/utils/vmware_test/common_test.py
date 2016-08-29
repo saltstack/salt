@@ -403,7 +403,7 @@ class GetContentTestCase(TestCase):
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=False,
+            name='traverseEntities', path='view', skip=True,
             type=vim.view.ContainerView)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.container_view_mock,
@@ -441,7 +441,7 @@ class GetContentTestCase(TestCase):
                             self.si_mock,
                             self.obj_type_mock)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=False,
+            name='traverseEntities', path='view', skip=True,
             type=vim.view.ContainerView)
         self.property_spec_mock.assert_called_once_with(
             type=self.obj_type_mock, all=True, pathSet=None)
