@@ -17,6 +17,7 @@ except ImportError:
     pass
 import logging
 import time
+import os
 
 # Import 3rdp-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -295,7 +296,8 @@ def chhome(name, home, persist=False):
 
     # If persist, move the home directory contents to the new location
     if persist:
-        __salt__['cmd.run'](['mv', pre_info['home'], home])
+        if os.path.isdir(pre_info['home']):
+            __salt__['cmd.run'](['mv', pre_info['home'], home])
 
     return info(name).get('home') == home
 
