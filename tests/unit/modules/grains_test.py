@@ -153,6 +153,15 @@ class GrainsModuleTestCase(TestCase):
         res = grainsmod.filter_by(dict1, grain='roles', default='C')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
 
+        # Test with wildcard pattern in the lookup_dict keys
+        dict1 = {'*OS': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1)
+        self.assertEqual(res, 'B')
+        # Test with sequence pattern with roles
+        dict1 = {'Z': 'B', '[BC]': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1, grain='roles', default='Z')
+        self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
+
         # Base tests
         # NOTE: these may fail to detect errors if dictupdate.update() is broken
         # but then the unit test for dictupdate.update() should fail and expose
