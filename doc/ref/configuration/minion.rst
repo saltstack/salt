@@ -1198,8 +1198,6 @@ enabled and can be disabled by changing this value to ``False``.
 ``environment``
 ---------------
 
-Default: ``None``
-
 Normally the minion is not isolated to any single environment on the master
 when running states, but the environment can be isolated on the minion side
 by statically setting it. Remember that the recommended way to manage
@@ -1214,14 +1212,22 @@ environments is to isolate via the top file.
 ``state_top_saltenv``
 ---------------------
 
-Default: not set
+This option has no default value. Set it to an environment name to ensure that
+*only* the top file from that environment is considered during a
+:ref:`highstate <running-highstate>`.
 
-Set this option to an environment name, to ensure that *only* the top file from
-that environment is considered during a :ref:`highstate <running-highstate>`.
+.. note::
+    Using this value does not change the merging strategy. For instance, if
+    :conf_minion:`top_file_merging_strategy` is left at its default, and
+    :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
+    environments other than ``foo`` in the top file for the ``foo`` environment
+    will be ignored. With :conf_minion:`top_file_merging_strategy` set to
+    ``base``, all states from all environments in the ``base`` top file will
+    be applied, while all other top files are ignored.
 
 .. code-block:: yaml
 
-    state_top_saltenv: base
+    state_top_saltenv: dev
 
 .. conf_minion:: top_file_merging_strategy
 

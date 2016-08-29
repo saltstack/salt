@@ -773,7 +773,7 @@ class SaltEvent(object):
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async(event_handler)
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter

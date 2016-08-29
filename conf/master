@@ -64,7 +64,7 @@
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", etc.
+# "states", "returners", "engines", etc.
 # Like 'extension_modules' but can take an array of paths
 #module_dirs: <no default>
 #   - /var/cache/salt/minion/extmods
