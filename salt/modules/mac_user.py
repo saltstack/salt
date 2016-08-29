@@ -294,10 +294,10 @@ def chhome(name, home, persist=False):
             moved = True
 
     # If the change fails and the file was moved, move it back
-    if not _dscl(['/Users/{0}'.format(name),
-                  'NFSHomeDirectory',
-                  pre_info['home'],
-                  home], ctype='change')['retcode'] and moved:
+    if _dscl(['/Users/{0}'.format(name),
+              'NFSHomeDirectory',
+              pre_info['home'],
+              home], ctype='change')['retcode'] and moved:
         __salt__['cmd.run_stderr'](['mv', home, pre_info['home']])
 
     # dscl buffers changes, sleep 1 second before checking if new value
