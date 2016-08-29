@@ -269,7 +269,13 @@ def chhome(name, home, persist=False):
     Args:
         name (str): The name of the user to change
         home (str): The new location of the home directory
+
+        .. versionadded:: 2016.3.4
         persist (bool): True to move files from the old to the new directory
+
+    .. note::
+        If persist is True and the new home directory already exists on the
+        system the home directory will not be moved.
 
     Returns:
         bool: True for success, False otherwise
