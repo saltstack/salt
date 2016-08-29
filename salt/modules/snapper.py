@@ -308,7 +308,10 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
 
     Returns the number of the created snapshot.
 
+    CLI example:
+
     .. code-block:: bash
+
         salt '*' snapper.create_snapshot
     '''
     if not userdata:
@@ -391,15 +394,18 @@ def run(function, *args, **kwargs):
     `**kwargs`
         kwargs for the function to call (default: None)
 
-    .. code-block:: bash
-        salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
-
     This  would run append text to /etc/motd using the file.append
     module, and will create two snapshots, pre and post with the associated
     metadata. The jid will be available as salt_jid in the userdata of the
     snapshot.
 
     You can immediately see the changes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
     '''
     config = kwargs.pop("config", "root")
     description = kwargs.pop("description", "snapper.run[{0}]".format(function))
@@ -560,7 +566,7 @@ def undo_jid(jid, config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -587,7 +593,7 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
     num_post
         last snapshot ID to compare. Default is 0 (current state)
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -670,7 +676,7 @@ def diff_jid(jid, config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -690,7 +696,7 @@ def create_baseline(tag="baseline", config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
