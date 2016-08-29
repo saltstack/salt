@@ -1594,6 +1594,7 @@ def latest(
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
                                                fromrepo=fromrepo,
                                                refresh=refresh,
+                                               show_installed=True,
                                                **kwargs)
     except CommandExecutionError as exc:
         return {'name': name,
@@ -1624,18 +1625,18 @@ def latest(
 
     targets = {}
     problems = []
+    cmp_func = __salt__.get('pkg.version_cmp')
     for pkg in desired_pkgs:
-        if not avail[pkg]:
-            if not cur[pkg]:
-                msg = 'No information found for \'{0}\'.'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
-            elif watch_flags \
-                    and __grains__.get('os') == 'Gentoo' \
-                    and __salt__['portage_config.is_changed_uses'](pkg):
+        if avail[pkg]:
+            if not cur[pkg] or salt.utils.compare_versions(ver1=cur[pkg],
+                                                           oper='<',
+                                                           ver2=avail[pkg],
+                                                           cmp_func=cmp_func):
                 targets[pkg] = avail[pkg]
         else:
-            targets[pkg] = avail[pkg]
+            msg = 'No information found for {0!r}.'.format(pkg)
+            log.error(msg)
+            problems.append(msg)
 
     if problems:
         return {

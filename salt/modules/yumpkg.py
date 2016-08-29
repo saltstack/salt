@@ -580,7 +580,7 @@ def latest_version(*names, **kwargs):
     cmd = [_yum(), '--quiet']
     cmd.extend(repo_arg)
     cmd.extend(exclude_arg)
-    cmd.extend(['list', 'available'])
+    cmd.extend(['list'])
     cmd.extend(names)
     out = __salt__['cmd.run_all'](cmd,
                                   output_loglevel='trace',
