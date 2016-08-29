@@ -270,6 +270,9 @@ class IPCClient(object):
         if hasattr(self, '_connecting_future') and not self._connecting_future.done():  # pylint: disable=E0203
             future = self._connecting_future  # pylint: disable=E0203
         else:
+            if hasattr(self, '_connecting_future'):
+                # read previous future result to prevent the "unhandled future exception" error
+                self._connecting_future.exc_info()  # pylint: disable=E0203
             future = tornado.concurrent.Future()
             self._connecting_future = future
             self._connect(timeout=timeout)
@@ -684,6 +687,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: {0}'.format(exc))
 
+    @tornado.gen.coroutine
     def read_async(self, callback):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
@@ -692,13 +696,14 @@ class IPCMessageSubscriber(IPCClient):
         '''
         while not self.connected():
             try:
-                self.connect()
+                yield self.connect(timeout=5)
             except tornado.iostream.StreamClosedError:
                 log.trace('Subscriber closed stream on IPC {0} before connect'.format(self.socket_path))
+                yield tornado.gen.sleep(1)
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: {0}'.format(exc))
-
-        self.io_loop.spawn_callback(self._read_async, callback)
+                yield tornado.gen.sleep(1)
+        yield self._read_async(callback)
 
     def close(self):
         '''
