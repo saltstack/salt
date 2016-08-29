@@ -99,14 +99,12 @@ class DDNSTestCase(TestCase):
         def mock_udp_query(*args, **kwargs):
             return MockAnswer
 
-        # pylint: disable=E0598
         with patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)):
             with patch.object(dns.query, 'udp', mock_udp_query()):
                 with patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
                             self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
-        # pylint: enable=E0598
 
     def test_delete(self):
         '''
@@ -124,14 +122,12 @@ class DDNSTestCase(TestCase):
         def mock_udp_query(*args, **kwargs):
             return MockAnswer
 
-        # pylint: disable=E0598
         with patch.object(dns.query, 'udp', mock_udp_query()):
             with patch('salt.utils.fopen', mock_open(read_data=file_data), create=True):
                 with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
                             self.assertTrue(ddns.delete(zone='A', name='B'))
-        # pylint: enable=E0598
 
 
 if __name__ == '__main__':
