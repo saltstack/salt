@@ -29,8 +29,9 @@ configuration is necessary. More Information available at::
 
    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-If IAM roles are not used you need to specify them either in a pillar or
-in the config file of the master or minion, as appropriate:
+If IAM roles are not (or for ``boto`` version < 2.5.1) used you need to
+specify them either in a pillar or in the config file of the master or
+minion, as appropriate:
 
 .. code-block:: yaml
 
