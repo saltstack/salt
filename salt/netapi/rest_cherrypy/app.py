@@ -561,7 +561,12 @@ def hypermedia_handler(*args, **kwargs):
     # Transform the output from the handler into the requested output format
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
-    return out(ret)
+    try:
+        return out(ret)
+    except Exception:
+        msg = 'Could not serialize the return data from Salt.'
+        logger.debug(msg, exc_info=True)
+        raise cherrypy.HTTPError(500, msg)
 
 
 def hypermedia_out():
