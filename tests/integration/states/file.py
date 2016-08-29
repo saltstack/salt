@@ -109,7 +109,12 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         mode=oct(initial_mode),
         source=grail,
     )
-    testcase.assertSaltTrueReturn(ret)
+    if IS_WINDOWS:
+        testcase.assertSaltFalseReturn(ret)
+        return
+    else:
+        testcase.assertSaltTrueReturn(ret)
+
     try:
         # Update the mode on the fileserver (pass 1)
         os.chmod(grail_fs_path, new_mode_1)
@@ -275,14 +280,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(oct(desired_mode), oct(resulting_mode))
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_keep(self):
         '''
         Test using "mode: keep" in a file.managed state
         '''
         _test_managed_file_mode_keep_helper(self, local=False)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_keep_local_source(self):
         '''
         Test using "mode: keep" in a file.managed state, with a local file path
@@ -290,7 +293,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         _test_managed_file_mode_keep_helper(self, local=True)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_file_exists_replace(self):
         '''
         file.managed, existing file with replace=True, change permissions
@@ -302,20 +304,25 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
         )
 
-        resulting_mode = stat.S_IMODE(
-            os.stat(name).st_mode
-        )
-        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+        if IS_WINDOWS:
+            expected = 'The \'mode\' option is not supported on Windows'
+            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertSaltFalseReturn(ret)
+        else:
+            resulting_mode = stat.S_IMODE(
+                os.stat(name).st_mode
+            )
+            self.assertEqual(oct(initial_mode), oct(resulting_mode))
 
-        name = os.path.join(integration.TMP, 'grail_scene33')
-        ret = self.run_state(
-            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
-        )
-        resulting_mode = stat.S_IMODE(
-            os.stat(name).st_mode
-        )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
-        self.assertSaltTrueReturn(ret)
+            name = os.path.join(integration.TMP, 'grail_scene33')
+            ret = self.run_state(
+                'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+            )
+            resulting_mode = stat.S_IMODE(
+                os.stat(name).st_mode
+            )
+            self.assertEqual(oct(desired_mode), oct(resulting_mode))
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_file_exists_noreplace(self):
@@ -329,14 +336,20 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
         )
 
-        ret = self.run_state(
-            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
-        )
-        resulting_mode = stat.S_IMODE(
-            os.stat(name).st_mode
-        )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
-        self.assertSaltTrueReturn(ret)
+        if IS_WINDOWS:
+            expected = 'The \'mode\' option is not supported on Windows'
+            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertSaltFalseReturn(ret)
+        else:
+
+            ret = self.run_state(
+                'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+            )
+            resulting_mode = stat.S_IMODE(
+                os.stat(name).st_mode
+            )
+            self.assertEqual(oct(desired_mode), oct(resulting_mode))
+            self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     def test_managed_file_with_grains_data(self):
