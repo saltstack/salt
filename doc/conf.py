@@ -207,6 +207,9 @@ intersphinx_mapping = {
 
 # -- General Configuration -----------------------------------------------------
 
+# Set a var if we're building docs for the live site or not
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
+
 project = 'Salt'
 copyright = '2016 SaltStack, Inc.'
 
@@ -217,7 +220,9 @@ previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
-today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+today = ''
+if on_saltstack:
+    today = "Generated on " + time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z") + "."
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'latest'  # latest, previous, develop, next
@@ -320,9 +325,6 @@ html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
-
-# Set a var if we're building docs for the live site or not
-on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
