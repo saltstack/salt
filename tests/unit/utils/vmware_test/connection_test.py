@@ -574,16 +574,10 @@ class GetServiceInstanceTestCase(TestCase):
                                                 None)
 
     @patch('salt.utils.is_proxy', MagicMock(return_value=True))
-    def test_cached_service_instace_same_host_on_proxy(self):
-        mock_si = MagicMock()
-        mock_si_stub_value = MagicMock()
-        mock_si_get_connection = MagicMock()
-        mock_si_stub = MagicMock(return_value=mock_si_stub_value)
-        mock_get_si = MagicMock(return_value=mock_si)
-        mock_si._GetStub = mock_si_stub
-        mock_si_stub_value.host = 'fake_host:1'
-        mock_si_stub_value.GetConnection = mock_si_get_connection
-        with patch('salt.utils.vmware.GetSi', mock_get_si):
+    def test_no_cached_service_instance_same_host_on_proxy(self):
+        # Service instance is uncached when using class default mock objs
+        mock_get_si = MagicMock()
+        with patch('salt.utils.vmware._get_service_instance', mock_get_si):
             salt.utils.vmware.get_service_instance(
                 host='fake_host',
                 username='fake_username',
@@ -594,30 +588,36 @@ class GetServiceInstanceTestCase(TestCase):
                 principal='fake_principal',
                 domain='fake_domain'
             )
-            self.assertEqual(mock_get_si.call_count, 1)
-            self.assertEqual(mock_si_stub.call_count, 2)
-            self.assertEqual(mock_si_get_connection.call_count, 1)
+            mock_get_si.assert_called_once_with('fake_host',
+                                                'fake_username',
+                                                'fake_password',
+                                                'fake_protocol',
+                                                1,
+                                                'fake_mechanism',
+                                                'fake_principal',
+                                                'fake_domain')
 
-    def test_cached_service_instace_dffierent_host(self):
+    def test_cached_service_instance_different_host(self):
         mock_si = MagicMock()
         mock_si_stub = MagicMock()
         mock_disconnect = MagicMock()
         mock_get_si = MagicMock(return_value=mock_si)
-        mock_si._GetStub = mock_si_stub
+        mock_getstub = MagicMock()
         with patch('salt.utils.vmware.GetSi', mock_get_si):
-            with patch('salt.utils.vmware.Disconnect', mock_disconnect):
-                salt.utils.vmware.get_service_instance(
-                    host='fake_host',
-                    username='fake_username',
-                    password='fake_password',
-                    protocol='fake_protocol',
-                    port=1,
-                    mechanism='fake_mechanism',
-                    principal='fake_principal',
-                    domain='fake_domain'
-                )
+            with patch('salt.utils.vmware.GetStub', mock_getstub):
+                with patch('salt.utils.vmware.Disconnect', mock_disconnect):
+                    salt.utils.vmware.get_service_instance(
+                        host='fake_host',
+                        username='fake_username',
+                        password='fake_password',
+                        protocol='fake_protocol',
+                        port=1,
+                        mechanism='fake_mechanism',
+                        principal='fake_principal',
+                        domain='fake_domain'
+                    )
             self.assertEqual(mock_get_si.call_count, 1)
-            self.assertEqual(mock_si_stub.call_count, 1)
+            self.assertEqual(mock_getstub.call_count, 1)
             self.assertEqual(mock_disconnect.call_count, 1)
 
     def test_uncached_service_instance(self):

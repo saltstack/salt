@@ -87,7 +87,7 @@ import salt.utils
 
 # Import Third Party Libs
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect
+    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
@@ -207,9 +207,17 @@ def _get_service_instance(host, username, password, protocol,
             port=port,
             b64token=token,
             mechanism=mechanism)
+    except TypeError as exc:
+        if 'unexpected keyword argument' in exc.message:
+            log.error('Initial connect to the VMware endpoint failed with {0}'.format(exc.message))
+            log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
+            log.error('We recommend updating to that version or later.')
+            raise
     except Exception as exc:
+
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
+
         try:
             if (isinstance(exc, vim.fault.HostConnectFault) and
                 '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
@@ -302,14 +310,16 @@ def get_service_instance(host, username=None, password=None, protocol=None,
 
     service_instance = GetSi()
     if service_instance:
-        if service_instance._GetStub().host == ':'.join([host, str(port)]):
-            log.trace('Using cached service instance')
-            if salt.utils.is_proxy():
-                service_instance._GetStub().GetConnection()
-        else:
-            # Invalidate service instance
+        stub = GetStub()
+        if salt.utils.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
+            # Proxies will fork and mess up the cached service instance.
+            # If this is a proxy or we are connecting to a different host
+            # invalidate the service instance to avoid a potential memory leak
+            # and reconnect
             Disconnect(service_instance)
             service_instance = None
+        else:
+            return service_instance
 
     if not service_instance:
         service_instance = _get_service_instance(host,
