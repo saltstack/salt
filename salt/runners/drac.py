@@ -30,18 +30,27 @@ def __virtual__():
     if HAS_PARAMIKO:
         return True
 
-    return False
+    return False, 'The drac runner module cannot be loaded: paramiko package is not installed.'
 
 
 def __connect(hostname, timeout=20, username=None, password=None):
     '''
     Connect to the DRAC
     '''
+    drac_cred = __opts__.get('drac')
 
     if not username:
-        username = __opts__['drac'].get('username', None)
+        if drac_cred is None:
+            log.error('No drac login credentials found. Please add a drac username and password'
+                      'in the master configuration file or pass in a username at the CLI.')
+            return False
+        username = drac_cred.get('username', None)
     if not password:
-        password = __opts__['drac'].get('password', None)
+        if drac_cred is None:
+            log.error('No drac login credentials found. Please add a drac username and password'
+                      'in the master configuration file or pass in a password at the CLI.')
+            return False
+        password = drac_cred.get('password', None)
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
