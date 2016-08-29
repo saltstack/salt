@@ -266,7 +266,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]['comment']], expected)
+            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
         else:
             resulting_mode = stat.S_IMODE(
