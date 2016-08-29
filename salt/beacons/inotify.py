@@ -155,7 +155,7 @@ def beacon(config):
               exclude:
                 - /path/to/file/or/dir/exclude1
                 - /path/to/file/or/dir/exclude2
-                - /path/to/file/or/dir/regex[\d]*$:
+                - /path/to/file/or/dir/regex[a-m]*$:
                     regex: True
 
     The mask list can contain the following events (the default mask is create,
@@ -217,9 +217,8 @@ def beacon(config):
                             try:
                                 if re.search(exclude.keys()[0], event.pathname):
                                     _append = False
-                            except:
+                            except Exception:
                                 log.warn('Failed to compile regex: {0}'.format(exclude.keys()[0]))
-                                pass
                         else:
                             exclude = exclude.keys()[0]
                     elif '*' in exclude:
