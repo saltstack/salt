@@ -380,9 +380,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def connect(self):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        if self.opts.get('detect_mode', False) is False:
-            self.publish_port = self.auth.creds['publish_port']
-            self._socket.connect(self.master_pub)
+        self.publish_port = self.auth.creds['publish_port']
+        self._socket.connect(self.master_pub)
 
     @property
     def master_pub(self):
