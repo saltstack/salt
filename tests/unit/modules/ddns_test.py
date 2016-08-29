@@ -101,11 +101,11 @@ class DDNSTestCase(TestCase):
 
         if six.PY3:
             # pylint: disable=E0598
-            with patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)), \
-                    patch.object(dns.query, 'udp', mock_udp_query()), \
-                    patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)), \
-                    patch.object(ddns, '_get_keyring', return_value=None), \
-                    patch.object(ddns, '_config', return_value=None):
+            with contextlib.nested(patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)),
+                    patch.object(dns.query, 'udp', mock_udp_query()),
+                    patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)),
+                    patch.object(ddns, '_get_keyring', return_value=None),
+                    patch.object(ddns, '_config', return_value=None)):
                 self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
             # pylint: enable=E0598
         else:
