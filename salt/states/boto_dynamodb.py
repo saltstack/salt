@@ -432,7 +432,7 @@ def _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
                             changes_new, comments, name, region, key, keyid,
                             profile):
     '''Handles global secondary index for the table present state.'''
-    ret = {'result': True} 
+    ret = {'result': True}
     if provisioned_indexes:
         provisioned_gsi_config = {index['IndexName']: index for index in provisioned_indexes}
     else:
@@ -487,7 +487,7 @@ def _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
             return ret
 
     if 'global_indexes' not in changes_old and 'global_indexes' not in changes_new:
-        comments.append('All global secondary indexes match') 
+        comments.append('All global secondary indexes match')
     return ret
 
 
