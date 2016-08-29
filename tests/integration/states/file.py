@@ -254,7 +254,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode(self):
         '''
         file.managed, correct file permissions
@@ -265,11 +264,16 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'file.managed', name=name, mode='0770', source='salt://grail/scene33'
         )
 
-        resulting_mode = stat.S_IMODE(
-            os.stat(name).st_mode
-        )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
-        self.assertSaltTrueReturn(ret)
+        if IS_WINDOWS:
+            expected = 'The \'mode\' option is not supported on Windows'
+            self.assertEqual(ret[ret.keys()[0]['comment']], expected)
+            self.assertSaltFalseReturn(ret)
+        else:
+            resulting_mode = stat.S_IMODE(
+                os.stat(name).st_mode
+            )
+            self.assertEqual(oct(desired_mode), oct(resulting_mode))
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_keep(self):
