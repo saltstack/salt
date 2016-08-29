@@ -222,7 +222,7 @@ def private_key_managed(name,
         whenever a new certificiate is generated.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion.
+        When replacing an existing file, backup the old file on the minion.
         Default is False.
 
     verbose:
@@ -526,7 +526,7 @@ def crl_managed(name,
         Include expired certificates in the CRL. Default is ``False``.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion. Default is False.
+        When replacing an existing file, backup the old file on the minion. Default is False.
 
     Example:
 

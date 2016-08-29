@@ -209,6 +209,19 @@ default configuration file for the minion contains the information and format
 used to pass data to the modules. :mod:`salt.modules.test`,
 :file:`conf/minion`.
 
+Strings and Unicode
+===================
+
+An execution  module author should always assume that strings fed to the module
+have already decoded from strings into Unicode. In Python 2, these will
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
+from a state to other Salt sub-systems, should pass Unicode (or bytes if passing binary data). In the
+rare event that a state needs to write directly to disk, Unicode should be
+encoded to a string immediately before writing to disk. An author may use
+``__salt_system_encoding__`` to learn what the encoding type of the system is.
+For example, `'my_string'.encode(__salt_system_encoding__')`.
+
+
 Outputter Configuration
 =======================
 
@@ -358,7 +371,7 @@ in the minion config file:
       pkg: aptpkg
 
 The above example will force the minion to use the :py:mod:`systemd
-<salt.modules.systemd>` module to provide service mangement, and the
+<salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
 .. __: https://github.com/saltstack/salt/issues/new
