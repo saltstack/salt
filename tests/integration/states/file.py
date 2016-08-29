@@ -324,7 +324,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(oct(desired_mode), oct(resulting_mode))
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     def test_managed_file_mode_file_exists_noreplace(self):
         '''
         file.managed, existing file with replace=False, change permissions
