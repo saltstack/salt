@@ -91,8 +91,6 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-import salt.utils
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
