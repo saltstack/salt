@@ -355,7 +355,7 @@ class _LegacyGitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+        hash_type = getattr(hashlib, opts['hash_type'])
         hash_str = '{0} {1}'.format(self.branch, self.rp_location)
         repo_hash = hash_type(salt.utils.to_bytes(hash_str)).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
