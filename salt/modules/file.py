@@ -3503,9 +3503,8 @@ def get_managed(
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
 
-        import string as _string
-        if parsed_scheme is not '' and parsed_scheme in _string.letters:
-            parsed_path = '{0}:{1}'.format(parsed_scheme, parsed_path)
+        if parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            parsed_path = ':'.join([parsed_scheme, parsed_path])
             parsed_scheme = 'file'
 
         if parsed_scheme == 'salt':

@@ -340,15 +340,16 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Test to ensure we can render grains data into a managed
         file.
         '''
-        if IS_WINDOWS:
-            grain_path = 'C:\\Windows\\Temp\\file-grain-test'
-        else:
-            grain_path = '/tmp/file-grain-test'
-
+        grain_path = os.path.join(integration.TMP, 'file-grain-test')
+        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
         ret = self.run_function('state.sls', [state_file])
         self.assertTrue(os.path.exists(grain_path))
+
+        with salt.utils.fopen(name, 'r') as fp_:
+            minion_data = fp_.read()
+
         file_contents = open(grain_path, 'r').readlines()
         self.assertTrue(re.match('^minion$', file_contents[0]))
 
