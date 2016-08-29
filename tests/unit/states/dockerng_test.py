@@ -340,7 +340,7 @@ class DockerngTestCase(TestCase):
             ret = dockerng_state.image_present('image:latest', force=True)
             self.assertEqual(ret,
                              {'changes': {},
-                              'result': True,
+                              'result': False,
                               'comment': "Image 'image:latest' was pulled, "
                               "but there were no changes",
                               'name': 'image:latest',
