@@ -89,14 +89,6 @@ def latest_version(*names, **kwargs):
         except (ValueError, IndexError):
             pass
 
-    pkgs = {}
-
-    for name in names:
-        if not ret[name]:
-            if not pkgs:
-                pkgs = list_pkgs()
-            if name in pkgs:
-                ret[name] = pkgs[name]
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
