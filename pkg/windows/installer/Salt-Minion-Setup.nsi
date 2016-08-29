@@ -276,6 +276,11 @@ Section -Post
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" \
         "DependOnService" "nsi"
 
+    ; Set the estimated size
+    ${GetSize} "$INSTDIR\bin" "/S=OK" $0 $1 $2
+    IntFmt $0 "0x%08X" $0
+    WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "EstimatedSize" "$0"
 
     ; Commandline Registry Entries
     WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
