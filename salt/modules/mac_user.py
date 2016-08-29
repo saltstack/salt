@@ -295,7 +295,7 @@ def chhome(name, home, persist=False):
 
     # If persist, move the home directory contents to the new location
     if persist:
-        __salt__['cmd.run'](['mv', '{0}\*'.format(pre_info['home']), home])
+        __salt__['cmd.run'](['mv', pre_info['home'], home])
 
     return info(name).get('home') == home
 
