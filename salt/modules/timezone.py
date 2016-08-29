@@ -85,6 +85,8 @@ def _get_zone_etc_localtime():
             return olson_name[tzdir_len:]
     except OSError as exc:
         if exc.errno == errno.ENOENT:
+            if 'FreeBSD' in __grains__['os_family']:
+                return get_zonecode()
             raise CommandExecutionError(tzfile + ' does not exist')
         elif exc.errno == errno.EINVAL:
             log.warning(
