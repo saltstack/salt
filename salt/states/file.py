@@ -267,6 +267,7 @@ from datetime import datetime   # python3 problem in the making?
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
@@ -5011,8 +5012,7 @@ def serialize(name,
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
-                merged_data = existing_data.copy()
-                merged_data.update(dataset)
+                merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
                 if existing_data == merged_data:
                     ret['result'] = True
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
