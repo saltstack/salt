@@ -344,13 +344,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
-        ret = self.run_function('state.sls', [state_file])
+        self.run_function('state.sls', [state_file])
         self.assertTrue(os.path.exists(grain_path))
 
-        with salt.utils.fopen(name, 'r') as fp_:
-            minion_data = fp_.read()
+        with salt.utils.fopen(grain_path, 'r') as fp_:
+            file_contents = fp_.readlines()
 
-        file_contents = open(grain_path, 'r').readlines()
         self.assertTrue(re.match('^minion$', file_contents[0]))
 
     @destructiveTest
