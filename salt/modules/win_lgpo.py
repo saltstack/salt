@@ -15,7 +15,7 @@ Windows Settings
 ================
     Policies contained in the "Windows Settings" section of the gpedit.msc gui are statically
     defined in this module.  Each policy is configured for the section (Machine/User) in the
-    module's _policy_info class.  The _policy_info class contains data on how the module will
+    module's _policy_info class.  The _policy_info class contains a policies dict on how the module will
     configure the policy, where the policy resides in the gui (for display purposes), data
     validation data, data transformation data, etc.
 
@@ -45,6 +45,7 @@ from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -107,6 +108,105 @@ except ImportError:
 class _policy_info(object):
     '''
     policy helper stuff
+
+    The format of the policy dict is as follows:
+        The top most two key/value pairs in the dict divide the policies object into the two sections
+        of local group policy, using the keys "Machine" and "User".  The value make-up of these dicts
+        are described below in "Policy Section Definition"
+
+        Policy Section Definition
+        -------------------------
+        A policy section dict has two required key/value pairs:
+            key name: lgpo_section
+            value: string matching how the policy section is displayed in the mmc snap-in
+                ("Computer Configuration" for "Machine" and "User Configuration" for "User")
+
+            key name: policies
+            value: a dict containing the non-Administrative template policy definitions, the key for
+                each item is a short/unique identifier for the policy, the value is described below in
+                "Policies Definition"
+
+        Policies Definition
+        -------------------
+        A policies definition item describes the particular policy.
+        There are three child key/value pairs shared with all policy types:
+            key name: lgpo_section
+            value: a list containing the hierarchical path to the policy in the gpedit mmc snap-in.
+
+            key name: Policy
+            value: a string containing the name of the policy in the gpedit mmc snap-in
+
+            key name: Settings
+            value: An object which describes valid settings for the policy.  This can be None for no validation,
+            a list of possible settings, or a dict with the following key/value pairs:
+                key name: Function
+                value: the class function to use to validate the setting
+
+                key name: Args
+                value: a dict of kwargs to pass to the class function
+
+        Additionally, each policies definition will contain a key/value pair that defines the mechanism that
+        will be used to configure the policy.  The available mechanisms are:  NetUserModal, Registry, Secedit,
+        and LsaRights
+
+        Registry mechanism
+        ------------------
+        Some policies set simply values in the windows registry, the value of this key is a dict with the
+        following make-up:
+            key name: Hive
+            value: a string containing the Registry hive, such as HKEY_LOCAL_MACHINE
+
+            key name: Path
+            value: a string containing the registry key path, such as SYSTEM\\CurrentControlSet\\Control\\Lsa
+
+            key name: Value
+            value: a string containing the name of the registry value, such as restrictanonymous
+
+            key name: Type
+            value: a string contianing the registry type of the value, such as REG_DWORD
+
+        Secedit mechanism
+        -----------------
+        Some policies are configurable via the "secedit.exe" executable, the value of this key is a dict with the
+        following make-up:
+            key name: Option
+            value: a string containing the name of the policy as it appears in an export from secedit, such as
+                PasswordComplexity
+
+            key name: Section
+            value: a string containing the name of the section that the "Option" value appears in in an export
+                from secedit, such as "System Access"
+
+        LsaRights mechanism
+        -------------------
+        LSA Rights policiesare configured via the LsaRights mechansim, the value of this key is a dict with the
+        following make-up:
+            key name: Option
+            value: a string containing the programmatic name of the Lsa Right, such as SeNetworkLogonRight
+
+        NetUserModal mechanism
+        ----------------------
+        Some policies are configurable by the NetUserModalGet and NetUserModalSet function from pywin32.  The value
+        of this key is a dict with the following make-up:
+            key name: Modal
+            value: The modal "level" that the particular option is specified in (0-3), see
+                https://msdn.microsoft.com/en-us/library/windows/desktop/aa370656(v=vs.85).aspx
+
+            key name: Option
+            value: The name of the structure member which contains the data for the policy, for example max_passwd_age
+
+        Optionally, each policy definition can contain a 'Transform' key.  The Transform key is used to handle data that is stored
+        and viewed differently.  This key's value is a dict with the following key/value pairs:
+            key name: Get
+            value: the name of the class function to use to transform the data from the stored value to how the value
+            is displayed in the GUI
+
+            key name: Put
+            value: the name of the class function to use to transfor the data supplied by the user to the correct value
+            that the policy is stored in
+        For example, "Minimum password age" is stored in seconds, but is displayed in days.  Thus the "Get" and "Put" functions
+        for this policy do these conversions so the user is able to set and view the policy using the same data that is shown
+        in the GUI
     '''
     def __init__(self):
         self.policies = {
@@ -1964,15 +2064,15 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', 
                     policydefs_policyns_xpath(t_policy_definitions)[0].append(temp_ns)
                 adml_file = os.path.join(root, display_language, os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
-                    msg = 'An adml file in the specified adml language "{0}" does not '
-                    msg = msg + 'exist for the admx "{1}", the fallback languange will be tried.'
+                    msg = ('An adml file in the specified adml language "{0}" does not '
+                           'exist for the admx "{1}", the fallback languange will be tried.')
                     log.info(msg.format(display_language, t_admfile))
                     adml_file = os.path.join(root,
                                              display_language_fallback,
                                              os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
-                        msg = 'An adml file in the specified adml language "{0}" and the fallback '
-                        msg = msg + 'language "{1}" do not exist for the admx "{2}".'
+                        msg = ('An adml file in the specified adml language "{0}" and the fallback '
+                               'language "{1}" do not exist for the admx "{2}".')
                         raise SaltInvocationError(msg.format(display_language,
                                                              display_language_fallback,
                                                              t_admfile))
@@ -2272,8 +2372,8 @@ def _checkListItem(policy_element, policy_name, policy_key, xpath_object, policy
 
     returns True if the enabled/disabledList is 100% configured in the registry.pol file, otherwise returns False
     '''
-    xpath_string = './/*[local-name() = "decimal" or local-name() = "delete"'
-    xpath_string = xpath_string + ' or local-name() = "longDecimal" or local-name() = "string"]'
+    xpath_string = ('.//*[local-name() = "decimal" or local-name() = "delete"'
+                    ' or local-name() = "longDecimal" or local-name() = "string"]')
     value_item_child_xpath = etree.XPath(xpath_string)
     expected_strings = []
     for list_element in xpath_object(policy_element):
@@ -2300,8 +2400,8 @@ def _checkListItem(policy_element, policy_name, policy_key, xpath_object, policy
                 if test_items:
                     if _regexSearchRegPolData(re.escape(search_string), policy_file_data):
                         configured_items = configured_items + 1
-                        msg = 'found the search string in the pol file, {0} of {1} '
-                        msg = msg + 'items for policy {2} are configured in registry.pol'
+                        msg = ('found the search string in the pol file, {0} of {1} '
+                               'items for policy {2} are configured in registry.pol')
                         log.debug(msg.format(configured_items, required_items, policy_name))
                 else:
                     expected_strings.append(search_string)
@@ -2426,8 +2526,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
                 this_element_value = this_element_value + unichr(val)
         else:
-            msg = 'The {2} child {1} element for the policy with attributes: {0} does not have the required'
-            msg = msg + ' "value" attribute.  The elment attributes are: {3}'
+            msg = ('The {2} child {1} element for the policy with attributes: {0} does not have the required'
+                   ' "value" attribute.  The elment attributes are: {3}')
             log.error(msg.format(policy.attrib,
                                  etree.QName(element).localname,
                                  etree.QName(parent_element).localname,
@@ -3185,6 +3285,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                 if adm_policy in base_policy_settings:
                     base_policy_settings.pop(adm_policy)
             else:
+                log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                 base_policy_settings[adm_policy] = admtemplate_data[adm_policy]
         for admPolicy in base_policy_settings.keys():
             log.debug('working on admPolicy {0}'.format(admPolicy))
@@ -3560,6 +3661,195 @@ def _writeGpoScript(psscript=False):
                                                    'psscripts.ini')
 
 
+def _lookup_admin_template(policy_name,
+                           policy_class,
+                           adml_language='en-US',
+                           admx_policy_definitions=None,
+                           adml_policy_resources=None):
+    '''
+    (success_flag, policy_xml_item, policy_name_list, message)
+    '''
+    policy_aliases = []
+    if admx_policy_definitions is None or adml_policy_resources is None:
+        admx_policy_definitions, adml_policy_resources = _processPolicyDefinitions(
+                display_language=adml_language)
+    admx_search_results = ADMX_SEARCH_XPATH(admx_policy_definitions,
+                                            policy_name=policy_name,
+                                            registry_class=policy_class)
+    the_policy = None
+    if admx_search_results:
+        if len(admx_search_results) == 1:
+            the_policy = admx_search_results[0]
+            policy_display_name = _getFullPolicyName(
+                    the_policy,
+                    the_policy.attrib['name'],
+                    True,
+                    adml_policy_resources)
+            policy_aliases.append(policy_display_name)
+            policy_aliases.append(the_policy.attrib['name'])
+            full_path_list = _build_parent_list(the_policy,
+                                                admx_policy_definitions,
+                                                True,
+                                                adml_policy_resources)
+            full_path_list.reverse()
+            full_path_list.append(policy_display_name)
+            policy_aliases.append('\\'.join(full_path_list))
+            return (True, the_policy, policy_aliases, None)
+        else:
+            msg = 'Admx policy name/id "{0}" is used in multiple admx files'
+            return (False, None, [], msg)
+    else:
+        adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
+                                                policy_name=policy_name)
+        hierarchy = []
+        hierarchy_policy_name = policy_name
+        if not adml_search_results:
+            if '\\' in policy_name:
+                hierarchy = policy_name.split('\\')
+                policy_name = hierarchy.pop()
+                adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
+                                                        policy_name=policy_name)
+        if adml_search_results:
+            multiple_adml_entries = False
+            suggested_policies = ''
+            if len(adml_search_results) > 1:
+                multiple_adml_entries = True
+            for adml_search_result in adml_search_results:
+                dmsg = 'found an adml entry matching the string! {0} -- {1}'
+                log.debug(dmsg.format(adml_search_result.tag,
+                                      adml_search_result.attrib))
+                display_name_searchval = '$({0}.{1})'.format(
+                        adml_search_result.tag.split('}')[1],
+                        adml_search_result.attrib['id'])
+                log.debug('searching for displayName == {0}'.format(display_name_searchval))
+                admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
+                        admx_policy_definitions,
+                        display_name=display_name_searchval,
+                        registry_class=policy_class)
+                if admx_search_results:
+                    if len(admx_search_results) == 1 or hierarchy and not multiple_adml_entries:
+                        found = False
+                        for search_result in admx_search_results:
+                            found = False
+                            if hierarchy:
+                                this_hierarchy = _build_parent_list(search_result,
+                                                                    admx_policy_definitions,
+                                                                    True,
+                                                                    adml_policy_resources)
+                                this_hierarchy.reverse()
+                                if hierarchy == this_hierarchy:
+                                    found = True
+                            else:
+                                found = True
+                            if found:
+                                dmsg = ('found the admx policy matching '
+                                        'the display name {1} -- {0}')
+                                log.debug(dmsg.format(search_result, policy_name))
+                                if 'name' in search_result.attrib:
+                                    policy_display_name = _getFullPolicyName(
+                                            search_result,
+                                            search_result.attrib['name'],
+                                            True,
+                                            adml_policy_resources)
+                                    policy_aliases.append(policy_display_name)
+                                    policy_aliases.append(search_result.attrib['name'])
+                                    full_path_list = _build_parent_list(search_result,
+                                                                        admx_policy_definitions,
+                                                                        True,
+                                                                        adml_policy_resources)
+                                    full_path_list.reverse()
+                                    full_path_list.append(policy_display_name)
+                                    policy_aliases.append('\\'.join(full_path_list))
+                                    return (True, search_result, policy_aliases, None)
+                                else:
+                                    msg = ('Admx policy with the display name {0} does not'
+                                           'have the required name attribtue')
+                                    msg = msg.format(policy_name)
+                                    return (False, None, [], msg)
+                        if not found:
+                            msg = 'Unable to correlate {0} to any policy'.format(hierarchy_policy_name)
+                            return (False, None, [], msg)
+                    else:
+                        for possible_policy in admx_search_results:
+                            this_parent_list = _build_parent_list(possible_policy,
+                                                                  admx_policy_definitions,
+                                                                  True,
+                                                                  adml_policy_resources)
+                            this_parent_list.reverse()
+                            this_parent_list.append(policy_name)
+                            if suggested_policies:
+                                suggested_policies = ', '.join([suggested_policies,
+                                                               '\\'.join(this_parent_list)])
+                            else:
+                                suggested_policies = '\\'.join(this_parent_list)
+                else:
+                    msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
+                    return (False, None, [], msg)
+            if suggested_policies:
+                msg = ('Adml policy name "{0}" is used as the display name'
+                       ' for multiple policies.'
+                       '  These policies matched: {1}'
+                       '.  You can utilize these long names to'
+                       ' specify the correct policy')
+                return (False, None, [], msg.format(policy_name, suggested_policies))
+    return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
+
+
+def get_policy_info(policy_name,
+                    policy_class,
+                    adml_language='en-US'):
+    '''
+    returns information about a specified policy
+
+    :str: policy_name
+        the name of the policy to lookup
+
+    :str: policy_class
+        the class of policy, i.e. machine, user, both
+
+    :str: adml_language
+        the adml language to use for Administrative Template data lookup
+    '''
+    # return the possible policy names and element names
+    ret = {'policy_name': policy_name,
+           'policy_class': policy_class,
+           'policy_aliases': [],
+           'policy_found': False,
+           'message': 'policy not found'}
+    policy_class = policy_class.title()
+    policy_data = _policy_info()
+    if policy_class not in policy_data.policies.keys():
+        ret['message'] = 'The requested policy class "{0}" is invalid, policy_class should be one of: {1}'.format(
+                policy_class,
+                ', '.join(policy_data.policies.keys()))
+        return ret
+    if policy_name in policy_data.policies[policy_class]:
+        ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
+        ret['policy_found'] = True
+        ret['message'] = ''
+        return ret
+    else:
+        for pol in policy_data.policies[policy_class]['policies'].keys():
+            if policy_data.policies[policy_class]['policies'][pol]['Policy'].lower() == policy_name.lower():
+                ret['policy_aliases'].append(pol)
+                ret['policy_found'] = True
+                ret['message'] = ''
+                return ret
+    success, policy_xml_item, policy_name_list, message = _lookup_admin_template(
+            policy_name,
+            policy_class,
+            adml_language=adml_language)
+    if success:
+        ret['policy_aliases'] = policy_name_list
+        ret['policy_found'] = True
+        ret['message'] = ''
+        return ret
+    else:
+        ret['message'] = message
+
+    return ret
+
+
 def get(policy_class=None, return_full_policy_names=True,
         hierarchical_return=False, adml_language='en-US',
         return_not_configured=False):
@@ -3870,104 +4160,17 @@ def set(computer_policy=None, user_policy=None,
                     else:
                         _value = policies[p_class][policy_name]
                         log.debug('searching for "{0}" in admx data'.format(policy_name))
-                        admxSearchResults = ADMX_SEARCH_XPATH(admxPolicyDefinitions,
-                                                              policy_name=policy_name,
-                                                              registry_class=p_class)
-                        the_policy = None
-                        if admxSearchResults:
-                            if len(admxSearchResults) == 1:
-                                _admTemplateData[policy_name] = _value
-                                the_policy = admxSearchResults[0]
-                            else:
-                                msg = 'Admx policy name/id "{0}" is used in multiple admx files'
-                                raise CommandExecutionError(msg.format(policy_name))
+                        success, the_policy, policy_name_list, msg = _lookup_admin_template(
+                                policy_name,
+                                p_class,
+                                adml_language=adml_language,
+                                admx_policy_definitions=admxPolicyDefinitions,
+                                adml_policy_resources=admlPolicyResources)
+                        if success:
+                            policy_name = the_policy.attrib['name']
+                            _admTemplateData[policy_name] = _value
                         else:
-                            admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
-                                                                  policy_name=policy_name)
-                            hierarchy = []
-                            hierarchy_policy_name = policy_name
-                            if not admlSearchResults:
-                                if '\\' in policy_name:
-                                    hierarchy = policy_name.split('\\')
-                                    policy_name = hierarchy.pop()
-                                    admlSearchResults = ADML_SEARCH_XPATH(admlPolicyResources,
-                                                                          policy_name=policy_name)
-                            if admlSearchResults:
-                                multiple_adml_entries = False
-                                msg = 'Adml policy name "{0}" is used as the display name'
-                                msg = msg + ' for multiple policies.'
-                                msg = msg + '  These policies matched: {1}'
-                                msg = msg + '.  You can utilize these long names to'
-                                msg = msg + ' specify the correct policy'
-                                suggested_policies = ''
-                                if len(admlSearchResults) > 1:
-                                    multiple_adml_entries = True
-                                for adml_search_result in admlSearchResults:
-                                    msg = 'found an adml entry matching the string! {0} -- {1}'
-                                    log.debug(msg.format(adml_search_result.tag,
-                                                         adml_search_result.attrib))
-                                    display_name_searchval = '$({0}.{1})'.format(
-                                            adml_search_result.tag.split('}')[1],
-                                            adml_search_result.attrib['id'])
-                                    log.debug('searching for displayName == {0}'.format(display_name_searchval))
-                                    admxSearchResults = ADMX_DISPLAYNAME_SEARCH_XPATH(
-                                            admxPolicyDefinitions,
-                                            display_name=display_name_searchval,
-                                            registry_class=p_class)
-                                    if admxSearchResults:
-                                        if len(admxSearchResults) == 1 or hierarchy and not multiple_adml_entries:
-                                            found = False
-                                            for search_result in admxSearchResults:
-                                                found = False
-                                                if hierarchy:
-                                                    this_hierarchy = _build_parent_list(search_result,
-                                                                                        admxPolicyDefinitions,
-                                                                                        True,
-                                                                                        admlPolicyResources)
-                                                    this_hierarchy.reverse()
-                                                    if hierarchy == this_hierarchy:
-                                                        found = True
-                                                else:
-                                                    found = True
-                                                if found:
-                                                    msg = 'found the admx policy matching '
-                                                    msg = msg + 'the display name {1} -- {0}'
-                                                    log.debug(msg.format(search_result, policy_name))
-                                                    if 'name' in search_result.attrib:
-                                                        # this is a policy
-                                                        policy_name = search_result.attrib['name']
-                                                    else:
-                                                        msg = 'Admx policy with the display name {0} does not'
-                                                        msg = msg + ' have the required name attribtue'
-                                                        raise SaltInvocationError(msg.format(policy_name))
-                                                    _admTemplateData[policy_name] = _value
-                                                    the_policy = search_result
-                                                    break
-                                            if not found:
-                                                msg = 'Unable to correlate {0} to any policy'
-                                                raise SaltInvocationError(msg.format(hierarchy_policy_name))
-                                        else:
-                                            for possible_policy in admxSearchResults:
-                                                this_parent_list = _build_parent_list(possible_policy,
-                                                                                      admxPolicyDefinitions,
-                                                                                      True,
-                                                                                      admlPolicyResources)
-                                                this_parent_list.reverse()
-                                                this_parent_list.append(policy_name)
-                                                if suggested_policies:
-                                                    suggested_policies = ', '.join([suggested_policies,
-                                                                                   '\\'.join(this_parent_list)])
-                                                else:
-                                                    suggested_policies = '\\'.join(this_parent_list)
-                                    else:
-                                        msg = 'Unable to find a policy with the name "{0}".'
-                                        raise SaltInvocationError(msg.format(policy_name))
-                                if suggested_policies:
-                                    raise SaltInvocationError(msg.format(policy_name,
-                                                                         suggested_policies))
-                            else:
-                                msg = 'Unable to find the policy "{0}"'.format(policy_name)
-                                raise SaltInvocationError(msg)
+                            raise SaltInvocationError(msg)
                         if policy_name in _admTemplateData and the_policy is not None:
                             log.debug('setting == {0}'.format(_admTemplateData[policy_name]).lower())
                             log.debug('{0}'.format(str(_admTemplateData[policy_name]).lower()))
@@ -3990,8 +4193,8 @@ def set(computer_policy=None, user_policy=None,
                                                 elif child_item.attrib['id'] in _admTemplateData[policy_name]:
                                                     temp_element_name = child_item.attrib['id']
                                                 else:
-                                                    msg = 'Element "{0}" must be included'
-                                                    msg = msg + ' in the policy configuration'
+                                                    msg = ('Element "{0}" must be included'
+                                                           ' in the policy configuration')
                                                     raise SaltInvocationError(msg.format(this_element_name))
                                                 if 'required' in child_item.attrib \
                                                         and child_item.attrib['required'].lower() == 'true':
@@ -4040,8 +4243,8 @@ def set(computer_policy=None, user_policy=None,
                                                         if not isinstance(
                                                                 _admTemplateData[policy_name][temp_element_name],
                                                                 dict):
-                                                            msg = 'Each list item of element "{0}" '
-                                                            msg = msg + 'requires a dict value'
+                                                            msg = ('Each list item of element "{0}" '
+                                                                   'requires a dict value')
                                                             msg = msg.format(temp_element_name)
                                                             raise SaltInvocationError(msg)
                                                     elif not isinstance(
@@ -4065,13 +4268,13 @@ def set(computer_policy=None, user_policy=None,
                                         raise SaltInvocationError(msg)
                                 else:
                                     if str(_admTemplateData[policy_name]).lower() != 'enabled':
-                                        msg = 'The policy {0} must either be "Enabled", '
-                                        msg = msg + '"Disabled", or "Not Configured"'
+                                        msg = ('The policy {0} must either be "Enabled", '
+                                               '"Disabled", or "Not Configured"')
                                         msg = msg.format(policy_name)
                                         raise SaltInvocationError(msg)
                 if _regedits:
                     for regedit in _regedits.keys():
-                        log.debug('{0} is a Registry policy'.format(policy_name))
+                        log.debug('{0} is a Registry policy'.format(regedit))
                         _ret = __salt__['reg.set_key'](
                                 _regedits[regedit]['policy']['Registry']['Hive'],
                                 _regedits[regedit]['policy']['Registry']['Path'],
@@ -4079,9 +4282,9 @@ def set(computer_policy=None, user_policy=None,
                                 _regedits[regedit]['value'],
                                 _regedits[regedit]['policy']['Registry']['Type'])
                         if not _ret:
-                            msg = 'Error while attempting to set policy {0} via the registry.'
-                            msg = msg + '  Some changes may not be applied as expected'
-                            raise CommandExecutionError(msg.format(policy_name))
+                            msg = ('Error while attempting to set policy {0} via the registry.'
+                                   '  Some changes may not be applied as expected')
+                            raise CommandExecutionError(msg.format(regedit))
                 if _lsarights:
                     for lsaright in _lsarights.keys():
                         _existingUsers = None
@@ -4093,16 +4296,16 @@ def set(computer_policy=None, user_policy=None,
                                 _ret = _addAccountRights(acct, _lsarights[lsaright]['policy']['LsaRights']['Option'])
                                 if not _ret:
                                     msg = 'An error occurred attempting to configure the user right {0}.'
-                                    raise SaltInvocationError(msg.format(policy_name))
+                                    raise SaltInvocationError(msg.format(lsaright))
                         if _existingUsers:
                             for acct in _existingUsers:
                                 if acct not in _lsarights[lsaright]['value']:
                                     _ret = _delAccountRights(
                                             acct, _lsarights[lsaright]['policy']['LsaRights']['Option'])
                                     if not _ret:
-                                        msg = 'An error occurred attempting to remove previously'
-                                        msg = msg + 'configured users with right {0}.'
-                                        raise SaltInvocationError(msg.format(policy_name))
+                                        msg = ('An error occurred attempting to remove previously'
+                                               'configured users with right {0}.')
+                                        raise SaltInvocationError(msg.format(lsaright))
                 if _secedits:
                     # we've got secedits to make
                     log.debug(_secedits)
@@ -4116,8 +4319,8 @@ def set(computer_policy=None, user_policy=None,
                     log.debug('_iniData == {0}'.format(_iniData))
                     _ret = _importSeceditConfig(_iniData)
                     if not _ret:
-                        msg = 'Error while attempting to set policies via secedit.'
-                        msg = msg + '  Some changes may not be applied as expected'
+                        msg = ('Error while attempting to set policies via secedit.'
+                               '  Some changes may not be applied as expected')
                         raise CommandExecutionError(msg)
                 if _modal_sets:
                     # we've got modalsets to make
@@ -4139,8 +4342,8 @@ def set(computer_policy=None, user_policy=None,
                                                          admlPolicyResources,
                                                          registry_class=p_class)
                     if not _ret:
-                        msg = 'Error while attempting to write Administrative Template Policy data.'
-                        msg = msg + '  Some changes may not be applied as expected'
+                        msg = ('Error while attempting to write Administrative Template Policy data.'
+                               '  Some changes may not be applied as expected')
                         raise CommandExecutionError(msg)
         return True
     else:
