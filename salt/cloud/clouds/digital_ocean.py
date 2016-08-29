@@ -336,7 +336,7 @@ def create(vm_):
             )
         )
 
-    if key_filename is None:
+    if not __opts__.get('ssh_agent', False) and key_filename is None:
         raise SaltCloudConfigError(
             'The DigitalOcean driver requires an ssh_key_file and an ssh_key_name '
             'because it does not supply a root password upon building the server.'
