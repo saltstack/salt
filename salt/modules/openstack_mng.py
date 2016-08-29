@@ -44,7 +44,7 @@ def start_service(service_name):
     .. code-block:: bash
         salt '*' openstack_mng.start_service neutron
     '''
-    
+
     os_cmd = ['/usr/bin/openstack-service', 'start', service_name]
     return __salt__['cmd.retcode'](os_cmd) == 0
 
