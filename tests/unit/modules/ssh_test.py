@@ -19,15 +19,14 @@ from salt.exceptions import CommandExecutionError
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SSHAuthKeyTestCase(TestCase):
-
+    '''
+    TestCase for salt.modules.ssh
+    '''
     def setUp(self):
         ssh.__salt__ = {
             'user.info': lambda u: getattr(self, 'user_info_mock', None),
         }
 
-    '''
-    TestCase for salt.modules.ssh
-    '''
     def test_expand_user_token(self):
         '''
         Test if the %u, %h, and %% tokens are correctly expanded
@@ -56,11 +55,10 @@ class SSHAuthKeyTestCase(TestCase):
         path = '/home/%dude'
         self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
 
-
     def test_set_auth_key_invalid(self):
         self.user_info_mock = {'home': '/dev/null'}
         # Inserting invalid public key should be rejected
-        invalid_key = 'AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY' # missing padding
+        invalid_key = 'AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY'  # missing padding
         self.assertEqual(ssh.set_auth_key('user', invalid_key), 'Invalid public key')
 
 
