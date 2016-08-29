@@ -541,7 +541,9 @@ def get_inventory(service_instance):
     return service_instance.RetrieveContent()
 
 
-def get_content(service_instance, obj_type, property_list=None, container_ref=None):
+def get_content(service_instance, obj_type, property_list=None,
+                container_ref=None, traversal_spec=None,
+                local_properties=False):
     '''
     Returns the content of the specified type of object for a Service Instance.
 
@@ -561,22 +563,37 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
         An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
         ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
         rootFolder.
+
+    traversal_spec
+        An optional TraversalSpec to be used instead of the standard
+        ``Traverse All`` spec.
+
+    local_properties
+        Flag specifying whether the properties to be retrieved are local to the
+        container. If that is the case, the traversal spec needs to be None.
     '''
     # Start at the rootFolder if container starting point not specified
     if not container_ref:
         container_ref = service_instance.content.rootFolder
 
-    # Create an object view
-    obj_view = service_instance.content.viewManager.CreateContainerView(
-        container_ref, [obj_type], True)
-
-    # Create traversal spec to determine the path for collection
-    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
-        name='traverseEntities',
-        path='view',
-        skip=False,
-        type=vim.view.ContainerView
-    )
+    # By default, the object reference used as the starting poing for the filter
+    # is the container_ref passed in the function
+    obj_ref = container_ref
+    local_traversal_spec = False
+    if not traversal_spec and not local_properties:
+        local_traversal_spec = True
+        # We don't have a specific traversal spec override so we are going to
+        # get everything using a container view
+        obj_ref = service_instance.content.viewManager.CreateContainerView(
+            container_ref, [obj_type], True)
+        # Create 'Traverse All' traversal spec to determine the path for
+        # collection
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='traverseEntities',
+            path='view',
+            skip=True,
+            type=vim.view.ContainerView
+        )
 
     # Create property spec to determine properties to be retrieved
     property_spec = vmodl.query.PropertyCollector.PropertySpec(
@@ -587,9 +604,9 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
 
     # Create object spec to navigate content
     obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
-        obj=obj_view,
-        skip=True,
-        selectSet=[traversal_spec]
+        obj=obj_ref,
+        skip=False,
+        selectSet=[traversal_spec] if not local_properties else None
     )
 
     # Create a filter spec and specify object, property spec in it
@@ -603,7 +620,8 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
     content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
 
     # Destroy the object view
-    obj_view.Destroy()
+    if local_traversal_spec:
+        obj_ref.Destroy()
 
     return content
 
@@ -639,7 +657,9 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     return None
 
 
-def get_mors_with_properties(service_instance, object_type, property_list=None, container_ref=None):
+def get_mors_with_properties(service_instance, object_type, property_list=None,
+                             container_ref=None, traversal_spec=None,
+                             local_properties=False):
     '''
     Returns a list containing properties and managed object references for the managed object.
 
@@ -656,18 +676,30 @@ def get_mors_with_properties(service_instance, object_type, property_list=None, 
         An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
         ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
         rootFolder.
+
+    traversal_spec
+        An optional TraversalSpec to be used instead of the standard
+        ``Traverse All`` spec
+
+    local_properties
+        Flag specigying whether the properties to be retrieved are local to the
+        container. If that is the case, the traversal spec needs to be None.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type, property_list=property_list, container_ref=container_ref)
+    content = get_content(service_instance, object_type,
+                          property_list=property_list,
+                          container_ref=container_ref,
+                          traversal_spec=traversal_spec,
+                          local_properties=local_properties)
 
     object_list = []
     for obj in content:
         properties = {}
         for prop in obj.propSet:
             properties[prop.name] = prop.val
-            properties['object'] = obj.obj
+        properties['object'] = obj.obj
         object_list.append(properties)
-
+    log.trace('Retrieved {0} objects'.format(len(object_list)))
     return object_list
 
 
@@ -700,7 +732,7 @@ def list_objects(service_instance, vim_object, properties=None):
     object_type
         The type of content for which to obtain information.
 
-    property_list
+    properties
         An optional list of object properties used to return reference results.
         If not provided, defaults to ``name``.
     '''
@@ -842,33 +874,43 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         The task to wait for.
 
     instance_name
-        The name of the ESXi host, vCenter Server, or Virtual Machine that the task is being run on.
+        The name of the ESXi host, vCenter Server, or Virtual Machine that
+        the task is being run on.
 
     task_type
         The type of task being performed. Useful information for debugging purposes.
 
     sleep_seconds
-        The number of seconds to wait before querying the task again. Defaults to ``1`` second.
+        The number of seconds to wait before querying the task again.
+        Defaults to ``1`` second.
 
     log_level
-        The level at which to log task information. Default is ``debug``, but ``info`` is also supported.
+        The level at which to log task information. Default is ``debug``,
+        but ``info`` is also supported.
     '''
     time_counter = 0
     start_time = time.time()
     while task.info.state == 'running' or task.info.state == 'queued':
         if time_counter % sleep_seconds == 0:
-            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(instance_name, task_type, time_counter)
+            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(
+                instance_name, task_type, time_counter)
             if log_level == 'info':
                 log.info(msg)
             else:
                 log.debug(msg)
         time.sleep(1.0 - ((time.time() - start_time) % 1.0))
         time_counter += 1
+    log.trace('task = {0}, task_type = {1}'.format(task,
+                                                   task.__class__.__name__))
     if task.info.state == 'success':
-        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(instance_name, task_type, time_counter)
+        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(
+            instance_name, task_type, time_counter)
         if log_level == 'info':
             log.info(msg)
         else:
             log.debug(msg)
+        # task is in a successful state
+        return task.info.result
     else:
-        raise Exception(task.info.error)
+        # task is in an error state
+        raise task.info.error
