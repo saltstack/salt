@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Wheel system wrapper for key system.
+Wheel system wrapper for the Salt key system to be used in interactions with
+the Salt Master programmatically.
 
 The key module for the wheel system is meant to provide an internal interface
 for other Salt systems to interact with the Salt Master. The following usage
@@ -227,11 +228,7 @@ def key_str(match):
 
         >>> wheel.cmd('key.key_str', ['minion1'])
         {'minions': {'minion1': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0B
-        AQEFAAOCAQ8AMIIBCgKCAQEA42Kf+w9XeZWgguzvIqm6\nDZvUSuIOjgesoAaK0waBnKWSbag
-        OYbAHs/mCYD4xuGTVk/Nt4w8JpRCJRhLKnQz+\n4l9ZE28swE+TOzK4rXVqGo4sAQ70WkG759
-        e/pWpaJi9LlTAS9w0FaJLC53nrCii4\nAXxldlHU9jubb4/AbGp6FKz6C53RF6VZcaL6GZUF/
-        mjWkPODGUu2bEs8FDXSHFUw\nLajoSOUPwSgaxW2ggTyynm0XgELMzkCmFihv0Ve4c+XPuOdG
-        55Jp8B5oG2xAtviU\naEEBBPfamX9gGPQTpN9e8HwcZjXQnmg8OrcUl10WHw09SDWLOlnW+ue
+        ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
     '''
     skey = salt.key.Key(__opts__)
@@ -274,34 +271,11 @@ def gen(id_=None, keysize=2048):
 
         >>> wheel.cmd('key.gen')
         {'pub': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBC
-        gKCAQEA42Kf+w9XeZWgguzvIqm6\nDZvUSuIOjgesoAaK0waBnKWSbagOYbAHs/mCYD4xuGTVk
-        /Nt4w8JpRCJRhLKnQz+\n4l9ZE28swE+TOzK4rXVqGo4sAQ70WkG759e/pWpaJi9LlTAS9w0Fa
-        JLC53nrCii4\nAXxldlHU9jubb4/AbGp6FKz6C53RF6VZcaL6GZUF/mjWkPODGUu2bEs8FDXSH
-        FUw\nLajoSOUPwSgaxW2ggTyynm0XgELMzkCmFihv0Ve4c+XPuOdG55Jp8B5oG2xAtviU\naEE
+        ...
         BBPfamX9gGPQTpN9e8HwcZjXQnmg8OrcUl10WHw09SDWLOlnW+ueTWugEQpPt\niQIDAQAB\n
         -----END PUBLIC KEY-----',
         'priv': '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA42Kf+w9XeZWgguzv
-        Iqm6DZvUSuIOjgesoAaK0waBnKWSbagO\nYbAHs/mCYD4xuGTVk/Nt4w8JpRCJRhLKnQz+4l9Z
-        E28swE+TOzK4rXVqGo4sAQ70\nWkG759e/pWpaJi9LlTAS9w0FaJLC53nrCii4AXxldlHU9jub
-        b4/AbGp6FKz6C53R\nF6VZcaL6GZUF/mjWkPODGUu2bEs8FDXSHFUwLajoSOUPwSgaxW2ggTyy
-        nm0XgELM\nzkCmFihv0Ve4c+XPuOdG55Jp8B5oG2xAtviUaEEBBPfamX9gGPQTpN9e8HwcZjXQ
-        \nnmg8OrcUl10WHw09SDWLOlnW+ueTWugEQpPtiQIDAQABAoIBAFPIf1IusPin3WDg\nlKydBW
-        UGSg7dhKdoxH6ianyfJRrnFzE4fzQXfH8gLJ3xzLg4z0mYpKDJZbBgi3Q6\ncFW1+CTJJTU3/b
-        FOoN1rLwka/mGSiTxKmla3adlfccotidIQEzWBZTuKnLePfCl2\njthLcKF7iJc0R9gC1p8gxL
-        It+ZWsBQyBH3+WHeWJ/sI9YWDpYKxmGNdcCIFH2v+L\n+V8y1R1JUsUbcqOQcxKxl7B+mKX9Bn
-        AOhX8pW4xpvpOzaIA2BpNkgmaqY+9/nFE1\nolA8ngZEImRoU5tmMquThneU1ACzRH7ZoceIX+
-        gpwUTTtIZrTwRhKlFPn2qcxFuF\nc5mqqpECgYEA65ZhY/V9emOYGanA7VDuRJp+249I5B3bvo
-        8C2yq2uR96EhbM6Q6c\nO8tdk3CaA9a2vkanchP+mi+TwX9hAEuuK5GS+XitDxOAXsM9OnHn9b
-        sX5snncrJL\naMplOonzjZGg6/tKDJl/SErr7hT0ylUtx3X3fqdrJGdKdq67X5ogMPcCgYEA9x
-        ZP\nbH1lAPuOEzxY3vt5ntXGOpW0oLiHh/VUSQyLS2tSPpJJxJUVnhBGpMS/l0gOFI9B\nT8/F
-        Ad/THK99DopbyIWwxOW08Wwp5ATr8c+HdSGVDx1k4HbEi7TGCbYBHBJ+AyYe\nAlepenCwCdDu
-        c6B8uczQBYIpa8dYmJ6rnROrtX8CgYEAw/onLjYrmcJ75u1V9pUa\ngKtc2FzLsCg+grkJETTp
-        J/rNW3roHv/ua7dzMpG7LXJSNtsjtDx50d2+Nns2QD60\ntr203B7NJ/t7EFmt946F/d8TtQNE
-        rB8xqAymRRo5Jw18JpK2OOEABy18MmPwdtiA\n6qpxpkSzVmcuhKg6av8VxGUCgYBRBnTnG7uq
-        ddNiRXDTNl3skyedAIiqB7kSAYYx\nKjbndXsT377nAwiCu82erJIzVsKfRVbiiDyPX8mH55g3
-        03FDsWuFNdp/LLwT9PU2\nZ5qA85FA0p/I58mOEqq6dn+op/vApphCpmKCLz/bCDOZoTAlcZ9p
-        nwRcPpO0AJxA\nNzogmwKBgQCFz8TQ4m41dNvTldAEiqRozsDTrjKOgNePOWHzjEnYCzS/FQv/
-        rsTx\nky3GRz3FTQ02tVa2lUqzfn05bAQtrD2wjKt4xoCdgqKVbCXhJ4RIovpkPSESOrJw\nFl
+        ...
         QH3/W74X1+WTBlx4R2KGLYBiH+bCCFEQ/Zvcu4Xp4bIOPtRKozEQ==\n
         -----END RSA PRIVATE KEY-----'}
     '''
@@ -345,34 +319,11 @@ def gen_accept(id_, keysize=2048, force=False):
 
         >>> wheel.cmd('key.gen_accept', ['foo'])
         {'pub': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBC
-        gKCAQEA42Kf+w9XeZWgguzvIqm6\nDZvUSuIOjgesoAaK0waBnKWSbagOYbAHs/mCYD4xuGTVk
-        /Nt4w8JpRCJRhLKnQz+\n4l9ZE28swE+TOzK4rXVqGo4sAQ70WkG759e/pWpaJi9LlTAS9w0Fa
-        JLC53nrCii4\nAXxldlHU9jubb4/AbGp6FKz6C53RF6VZcaL6GZUF/mjWkPODGUu2bEs8FDXSH
-        FUw\nLajoSOUPwSgaxW2ggTyynm0XgELMzkCmFihv0Ve4c+XPuOdG55Jp8B5oG2xAtviU\naEE
+        ...
         BBPfamX9gGPQTpN9e8HwcZjXQnmg8OrcUl10WHw09SDWLOlnW+ueTWugEQpPt\niQIDAQAB\n
         -----END PUBLIC KEY-----',
         'priv': '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA42Kf+w9XeZWgguzv
-        Iqm6DZvUSuIOjgesoAaK0waBnKWSbagO\nYbAHs/mCYD4xuGTVk/Nt4w8JpRCJRhLKnQz+4l9Z
-        E28swE+TOzK4rXVqGo4sAQ70\nWkG759e/pWpaJi9LlTAS9w0FaJLC53nrCii4AXxldlHU9jub
-        b4/AbGp6FKz6C53R\nF6VZcaL6GZUF/mjWkPODGUu2bEs8FDXSHFUwLajoSOUPwSgaxW2ggTyy
-        nm0XgELM\nzkCmFihv0Ve4c+XPuOdG55Jp8B5oG2xAtviUaEEBBPfamX9gGPQTpN9e8HwcZjXQ
-        \nnmg8OrcUl10WHw09SDWLOlnW+ueTWugEQpPtiQIDAQABAoIBAFPIf1IusPin3WDg\nlKydBW
-        UGSg7dhKdoxH6ianyfJRrnFzE4fzQXfH8gLJ3xzLg4z0mYpKDJZbBgi3Q6\ncFW1+CTJJTU3/b
-        FOoN1rLwka/mGSiTxKmla3adlfccotidIQEzWBZTuKnLePfCl2\njthLcKF7iJc0R9gC1p8gxL
-        It+ZWsBQyBH3+WHeWJ/sI9YWDpYKxmGNdcCIFH2v+L\n+V8y1R1JUsUbcqOQcxKxl7B+mKX9Bn
-        AOhX8pW4xpvpOzaIA2BpNkgmaqY+9/nFE1\nolA8ngZEImRoU5tmMquThneU1ACzRH7ZoceIX+
-        gpwUTTtIZrTwRhKlFPn2qcxFuF\nc5mqqpECgYEA65ZhY/V9emOYGanA7VDuRJp+249I5B3bvo
-        8C2yq2uR96EhbM6Q6c\nO8tdk3CaA9a2vkanchP+mi+TwX9hAEuuK5GS+XitDxOAXsM9OnHn9b
-        sX5snncrJL\naMplOonzjZGg6/tKDJl/SErr7hT0ylUtx3X3fqdrJGdKdq67X5ogMPcCgYEA9x
-        ZP\nbH1lAPuOEzxY3vt5ntXGOpW0oLiHh/VUSQyLS2tSPpJJxJUVnhBGpMS/l0gOFI9B\nT8/F
-        Ad/THK99DopbyIWwxOW08Wwp5ATr8c+HdSGVDx1k4HbEi7TGCbYBHBJ+AyYe\nAlepenCwCdDu
-        c6B8uczQBYIpa8dYmJ6rnROrtX8CgYEAw/onLjYrmcJ75u1V9pUa\ngKtc2FzLsCg+grkJETTp
-        J/rNW3roHv/ua7dzMpG7LXJSNtsjtDx50d2+Nns2QD60\ntr203B7NJ/t7EFmt946F/d8TtQNE
-        rB8xqAymRRo5Jw18JpK2OOEABy18MmPwdtiA\n6qpxpkSzVmcuhKg6av8VxGUCgYBRBnTnG7uq
-        ddNiRXDTNl3skyedAIiqB7kSAYYx\nKjbndXsT377nAwiCu82erJIzVsKfRVbiiDyPX8mH55g3
-        03FDsWuFNdp/LLwT9PU2\nZ5qA85FA0p/I58mOEqq6dn+op/vApphCpmKCLz/bCDOZoTAlcZ9p
-        nwRcPpO0AJxA\nNzogmwKBgQCFz8TQ4m41dNvTldAEiqRozsDTrjKOgNePOWHzjEnYCzS/FQv/
-        rsTx\nky3GRz3FTQ02tVa2lUqzfn05bAQtrD2wjKt4xoCdgqKVbCXhJ4RIovpkPSESOrJw\nFl
+        ...
         QH3/W74X1+WTBlx4R2KGLYBiH+bCCFEQ/Zvcu4Xp4bIOPtRKozEQ==\n
         -----END RSA PRIVATE KEY-----'}
 
