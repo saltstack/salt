@@ -268,7 +268,7 @@ def chhome(name, home, persist=False):
     Args:
         name (str): The name of the user to change
         home (str): The new location of the home directory
-        persist (bool): True to copy files from the old to the new directory
+        persist (bool): True to move files from the old to the new directory
 
     Returns:
         bool: True for success, False otherwise
@@ -295,7 +295,7 @@ def chhome(name, home, persist=False):
 
     # If persist, move the home directory contents to the new location
     if persist:
-        __salt__['cmd.run'](['mv', pre_info['home'], home])
+        __salt__['cmd.run'](['mv', '{0}\*'.format(pre_info['home']), home])
 
     return info(name).get('home') == home
 
