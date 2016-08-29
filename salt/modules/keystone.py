@@ -328,7 +328,7 @@ def endpoint_list(profile=None, **connection_args):
     for endpoint in kstone.endpoints.list():
         ret[endpoint.id] = dict((value, getattr(endpoint, value)) for value in dir(endpoint)
                                 if not value.startswith('_') and
-                                isinstance(getattr(endpoint, value), (six.text_type, dict, bool)))
+                                isinstance(getattr(endpoint, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -478,7 +478,7 @@ def role_list(profile=None, **connection_args):
     for role in kstone.roles.list():
         ret[role.name] = dict((value, getattr(role, value)) for value in dir(role)
                               if not value.startswith('_') and
-                              isinstance(getattr(role, value), (six.text_type, dict, bool)))
+                              isinstance(getattr(role, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -542,7 +542,7 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
     service = kstone.services.get(service_id)
     ret[service.name] = dict((value, getattr(service, value)) for value in dir(service)
                              if not value.startswith('_') and
-                             isinstance(getattr(service, value), (six.text_type, dict, bool)))
+                             isinstance(getattr(service, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -561,7 +561,7 @@ def service_list(profile=None, **connection_args):
     for service in kstone.services.list():
         ret[service.name] = dict((value, getattr(service, value)) for value in dir(service)
                                  if not value.startswith('_') and
-                                 isinstance(getattr(service, value), (six.text_type, dict, bool)))
+                                 isinstance(getattr(service, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -700,7 +700,7 @@ def tenant_get(tenant_id=None, name=None, profile=None,
     tenant = getattr(kstone, _TENANTS, None).get(tenant_id)
     ret[tenant.name] = dict((value, getattr(tenant, value)) for value in dir(tenant)
                             if not value.startswith('_') and
-                            isinstance(getattr(tenant, value), (six.text_type, dict, bool)))
+                            isinstance(getattr(tenant, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -751,7 +751,7 @@ def tenant_list(profile=None, **connection_args):
     for tenant in getattr(kstone, _TENANTS, None).list():
         ret[tenant.name] = dict((value, getattr(tenant, value)) for value in dir(tenant)
                                 if not value.startswith('_') and
-                                isinstance(getattr(tenant, value), (six.text_type, dict, bool)))
+                                isinstance(getattr(tenant, value), (six.text_type, dict, bool, str)))
     return ret
 
 
@@ -813,7 +813,7 @@ def tenant_update(tenant_id=None, name=None, description=None,
 
     return dict((value, getattr(updated, value)) for value in dir(updated)
                 if not value.startswith('_') and
-                isinstance(getattr(updated, value), (six.text_type, dict, bool)))
+                isinstance(getattr(updated, value), (six.text_type, dict, bool, str)))
 
 
 def project_update(project_id=None, name=None, description=None,
@@ -890,7 +890,7 @@ def user_list(profile=None, **connection_args):
     for user in kstone.users.list():
         ret[user.name] = dict((value, getattr(user, value, None)) for value in dir(user)
                               if not value.startswith('_') and
-                              isinstance(getattr(user, value, None), (six.text_type, dict, bool)))
+                              isinstance(getattr(user, value, None), (six.text_type, dict, bool, str)))
         tenant_id = getattr(user, 'tenantId', None)
         if tenant_id:
             ret[user.name]['tenant_id'] = tenant_id
@@ -927,7 +927,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
 
     ret[user.name] = dict((value, getattr(user, value, None)) for value in dir(user)
                           if not value.startswith('_') and
-                          isinstance(getattr(user, value, None), (six.text_type, dict, bool)))
+                          isinstance(getattr(user, value, None), (six.text_type, dict, bool, str)))
 
     tenant_id = getattr(user, 'tenantId', None)
     if tenant_id:
@@ -1289,7 +1289,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         for role in kstone.roles.list(user=user_id, project=tenant_id):
             ret[role.name] = dict((value, getattr(role, value)) for value in dir(role)
                                   if not value.startswith('_') and
-                                  isinstance(getattr(role, value), (six.text_type, dict, bool)))
+                                  isinstance(getattr(role, value), (six.text_type, dict, bool, str)))
     else:
         for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
             ret[role.name] = {'id': role.id,
