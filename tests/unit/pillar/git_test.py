@@ -51,6 +51,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         git_pillar.__opts__ = {
                 'cachedir': cachedir,
                 'pillar_roots': {},
+                'hash_type': 'sha256',
                 'file_roots': {},
                 'state_top': 'top.sls',
                 'extension_modules': '',
