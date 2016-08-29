@@ -5,7 +5,6 @@
 # Import Python libs
 from __future__ import absolute_import
 import contextlib
-import textwrap
 import json
 try:
     import dns.query
@@ -26,7 +25,6 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
 from salt.modules import ddns
 
 # Globals
