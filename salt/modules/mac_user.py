@@ -285,21 +285,24 @@ def chhome(name, home, persist=False):
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
     if home == pre_info['home']:
         return True
-    _dscl(
-        ['/Users/{0}'.format(name), 'NFSHomeDirectory',
-         pre_info['home'], home],
-        ctype='change'
-    )
+
+    # Try to move the home directory first if persist is passed and the target
+    # directory does not exist
+    moved = False
+    if persist and not os.path.exists(home):
+        if not __salt__['cmd.run_stderr'](['mv', pre_info['home'], home]):
+            moved = True
+
+    # If the change fails and the file was moved, move it back
+    if not _dscl(['/Users/{0}'.format(name),
+                  'NFSHomeDirectory',
+                  pre_info['home'],
+                  home], ctype='change')['retcode'] and moved:
+        __salt__['cmd.run_stderr'](['mv', home, pre_info['home']])
+
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
-
-    # If persist, move the home directory contents to the new location
-    if persist:
-        if os.path.isdir(home) and not os.listdir(home):
-            __salt__['cmd.run'](['mv', '{0}/*'.format(pre_info['home']), home])
-        elif not os.path.isfile(home) and os.path.isdir(pre_info['home']):
-            __salt__['cmd.run'](['mv', pre_info['home'], home])
 
     return info(name).get('home') == home
 
