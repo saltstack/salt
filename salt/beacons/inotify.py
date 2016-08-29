@@ -273,6 +273,7 @@ def beacon(config):
                     if update:
                         wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
         elif os.path.exists(path):
+            excludes = config[path].get('exclude', '')
             excl = None
             if isinstance(excludes, list):
                 excl = []
