@@ -1637,7 +1637,7 @@ def latest(
                     and __salt__['portage_config.is_changed_uses'](pkg):
                 # Package is up-to-date, but Gentoo USE flags are changing so
                 # we need to add it to the targets
-                targets[pkg] = avail[pkg]
+                targets[pkg] = cur[pkg]
         else:
             # Package either a) is not installed, or b) is installed and has an
             # upgrade available
