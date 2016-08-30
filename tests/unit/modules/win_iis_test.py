@@ -92,6 +92,7 @@ LIST_VDIRS_SRVMGR = {
     }])
 }
 
+
 @skipIf(not HAS_IIS, 'This test case runs only on Windows systems')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase):
