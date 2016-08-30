@@ -5221,10 +5221,16 @@ def grep(path,
     split_opts = []
     for opt in opts:
         try:
-            opt = salt.utils.shlex_split(opt)
+            split = salt.utils.shlex_split(opt)
         except AttributeError:
-            opt = salt.utils.shlex_split(str(opt))
-        split_opts.extend(opt)
+            split = salt.utils.shlex_split(str(opt))
+        if len(split) > 1:
+            raise SaltInvocationError(
+                'Passing multiple command line arguments in a single string '
+                'is not supported, please pass the following arguments '
+                'separately: {0}'.format(opt)
+            )
+        split_opts.extend(split)
 
     cmd = ['grep'] + split_opts + [pattern, path]
     try:
