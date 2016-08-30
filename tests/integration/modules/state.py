@@ -1125,6 +1125,38 @@ class StateModuleTest(integration.ModuleCase,
         self.assertEqual(state_run[bar_state]['comment'],
                          'Command "echo bar" run')
 
+    def test_show_template(self):
+        '''
+        Test the show_template function
+        '''
+        fd_, sls_file = tempfile.mkstemp()
+
+        # Create the content of the yaml/jinja file to test
+        with salt.utils.fopen(state_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                bikini-bottom:
+                  {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
+                  '{{ first_name }}':
+                    full_name: '{{ first_name }} {{ last_name }}'
+                  {% endfor %}
+                '''))
+
+        # Release the handle so it can be removed in Windows
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+
+        # Parse the file
+        ret = self.run_function('state.show_template', [sls_file])
+
+        self.assertIn(ret['bikini-bottom'], 'spongebob')
+        self.assertIn(ret['bikini-bottom'], 'patrick')
+        self.assertEqual(
+            ret['bikini-bottom']['patrick']['full_name'], 'patrick star')
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(StateModuleTest)
