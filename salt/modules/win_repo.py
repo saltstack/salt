@@ -205,7 +205,7 @@ def show_sls(name, saltenv='base'):
     return config
 
 
-def show_template(name, **kwargs):
+def show_template(sls_file, **kwargs):
     '''
     .. versionadded:: Carbon
 
@@ -218,7 +218,7 @@ def show_template(name, **kwargs):
         instead directly processes the file at the provided path on the minion.
 
     Args:
-        name (str): The path to the file to process.
+        sls_file (str): The path to the file to process.
 
     Returns:
         dict: A dictionary containing the rendered data or any errors
@@ -229,4 +229,4 @@ def show_template(name, **kwargs):
 
         salt '*' state.show_template '<Path to template on the minion>'
     '''
-    return __salt__['state.show_template'](name, **kwargs)
+    return __salt__['state.show_template'](sls_file, **kwargs)

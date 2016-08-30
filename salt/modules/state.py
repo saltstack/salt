@@ -386,7 +386,7 @@ def show_template(sls_file, **kwargs):
         return {'error': '"{0}" not found'.format(sls_file)}
 
     if not os.path.isfile(sls_file):
-        return {'error': '"{0}" must be a file'.format(sls_file)}
+        return {'error': '"{0}" not a file'.format(sls_file)}
 
     st_ = salt.state.HighState(__opts__, context=__context__)
 
