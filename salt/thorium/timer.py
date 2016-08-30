@@ -10,7 +10,7 @@ import time
 
 def hold(name, seconds):
     '''
-    Wait for a given period of time, then fire a result of True, requireing
+    Wait for a given period of time, then fire a result of True, requiring
     this state allows for an action to be blocked for evaluation based on
     time
     '''
