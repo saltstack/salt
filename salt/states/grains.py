@@ -80,11 +80,13 @@ def present(name, value=None, delimiter=DEFAULT_TARGET_DELIM, force=False):
     _non_existent = object()
     existing = __salt__['grains.get'](name, _non_existent)
     if value is None:
+        ret = __salt__['grains.set'](name, value, force=force)
         if existing is _non_existent:
             ret['result'] = False
             ret['comment'] = 'Grain is not present'
         else:
-            ret['comment'] = 'Grain is present'
+            if not ret['comment']:
+                ret['comment'] = 'Grain is present'
         return ret
     if existing == value:
         ret['comment'] = 'Grain is already set'

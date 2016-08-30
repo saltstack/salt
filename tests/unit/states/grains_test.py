@@ -88,7 +88,7 @@ class GrainsTestCase(TestCase):
             value=None)
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Grain is present')
-        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['changes'], {'foo': None})
 
         # Grain not present
         self.setGrains({'a': 'aval'})
@@ -97,7 +97,7 @@ class GrainsTestCase(TestCase):
             value=None)
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['comment'], 'Grain is not present')
-        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['changes'], {'foo': None})
 
     def test_present_add(self):
         # Set a non existing grain
