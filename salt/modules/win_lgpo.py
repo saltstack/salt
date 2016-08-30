@@ -23,6 +23,8 @@ Current known limitations
 =========================
     At this time, start/shutdown scripts policies are displayed, but are not configurable.
 
+    Not all "Security Settings" policies exist in the _policy_info class
+
 
 :depends:
   - pywin32 Python module
@@ -4074,6 +4076,10 @@ def set_computer_policy(name,
     :param str adml_language:
         The language files to use for looking up Administrative Template policy data (i.e. how the policy is
         displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+
+    .. code-block:: bash
+
+        salt '*' gpedit.set_computer_policy LockoutDuration 1440
     '''
     pol = {}
     pol[name] = setting
@@ -4086,7 +4092,6 @@ def set_computer_policy(name,
 
 def set_user_policy(name,
                     setting,
-                    cumulative_rights_assignments=True,
                     adml_language='en-US'):
     '''
     Set a single user policy
@@ -4097,21 +4102,19 @@ def set_user_policy(name,
     :param object setting
         the setting to configure the named policy with
 
-    :param bool cumulative_rights_assignments
-        Determine how user rights assignment policies are configured.
-
-        If True, user right assignment specifications are simply added to the existing policy
-        If False, only the users specified will get the right (any existing will have the right revoked)
-
     :param str adml_language:
         The language files to use for looking up Administrative Template policy data (i.e. how the policy is
         displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+
+    .. code-block:: bash
+
+        salt '*' gpedit.set_user_policy "Control Panel\\Display\\Disable the Display Control Panel" Enabled
     '''
     pol = {}
     pol[name] = setting
     ret = set(user_policy=pol,
               computer_policy=None,
-              cumulative_rights_assignments=cumulative_rights_assignments,
+              cumulative_rights_assignments=True,
               adml_language=adml_language)
     return ret
 

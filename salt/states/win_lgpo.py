@@ -54,6 +54,53 @@ Multiple policy configuration
                     Set the intranet statistics server: http://mywsus
             - user_policy:
                 Do not process the legacy run list: Enabled
+
+.. code-block:: yaml
+
+    server_policy:
+      lgpo.set:
+        - computer_policy:
+            Maximum password age: 60
+            Minimum password age: 1
+            Minimum password length: 14
+            Account lockout duration: 1440
+            Account lockout threshold: 10
+            Reset account lockout counter after: 1440
+            Manage auditing and security log:
+              - "BUILTIN\\Administrators"
+            Replace a process level token:
+              - "NT AUTHORITY\\NETWORK SERVICE"
+              - "NT AUTHORITY\\LOCAL SERVICE"
+            "Accounts: Guest account status": Disabled
+            "Accounts: Rename guest account": Not_4_U
+            "Audit: Audit the use of Backup and Restore privilege": Enabled
+            "Interactive logon: Do not display last user name": Enabled
+            "Network\\DNS Client\\Dynamic update": Disabled
+            "System\\Logon\\Do not display the Getting Started welcome screen at logon": Enabled
+            "Windows Components\\Remote Desktop Services\\Remote Desktop Session Host\\Connections\\Select RDP transport protocols":
+                "Select Transport Type": "Use both UDP and TCP"
+            "Windows Components\\Windows Update\\Allow Automatic Updates immediate installation": Enabled
+            "Windows Components\\Windows Update\\Allow non-administrators to receive update notifications": Disabled
+            "Windows Components\\Windows Update\\Always automatically restart at the scheduled time":
+                "The restart timer will give users this much time to save their work (minutes)": 15
+            "Windows Components\\Windows Update\\Automatic Updates detection frequency":
+                "Check for updates at the following interval (hours)": 1
+            "Windows Components\\Windows Update\\Configure Automatic Updates":
+                "Configure automatic updating": 4 - Auto download and schedule the install
+                "Install during automatic maintenance": False
+                "Scheduled install day": 7 - Every Saturday
+                "Scheduled install time": "17:00"
+            "Windows Components\\Windows Update\\Delay Restart for scheduled installations":
+                "Wait the following period before proceeding with a scheduled restart (minutes)": 1
+            "Windows Components\\Windows Update\\No auto-restart with logged on users for scheduled automatic updates installations": Disabled
+            "Windows Components\\Windows Update\\Re-prompt for restart with scheduled installations":
+                "Wait the following period before prompting again with a scheduled restart (minutes)": 30
+            "Windows Components\\Windows Update\\Reschedule Automatic Updates scheduled installations": Disabled
+            "Windows Components\\Windows Update\\Specify intranet Microsoft update service location":
+                "Set the intranet update service for detecting updates": http://mywsus
+                "Set the intranet statistics server": http://mywsus
+        - cumulative_rights_assignments: True
+
 '''
 
 
