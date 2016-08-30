@@ -478,6 +478,9 @@ class AsyncAuth(object):
                 error = exc
                 break
             if creds == 'retry':
+                if self.opts.get('detect_mode') is True:
+                    error = SaltClientError('Detect mode is on')
+                    break
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
@@ -491,6 +494,8 @@ class AsyncAuth(object):
                 continue
             break
         if not isinstance(creds, dict) or 'aes' not in creds:
+            if self.opts.get('detect_mode') is True:
+                error = SaltClientError('-|RETRY|-')
             try:
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
@@ -553,7 +558,10 @@ class AsyncAuth(object):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 raise tornado.gen.Return('retry')
-            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
+            if self.opts.get('detect_mode') is True:
+                raise tornado.gen.Return('retry')
+            else:
+                raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:

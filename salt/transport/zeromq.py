@@ -998,6 +998,9 @@ class AsyncReqMessageClient(object):
         # Add this future to the mapping
         self.send_future_map[message] = future
 
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
+
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
             self.send_timeout_map[message] = send_timeout
