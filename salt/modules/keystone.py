@@ -1160,7 +1160,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
 
     if user:
         user_id = user_get(name=user, profile=profile,
-                           **connection_args)[user]['id']
+                           **connection_args)[user].get('id')
     else:
         user = next(six.iterkeys(user_get(user_id, profile=profile,
                                           **connection_args)))['name']
@@ -1169,7 +1169,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
 
     if tenant:
         tenant_id = tenant_get(name=tenant, profile=profile,
-                               **connection_args)[tenant]['id']
+                               **connection_args)[tenant].get('id')
     else:
         tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
                                               **connection_args)))['name']
@@ -1218,7 +1218,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
 
     if user:
         user_id = user_get(name=user, profile=profile,
-                           **connection_args)[user]['id']
+                           **connection_args)[user].get('id')
     else:
         user = next(six.iterkeys(user_get(user_id, profile=profile,
                                           **connection_args)))['name']
@@ -1227,7 +1227,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
 
     if tenant:
         tenant_id = tenant_get(name=tenant, profile=profile,
-                               **connection_args)[tenant]['id']
+                               **connection_args)[tenant].get('id')
     else:
         tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
                                               **connection_args)))['name']

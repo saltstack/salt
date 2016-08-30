@@ -847,7 +847,7 @@ class KeystoneTestCase(TestCase):
 
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockUsers.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova'),
@@ -867,7 +867,7 @@ class KeystoneTestCase(TestCase):
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_remove(user='nova',
                                                        tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockTenants.flag = 0
         MockRoles.flag = 1
