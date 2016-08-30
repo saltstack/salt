@@ -470,7 +470,7 @@ def update_one(objects, collection, user=None, password=None,
     _update_doc = document[1]
 
     # need a string to perform the test, so using objs[0]
-    test_f = find(collection, objs[0], user, password, host, port, \
+    test_f = find(collection, objs[0], user, password, host, port, 
     database, authdb)
     if not isinstance(test_f, list):
         return "The find result is not well formatted. An error "+ \
@@ -481,15 +481,15 @@ def update_one(objects, collection, user=None, password=None,
         return "Too much results... Try to be more specific."
     else:
         try:
-            log.info("Updating %r into %s.%s", _id_field, database, \
+            log.info("Updating %r into %s.%s", _id_field, database, 
             collection)
             mdb = pymongo.database.Database(conn, database)
             col = getattr(mdb, collection)
-            ids = col.update_one(_id_field, { '$set': _update_doc })
+            ids = col.update_one( _id_field, {'$set': _update_doc} )
             nb_mod = ids.modified_count
             return "{0} objects updated".format(nb_mod)
         except pymongo.errors.PyMongoError as err:
-            log.error("Updating object %r failed with error %s", \
+            log.error("Updating object %r failed with error %s", 
             objects, err)
             return err
 
