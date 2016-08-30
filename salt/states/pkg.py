@@ -1626,15 +1626,21 @@ def latest(
     problems = []
     for pkg in desired_pkgs:
         if not avail[pkg]:
+            # Package either a) is up-to-date, or b) does not exist
             if not cur[pkg]:
+                # Package does not exist
                 msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
             elif watch_flags \
                     and __grains__.get('os') == 'Gentoo' \
                     and __salt__['portage_config.is_changed_uses'](pkg):
-                targets[pkg] = avail[pkg]
+                # Package is up-to-date, but Gentoo USE flags are changing so
+                # we need to add it to the targets
+                targets[pkg] = cur[pkg]
         else:
+            # Package either a) is not installed, or b) is installed and has an
+            # upgrade available
             targets[pkg] = avail[pkg]
 
     if problems:
