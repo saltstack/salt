@@ -868,9 +868,11 @@ def get_distribution_id(vm_):
     if not distro_id:
         raise SaltCloudNotFound(
             'The DistributionID for the \'{0}\' profile could not be found.\n'
-            'The \'{1}\' instance could not be provisioned.'.format(
+            'The \'{1}\' instance could not be provisioned. The following distributions '
+            'are available:\n{2}'.format(
                 vm_image_name,
-                vm_['name']
+                vm_['name'],
+                pprint.pprint([distro['LABEL'].encode(__salt_system_encoding__) for distro in distributions])
             )
         )
 
