@@ -10,12 +10,14 @@ A module to manage software on Windows
 
 '''
 
-# Import python libs
+# Import python future libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import errno
 import os
 import locale
 import logging
+import re
 # pylint: disable=import-error,no-name-in-module
 from distutils.version import LooseVersion
 
@@ -132,9 +134,9 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
-# available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version,
-                                              'available_version')
+
+
+
 
 
 def upgrade_available(name):
@@ -313,7 +315,7 @@ def _get_reg_software():
                    'Not Found',
                    '(value not set)',
                    '']
-    encoding = locale.getpreferredencoding()
+    #encoding = locale.getpreferredencoding()
     reg_software = {}
 
     hive = 'HKLM'
@@ -328,10 +330,10 @@ def _get_reg_software():
                                             '{0}\\{1}'.format(key, reg_key),
                                             'DisplayName',
                                             use_32bit)['vdata']
-        try:
-            d_name = d_name.decode(encoding)
-        except Exception:
-            pass
+        #try:
+        #    d_name = d_name.decode(encoding)
+        #except Exception:
+        #    pass
 
         d_vers = __salt__['reg.read_value'](hive,
                                             '{0}\\{1}'.format(key, reg_key),
@@ -352,46 +354,73 @@ def _get_reg_software():
     return reg_software
 
 
-def refresh_db(saltenv='base'):
+def refresh_db(**kwargs):
     '''
-    Just recheck the repository and return a dict::
-
-        {'<database name>': Bool}
+    Compile the repository from the local cached state files and return a dict
+    of the results & status. See also pkg.genrepo
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
+        salt '*' pkg.refresh_db saltenv=base
+
+    *Keyword Arguments (kwargs)*
+        See pkg.genrepo
     '''
+    saltenv = kwargs.pop('saltenv', 'base')
+    verbose = kwargs.pop('verbose', False)
+    raise_error= kwargs.pop('raise_error',True)
     __context__.pop('winrepo.data', None)
-    if 'win_repo_source_dir' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_source_dir\' config option is deprecated, please '
-            'use \'winrepo_source_dir\' instead.'
-        )
-        winrepo_source_dir = __opts__['win_repo_source_dir']
-    else:
-        winrepo_source_dir = __opts__['winrepo_source_dir']
+    (winrepo_source_dir,repo_path)=_get_repo_src_dest(saltenv)
+    # Do some safety checks on the repo_path before removing its contents
+    for pathchecks in [
+            '[a-z]\:\\\\$',
+            '\\\\',
+            re.escape(os.environ.get('SystemRoot','C:\\Windows')),
+            ]:
+        if re.match(pathchecks,repo_path,flags=re.IGNORECASE) is not None:
+            log.error(
+                'Local cache dir seems a bad choice "%s"',
+                repo_path
+                )
+            raise CommandExecutionError(
+                'Error local cache dir seems a bad choice',
+                info=repo_path
+                )
+    # Clear minion repo-ng cache see #35342 discussion
+    log.info('Removing all *.sls files of "%s" tree',repo_path)
+    for root, _, files in os.walk(repo_path):
+        for name in files:
+            if name.endswith('.sls'):
+                full_filename=os.path.join(root, name)
+                try:
+                    os.remove(full_filename)
+                except (OSError, IOError) as exc:
+                    raise CommandExecutionError(
+                        'Could not remove \'{0}\': {1}'.
+                        format(full_filename,exc)
+                        )
 
-    # Clear minion repo-ng cache
-    repo_path = '{0}\\files\\{1}\\win\\repo-ng\\salt-winrepo-ng'\
-        .format(__opts__['cachedir'], saltenv)
-    if not __salt__['file.remove'](repo_path):
-        log.error('pkg.refresh_db: failed to clear existing cache')
-
+    if not os.path.exists(repo_path):
+        os.makedirs(repo_path)
     # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
         winrepo_source_dir,
         saltenv,
         include_pat='*.sls'
     )
-    genrepo(saltenv=saltenv)
-    return cached_files
+    results=genrepo(saltenv=saltenv,verbose=verbose,raise_error=False)
+    if results.get('failed',0)>0 and raise_error:
+        raise CommandExecutionError(
+            'Error occurred while generating repo db',
+            info=results
+            )
+    else:    
+        return results
 
-
-def _get_local_repo_dir(saltenv='base'):
+def _get_repo_src_dest(saltenv):
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
             'Nitrogen',
@@ -401,64 +430,187 @@ def _get_local_repo_dir(saltenv='base'):
         winrepo_source_dir = __opts__['win_repo_source_dir']
     else:
         winrepo_source_dir = __opts__['winrepo_source_dir']
+    
+    #dest_path = '{0}\\files\\{1}\\win\\repo-ng'\
+    #    .format(__opts__['cachedir'], saltenv)
+    
+    dirs = [__opts__['cachedir'], 'files',saltenv]
+    url_parts=_urlparse(winrepo_source_dir)
+    dirs.append(url_parts.netloc)
+    dirs.extend(url_parts.path.strip('/').split('/'))
+    dest_path = os.sep.join(dirs)
+    return (winrepo_source_dir,dest_path)
 
-    dirs = []
-    dirs.append(salt.syspaths.CACHE_DIR)
-    dirs.extend(['minion', 'files'])
-    dirs.append(saltenv)
-    dirs.extend(winrepo_source_dir[7:].strip('/').split('/'))
-    return os.sep.join(dirs)
 
-
-def genrepo(saltenv='base'):
+def genrepo(**kwargs):
     '''
-    Generate winrepo_cachefile based on sls files in the winrepo
+    Generate winrepo db based on sls files in the winrepo_source_dir
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run winrepo.genrepo
+        salt-run pkg.genrepo
+        salt -G 'os:windows' pkg.genrepo verbose=true raise_error=false
+        salt -G 'os:windows' pkg.genrepo saltenv=base
+
+    *Keyword Arguments (kwargs)*
+
+    :param str saltenv:
+        Default 'base'
+
+    :param bool verbose:
+        Return verbose data structure which includes 'success_list', a list of
+        all sls files and the package names contained within. Default 'False'
+
+    :param bool raise_error:
+        Raise an exception error.  'True' - Errors are reported as text strings,
+        with data also return as a string. 'False' - No error is raise still
+        allowing a data structure to be return, which includes any errors.
+        Default 'True'.
+
     '''
+    saltenv = kwargs.pop('saltenv', 'base')
+    verbose = kwargs.pop('verbose', False)
+    raise_error= kwargs.pop('raise_error',True)
     ret = {}
-    repo = _get_local_repo_dir(saltenv)
-    if not os.path.exists(repo):
-        os.makedirs(repo)
+    successful_verbose={}
+    total_files_processed=0
+    ret['repo'] = {}
+    ret['!errors']={}
+    (repo_remote,repo_local) = _get_repo_src_dest(saltenv)
+    if not os.path.exists(repo_local):
+        os.makedirs(repo_local)
     winrepo = 'winrepo.p'
-    renderers = salt.loader.render(__opts__, __salt__)
-    for root, _, files in os.walk(repo):
+    
+    for root, _, files in os.walk(repo_local):
+        short_path=os.path.relpath(root,repo_local)
+        if short_path == '.':
+            short_path=''
         for name in files:
             if name.endswith('.sls'):
-                try:
-                    config = salt.template.compile_template(
-                            os.path.join(root, name),
-                            renderers,
-                            __opts__['renderer'],
-                            __opts__.get('renderer_blacklist', ""),
-                            __opts__.get('renderer_whitelist', ""))
-                except SaltRenderError as exc:
-                    log.debug('Failed to compile {0}.'.format(
-                        os.path.join(root, name)))
-                    log.debug('Error: {0}.'.format(exc))
-                    continue
-
-                if config:
-                    revmap = {}
-                    for pkgname, versions in six.iteritems(config):
-                        for version, repodata in six.iteritems(versions):
-                            if not isinstance(version, six.string_types):
-                                config[pkgname][str(version)] = \
-                                    config[pkgname].pop(version)
-                            if not isinstance(repodata, dict):
-                                log.debug('Failed to compile {0}.'.format(
-                                    os.path.join(root, name)))
-                                continue
-                            revmap[repodata['full_name']] = pkgname
-                    ret.setdefault('repo', {}).update(config)
-                    ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo_cache:
+                total_files_processed+=1
+                _repo_process_pkg_sls(
+                    os.path.join(root, name),
+                    os.path.join(short_path,name),
+                    ret,
+                    successful_verbose
+                    )
+    with salt.utils.fopen(os.path.join(repo_local,winrepo),'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
-    return ret
+    
+    successful_count=len(successful_verbose)
+    error_count=len(ret['!errors'])
+    if verbose:
+        results={
+            'total': total_files_processed,
+            'success': successful_count,
+            'failed': error_count,
+            'success_list': successful_verbose,
+            'failed_list': ret['!errors']
+            }
+    else:
+        if error_count>0:
+            results={
+                'total': total_files_processed,
+                'success': successful_count,
+                'failed': error_count,
+                'failed_list': ret['!errors']
+                }
+        else:
+            results={
+                'total': total_files_processed,
+                'success': successful_count,
+                'failed': error_count
+                }
+
+    if error_count>0 and raise_error:
+        raise CommandExecutionError(
+            'Error occurred while generating repo db',
+            info=results
+            )
+    else:    
+        return results 
+
+def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
+    renderers = salt.loader.render(__opts__, __salt__)            
+    try:
+        config = salt.template.compile_template(
+            file,
+            renderers,
+            __opts__['renderer'],
+            __opts__.get('renderer_blacklist', ""),
+            __opts__.get('renderer_whitelist', ""))
+    except SaltRenderError as exc:
+        log.error('failed to compile "{0}", check syntax, {1}'.format(
+            short_path_name,exc))
+        ret.setdefault('!errors', {}).update(
+            { short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
+        # skip to the next file
+        return False
+    except Exception as exc:
+        log.error('failed to read "{0}", {1}'.format(
+            short_path_name,exc))
+        ret.setdefault('!errors', {}).update(
+            { short_path_name: ['failed to read {0}'.format(exc)]})
+        return False
+
+    if config:
+        revmap = {}
+        error_msg_list=[]
+        pkgname_ok_list=[]
+        for pkgname, versions in six.iteritems(config):
+            if pkgname in ret['repo']:
+                log.error(
+                    'pkgname "{0}" within "{1}",  already defined, skipping.'
+                    .format(pkgname,short_path_name)
+                    )
+                error_msg_list.append(
+                    'pkgname "{0}" already defined'
+                    .format(pkgname)
+                    )
+                break
+            for version, repodata in six.iteritems(versions):
+                # Ensure version is a string/unicode
+                if not isinstance(version, six.string_types):
+                    log.error(
+                        'pkgname "{0}" version "{1}" within "{2}", '
+                        '"version number" is not a string'
+                        .format(pkgname,version,short_path_name,version)
+                        )
+                    error_msg_list.append(
+                        'pkgname "{0}", version "{1}" is not a string'
+                        .format(pkgname,version)
+                        )
+                    continue
+                #Ensure version contains a dict
+                if not isinstance(repodata, dict):
+                    log.error(
+                        'pkgname "{0}" version "{1}" within "{2}", '
+                        '"version number" is not defined as dictionary(hash) key'
+                        .format(
+                        pkgname,version,short_path_name)
+                        )
+                    error_msg_list.append(
+                        'pkgname "{0}", version "{1}" is not defined as a '
+                        'dictionary(hash) key'
+                        .format(pkgname,version)
+                        )
+                    continue
+                revmap[repodata['full_name']] = pkgname
+        if error_msg_list:
+            ret.setdefault(
+                '!errors', {}).update({short_path_name: error_msg_list}
+                )
+        else:
+            if pkgname not in pkgname_ok_list:
+                pkgname_ok_list.append(pkgname)
+            ret.setdefault('repo', {}).update(config)
+            ret.setdefault('name_map', {}).update(revmap)
+            successful_verbose[short_path_name]=config.keys()
+    else:
+        log.debug('no data within "{0}" after processing'.format(short_path_name))
+        successful_verbose[short_path_name]=[]  # i.e. no pkgname found after render
 
 
 def _get_source_sum(source_hash, file_path, saltenv):
@@ -846,7 +998,10 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 changed.append(pkg_name)
             elif result['retcode'] == 3010:
                 # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
-                report_reboot_exit_codes = kwargs.pop('report_reboot_exit_codes', True)
+                report_reboot_exit_codes = kwargs.pop(
+                    'report_reboot_exit_codes',
+                    True
+                    )
                 if report_reboot_exit_codes:
                     __salt__['system.set_reboot_required_witnessed']()
                 ret[pkg_name] = {'install status': 'success, reboot required'}
@@ -1164,7 +1319,7 @@ def get_repo_data(saltenv='base'):
     '''
     # if 'winrepo.data' in __context__:
     #     return __context__['winrepo.data']
-    repocache_dir = _get_local_repo_dir(saltenv=saltenv)
+    (repo_remote,repocache_dir) = _get_repo_src_dest(saltenv)
     winrepo = 'winrepo.p'
     try:
         with salt.utils.fopen(
@@ -1176,14 +1331,15 @@ def get_repo_data(saltenv='base'):
                 log.exception(exc)
                 return {}
     except IOError as exc:
+        log.error('Not able to read repo file')
+        log.exception(exc)
         if exc.errno == errno.ENOENT:
             # File doesn't exist
             raise CommandExecutionError(
                 'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
                 'needed'
             )
-        log.error('Not able to read repo file')
-        log.exception(exc)
+
         return {}
 
 
@@ -1243,7 +1399,6 @@ def _get_latest_pkg_version(pkginfo):
         return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()
     except IndexError:
         return ''
-
 
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
