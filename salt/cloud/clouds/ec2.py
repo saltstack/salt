@@ -4492,7 +4492,7 @@ def _parse_pricing(url, name):
         regions[region['region']] = sizes
 
     outfile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
@@ -4556,7 +4556,7 @@ def show_pricing(kwargs=None, call=None):
         name = 'linux'
 
     pricefile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
 
     if not os.path.isfile(pricefile):
