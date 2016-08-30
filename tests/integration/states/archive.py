@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for the file state
+Tests for the archive state
 '''
 # Import python libs
 from __future__ import absolute_import
 import os
 import shutil
+import threading
+import tornado.ioloop
+import tornado.web
 
 # Import Salt Testing libs
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -21,19 +25,44 @@ if salt.utils.is_windows():
 else:
     ARCHIVE_DIR = '/tmp/archive/'
 
-#local tar file
-LOCAL_ARCHIVE_TAR_SOURCE = 'salt://custom.tar.gz'
-LOCAL_UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom', 'README')
-
-#external sources. Only external sources verify source_hash.
-#Therefore need to keep to verify source_hash test
-ARCHIVE_TAR_SOURCE = 'https://github.com/downloads/Graylog2/'\
-                     'graylog2-server/graylog2-server-0.9.6p1.tar.gz'
-UNTAR_FILE = ARCHIVE_DIR + 'graylog2-server-0.9.6p1/README'
-ARCHIVE_TAR_HASH = 'md5=499ae16dcae71eeb7c3a30c75ea7a1a6'
+PORT = 9999
+ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
+UNTAR_FILE = ARCHIVE_DIR + 'custom/README'
+ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
+STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
-class ArchiveTest(integration.ModuleCase,
+class SetupWebServer(TestCase):
+    '''
+    Setup and Teardown of Web Server
+    Only need to set this up once not
+    before all tests
+    '''
+    @classmethod
+    def webserver(cls):
+        '''
+        method to start tornado
+        static web app
+        '''
+        application = tornado.web.Application([(r"/(.*)", tornado.web.StaticFileHandler,
+                                              {"path": STATE_DIR})])
+        application.listen(PORT)
+        tornado.ioloop.IOLoop.instance().start()
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server_thread = threading.Thread(target=cls.webserver)
+        cls.server_thread.daemon = True
+        cls.server_thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        tornado.ioloop.IOLoop.instance().stop()
+        cls.server_thread.join()
+
+
+class ArchiveTest(SetupWebServer,
+                  integration.ModuleCase,
                   integration.SaltReturnAssertsMixIn):
     '''
     Validate the archive state
@@ -43,13 +72,12 @@ class ArchiveTest(integration.ModuleCase,
         function to check if file was extracted
         and remove the directory.
         '''
-
-        #check to see if it extracted
+        # check to see if it extracted
         check_dir = os.path.isfile(file)
         self.assertTrue(check_dir)
 
-        #wipe away dir. Can't do this in teardown
-        #because it needs to be wiped before each test
+        # wipe away dir. Can't do this in teardown
+        # because it needs to be wiped before each test
         shutil.rmtree(dir)
 
     def test_archive_extracted_skip_verify(self):
@@ -57,11 +85,11 @@ class ArchiveTest(integration.ModuleCase,
         test archive.extracted with skip_verify
         '''
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
-                             source=LOCAL_ARCHIVE_TAR_SOURCE, archive_format='tar',
+                             source=ARCHIVE_TAR_SOURCE, archive_format='tar',
                              skip_verify=True)
         self.assertSaltTrueReturn(ret)
 
-        self._check_ext_remove(ARCHIVE_DIR, LOCAL_UNTAR_FILE)
+        self._check_ext_remove(ARCHIVE_DIR, UNTAR_FILE)
 
     def test_archive_extracted_with_source_hash(self):
         '''

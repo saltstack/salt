@@ -180,7 +180,7 @@ def extracted(name,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
         argument will be ignored.
 
-        .. versionadded:: 2016.3.2
+        .. versionadded:: 2016.3.4
 
     archive_format
         ``tar``, ``zip`` or ``rar``
