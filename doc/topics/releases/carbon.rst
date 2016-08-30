@@ -390,6 +390,12 @@ Execution Module Deprecations
   instead.
 
 
+Outputter Module Deprecations
+-----------------------------
+
+- The ``compact`` outputter has been removed. Set ``state_verbose`` to ``False`` instead.
+
+
 Runner Module Deprecations
 --------------------------
 
