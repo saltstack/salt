@@ -1054,6 +1054,10 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if hasattr(self, 'io_loop'):
             self.io_loop.close()
 
+    def _handle_signals(self, signum, sigframe):
+        self.close()
+        super(EventPublisher, self)._handle_signals(signum, sigframe)
+
     def __del__(self):
         self.close()
 

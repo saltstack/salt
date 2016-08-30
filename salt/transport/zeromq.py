@@ -502,6 +502,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         if self._closing:
             return
+        log.info('MWorkerQueue under PID %s is closing', os.getpid())
         self._closing = True
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
@@ -515,6 +516,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.workers.close()
         if hasattr(self, 'stream'):
             self.stream.close()
+        if hasattr(self, '_socket') and self._socket.closed is False:
+            self._socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
@@ -642,6 +645,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
+        self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
 

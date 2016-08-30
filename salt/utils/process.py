@@ -381,10 +381,10 @@ class ProcessManager(object):
 
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are not SIGTERM handlers installed, install ours
+            # There are no SIGTERM handlers installed, install ours
             signal.signal(signal.SIGTERM, self.kill_children)
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are not SIGTERM handlers installed, install ours
+            # There are no SIGINT handlers installed, install ours
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:

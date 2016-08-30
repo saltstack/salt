@@ -507,21 +507,6 @@ class Master(SMaster):
             log.critical('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    # run_reqserver cannot be defined within a class method in order for it
-    # to be picklable.
-    def run_reqserver(self, **kwargs):
-        secrets = kwargs.pop('secrets', None)
-        if secrets is not None:
-            SMaster.secrets = secrets
-
-        with default_signals(signal.SIGINT, signal.SIGTERM):
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key,
-                **kwargs)
-            reqserv.run()
-
     def start(self):
         '''
         Turn on the master server components
@@ -550,7 +535,7 @@ class Master(SMaster):
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
-            self.process_manager = salt.utils.process.ProcessManager()
+            self.process_manager = salt.utils.process.ProcessManager(name='Master_ProcessManager')
             pub_channels = []
             log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
@@ -610,15 +595,17 @@ class Master(SMaster):
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
-        log.info('Creating master request server process')
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
-            kwargs['secrets'] = SMaster.secrets
+            log.info('Creating master request server process')
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['secrets'] = SMaster.secrets
 
-        # No need to call this one under default_signals because that's invoked when
-        # actually starting the ReqServer
-        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
+            self.process_manager.add_process(
+                ReqServer,
+                args=(self.opts, self.key, self.master_key),
+                kwargs=kwargs,
+                name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -627,7 +614,7 @@ class Master(SMaster):
 
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
-            signal.signal(signal.SIGINT, self._handle_signals)
+            signal.signal(signal.SIGTERM, self._handle_signals)
 
         self.process_manager.run()
 
@@ -637,6 +624,8 @@ class Master(SMaster):
         self.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.process_manager.kill_children()
+        time.sleep(1)
+        sys.exit(0)
 
 
 class Halite(SignalHandlingMultiprocessingProcess):
@@ -676,7 +665,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None):
+    def __init__(self, opts, key, mkey, log_queue=None, secrets=None):
         '''
         Create a request server
 
@@ -692,6 +681,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.secrets = secrets
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -704,6 +694,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         if self.log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        if self.secrets is not None:
+            SMaster.secrets = self.secrets
 
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
@@ -737,18 +729,20 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                             'when using Python 2.')
                 self.opts['worker_threads'] = 1
 
-        for ind in range(int(self.opts['worker_threads'])):
-            name = 'MWorker-{0}'.format(ind)
-            self.process_manager.add_process(MWorker,
-                                            args=(self.opts,
-                                                self.master_key,
-                                                self.key,
-                                                req_channels,
-                                                name
-                                                ),
-                                            kwargs=kwargs,
-                                            name=name
-                                            )
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            for ind in range(int(self.opts['worker_threads'])):
+                name = 'MWorker-{0}'.format(ind)
+                self.process_manager.add_process(MWorker,
+                                                 args=(self.opts,
+                                                       self.master_key,
+                                                       self.key,
+                                                       req_channels,
+                                                       name),
+                                                 kwargs=kwargs,
+                                                 name=name)
         self.process_manager.run()
 
     def run(self):
@@ -758,17 +752,6 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.__bind()
 
     def destroy(self, signum=signal.SIGTERM):
-        if hasattr(self, 'clients') and self.clients.closed is False:
-            if HAS_ZMQ:
-                self.clients.setsockopt(zmq.LINGER, 1)
-            self.clients.close()
-        if hasattr(self, 'workers') and self.workers.closed is False:
-            if HAS_ZMQ:
-                self.workers.setsockopt(zmq.LINGER, 1)
-            self.workers.close()
-        if hasattr(self, 'context') and self.context.closed is False:
-            self.context.term()
-        # Also stop the workers
         if hasattr(self, 'process_manager'):
             self.process_manager.stop_restarting()
             self.process_manager.send_signal_to_processes(signum)
@@ -846,9 +829,14 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
+        self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            # Tornado knows what to do
+            pass
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
