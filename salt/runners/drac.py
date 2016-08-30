@@ -5,11 +5,12 @@ Manage Dell DRAC from the Master
 The login credentials need to be configured in the Salt master
 configuration file.
 
-  .. code-block: yaml
+.. code-block: yaml
 
-      drac:
-        username: admin
-        password: secret
+    drac:
+      username: admin
+      password: secret
+
 '''
 
 # Import python libs
@@ -38,17 +39,18 @@ def __connect(hostname, timeout=20, username=None, password=None):
     Connect to the DRAC
     '''
     drac_cred = __opts__.get('drac')
+    err_msg = 'No drac login credentials found. Please add the \'username\' and \'password\' ' \
+              'fields beneath a \'drac\' key in the master configuration file. Or you can ' \
+              'pass in a username and password as kwargs at the CLI.'
 
     if not username:
         if drac_cred is None:
-            log.error('No drac login credentials found. Please add a drac username and password'
-                      'in the master configuration file or pass in a username at the CLI.')
+            log.error(err_msg)
             return False
         username = drac_cred.get('username', None)
     if not password:
         if drac_cred is None:
-            log.error('No drac login credentials found. Please add a drac username and password'
-                      'in the master configuration file or pass in a password at the CLI.')
+            log.error(err_msg)
             return False
         password = drac_cred.get('password', None)
 
