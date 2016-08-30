@@ -211,7 +211,6 @@ intersphinx_mapping = {
 on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 project = 'Salt'
-copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
 latest_release = '2016.3.2'  # latest release
@@ -221,8 +220,10 @@ next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
 today = ''
+copyright = ''
 if on_saltstack:
     today = "Generated on " + time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z") + "."
+    copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'latest'  # latest, previous, develop, next
@@ -372,6 +373,7 @@ html_context = {
     'search_cx': search_cx,
     'build_type': build_type,
     'today': today,
+    'copyright': copyright,
 }
 
 html_use_index = True
