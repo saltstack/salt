@@ -3499,13 +3499,21 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        if urlparsed_source.scheme == 'salt':
+        parsed_scheme = urlparsed_source.scheme
+        parsed_path = os.path.join(
+                urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+
+        if parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            parsed_path = ':'.join([parsed_scheme, parsed_path])
+            parsed_scheme = 'file'
+
+        if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and urlparsed_source.scheme == 'file':
-            source_sum = _get_local_file_source_sum(urlparsed_source.path)
-        elif not source_hash and source.startswith('/'):
+        elif not source_hash and parsed_scheme == 'file':
+            source_sum = _get_local_file_source_sum(parsed_path)
+        elif not source_hash and source.startswith(os.sep):
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
@@ -3555,7 +3563,7 @@ def get_managed(
                     )
                     return '', {}, msg
 
-    if source and (template or urlparsed_source.scheme in remote_protos):
+    if source and (template or parsed_scheme in remote_protos):
         # Check if we have the template or remote file cached
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
