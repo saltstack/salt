@@ -337,12 +337,11 @@ class DockerngTestCase(TestCase):
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
-            ret = dockerng_state.image_present('image:latest', force=True)
+            ret = dockerng_state.image_present('image:latest', force=False)
             self.assertEqual(ret,
                              {'changes': {},
                               'result': True,
-                              'comment': "Image 'image:latest' was pulled, "
-                              "but there were no changes",
+                              'comment': "Image 'image:latest' already present",
                               'name': 'image:latest',
                               })
 
