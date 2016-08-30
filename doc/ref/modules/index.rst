@@ -466,6 +466,26 @@ logs. The following code snippet demonstrates writing log messages:
     log.warning('You Should Not Do That')
     log.error('It Is Busted')
 
+Aliasing Functions
+==================
+
+Sometimes one wishes to use a function name that would shadow a python built-in.
+A common example would be ``set()``. To support this, append an underscore to
+the function defintion, ``def set_():``, and use the ``__func_alias__`` feature
+to provide an alias to the function.
+
+``__func_alias__`` is a dictionary where each key is the name of a function in
+the module, and each value is a string representing the alias for that function.
+When calling an aliased function from a different execution module, state
+module, or from the cli, the alias name should be used.
+
+.. code-block:: python
+
+    __func_alias__ = {
+        'set_': 'set',
+        'list_': 'list',
+    }
+
 Private Functions
 =================
 
@@ -494,12 +514,6 @@ Objects NOT Loaded into the Salt Minion
         return baz
 
     cheese = {} # Not a callable Python object
-
-.. note::
-
-    Some callable names also end with an underscore ``_``, to avoid keyword clashes
-    with Python keywords.  When using execution modules, or state modules, with these
-    in them the trailing underscore should be omitted.
 
 Useful Decorators for Modules
 =============================
