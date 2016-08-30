@@ -1729,7 +1729,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
             'parameter be passed in when calling the function.'
         )
