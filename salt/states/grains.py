@@ -87,6 +87,7 @@ def present(name, value=None, delimiter=DEFAULT_TARGET_DELIM, force=False):
         else:
             if not ret['comment']:
                 ret['comment'] = 'Grain is present'
+        return ret
     if existing == value:
         ret['comment'] = 'Grain is already set'
         return ret
