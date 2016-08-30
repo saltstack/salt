@@ -3953,7 +3953,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     .. code-block:: bash
 
-        salt '*' gpedit.get return_full_policy_names=True
+        salt '*' lgpo.get return_full_policy_names=True
     '''
 
     vals = {}
@@ -4079,7 +4079,7 @@ def set_computer_policy(name,
 
     .. code-block:: bash
 
-        salt '*' gpedit.set_computer_policy LockoutDuration 1440
+        salt '*' lgpo.set_computer_policy LockoutDuration 1440
     '''
     pol = {}
     pol[name] = setting
@@ -4108,7 +4108,7 @@ def set_user_policy(name,
 
     .. code-block:: bash
 
-        salt '*' gpedit.set_user_policy "Control Panel\\Display\\Disable the Display Control Panel" Enabled
+        salt '*' lgpo.set_user_policy "Control Panel\\Display\\Disable the Display Control Panel" Enabled
     '''
     pol = {}
     pol[name] = setting
@@ -4172,7 +4172,7 @@ def set_(computer_policy=None, user_policy=None,
 
     .. code-block:: bash
 
-        salt '*' gpedit.set computer_policy="{'LockoutDuration': 2, 'RestrictAnonymous': 'Enabled', 'AuditProcessTracking': 'Succes, Failure'}"
+        salt '*' lgpo.set computer_policy="{'LockoutDuration': 2, 'RestrictAnonymous': 'Enabled', 'AuditProcessTracking': 'Succes, Failure'}"
     '''
 
     if computer_policy and not isinstance(computer_policy, dict):
