@@ -371,7 +371,7 @@ def refresh_db(**kwargs):
     '''
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = kwargs.pop('verbose', False)
-    raise_error= kwargs.pop('raise_error', True)
+    raise_error = kwargs.pop('raise_error', True)
     __context__.pop('winrepo.data', None)
     (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
     # Do some safety checks on the repo_path before removing its contents
@@ -417,7 +417,7 @@ def refresh_db(**kwargs):
             'Error occurred while generating repo db',
             info=results
             )
-    else:    
+    else:
         return results
 
 def _get_repo_src_dest(saltenv):
@@ -430,10 +430,10 @@ def _get_repo_src_dest(saltenv):
         winrepo_source_dir = __opts__['win_repo_source_dir']
     else:
         winrepo_source_dir = __opts__['winrepo_source_dir']
-    
+
     #dest_path = '{0}\\files\\{1}\\win\\repo-ng'\
     #    .format(__opts__['cachedir'], saltenv)
-    
+
     dirs = [__opts__['cachedir'], 'files', saltenv]
     url_parts = _urlparse(winrepo_source_dir)
     dirs.append(url_parts.netloc)
@@ -482,14 +482,14 @@ def genrepo(**kwargs):
     if not os.path.exists(repo_local):
         os.makedirs(repo_local)
     winrepo = 'winrepo.p'
-    
+
     for root, _, files in os.walk(repo_local):
         short_path = os.path.relpath(root, repo_local)
         if short_path == '.':
             short_path = ''
         for name in files:
             if name.endswith('.sls'):
-                total_files_processed+=1
+                total_files_processed += 1
                 _repo_process_pkg_sls(
                     os.path.join(root, name),
                     os.path.join(short_path, name),
@@ -498,7 +498,7 @@ def genrepo(**kwargs):
                     )
     with salt.utils.fopen(os.path.join(repo_local, winrepo), 'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
-    
+
     successful_count = len(successful_verbose)
     error_count = len(ret['!errors'])
     if verbose:
@@ -510,7 +510,7 @@ def genrepo(**kwargs):
             'failed_list': ret['!errors']
             }
     else:
-        if error_count>0:
+        if error_count > 0:
             results = {
                 'total': total_files_processed,
                 'success': successful_count,
@@ -529,10 +529,10 @@ def genrepo(**kwargs):
             'Error occurred while generating repo db',
             info=results
             )
-    else:    
-        return results 
+    else:
+        return results
 
-def _repo_process_pkg_sls(file, short_path_name, ret,successful_verbose):
+def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
     try:
         config = salt.template.compile_template(
@@ -543,14 +543,14 @@ def _repo_process_pkg_sls(file, short_path_name, ret,successful_verbose):
             __opts__.get('renderer_whitelist', ""))
     except SaltRenderError as exc:
         log.error('failed to compile "{0}", check syntax, {1}'.format(
-            short_path_name,exc))
+            short_path_name, exc))
         ret.setdefault('!errors', {}).update(
             {short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
         # skip to the next file
         return False
     except Exception as exc:
         log.error('failed to read "{0}", {1}'.format(
-            short_path_name,exc))
+            short_path_name, exc))
         ret.setdefault('!errors', {}).update(
             {short_path_name: ['failed to read {0}'.format(exc)]})
         return False
@@ -609,7 +609,7 @@ def _repo_process_pkg_sls(file, short_path_name, ret,successful_verbose):
             successful_verbose[short_path_name] = config.keys()
     else:
         log.debug('no data within "{0}" after processing'.format(short_path_name))
-        successful_verbose[short_path_name]=[]  # i.e. no pkgname found after render
+        successful_verbose[short_path_name] = []  # i.e. no pkgname found after render
 
 
 def _get_source_sum(source_hash, file_path, saltenv):
