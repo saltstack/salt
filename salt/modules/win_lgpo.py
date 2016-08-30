@@ -49,6 +49,7 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
+__func_alias__ = {'set_': 'set'}
 adm_policy_name_map = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
 # define some globals XPATH variables that we'll set assuming all our imports are good
@@ -71,6 +72,8 @@ ENUM_ITEM_DISPLAY_NAME_XPATH = None
 ADMX_SEARCH_XPATH = None
 ADML_SEARCH_XPATH = None
 ADMX_DISPLAYNAME_SEARCH_XPATH = None
+PRESENTATION_ANCESTOR_XPATH = None
+TEXT_ELEMENT_XPATH = None
 
 try:
     import win32net
@@ -101,6 +104,8 @@ try:
     ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
     ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
+    PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
+    TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -545,6 +550,25 @@ class _policy_info(object):
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'AuditBaseObjects',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_enable_one_disable_zero_conversion',
+                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        },
+                    },
+                    'DoNotDisplayLastUserName': {
+                        'Policy': 'Interactive logon: Do not display last user name',
+                        'Settings': [0, 1],
+                        'lgpo_section': ['Computer Configuration',
+                                         'Windows Settings',
+                                         'Security Settings',
+                                         'Local Policies',
+                                         'Security Options'],
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'DontDisplayLastUserName',
                             'Type': 'REG_DWORD',
                         },
                         'Transform': {
@@ -2256,15 +2280,33 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     helper function to check for a presentation label for a policy element
     '''
     search_results = adml_data.xpath('//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id))
+    prepended_text = ''
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
+            presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
+            if presentation_element:
+                presentation_element = presentation_element[0]
+                if TEXT_ELEMENT_XPATH(presentation_element):
+                    for p_item in presentation_element.getchildren():
+                        if p_item == result:
+                            break
+                        else:
+                            if etree.QName(p_item.tag).localname == 'text':
+                                if prepended_text:
+                                    prepended_text = ' '.join([prepended_text, p_item.text.rstrip()])
+                                else:
+                                    prepended_text = p_item.text.rstrip()
+                            else:
+                                prepended_text = ''
+                    if prepended_text.endswith('.'):
+                        prepended_text = ''
             if the_localname == 'textBox' \
                     or the_localname == 'comboBox':
                 label_items = result.xpath('.//*[local-name() = "label"]')
                 for label_item in label_items:
                     if label_item.text:
-                        return label_item.text.rstrip().rstrip(':')
+                        return (prepended_text + ' ' + label_item.text.rstrip().rstrip(':')).lstrip()
             elif the_localname == 'decimalTextBox' \
                     or the_localname == 'longDecimalTextBox' \
                     or the_localname == 'dropdownList' \
@@ -2273,7 +2315,7 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                     or the_localname == 'text' \
                     or the_localname == 'multiTextBox':
                 if result.text:
-                    return result.text.rstrip().rstrip(':')
+                    return (prepended_text + ' ' + result.text.rstrip().rstrip(':')).lstrip()
     return None
 
 
@@ -2817,7 +2859,6 @@ def _checkAllAdmxPolicies(policy_class,
 
             if ELEMENTS_XPATH(admx_policy):
                 if element_only_enabled_disabled or this_policy_setting == 'Enabled':
-                    # TODO should we even bother looking at this if we detect the policy is "Disabled" above?
                     # TODO does this need to be modified based on the 'required' attribute?
                     required_elements = {}
                     configured_elements = {}
@@ -3795,6 +3836,14 @@ def _lookup_admin_template(policy_name,
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
 
 
+def list_configurable_policies(policy_class='Machine',
+                               include_administrative_templates=True,
+                               adml_language='en-US'):
+    '''
+    list the policies that the execution module can configure
+    '''
+
+
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
@@ -3815,9 +3864,13 @@ def get_policy_info(policy_name,
            'policy_class': policy_class,
            'policy_aliases': [],
            'policy_found': False,
+           'rights_assignment': False,
+           'policy_elements': [],
            'message': 'policy not found'}
     policy_class = policy_class.title()
     policy_data = _policy_info()
+    admx_policy_definitions, adml_policy_resources = _processPolicyDefinitions(
+            display_language=adml_language)
     if policy_class not in policy_data.policies.keys():
         ret['message'] = 'The requested policy class "{0}" is invalid, policy_class should be one of: {1}'.format(
                 policy_class,
@@ -3827,6 +3880,8 @@ def get_policy_info(policy_name,
         ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
         ret['policy_found'] = True
         ret['message'] = ''
+        if 'LsaRights' in policy_data.policies[policy_class]['policies'][policy_name]:
+            ret['rights_assignment'] = True
         return ret
     else:
         for pol in policy_data.policies[policy_class]['policies'].keys():
@@ -3834,12 +3889,25 @@ def get_policy_info(policy_name,
                 ret['policy_aliases'].append(pol)
                 ret['policy_found'] = True
                 ret['message'] = ''
+                if 'LsaRights' in policy_data.policies[policy_class]['policies'][pol]:
+                    ret['rights_assignment'] = True
                 return ret
     success, policy_xml_item, policy_name_list, message = _lookup_admin_template(
             policy_name,
             policy_class,
-            adml_language=adml_language)
+            adml_language=adml_language,
+            admx_policy_definitions=admx_policy_definitions,
+            adml_policy_resources=adml_policy_resources)
     if success:
+        for elements_item in ELEMENTS_XPATH(policy_xml_item):
+            for child_item in elements_item.getchildren():
+                this_element_name = _getFullPolicyName(child_item,
+                                                       child_item.attrib['id'],
+                                                       True,
+                                                       adml_policy_resources)
+                ret['policy_elements'].append(
+                        {'element_id': child_item.attrib['id'],
+                         'element_aliases': [child_item.attrib['id'], this_element_name]})
         ret['policy_aliases'] = policy_name_list
         ret['policy_found'] = True
         ret['message'] = ''
@@ -4048,9 +4116,9 @@ def set_user_policy(name,
     return ret
 
 
-def set(computer_policy=None, user_policy=None,
-        cumulative_rights_assignments=True,
-        adml_language='en-US'):
+def set_(computer_policy=None, user_policy=None,
+         cumulative_rights_assignments=True,
+         adml_language='en-US'):
     '''
     Set a local server policy.
 
@@ -4074,6 +4142,12 @@ def set(computer_policy=None, user_policy=None,
                 (for example, "Windows Components\\Internet Explorer\\Internet Control Panel\\Security Page\\Internet Zone\\Access data sources across domains").
                 Additionally, policies can be specified using the "name" and "id" attributes from the
                 admx files.
+
+                For Administrative Templates that have policy elements, each element can be specified using the text string
+                as seen in the GUI or using the ID attribute from the admx file.  Due to the way some of the GUI text is laid out,
+                some policy element names could include descriptive text that appears before the policy element in the gui.
+
+                Use the get_policy_info function for the policy name to view the element ID/names that the module will accept.
 
     :param dict user_policy:
        The same setup as the computer_policy, except with data to configure the local
@@ -4194,8 +4268,8 @@ def set(computer_policy=None, user_policy=None,
                                                     temp_element_name = child_item.attrib['id']
                                                 else:
                                                     msg = ('Element "{0}" must be included'
-                                                           ' in the policy configuration')
-                                                    raise SaltInvocationError(msg.format(this_element_name))
+                                                           ' in the policy configuration for policy {1}')
+                                                    raise SaltInvocationError(msg.format(this_element_name, policy_name))
                                                 if 'required' in child_item.attrib \
                                                         and child_item.attrib['required'].lower() == 'true':
                                                     if not _admTemplateData[policy_name][temp_element_name]:
@@ -4275,7 +4349,7 @@ def set(computer_policy=None, user_policy=None,
                 if _regedits:
                     for regedit in _regedits.keys():
                         log.debug('{0} is a Registry policy'.format(regedit))
-                        _ret = __salt__['reg.set_key'](
+                        _ret = __salt__['reg.set_value'](
                                 _regedits[regedit]['policy']['Registry']['Hive'],
                                 _regedits[regedit]['policy']['Registry']['Path'],
                                 _regedits[regedit]['policy']['Registry']['Value'],
