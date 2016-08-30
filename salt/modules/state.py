@@ -344,6 +344,58 @@ def high(data, test=None, queue=False, **kwargs):
     return ret
 
 
+def show_template(sls_file, **kwargs):
+    '''
+    .. versionadded:: Carbon
+
+    Render yaml/jinja2 template file as a dictionary. This returns the data
+    structure that salt will use when processing the sls file. Useful to verify
+    correct syntax.
+
+    .. note::
+        This function does not ask a master for an SLS file to render but
+        instead directly processes the file at the provided path on the minion.
+
+    Args:
+        sls_file (str): The path to the file to process.
+
+    Returns:
+        dict: A dictionary containing the rendered data or any errors
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_template '<Path to template on the minion>'
+    '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+        )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+    else:
+        saltenv = ''
+
+    if not os.path.exists(sls_file):
+        return {'error': '"{0}" not found'.format(sls_file)}
+
+    if not os.path.isfile(sls_file):
+        return {'error': '"{0}" must be a file'.format(sls_file)}
+
+    st_ = salt.state.HighState(__opts__, context=__context__)
+
+    high_state, errors = st_.render_state(
+            sls_file, saltenv, '', None, local=True)
+
+    return high_state, errors
+
+
 def template(tem, queue=False, **kwargs):
     '''
     Execute the information stored in a template file on the minion.
