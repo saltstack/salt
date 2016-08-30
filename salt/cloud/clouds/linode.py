@@ -872,7 +872,7 @@ def get_distribution_id(vm_):
             'are available:\n{2}'.format(
                 vm_image_name,
                 vm_['name'],
-                pprint.pprint([distro['LABEL'].encode(__salt_system_encoding__) for distro in distributions])
+                pprint.pprint(sorted([distro['LABEL'].encode(__salt_system_encoding__) for distro in distributions]))
             )
         )
 
