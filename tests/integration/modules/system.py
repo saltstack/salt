@@ -32,6 +32,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._orig_time = None
         self._machine_info = True
 
+
     def setUp(self):
         super(SystemModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
@@ -41,6 +42,8 @@ class SystemModuleTest(integration.ModuleCase):
                     **os_grain
                 )
             )
+        if self.run_function('service.available', ['systemd-timesyncd']):
+            self.run_function('service.stop', ['systemd-timesyncd'])
 
     def tearDown(self):
         if self._orig_time is not None:
@@ -49,6 +52,8 @@ class SystemModuleTest(integration.ModuleCase):
         if self._machine_info is not True:
             self._restore_machine_info()
         self._machine_info = True
+        if self.run_function('service.available', ['systemd-timesyncd']):
+            self.run_function('service.start', ['systemd-timesyncd'])
 
     def _save_time(self):
         self._orig_time = datetime.datetime.utcnow()
