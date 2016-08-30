@@ -371,16 +371,16 @@ def refresh_db(**kwargs):
     '''
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = kwargs.pop('verbose', False)
-    raise_error= kwargs.pop('raise_error',True)
+    raise_error= kwargs.pop('raise_error', True)
     __context__.pop('winrepo.data', None)
-    (winrepo_source_dir,repo_path)=_get_repo_src_dest(saltenv)
+    (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
     # Do some safety checks on the repo_path before removing its contents
     for pathchecks in [
             '[a-z]\:\\\\$',
             '\\\\',
-            re.escape(os.environ.get('SystemRoot','C:\\Windows')),
+            re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
             ]:
-        if re.match(pathchecks,repo_path,flags=re.IGNORECASE) is not None:
+        if re.match(pathchecks, repo_path, flags=re.IGNORECASE) is not None:
             log.error(
                 'Local cache dir seems a bad choice "%s"',
                 repo_path
@@ -390,17 +390,17 @@ def refresh_db(**kwargs):
                 info=repo_path
                 )
     # Clear minion repo-ng cache see #35342 discussion
-    log.info('Removing all *.sls files of "%s" tree',repo_path)
+    log.info('Removing all *.sls files of "%s" tree', repo_path)
     for root, _, files in os.walk(repo_path):
         for name in files:
             if name.endswith('.sls'):
-                full_filename=os.path.join(root, name)
+                full_filename = os.path.join(root, name)
                 try:
                     os.remove(full_filename)
                 except (OSError, IOError) as exc:
                     raise CommandExecutionError(
                         'Could not remove \'{0}\': {1}'.
-                        format(full_filename,exc)
+                        format(full_filename, exc)
                         )
 
     if not os.path.exists(repo_path):
@@ -411,8 +411,8 @@ def refresh_db(**kwargs):
         saltenv,
         include_pat='*.sls'
     )
-    results=genrepo(saltenv=saltenv,verbose=verbose,raise_error=False)
-    if results.get('failed',0)>0 and raise_error:
+    results = genrepo(saltenv=saltenv, verbose=verbose, raise_error=False)
+    if results.get('failed', 0) > 0 and raise_error:
         raise CommandExecutionError(
             'Error occurred while generating repo db',
             info=results
@@ -434,12 +434,12 @@ def _get_repo_src_dest(saltenv):
     #dest_path = '{0}\\files\\{1}\\win\\repo-ng'\
     #    .format(__opts__['cachedir'], saltenv)
     
-    dirs = [__opts__['cachedir'], 'files',saltenv]
-    url_parts=_urlparse(winrepo_source_dir)
+    dirs = [__opts__['cachedir'], 'files', saltenv]
+    url_parts = _urlparse(winrepo_source_dir)
     dirs.append(url_parts.netloc)
     dirs.extend(url_parts.path.strip('/').split('/'))
     dest_path = os.sep.join(dirs)
-    return (winrepo_source_dir,dest_path)
+    return (winrepo_source_dir, dest_path)
 
 
 def genrepo(**kwargs):
@@ -472,37 +472,37 @@ def genrepo(**kwargs):
     '''
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = kwargs.pop('verbose', False)
-    raise_error= kwargs.pop('raise_error',True)
+    raise_error = kwargs.pop('raise_error', True)
     ret = {}
-    successful_verbose={}
-    total_files_processed=0
+    successful_verbose = {}
+    total_files_processed = 0
     ret['repo'] = {}
-    ret['!errors']={}
-    (repo_remote,repo_local) = _get_repo_src_dest(saltenv)
+    ret['!errors'] = {}
+    (repo_remote, repo_local) = _get_repo_src_dest(saltenv)
     if not os.path.exists(repo_local):
         os.makedirs(repo_local)
     winrepo = 'winrepo.p'
     
     for root, _, files in os.walk(repo_local):
-        short_path=os.path.relpath(root,repo_local)
+        short_path = os.path.relpath(root, repo_local)
         if short_path == '.':
-            short_path=''
+            short_path = ''
         for name in files:
             if name.endswith('.sls'):
                 total_files_processed+=1
                 _repo_process_pkg_sls(
                     os.path.join(root, name),
-                    os.path.join(short_path,name),
+                    os.path.join(short_path, name),
                     ret,
                     successful_verbose
                     )
-    with salt.utils.fopen(os.path.join(repo_local,winrepo),'w+b') as repo_cache:
+    with salt.utils.fopen(os.path.join(repo_local, winrepo), 'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
     
-    successful_count=len(successful_verbose)
-    error_count=len(ret['!errors'])
+    successful_count = len(successful_verbose)
+    error_count = len(ret['!errors'])
     if verbose:
-        results={
+        results = {
             'total': total_files_processed,
             'success': successful_count,
             'failed': error_count,
@@ -511,20 +511,20 @@ def genrepo(**kwargs):
             }
     else:
         if error_count>0:
-            results={
+            results = {
                 'total': total_files_processed,
                 'success': successful_count,
                 'failed': error_count,
                 'failed_list': ret['!errors']
                 }
         else:
-            results={
+            results = {
                 'total': total_files_processed,
                 'success': successful_count,
                 'failed': error_count
                 }
 
-    if error_count>0 and raise_error:
+    if error_count > 0 and raise_error:
         raise CommandExecutionError(
             'Error occurred while generating repo db',
             info=results
@@ -532,8 +532,8 @@ def genrepo(**kwargs):
     else:    
         return results 
 
-def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
-    renderers = salt.loader.render(__opts__, __salt__)            
+def _repo_process_pkg_sls(file, short_path_name, ret,successful_verbose):
+    renderers = salt.loader.render(__opts__, __salt__)
     try:
         config = salt.template.compile_template(
             file,
@@ -545,25 +545,25 @@ def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
         log.error('failed to compile "{0}", check syntax, {1}'.format(
             short_path_name,exc))
         ret.setdefault('!errors', {}).update(
-            { short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
+            {short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
         # skip to the next file
         return False
     except Exception as exc:
         log.error('failed to read "{0}", {1}'.format(
             short_path_name,exc))
         ret.setdefault('!errors', {}).update(
-            { short_path_name: ['failed to read {0}'.format(exc)]})
+            {short_path_name: ['failed to read {0}'.format(exc)]})
         return False
 
     if config:
         revmap = {}
-        error_msg_list=[]
-        pkgname_ok_list=[]
+        error_msg_list = []
+        pkgname_ok_list = []
         for pkgname, versions in six.iteritems(config):
             if pkgname in ret['repo']:
                 log.error(
                     'pkgname "{0}" within "{1}",  already defined, skipping.'
-                    .format(pkgname,short_path_name)
+                    .format(pkgname, short_path_name)
                     )
                 error_msg_list.append(
                     'pkgname "{0}" already defined'
@@ -576,11 +576,11 @@ def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
                     log.error(
                         'pkgname "{0}" version "{1}" within "{2}", '
                         '"version number" is not a string'
-                        .format(pkgname,version,short_path_name,version)
+                        .format(pkgname, version, short_path_name, version)
                         )
                     error_msg_list.append(
                         'pkgname "{0}", version "{1}" is not a string'
-                        .format(pkgname,version)
+                        .format(pkgname, version)
                         )
                     continue
                 #Ensure version contains a dict
@@ -588,13 +588,12 @@ def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
                     log.error(
                         'pkgname "{0}" version "{1}" within "{2}", '
                         '"version number" is not defined as dictionary(hash) key'
-                        .format(
-                        pkgname,version,short_path_name)
+                        .format(pkgname, version, short_path_name)
                         )
                     error_msg_list.append(
                         'pkgname "{0}", version "{1}" is not defined as a '
                         'dictionary(hash) key'
-                        .format(pkgname,version)
+                        .format(pkgname, version)
                         )
                     continue
                 revmap[repodata['full_name']] = pkgname
@@ -607,7 +606,7 @@ def _repo_process_pkg_sls(file,short_path_name,ret,successful_verbose):
                 pkgname_ok_list.append(pkgname)
             ret.setdefault('repo', {}).update(config)
             ret.setdefault('name_map', {}).update(revmap)
-            successful_verbose[short_path_name]=config.keys()
+            successful_verbose[short_path_name] = config.keys()
     else:
         log.debug('no data within "{0}" after processing'.format(short_path_name))
         successful_verbose[short_path_name]=[]  # i.e. no pkgname found after render
@@ -1319,7 +1318,7 @@ def get_repo_data(saltenv='base'):
     '''
     # if 'winrepo.data' in __context__:
     #     return __context__['winrepo.data']
-    (repo_remote,repocache_dir) = _get_repo_src_dest(saltenv)
+    (repo_remote, repocache_dir) = _get_repo_src_dest(saltenv)
     winrepo = 'winrepo.p'
     try:
         with salt.utils.fopen(
