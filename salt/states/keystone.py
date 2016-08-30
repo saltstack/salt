@@ -93,6 +93,7 @@ def _api_version(**connection_args):
     except KeyError:
         pass
 
+
 def user_present(name,
                  password,
                  email,
