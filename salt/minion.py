@@ -576,7 +576,7 @@ class MinionBase(object):
                 try:
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
-                        for trans in ('tcp', 'zeromq'):
+                        for trans in ('zeromq', 'tcp'):
                             if trans == 'zeromq' and not HAS_ZMQ:
                                 continue
                             self.opts['transport'] = trans
