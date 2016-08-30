@@ -1733,12 +1733,14 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
             '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
             'parameter be passed in when calling the function.'
         )
-        sock_dir = os.path.join(__opts__['sock_dir'], 'master')
+        sock_dir = __opts__['sock_dir']
+
     event = salt.utils.event.get_event(
         'master',
         sock_dir,
         transport,
         listen=False)
+
     try:
         event.fire_event(msg, tag)
     except ValueError:
