@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from salttesting import skipIf
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -148,36 +148,37 @@ class NetworkTestCase(TestCase):
     def test_interfaces_ifconfig_solaris(self):
         with patch('salt.utils.is_sunos', lambda: True):
             interfaces = network._interfaces_ifconfig(SOLARIS)
-            self.assertEqual(interfaces,
-                             {'ilbext0': {'inet': [{'address': '10.10.11.11',
-                                                    'broadcast': '10.10.11.31',
-                                                    'netmask': '255.255.255.224'}],
-                                          'inet6': [{'address': '::',
-                                                     'prefixlen': '0'}],
-                                          'up': True},
-                              'ilbint0': {'inet': [{'address': '10.6.0.11',
-                                                    'broadcast': '10.6.0.255',
-                                                    'netmask': '255.255.255.0'}],
-                                          'inet6': [{'address': '::',
-                                                     'prefixlen': '0'}],
-                                          'up': True},
-                              'lo0': {'inet': [{'address': '127.0.0.1',
-                                                'netmask': '255.0.0.0'}],
-                                      'inet6': [{'address': '::1',
-                                                 'prefixlen': '128'}],
-                                      'up': True},
-                              'net0': {'inet': [{'address': '10.10.10.38',
-                                                 'broadcast': '10.10.10.63',
-                                                 'netmask': '255.255.255.224'}],
-                                       'inet6': [{'address': 'fe80::221:9bff:fefd:2a22',
-                                                  'prefixlen': '10'}],
-                                       'up': True},
-                              'vpn0': {'inet': [{'address': '10.6.0.14',
-                                                 'netmask': '255.0.0.0'}],
-                                       'inet6': [{'address': '::',
-                                                  'prefixlen': '0'}],
-                                       'up': True}}
-            )
+            expected_interfaces = {'ilbint0':
+                                       {'inet6': [],
+                                        'inet': [{'broadcast': '10.6.0.255',
+                                                  'netmask': '255.255.255.0',
+                                                  'address': '10.6.0.11'}],
+                                        'up': True},
+                                   'lo0':
+                                       {'inet6': [{'prefixlen': '128',
+                                                   'address': '::1'}],
+                                       'inet': [{'netmask': '255.0.0.0',
+                                                 'address': '127.0.0.1'}],
+                                        'up': True},
+                                   'ilbext0': {'inet6': [],
+                                               'inet': [{'broadcast': '10.10.11.31',
+                                                         'netmask': '255.255.255.224',
+                                                         'address': '10.10.11.11'},
+                                                        {'broadcast': '10.10.11.31',
+                                                         'netmask': '255.255.255.224',
+                                                         'address': '10.10.11.12'}],
+                                               'up': True},
+                                   'vpn0': {'inet6': [],
+                                            'inet': [{'netmask': '255.0.0.0',
+                                                      'address': '10.6.0.14'}],
+                                            'up': True},
+                                   'net0': {'inet6': [{'prefixlen': '10',
+                                                       'address': 'fe80::221:9bff:fefd:2a22'}],
+                                   'inet': [{'broadcast': '10.10.10.63',
+                                             'netmask': '255.255.255.224',
+                                             'address': '10.10.10.38'}],
+                                            'up': True}}
+            self.assertEqual(interfaces, expected_interfaces)
 
     def test_freebsd_remotes_on(self):
         with patch('salt.utils.is_sunos', lambda: False):
@@ -186,6 +187,101 @@ class NetworkTestCase(TestCase):
                            return_value=FREEBSD_SOCKSTAT):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
+
+
+    @patch('platform.node', MagicMock(return_value='nodename'))
+    @patch('socket.gethostname', MagicMock(return_value='hostname'))
+    @patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    def test_generate_minion_id_distinct(self):
+        '''
+        Test if minion IDs are distinct in the pool.
+
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(),
+                         ['nodename', 'hostname', 'hostname.domainname.blank',
+                          'attrname', '1.2.3.4', '5.6.7.8'])
+
+    @patch('platform.node', MagicMock(return_value='hostname'))
+    @patch('socket.gethostname', MagicMock(return_value='hostname'))
+    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
+    def test_generate_minion_id_duplicate(self):
+        '''
+        Test if IP addresses in the minion IDs are distinct in the pool
+
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(), ['hostname', '1.2.3.4'])
+
+    @patch('platform.node', MagicMock(return_value='very.long.and.complex.domain.name'))
+    @patch('socket.gethostname', MagicMock(return_value='hostname'))
+    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
+    def test_generate_minion_id_platform_used(self):
+        '''
+        Test if platform.node is used for the first occurrence.
+        The platform.node is most common hostname resolver before anything else.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), 'very.long.and.complex.domain.name')
+
+    @patch('platform.node', MagicMock(return_value='localhost'))
+    @patch('socket.gethostname', MagicMock(return_value='pick.me'))
+    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
+    def test_generate_minion_id_platform_localhost_filtered(self):
+        '''
+        Test if localhost is filtered from the first occurrence.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), 'pick.me')
+
+    @patch('platform.node', MagicMock(return_value='localhost'))
+    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
+    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
+    def test_generate_minion_id_platform_localhost_filtered_all(self):
+        '''
+        Test if any of the localhost is filtered from anywhere.
+        In this case Minion ID cannot be generated, but so is no networking.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), None)
+
+    @patch('platform.node', MagicMock(return_value='localhost'))
+    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
+    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
+    def test_generate_minion_id_platform_ip_addr_only(self):
+        '''
+        Test if IP address is the only what is used as a Minion ID in case no DNS name.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), '1.2.3.4')
 
 
 if __name__ == '__main__':
