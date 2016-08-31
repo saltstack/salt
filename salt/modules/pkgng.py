@@ -288,6 +288,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
     jail = kwargs.get('jail')
     chroot = kwargs.get('chroot')
+    refresh = kwargs.get('refresh')
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
@@ -305,6 +306,8 @@ def latest_version(*names, **kwargs):
             cmd = _pkg(jail, chroot, root) + ['search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
+        if not salt.utils.is_true(refresh):
+            cmd.append('-U')
         cmd.append(name)
 
         pkgver = _get_version(
