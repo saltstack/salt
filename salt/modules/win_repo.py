@@ -143,7 +143,7 @@ def show_sls(name, saltenv='base'):
         The name of the package you want to view. Start from the local winrepo
         root. If you have ``.sls`` files organized in subdirectories you'll have
         to denote them with ``.``. For example, if I have a ``test`` directory
-        in the winrepo root with a ``gvim.sls`` file inside, I would target that
+        in the winrepo root with a ``gvim.sls`` file inside, would target that
         file like so: ``test.gvim``. Directories can be targeted as well as long
         as they contain an ``init.sls`` inside. For example, if I have a ``node``
         directory with an ``init.sls`` inside, I would target that like so:
@@ -163,24 +163,27 @@ def show_sls(name, saltenv='base'):
         salt '*' winrepo.show_sls gvim
         salt '*' winrepo.show_sls test.npp
     '''
-    # Get the location of the local repo
-    repo = _get_local_repo_dir(saltenv)
+    if os.path.exists(name):
+        sls_file = name
+    else:
+        # Get the location of the local repo
+        repo = _get_local_repo_dir(saltenv)
 
-    # Add the sls file name to the path
-    repo = repo.split('\\')
-    definition = name.split('.')
-    repo.extend(definition)
+        # Add the sls file name to the path
+        repo = repo.split('\\')
+        definition = name.split('.')
+        repo.extend(definition)
 
-    # Check for the sls file by name
-    sls_file = '{0}.sls'.format(os.sep.join(repo))
-    if not os.path.exists(sls_file):
-
-        # Maybe it's a directory with an init.sls
-        sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
+        # Check for the sls file by name
+        sls_file = '{0}.sls'.format(os.sep.join(repo))
         if not os.path.exists(sls_file):
 
-            # It's neither, return
-            return 'Software definition {0} not found'.format(name)
+            # Maybe it's a directory with an init.sls
+            sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
+            if not os.path.exists(sls_file):
+
+                # It's neither, return
+                return 'Software definition {0} not found'.format(name)
 
     # Load the renderer
     renderers = salt.loader.render(__opts__, __salt__)
