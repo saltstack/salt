@@ -1110,6 +1110,35 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
+    def test_serialize(self):
+        '''
+        Test to ensure that file.serialize returns a data structure that's
+        both serialized and formatted properly
+        '''
+        path_test = os.path.join(integration.TMP, 'test_serialize')
+        ret = self.run_state('file.serialize',
+                name=path_test,
+                dataset={'name': 'naive',
+                    'description': 'A basic test',
+                    'a_list': ['first_element', 'second_element'],
+                    'finally': 'the last item'},
+                formatter='json')
+
+        with salt.utils.fopen(path_test, 'r') as fp_:
+            serialized_file = fp_.read()
+
+        expected_file = '''{
+  "a_list": [
+    "first_element",
+    "second_element"
+  ],
+  "description": "A basic test",
+  "finally": "the last item",
+  "name": "naive"
+}
+'''
+        self.assertEqual(serialized_file, expected_file)
+
     def test_replace_issue_18841_omit_backup(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18841:
