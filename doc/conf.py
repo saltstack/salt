@@ -123,6 +123,7 @@ MOCK_MODULES = [
     'MySQLdb.cursors',
     'nagios_json',
     'psutil',
+    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
@@ -161,6 +162,8 @@ MOCK_MODULES = [
 for mod_name in MOCK_MODULES:
     if mod_name == 'psutil':
         mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+    elif mod_name == 'psutil.version_info':
+        mock = Mock(mapping=(2, 0))
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
