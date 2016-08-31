@@ -64,6 +64,7 @@ import json
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if boto is available.
