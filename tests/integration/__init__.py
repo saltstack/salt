@@ -802,7 +802,7 @@ class TestDaemon(object):
         Generate keys and start an ssh daemon on an alternate port
         '''
         sys.stdout.write(
-            ' * {LIGHT_GREEN}Starting {0} ... STARTED!\n{ENDC}'.format(
+            ' * {LIGHT_GREEN}Starting {0} ... {ENDC}'.format(
                 'SSH server',
                 **self.colors
             )
@@ -958,6 +958,11 @@ class TestDaemon(object):
             with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
                 roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
                 roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        sys.stdout.write(
+            ' {LIGHT_GREEN}STARTED!\n{ENDC}'.format(
+                **self.colors
+            )
+        )
 
     @classmethod
     def config(cls, role):
