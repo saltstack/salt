@@ -372,7 +372,7 @@ def refresh_db(**kwargs):
     (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
     # Do some safety checks on the repo_path before removing its contents
     for pathchecks in [
-            '[a-z]\:\\\\$',
+            '[a-z]\\:\\\\$',
             '\\\\',
             re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
             ]:
