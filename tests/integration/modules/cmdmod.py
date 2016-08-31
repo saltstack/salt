@@ -157,6 +157,14 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
+    def test_blacklist_glob(self):
+        '''
+        cmd_blacklist_glob
+        '''
+        self.assertEqual(self.run_function('cmd.run',
+                ['bad_command --foo']).rstrip(),
+                'ERROR: This shell command is not permitted: "bad_command --foo"')
+
     def test_script(self):
         '''
         cmd.script
