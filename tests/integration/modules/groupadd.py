@@ -10,6 +10,7 @@ from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs
+from salt.ext.six.moves import range
 import integration
 import salt.utils
 
