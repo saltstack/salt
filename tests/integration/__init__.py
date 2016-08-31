@@ -118,7 +118,11 @@ except ImportError:
             log.info('No process with the PID %s was found running', pid)
 
         if process and only_children is False:
-            cmdline = process.cmdline()
+            try:
+                cmdline = process.cmdline()
+            except psutil.AccessDenied:
+                # OSX denies us access to the above information
+                cmdline = None
             if not cmdline:
                 try:
                     cmdline = process.as_dict()
@@ -260,7 +264,15 @@ def get_unused_localhost_port():
         usock.close()
         return port
 
+    if sys.platform.startswith('darwin') and port in _RUNTESTS_PORTS:
+        port = get_unused_localhost_port()
+        usock.close()
+        return port
+
     _RUNTESTS_PORTS[port] = usock
+
+    if sys.platform.startswith('darwin'):
+        usock.close()
 
     return port
 
@@ -573,8 +585,18 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                     if conn == 0:
                         log.debug('Port %s is connectable!', port)
                         check_ports.remove(port)
-                        sock.shutdown(socket.SHUT_RDWR)
-                        sock.close()
+                        try:
+                            sock.shutdown(socket.SHUT_RDWR)
+                            sock.close()
+                        except socket.error as exc:
+                            if not sys.platform.startswith('darwin'):
+                                raise
+                            try:
+                                if exc.errno != errno.ENOTCONN:
+                                    raise
+                            except AttributeError:
+                                # This is not OSX !?
+                                pass
                     del sock
                 elif isinstance(port, str):
                     joined = self.run_run('manage.joined', config_dir=self.config_dir)
