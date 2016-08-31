@@ -694,7 +694,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                                          start_in=cache_path,
                                          trigger_type='Once',
                                          start_date='1975-01-01',
-                                         start_time='01:00')
+                                         start_time='01:00',
+                                         ac_only=False,
+                                         stop_if_on_batteries=False)
             # Run Scheduled Task
             __salt__['task.run_wait'](name='update-salt-software')
         else:
@@ -953,7 +955,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                                          start_in=cache_path,
                                          trigger_type='Once',
                                          start_date='1975-01-01',
-                                         start_time='01:00')
+                                         start_time='01:00',
+                                         ac_only=False,
+                                         stop_if_on_batteries=False)
             # Run Scheduled Task
             __salt__['task.run_wait'](name='update-salt-software')
         else:
