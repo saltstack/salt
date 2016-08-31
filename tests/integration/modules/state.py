@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import textwrap
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -1133,7 +1134,7 @@ class StateModuleTest(integration.ModuleCase,
 
         # Create the content of the yaml/jinja file to test
         with salt.utils.fopen(state_file, 'w') as fp_:
-            fp_.write(textwrap.dedent('''\
+            t
                 bikini-bottom:
                   {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
                   '{{ first_name }}':
