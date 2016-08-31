@@ -1030,6 +1030,21 @@ class StateModuleTest(integration.ModuleCase,
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
 
+    def test_multiple_onfail_requisite(self):
+        '''
+        test to ensure state is run even if only one
+        of the onfails fails. This is a test for the issue:
+        https://github.com/saltstack/salt/issues/22370
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple')
+
+        retcode = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'itworked')
+
     def test_onfail_in_requisite(self):
         '''
         Tests a simple state using the onfail_in requisite
