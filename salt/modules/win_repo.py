@@ -131,30 +131,36 @@ def update_git_repos(clean=False):
 
 
 def show_sls(name, saltenv='base'):
-    '''
+    r'''
     .. versionadded:: 2015.8.0
 
     Display the rendered software definition from a specific sls file in the
     local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
     the latest software definitions from the master.
 
+    .. note::
+        This function does not ask a master for an sls file to render. Instead
+        it directly processes the file specified in `name`
 
-    :param str name:
-        The name of the package you want to view. Start from the local winrepo
-        root. If you have ``.sls`` files organized in subdirectories you'll have
-        to denote them with ``.``. For example, if I have a ``test`` directory
-        in the winrepo root with a ``gvim.sls`` file inside, would target that
-        file like so: ``test.gvim``. Directories can be targeted as well as long
-        as they contain an ``init.sls`` inside. For example, if I have a ``node``
-        directory with an ``init.sls`` inside, I would target that like so:
-        ``node``.
+    Args:
+        name str: The name/path of the package you want to view. This can be the
+        full path to a file on the minion file system or a file on the local
+        minion cache.
 
-    :param str saltenv:
-        The default environment is ``base``
+        saltenv str: The default environment is ``base``
 
-    :return:
-        Returns a dictionary containing the rendered data structure
-    :rtype: dict
+    Returns:
+        dict: Returns a dictionary containing the rendered data structure
+
+    .. note::
+        To use a file from the minion cache start from the local winrepo root
+        (``C:\salt\var\cache\salt\minion\files\base\win\repo-ng``). If you have
+        ``.sls`` files organized in subdirectories you'll have to denote them
+        with ``.``. For example, if you have a ``test`` directory in the winrepo
+        root with a ``gvim.sls`` file inside, would target that file like so:
+        ``test.gvim``. Directories can be targeted as well as long as they
+        contain an ``init.sls`` inside. For example, if you have a ``node``
+        directory with an ``init.sls`` inside, target that like so: ``node``.
 
     CLI Example:
 
@@ -162,9 +168,13 @@ def show_sls(name, saltenv='base'):
 
         salt '*' winrepo.show_sls gvim
         salt '*' winrepo.show_sls test.npp
+        salt '*' winrepo.show_sls C:\test\gvim.sls
     '''
+    # Passed a filename
     if os.path.exists(name):
         sls_file = name
+
+    # Use a winrepo path
     else:
         # Get the location of the local repo
         repo = _get_local_repo_dir(saltenv)
@@ -198,7 +208,7 @@ def show_sls(name, saltenv='base'):
             __opts__['renderer_blacklist'],
             __opts__['renderer_whitelist'])
 
-    # Dump return the error if any
+    # Return the error if any
     except SaltRenderError as exc:
         log.debug('Failed to compile {0}.'.format(sls_file))
         log.debug('Error: {0}.'.format(exc))
