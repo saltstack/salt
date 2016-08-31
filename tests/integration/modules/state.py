@@ -1132,21 +1132,22 @@ class StateModuleTest(integration.ModuleCase,
         '''
         fd_, sls_file = tempfile.mkstemp()
 
-        # Create the content of the yaml/jinja file to test
-        fd_.write(textwrap.dedent('''\
-            bikini-bottom:
-              {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
-              '{{ first_name }}':
-                full_name: '{{ first_name }} {{ last_name }}'
-              {% endfor %}
-            '''))
-
         # Release the handle so it can be removed in Windows
         try:
             os.close(fd_)
         except OSError as exc:
             if exc.errno != errno.EBADF:
                 raise exc
+
+        # Create the content of the yaml/jinja file to test
+        with salt.utils.fopen(sls_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                bikini-bottom:
+                  {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
+                  '{{ first_name }}':
+                    full_name: '{{ first_name }} {{ last_name }}'
+                  {% endfor %}
+                '''))
 
         # Parse the file
         ret = self.run_function('state.show_template', [sls_file])
