@@ -801,7 +801,12 @@ class TestDaemon(object):
         '''
         Generate keys and start an ssh daemon on an alternate port
         '''
-        print(' * Initializing SSH subsystem')
+        sys.stdout.write(
+            ' * {LIGHT_GREEN}Starting {0} ... STARTED!\n{ENDC}'.format(
+                'SSH server',
+                **self.colors
+            )
+        )
         keygen = salt.utils.which('ssh-keygen')
         sshd = salt.utils.which('sshd')
 
@@ -1968,7 +1973,10 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=25, **kwargs):
+    def run_function(self, function, arg=(), timeout=90, **kwargs):
+        '''
+        We use a 90s timeout here, which some slower systems do end up needing
+        '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
         try:
             return json.loads(ret)['localhost']
