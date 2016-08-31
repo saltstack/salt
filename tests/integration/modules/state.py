@@ -1134,7 +1134,7 @@ class StateModuleTest(integration.ModuleCase,
 
         # Create the content of the yaml/jinja file to test
         with salt.utils.fopen(state_file, 'w') as fp_:
-            t
+            fp_.write(textwrap.dedent('''\
                 bikini-bottom:
                   {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
                   '{{ first_name }}':
