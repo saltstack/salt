@@ -118,7 +118,11 @@ except ImportError:
             log.info('No process with the PID %s was found running', pid)
 
         if process and only_children is False:
-            cmdline = process.cmdline()
+            try:
+                cmdline = process.cmdline()
+            except psutil.AccessDenied:
+                # OSX denies us access to the above information
+                cmdline = None
             if not cmdline:
                 try:
                     cmdline = process.as_dict()
