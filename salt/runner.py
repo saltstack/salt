@@ -216,6 +216,7 @@ class Runner(RunnerClient):
 
                 # Allocate a jid
                 async_pub = self._gen_async_pub()
+                self.jid = async_pub['jid']
 
                 if self.opts.get('runner_returns', False):
                     job_load = {
@@ -230,7 +231,7 @@ class Runner(RunnerClient):
                     job_load = {}
 
                 if low['fun'] == 'state.orchestrate':
-                    low['kwarg']['__pub_orchestration_jid'] = async_pub['jid']
+                    low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
                 if self.opts.get('async', False):
