@@ -2160,7 +2160,7 @@ def update_pricing(kwargs=None, call=None):
     price_json = http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
@@ -2196,7 +2196,7 @@ def show_pricing(kwargs=None, call=None):
 
     size = 'CP-COMPUTEENGINE-VMIMAGE-{0}'.format(profile['size'].upper())
     pricefile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     if not os.path.exists(pricefile):
         update_pricing()
