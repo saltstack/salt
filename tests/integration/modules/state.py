@@ -1133,14 +1133,13 @@ class StateModuleTest(integration.ModuleCase,
         fd_, sls_file = tempfile.mkstemp()
 
         # Create the content of the yaml/jinja file to test
-        with salt.utils.fopen(state_file, 'w') as fp_:
-            fp_.write(textwrap.dedent('''\
-                bikini-bottom:
-                  {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
-                  '{{ first_name }}':
-                    full_name: '{{ first_name }} {{ last_name }}'
-                  {% endfor %}
-                '''))
+        fd_.write(textwrap.dedent('''\
+            bikini-bottom:
+              {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
+              '{{ first_name }}':
+                full_name: '{{ first_name }} {{ last_name }}'
+              {% endfor %}
+            '''))
 
         # Release the handle so it can be removed in Windows
         try:
