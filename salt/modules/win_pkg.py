@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 import errno
 import os
-import locale
+#import locale
 import logging
 import re
 # pylint: disable=import-error,no-name-in-module
@@ -133,10 +133,6 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
-
-
-
-
 
 
 def upgrade_available(name):
@@ -321,6 +317,7 @@ def _get_reg_software():
     hive = 'HKLM'
     key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
+
     def update(hive, key, reg_key, use_32bit):
 
         d_name = ''
@@ -419,6 +416,7 @@ def refresh_db(**kwargs):
             )
     else:
         return results
+
 
 def _get_repo_src_dest(saltenv):
     if 'win_repo_source_dir' in __opts__:
@@ -532,6 +530,7 @@ def genrepo(**kwargs):
     else:
         return results
 
+
 def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
     try:
@@ -542,8 +541,9 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
             __opts__.get('renderer_blacklist', ""),
             __opts__.get('renderer_whitelist', ""))
     except SaltRenderError as exc:
-        log.error('failed to compile "{0}", check syntax, {1}'.format(
-            short_path_name, exc))
+        log.error('failed to compile "{0}", check syntax, {1}'
+            .format(short_path_name, exc)
+            )
         ret.setdefault('!errors', {}).update(
             {short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
         # skip to the next file
@@ -1398,6 +1398,7 @@ def _get_latest_pkg_version(pkginfo):
         return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()
     except IndexError:
         return ''
+
 
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
