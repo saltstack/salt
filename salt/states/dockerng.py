@@ -572,13 +572,7 @@ def image_present(name,
     image = ':'.join(_get_repo_tag(name))
     all_tags = __salt__['dockerng.list_tags']()
 
-    image_in_tags = False
-    for tag in __salt__['dockerng.list_tags']():
-        if tag.endswith(image):
-            image_in_tags = True
-            break
-
-    if image_in_tags:
+    if image in all_tags:
         if not force:
             ret['result'] = True
             ret['comment'] = 'Image \'{0}\' already present'.format(name)
@@ -602,7 +596,7 @@ def image_present(name,
 
     if __opts__['test']:
         ret['result'] = None
-        if (image_in_tags and force) or image not in all_tags:
+        if (image in all_tags and force) or image not in all_tags:
             ret['comment'] = 'Image \'{0}\' will be {1}'.format(name, action)
             return ret
 
@@ -655,7 +649,9 @@ def image_present(name,
             # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
-    if not image_in_tags:
+    ret['result'] = image in __salt__['dockerng.list_tags']()
+
+    if not ret['result']:
         # This shouldn't happen, failure to pull should be caught above
         ret['comment'] = 'Image \'{0}\' could not be {1}'.format(name, action)
     elif not ret['changes']:
