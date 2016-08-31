@@ -246,6 +246,12 @@ def _get_last_snapshot(config='root'):
 def status_to_string(dbus_status):
     '''
     Converts a numeric dbus snapper status into a string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.status_to_string <dbus_status>
     '''
     status_tuple = (
         dbus_status & 0b000000001, dbus_status & 0b000000010, dbus_status & 0b000000100,
@@ -514,6 +520,12 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
 
         You to undo changes between num_pre and the current version of the
         files use num_post=0.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.undo
     '''
     pre, post = _get_num_interval(config, num_pre, num_post)
 
