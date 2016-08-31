@@ -224,17 +224,23 @@ intersphinx_mapping = {
 
 # -- General Configuration -----------------------------------------------------
 
+# Set a var if we're building docs for the live site or not
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
+
 project = 'Salt'
-copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2016.3.2'  # latest release
-previous_release = '2015.8.11'  # latest release from previous branch
+latest_release = '2016.3.3'  # latest release
+previous_release = '2015.8.12'  # latest release from previous branch
 previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
-today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+today = ''
+copyright = ''
+if on_saltstack:
+    today = "Generated on " + time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z") + "."
+    copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'develop'  # latest, previous, develop, next
@@ -338,9 +344,6 @@ html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
-# Set a var if we're building docs for the live site or not
-on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
-
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
     html_search_template = 'googlesearch.html'
@@ -387,6 +390,7 @@ html_context = {
     'search_cx': search_cx,
     'build_type': build_type,
     'today': today,
+    'copyright': copyright,
 }
 
 html_use_index = True
