@@ -577,8 +577,18 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                     if conn == 0:
                         log.debug('Port %s is connectable!', port)
                         check_ports.remove(port)
-                        sock.shutdown(socket.SHUT_RDWR)
-                        sock.close()
+                        try:
+                            sock.shutdown(socket.SHUT_RDWR)
+                            sock.close()
+                        except socket.error as exc:
+                            if not sys.platform.startswith('darwin'):
+                                raise
+                            try:
+                                if exc.errno != errno.ENOTCONN:
+                                    raise
+                            except AttributeError:
+                                # This is not OSX !?
+                                pass
                     del sock
                 elif isinstance(port, str):
                     joined = self.run_run('manage.joined', config_dir=self.config_dir)
