@@ -84,7 +84,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
-        refresh_db(saltenv)
+        refresh_db(saltenv=saltenv)
 
     installed_pkgs = list_pkgs(versions_as_list=True, saltenv=saltenv)
     log.trace('List of installed packages: {0}'.format(installed_pkgs))
@@ -159,7 +159,7 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
         salt '*' pkg.list_upgrades
     '''
     if salt.utils.is_true(refresh):
-        refresh_db(saltenv)
+        refresh_db(saltenv=saltenv)
 
     ret = {}
     for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
@@ -316,7 +316,6 @@ def _get_reg_software():
 
     hive = 'HKLM'
     key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-
 
     def update(hive, key, reg_key, use_32bit):
 
@@ -770,7 +769,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     '''
     ret = {}
     if refresh:
-        refresh_db(saltenv)
+        refresh_db(saltenv=saltenv)
 
     # Make sure name or pkgs is passed
     if not name and not pkgs:
