@@ -252,9 +252,9 @@ def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
 
     if kwargs.get('refresh', False):
         # _get_name_map() needs a refresh_db if cache is not present
-        if versions_as_list: # Assume we are being called by the state/pkg.py
+        if versions_as_list:  # Assume we are being called by the state/pkg.py
             _refresh_db(saltenv)
-        else: # Assume being called by a user
+        else:  # Assume being called by a user
             refresh_db(saltenv=saltenv)
 
     ret = {}
@@ -354,30 +354,36 @@ def _get_reg_software():
     return reg_software
 
 
-def _refresh_db(saltenv,**kwargs):
+def _refresh_db(saltenv, **kwargs):
     '''
     Internal use only in this module, has a different set of defaults and
     returns True or False. And supports check the age of the existing
     generated meta data.
+    
+    :param str setenv: salt environment
+    :return: Trupple of salt url source and local cache path
+    :rtype: tuple
+    
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     raise_error = kwargs.pop('raise_error', False)
     expire_age = kwargs.pop('expire', 0)
 
     (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
-    repo_age_sec=_repo_age(saltenv)
-    
-    if (repo_age_sec>-1):  # the file exists
-        if expire_age > 0 and (repo_age_sec <  expire_age):
+    repo_age_sec = _repo_age(saltenv)
+
+    if repo_age_sec > -1:  # the file exists
+        if expire_age > 0 and (repo_age_sec < expire_age):
             log.debug(
                 'Using existing pkg meta db as of %d minutes ago',
                 int(repo_age_sec/60)
                 )
             return True
         if expire_age == 0 and (repo_age_sec < 60):
-                log.warning(
+            log.warning(
                 'pkg meta db less than a minute old and been asked to refresh it'
-                )
-    
+            )
+
     results = refresh_db(saltenv=saltenv, verbose=False, raise_error=False)
     if results.get('failed', 0) > 0:
         if raise_error:
@@ -386,7 +392,7 @@ def _refresh_db(saltenv,**kwargs):
                 info=results
                 )
         else:
-                return False
+            return False
     else:
         return True
 
@@ -462,6 +468,12 @@ def refresh_db(**kwargs):
 
 
 def _get_repo_src_dest(saltenv):
+    '''
+    :param str setenv: salt environment
+    :return: Trupple of salt url source and local cache path
+    :rtype: tuple
+    
+    '''
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
             'Nitrogen',
@@ -494,7 +506,7 @@ def _repo_age(saltenv):
 
     try:
         if os.path.isfile(winrepo):
-            file_time=os.stat(winrepo).st_mtime
+            file_time = os.stat(winrepo).st_mtime
         else:
             return -1
     except:
@@ -640,7 +652,7 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
                     log.error(
                         'pkgname "{0}" version "{1}" within "{2}", '
                         '"version number" is not a string'
-                        .format(pkgname, version, short_path_name, version)
+                        .format(pkgname, version, short_path_name)
                         )
                     error_msg_list.append(
                         'pkgname "{0}", version "{1}" is not a string'
