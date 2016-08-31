@@ -359,11 +359,11 @@ def _refresh_db(saltenv, **kwargs):
     Internal use only in this module, has a different set of defaults and
     returns True or False. And supports check the age of the existing
     generated meta data.
-    
+
     :param str setenv: salt environment
     :return: Trupple of salt url source and local cache path
     :rtype: tuple
-    
+
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     raise_error = kwargs.pop('raise_error', False)
@@ -472,7 +472,6 @@ def _get_repo_src_dest(saltenv):
     :param str setenv: salt environment
     :return: Trupple of salt url source and local cache path
     :rtype: tuple
-    
     '''
     if 'win_repo_source_dir' in __opts__:
         salt.utils.warn_until(
