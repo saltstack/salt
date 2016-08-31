@@ -136,7 +136,7 @@ def present(
                     val = json.loads(val)
                 if _val != val:
                     log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
-                    attrs_to_set[attr] = val
+                    attrs_to_set[attr] = json.dumps(val, sort_keys=True)
             elif str(_val) != str(val):
                 log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
                 attrs_to_set[attr] = val
