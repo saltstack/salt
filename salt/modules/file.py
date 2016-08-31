@@ -3503,7 +3503,7 @@ def get_managed(
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
 
-        if parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz' and parsed_scheme != '':
+        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
             parsed_path = ':'.join([parsed_scheme, parsed_path])
             parsed_scheme = 'file'
 
