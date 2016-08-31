@@ -32,6 +32,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._orig_time = None
         self._machine_info = True
 
+
     def setUp(self):
         super(SystemModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
