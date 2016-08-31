@@ -698,7 +698,10 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                                          ac_only=False,
                                          stop_if_on_batteries=False)
             # Run Scheduled Task
-            __salt__['task.run_wait'](name='update-salt-software')
+            if not __salt__['task.run_wait'](name='update-salt-software'):
+                log.error('Failed to install {0}'.format(pkg_name))
+                log.error('Scheduled Task failed to run')
+                ret[pkg_name] = {'install status': 'failed'}
         else:
             # Build the install command
             cmd = []
@@ -959,7 +962,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                                          ac_only=False,
                                          stop_if_on_batteries=False)
             # Run Scheduled Task
-            __salt__['task.run_wait'](name='update-salt-software')
+            if not __salt__['task.run_wait'](name='update-salt-software'):
+                log.error('Failed to remove {0}'.format(target))
+                log.error('Scheduled Task failed to run')
+                ret[target] = {'uninstall status': 'failed'}
         else:
             # Build the install command
             cmd = []
