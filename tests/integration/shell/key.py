@@ -15,6 +15,10 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+USERA = 'saltdev'
+USERA_PWD = 'saltdev'
+HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
+
 
 class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
@@ -22,6 +26,33 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
 
     _call_binary_ = 'salt-key'
+
+    def _add_user(self):
+        '''
+        helper method to add user
+        '''
+        try:
+            add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
+            add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
+                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+            self.assertTrue(add_user)
+            self.assertTrue(add_pwd)
+            user_list = self.run_call('user.list_users')
+            self.assertIn(USERA, str(user_list))
+        except AssertionError:
+            self.run_call('user.delete {0} remove=True'.format(USERA))
+            self.skipTest(
+                'Could not add user or password, skipping test'
+                )
+
+    def _remove_user(self):
+        '''
+        helper method to remove user
+        '''
+        user_list = self.run_call('user.list_users')
+        for user in user_list:
+            if USERA in user:
+                self.run_call('user.delete {0} remove=True'.format(USERA))
 
     def test_list_accepted_args(self):
         '''
@@ -139,6 +170,34 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-l acc')
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
+        self.assertEqual(data, expect)
+
+    def test_list_acc_eauth(self):
+        '''
+        test salt-key -l with eauth
+        '''
+        self._add_user()
+        data = self.run_key('-l acc --eauth pam --username {0} --password {1}'.format(USERA, USERA_PWD))
+        expect = ['Accepted Keys:', 'minion', 'sub_minion']
+        self.assertEqual(data, expect)
+        self._remove_user()
+
+    def test_list_acc_eauth_bad_creds(self):
+        '''
+        test salt-key -l with eauth and bad creds
+        '''
+        self._add_user()
+        data = self.run_key('-l acc --eauth pam --username {0} --password wrongpassword'.format(USERA))
+        expect = []
+        self.assertEqual(data, expect)
+        self._remove_user()
+
+    def test_list_acc_wrong_eauth(self):
+        '''
+        test salt-key -l with wrong eauth
+        '''
+        data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
+        expect = ['The specified external authentication system "wrongeauth" is not available']
         self.assertEqual(data, expect)
 
     def test_list_un(self):
