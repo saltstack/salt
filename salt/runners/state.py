@@ -21,7 +21,7 @@ def orchestrate(mods,
                 exclude=None,
                 pillar=None,
                 pillarenv=None,
-                **kwargs):
+                orchestration_jid=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -62,7 +62,7 @@ def orchestrate(mods,
             exclude,
             pillar=pillar,
             pillarenv=pillarenv,
-            orchestration_jid=kwargs.get('__pub_orchestration_jid'))
+            orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
