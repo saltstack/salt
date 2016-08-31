@@ -1367,6 +1367,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'start_action': None,
     'enable_hard_maps': False,
     'delete_sshkeys': False,
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'cloud'),
     # Custom deploy scripts
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
@@ -1906,16 +1907,17 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     '''
     Read in the salt cloud config and return the dict
     '''
-    # Load the cloud configuration
-    overrides = load_config(
-        path,
-        env_var,
-        os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
-    )
     if path:
         config_dir = os.path.dirname(path)
     else:
         config_dir = salt.syspaths.CONFIG_DIR
+
+    # Load the cloud configuration
+    overrides = load_config(
+        path,
+        env_var,
+        os.path.join(config_dir, 'cloud')
+    )
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -2033,10 +2035,13 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # 2nd - salt-cloud configuration which was loaded before so we could
     # extract the master configuration file if needed.
 
-    # Override master configuration with the salt cloud(current overrides)
-    master_config.update(overrides)
-    # We now set the overridden master_config as the overrides
-    overrides = master_config
+    # Apply the salt-cloud configuration
+    opts = apply_cloud_config(overrides, defaults)
+
+    # Override master configuration with the Salt Cloud options
+    master_config.update(opts)
+    # We now set the overridden master_config as the opts
+    opts = master_config
 
     if providers_config_path is not None and providers_config is not None:
         raise salt.exceptions.SaltCloudConfigError(
@@ -2044,7 +2049,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             'not both.'
         )
     elif providers_config_path is None and providers_config is None:
-        providers_config_path = overrides.get(
+        providers_config_path = opts.get(
             # use the value from the cloud config file
             'providers_config',
             # if not found, use the default path
@@ -2056,15 +2061,12 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             'Only pass `profiles_config` or `profiles_config_path`, not both.'
         )
     elif profiles_config_path is None and profiles_config is None:
-        profiles_config_path = overrides.get(
+        profiles_config_path = opts.get(
             # use the value from the cloud config file
             'profiles_config',
             # if not found, use the default path
             os.path.join(salt.syspaths.CONFIG_DIR, 'cloud.profiles')
         )
-
-    # Apply the salt-cloud configuration
-    opts = apply_cloud_config(overrides, defaults)
 
     # 3rd - Include Cloud Providers
     if 'providers' in opts:

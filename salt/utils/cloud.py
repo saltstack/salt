@@ -2525,7 +2525,8 @@ def init_cachedir(base=None):
     Initialize the cachedir needed for Salt Cloud to keep track of minions
     '''
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
+
     needed_dirs = (base,
                    os.path.join(base, 'requested'),
                    os.path.join(base, 'active'))
@@ -2555,7 +2556,7 @@ def request_minion_cachedir(
     will be set to None.
     '''
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
 
     if not fingerprint and pubkey is not None:
         fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
@@ -2597,7 +2598,7 @@ def change_minion_cachedir(
         return False
 
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
@@ -2618,7 +2619,7 @@ def activate_minion_cachedir(minion_id, base=None):
     exists, and should be expected to exist from here on out.
     '''
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
 
     fname = '{0}.p'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
@@ -2636,7 +2637,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
         return
 
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
 
     driver = next(six.iterkeys(opts['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
@@ -2656,7 +2657,7 @@ def list_cache_nodes_full(opts, provider=None, base=None):
         return
 
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud', 'active')
+        base = os.path.join(__opts__['cachedir'], 'active')
 
     minions = {}
     # First, get a list of all drivers in use
@@ -2687,7 +2688,7 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'cloud')
+        base = __opts__['cachedir']
 
     minions = list_cache_nodes_full(opts, base=base)
 
@@ -2867,7 +2868,7 @@ def cache_node(node, provider, opts):
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
-    base = os.path.join(__opts__['cachedir'], 'cloud', 'active')
+    base = os.path.join(__opts__['cachedir'], 'active')
     if not os.path.exists(base):
         init_cachedir()
 
