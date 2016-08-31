@@ -176,6 +176,10 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
         )
 
     def test_salt_run_with_eauth_all_args(self):
+        '''
+        test salt-run with eauth
+        tests all eauth args
+        '''
         args = ['--auth', '--eauth', '--external-auth', '-a']
         self._add_user()
         for arg in args:
@@ -186,6 +190,9 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
         self._remove_user()
 
     def test_salt_run_with_eauth_bad_passwd(self):
+        '''
+        test salt-run with eauth and bad password
+        '''
         self._add_user()
         run_cmd = self.run_run('-a pam --username {0} --password wrongpassword\
                                test.arg arg kwarg=kwarg1'.format(USERA))
@@ -194,6 +201,9 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
         self._remove_user()
 
     def test_salt_run_with_wrong_eauth(self):
+        '''
+        test salt-run with wrong eauth parameter
+        '''
         run_cmd = self.run_run('-a wrongeauth --username {0} --password {1}\
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
         expect = ['The specified external authentication system "wrongeauth" is not available']
