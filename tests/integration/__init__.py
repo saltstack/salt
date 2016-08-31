@@ -264,7 +264,15 @@ def get_unused_localhost_port():
         usock.close()
         return port
 
+    if sys.platform.startswith('darwin') and port in _RUNTESTS_PORTS:
+        port = get_unused_localhost_port()
+        usock.close()
+        return port
+
     _RUNTESTS_PORTS[port] = usock
+
+    if sys.platform.startswith('darwin'):
+        usock.close()
 
     return port
 
