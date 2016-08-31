@@ -15,6 +15,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 import errno
 import os
+import time
 #import locale
 import logging
 import re
@@ -84,7 +85,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
-        refresh_db(saltenv=saltenv)
+        _refresh_db(saltenv)
 
     installed_pkgs = list_pkgs(versions_as_list=True, saltenv=saltenv)
     log.trace('List of installed packages: {0}'.format(installed_pkgs))
@@ -159,7 +160,7 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
         salt '*' pkg.list_upgrades
     '''
     if salt.utils.is_true(refresh):
-        refresh_db(saltenv=saltenv)
+        _refresh_db(saltenv)
 
     ret = {}
     for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
@@ -251,7 +252,10 @@ def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
 
     if kwargs.get('refresh', False):
         # _get_name_map() needs a refresh_db if cache is not present
-        refresh_db(saltenv=saltenv)
+        if versions_as_list: # Assume we are being called by the state/pkg.py
+            _refresh_db(saltenv)
+        else: # Assume being called by a user
+            refresh_db(saltenv=saltenv)
 
     ret = {}
     name_map = _get_name_map(saltenv)
@@ -350,6 +354,43 @@ def _get_reg_software():
     return reg_software
 
 
+def _refresh_db(saltenv,**kwargs):
+    '''
+    Internal use only in this module, has a different set of defaults and
+    returns True or False. And supports check the age of the existing
+    generated meta data.
+    '''
+    raise_error = kwargs.pop('raise_error', False)
+    expire_age = kwargs.pop('expire', 0)
+
+    (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
+    repo_age_sec=_repo_age(saltenv)
+    
+    if (repo_age_sec>-1):  # the file exists
+        if expire_age > 0 and (repo_age_sec <  expire_age):
+            log.debug(
+                'Using existing pkg meta db as of %d minutes ago',
+                int(repo_age_sec/60)
+                )
+            return True
+        if expire_age == 0 and (repo_age_sec < 60):
+                log.warning(
+                'pkg meta db less than a minute old and been asked to refresh it'
+                )
+    
+    results = refresh_db(saltenv=saltenv, verbose=False, raise_error=False)
+    if results.get('failed', 0) > 0:
+        if raise_error:
+            raise CommandExecutionError(
+                'Error occurred while generating repo db',
+                info=results
+                )
+        else:
+                return False
+    else:
+        return True
+
+
 def refresh_db(**kwargs):
     '''
     Compile the repository from the local cached state files and return a dict
@@ -370,6 +411,7 @@ def refresh_db(**kwargs):
     raise_error = kwargs.pop('raise_error', True)
     __context__.pop('winrepo.data', None)
     (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
+
     # Do some safety checks on the repo_path before removing its contents
     for pathchecks in [
             '[a-z]\\:\\\\$',
@@ -407,7 +449,9 @@ def refresh_db(**kwargs):
         saltenv,
         include_pat='*.sls'
     )
+
     results = genrepo(saltenv=saltenv, verbose=verbose, raise_error=False)
+
     if results.get('failed', 0) > 0 and raise_error:
         raise CommandExecutionError(
             'Error occurred while generating repo db',
@@ -437,6 +481,26 @@ def _get_repo_src_dest(saltenv):
     dirs.extend(url_parts.path.strip('/').split('/'))
     dest_path = os.sep.join(dirs)
     return (winrepo_source_dir, dest_path)
+
+
+def _repo_age(saltenv):
+    '''
+    Returns age in seconds of the generated repo
+    '''
+    (repo_remote, repo_local) = _get_repo_src_dest(saltenv)
+    if not os.path.exists(repo_local):
+        os.makedirs(repo_local)
+    winrepo = os.path.join(repo_local, 'winrepo.p')
+
+    try:
+        if os.path.isfile(winrepo):
+            file_time=os.stat(winrepo).st_mtime
+        else:
+            return -1
+    except:
+        raise
+
+    return time.time()-file_time
 
 
 def genrepo(**kwargs):
@@ -470,6 +534,7 @@ def genrepo(**kwargs):
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = kwargs.pop('verbose', False)
     raise_error = kwargs.pop('raise_error', True)
+
     ret = {}
     successful_verbose = {}
     total_files_processed = 0
@@ -478,7 +543,7 @@ def genrepo(**kwargs):
     (repo_remote, repo_local) = _get_repo_src_dest(saltenv)
     if not os.path.exists(repo_local):
         os.makedirs(repo_local)
-    winrepo = 'winrepo.p'
+    winrepo = os.path.join(repo_local, 'winrepo.p')
 
     for root, _, files in os.walk(repo_local):
         short_path = os.path.relpath(root, repo_local)
@@ -493,7 +558,7 @@ def genrepo(**kwargs):
                     ret,
                     successful_verbose
                     )
-    with salt.utils.fopen(os.path.join(repo_local, winrepo), 'w+b') as repo_cache:
+    with salt.utils.fopen(winrepo, 'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
 
     successful_count = len(successful_verbose)
