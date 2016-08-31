@@ -251,7 +251,7 @@ def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
 
     if kwargs.get('refresh', False):
         # _get_name_map() needs a refresh_db if cache is not present
-        refresh_db()
+        refresh_db(saltenv=saltenv)
 
     ret = {}
     name_map = _get_name_map(saltenv)
