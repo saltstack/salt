@@ -1152,7 +1152,7 @@ class StateModuleTest(integration.ModuleCase,
         # Parse the file
         ret = self.run_function('state.show_template', [sls_file])
 
-        self.assertIn(ret['bikini-bottom'], 'spongebob')
+        self.assertIn('spongebob', ret['bikini-bottom'])
         self.assertIn(ret['bikini-bottom'], 'patrick')
         self.assertEqual(
             ret['bikini-bottom']['patrick']['full_name'], 'patrick star')
