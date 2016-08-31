@@ -424,8 +424,10 @@ def project_present(name, description=None, enabled=True, profile=None,
                     **connection_args):
     '''
     Ensures that the keystone project exists
-    Alias for tenant_present from V2 API to fulfil
+    Alias for tenant_present from V2 API to fulfill
     V3 API naming convention.
+
+    .. versionadded:: Carbon
 
     name
         The name of the project to manage
@@ -452,8 +454,10 @@ def project_present(name, description=None, enabled=True, profile=None,
 def project_absent(name, profile=None, **connection_args):
     '''
     Ensure that the keystone project is absent.
-    Alias for tenant_absent from V2 API to fulfil
+    Alias for tenant_absent from V2 API to fulfill
     V3 API naming convention.
+
+    .. versionadded:: Carbon
 
     name
         The name of the project that should not exist
