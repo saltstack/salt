@@ -60,10 +60,16 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
+from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from shlex import quote as _quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote
 
 try:
     import salt.master
@@ -1887,16 +1893,31 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
-        ret = {}
+        cmd = '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+        for key, value in six.iteritems(kwargs):
+            cmd += ' {0}={1}'.format(key, _quote(value))
+
+        ret = {'fun': fun}
         ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
+            cmd,
+            catch_stderr=kwargs.get('catch_stderr', None)
         )
+        # Have to create an empty dict and then update it, as the result from
+        # self.get_config() is an ImmutableDict.
         opts = {}
         opts.update(self.get_config('client_config'))
-        opts.update({'doc': False, 'fun': fun, 'arg': arg})
+        opts_arg = list(arg)
+        if kwargs:
+            opts_arg.append({'__kwarg__': True})
+            opts_arg[-1].update(kwargs)
+        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
-            ret['fun'] = runner.run()
+            ret['return'] = runner.run()
+            try:
+                ret['jid'] = runner.jid
+            except AttributeError:
+                ret['jid'] = None
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
