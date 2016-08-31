@@ -1329,10 +1329,13 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            ret['info'] = job_ret_info[0]
-            ret['return'] = [dict((k, job_ret_info[0]['Result'][k]['return']) for k in job_ret_info[0]['Result'])]
+            ret['info'] = [job_ret_info[0]]
+            try:
+                ret['return'] = [dict((k, job_ret_info[0]['Result'][k]['return']) for k in job_ret_info[0]['Result'])]
+            except (TypeError, KeyError):
+                ret['return'] = [{}]
         else:
-            ret['return'] = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
         return ret
 
