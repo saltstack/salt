@@ -120,7 +120,10 @@ except ImportError:
         if process and only_children is False:
             cmdline = process.cmdline()
             if not cmdline:
-                cmdline = process.as_dict()
+                try:
+                    cmdline = process.as_dict()
+                except psutil.NoSuchProcess as exc:
+                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
 
             log.info('Sending %s to process: %s', sigint_name, cmdline)
             process.send_signal(sigint)
