@@ -56,6 +56,7 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
+from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
@@ -1716,7 +1717,9 @@ def run_inline_script(host,
 
 
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
-    # Fire deploy action
+    '''
+    Fire Salt Cloud event using Master socket
+    '''
     if sock_dir is None:
         sock_dir = __opts__['sock_dir']
 
@@ -2526,9 +2529,20 @@ def init_cachedir(base=None):
     '''
     if base is None:
         base = os.path.join(__opts__['cachedir'], 'cloud')
+
+    old_base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    if os.path.exists(old_base) and not os.path.exists(base):
+        log.warning('Attempting to migrate Salt Cloud cachedir to the new location: {0}'.format(base))
+        try:
+            shutil.move(old_base, base)
+        except (IOError, OSError, shutil.Error) as err:
+            log.error('Failed to migrate Salt Cloud cachedir to the new location: {0}'.format(err))
+
     needed_dirs = (base,
                    os.path.join(base, 'requested'),
                    os.path.join(base, 'active'))
+
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
