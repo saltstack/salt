@@ -597,7 +597,7 @@ class PkgTest(integration.ModuleCase,
             )
 
     @requires_system_grains
-    def test_group_installed_handle_missing_package_group(self):
+    def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
         '''
         Tests that a CommandExecutionError is caught and the state returns False when
         the package group is missing. Before this fix, the state would stacktrace.
