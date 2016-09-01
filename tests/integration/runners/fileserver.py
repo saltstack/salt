@@ -22,7 +22,7 @@ class ManageTest(integration.ShellCase):
         fileserver.dir_list
         '''
         ret = self.run_run_plus(fun='fileserver.dir_list')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a string
         ret = self.run_run_plus(
@@ -41,7 +41,7 @@ class ManageTest(integration.ShellCase):
         fileserver.empty_dir_list
         '''
         ret = self.run_run_plus(fun='fileserver.empty_dir_list')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a string
         ret = self.run_run_plus(
@@ -60,7 +60,7 @@ class ManageTest(integration.ShellCase):
         fileserver.envs
         '''
         ret = self.run_run_plus(fun='fileserver.envs')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.envs', backend='roots')
@@ -75,7 +75,7 @@ class ManageTest(integration.ShellCase):
         fileserver.file_list
         '''
         ret = self.run_run_plus(fun='fileserver.file_list')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.file_list', backend='roots')
@@ -90,7 +90,7 @@ class ManageTest(integration.ShellCase):
         fileserver.symlink_list
         '''
         ret = self.run_run_plus(fun='fileserver.symlink_list')
-        self.assertIsInstance(ret['fun'], dict)
+        self.assertIsInstance(ret['return'], dict)
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.symlink_list', backend='roots')
@@ -105,7 +105,7 @@ class ManageTest(integration.ShellCase):
         fileserver.update
         '''
         ret = self.run_run_plus(fun='fileserver.update')
-        self.assertTrue(ret['fun'])
+        self.assertTrue(ret['return'])
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.update', backend='roots')
