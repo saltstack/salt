@@ -45,25 +45,6 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 
-config = salt.config.minion_config(
-        os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
-)
-
-# Set HTTP_PROXY_URL for use in various internet facing actions...eg apt-key adv
-if config['proxy_host'] and config['proxy_port']:
-    if config['proxy_username'] and config['proxy_password']:
-        HTTP_PROXY_URL = 'http://{0}:{1}@{2}:{3}'.format(
-            config['proxy_username'],
-            config['proxy_password'],
-            config['proxy_host'],
-            config['proxy_port'])
-    else:
-        HTTP_PROXY_URL = 'http://{0}:{1}'.format(
-            config['proxy_host'],
-            config['proxy_port'])
-else:
-    HTTP_PROXY_URL = None
-
 # pylint: disable=import-error
 try:
     import apt.cache
@@ -2037,8 +2018,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
-                if HTTP_PROXY_URL:
-                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(HTTP_PROXY_URL),
+                http_proxy_url = _get_http_proxy_url()
+                if http_proxy_url:
+                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
                            '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
                 else:
                     cmd = ['apt-key', 'adv', '--keyserver', keyserver,
@@ -2515,3 +2497,34 @@ def info_installed(*names):
         ret[pkg_name] = t_nfo
 
     return ret
+
+
+def _get_http_proxy_url():
+    '''
+    Returns the http_proxy_url if proxy_username, proxy_password, proxy_host, and proxy_port
+    config values are set.
+
+    Returns a string.
+    '''
+    http_proxy_url = ''
+    host = __salt__['config.option']('proxy_host')
+    port = __salt__['config.option']('proxy_port')
+    username = __salt__['config.option']('proxy_username')
+    password = __salt__['config.option']('proxy_password')
+
+    # Set http_proxy_url for use in various internet facing actions...eg apt-key adv
+    if host and port:
+        if username and password:
+            http_proxy_url = 'http://{0}:{1}@{2}:{3}'.format(
+                username,
+                password,
+                host,
+                port
+            )
+        else:
+            http_proxy_url = 'http://{0}:{1}'.format(
+                host,
+                port
+            )
+
+    return http_proxy_url
