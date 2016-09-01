@@ -81,6 +81,7 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
+from salt.ext.six.moves import cStringIO
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
@@ -1893,18 +1894,10 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
-        from_scratch = bool(kwargs.pop('__reload_config', False))
-        cmd = '{0} {1} {2}'.format(options, fun, ' '.join(arg))
-        for key, value in six.iteritems(kwargs):
-            cmd += ' {0}={1}'.format(key, _quote(value))
-
         ret = {'fun': fun}
-        ret['out'] = self.run_run(
-            cmd,
-            catch_stderr=kwargs.get('catch_stderr', None)
-        )
+        from_scratch = bool(kwargs.pop('__reload_config', False))
         # Have to create an empty dict and then update it, as the result from
-        # self.get_config() is an ImmutableDict.
+        # self.get_config() is an ImmutableDict which cannot be updated.
         opts = {}
         opts.update(self.get_config('client_config', from_scratch=from_scratch))
         opts_arg = list(arg)
@@ -1919,6 +1912,17 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
                 ret['jid'] = runner.jid
             except AttributeError:
                 ret['jid'] = None
+
+        # Compile output
+        # TODO: Support outputters other than nested
+        opts['color'] = False
+        opts['output_file'] = cStringIO()
+        try:
+            salt.output.display_output(ret['return'], opts=opts)
+            ret['out'] = opts['output_file'].getvalue().splitlines()
+        finally:
+            opts['output_file'].close()
+
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
