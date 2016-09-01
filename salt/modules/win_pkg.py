@@ -1070,12 +1070,6 @@ def get_repo_data(saltenv='base'):
                 log.exception(exc)
                 return {}
     except IOError as exc:
-        if exc.errno == errno.ENOENT:
-            # File doesn't exist
-            raise CommandExecutionError(
-                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
-                'needed'
-            )
         log.error('Not able to read repo file')
         log.exception(exc)
         return {}
