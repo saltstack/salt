@@ -7,7 +7,6 @@ A module to manage software on Windows
     minion, and it is using a different module (or gives an error similar to
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
-
 '''
 
 # Import python future libs
