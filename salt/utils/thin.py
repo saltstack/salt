@@ -269,6 +269,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     tempdir = None
     for py_ver, tops in six.iteritems(tops_py_version_mapping):
         for top in tops:
+            if not os.path.isabs(top):
+                continue
             base = os.path.basename(top)
             top_dirname = os.path.dirname(top)
             if os.path.isdir(top_dirname):
