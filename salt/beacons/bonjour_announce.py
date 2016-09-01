@@ -1,37 +1,50 @@
 # -*- coding: utf-8 -*-
 '''
- Beacon to announce via avahi (zeroconf)
-
+ Beacon to announce via Bonjour (zeroconf)
 '''
+
 # Import Python libs
 from __future__ import absolute_import
+import atexit
 import logging
+import select
 import time
 
 # Import 3rd Party libs
 try:
-    import avahi
-    HAS_PYAVAHI = True
+    import pybonjour
+    HAS_PYBONJOUR = True
 except ImportError:
-    HAS_PYAVAHI = False
-import dbus
+    HAS_PYBONJOUR = False
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'avahi_announce'
+__virtualname__ = 'bonjour_announce'
 
 LAST_GRAINS = {}
-BUS = dbus.SystemBus()
-SERVER = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
-                        avahi.DBUS_INTERFACE_SERVER)
-GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
-                       avahi.DBUS_INTERFACE_ENTRY_GROUP)
+SD_REF = None
 
 
 def __virtual__():
-    if HAS_PYAVAHI:
+    if HAS_PYBONJOUR:
         return __virtualname__
     return False
+
+
+def _close_sd_ref():
+    '''
+    Close the SD_REF object if it isn't NULL
+    For use with atexit.register
+    '''
+    global SD_REF
+    if SD_REF:
+        SD_REF.close()
+        SD_REF = None
+
+
+def _register_callback(sdRef, flags, errorCode, name, regtype, domain):  # pylint: disable=unused-argument
+    if errorCode != pybonjour.kDNSServiceErr_NoError:
+        log.error('Bonjour registration failed with error code {0}'.format(errorCode))
 
 
 def __validate__(config):
@@ -39,10 +52,10 @@ def __validate__(config):
     Validate the beacon configuration
     '''
     if not isinstance(config, dict):
-        return False, ('Configuration for avahi_announcement '
+        return False, ('Configuration for bonjour_announcement '
                        'beacon must be a dictionary')
     elif not all(x in list(config.keys()) for x in ('servicetype', 'port', 'txt')):
-        return False, ('Configuration for avahi_announce beacon '
+        return False, ('Configuration for bonjour_announce beacon '
                        'must contain servicetype, port and txt items')
     return True, 'Valid beacon configuration'
 
@@ -97,7 +110,7 @@ def beacon(config):
     .. code-block:: yaml
 
        beacons:
-         avahi_announce:
+         bonjour_announce:
            run_once: True
            servicetype: _demo._tcp
            port: 1234
@@ -111,6 +124,7 @@ def beacon(config):
     txt = {}
 
     global LAST_GRAINS
+    global SD_REF
 
     _validate = __validate__(config)
     if not _validate[0]:
@@ -148,27 +162,43 @@ def beacon(config):
             changes[str('txt.' + item)] = txt[item]
 
     if changes:
+        txt_record = pybonjour.TXTRecord(items=txt)
         if not LAST_GRAINS:
             changes['servicename'] = servicename
             changes['servicetype'] = config['servicetype']
             changes['port'] = config['port']
-            GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                             servicename, config['servicetype'], '', '',
-                             dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
-            GROUP.Commit()
+            SD_REF = pybonjour.DNSServiceRegister(
+                name=servicename,
+                regtype=config['servicetype'],
+                port=config['port'],
+                txtRecord=txt_record,
+                callBack=_register_callback)
+            atexit.register(_close_sd_ref)
+            ready = select.select([SD_REF], [], [])
+            if SD_REF in ready[0]:
+                pybonjour.DNSServiceProcessResult(SD_REF)
         elif config.get('reset_on_change', False):
-            GROUP.Reset()
+            SD_REF.close()
+            SD_REF = None
             reset_wait = config.get('reset_wait', 0)
             if reset_wait > 0:
                 time.sleep(reset_wait)
-            GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                             servicename, config['servicetype'], '', '',
-                             dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
-            GROUP.Commit()
+            SD_REF = pybonjour.DNSServiceRegister(
+                name=servicename,
+                regtype=config['servicetype'],
+                port=config['port'],
+                txtRecord=txt_record,
+                callBack=_register_callback)
+            ready = select.select([SD_REF], [], [])
+            if SD_REF in ready[0]:
+                pybonjour.DNSServiceProcessResult(SD_REF)
         else:
-            GROUP.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                                servicename, config['servicetype'], '',
-                                avahi.dict_to_txt_array(txt))
+            txt_record_raw = str(txt_record).encode('utf-8')
+            pybonjour.DNSServiceUpdateRecord(
+                SD_REF,
+                RecordRef=None,
+                flags=0,
+                rdata=txt_record_raw)
 
         ret.append({'tag': 'result', 'changes': changes})
 

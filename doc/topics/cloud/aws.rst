@@ -526,6 +526,31 @@ Tags can be set once an instance has been launched.
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
 .. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
 
+Setting up a Master inside EC2
+------------------------------
+
+Salt Cloud can configure Salt Masters as well as Minions. Use the ``make_master`` setting to use
+this functionality.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Optionally install a Salt Master in addition to the Salt Minion
+      make_master: True
+
+When creating a Salt Master inside EC2 with ``make_master: True``, or when the Salt Master is already
+located and configured inside EC2, by default, minions connect to the master's public IP address during
+Salt Cloud's provisioning process. Depending on how your security groups are defined, the minions
+may or may not be able to communicate with the master. In order to use the master's private IP in EC2
+instead of the public IP, set the ``salt_interface`` to ``private_ips``.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Optionally set the IP configuration to private_ips
+      salt_interface: private_ips
+
+
 Modify EC2 Tags
 ===============
 One of the features of EC2 is the ability to tag resources. In fact, under the
