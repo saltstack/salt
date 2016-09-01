@@ -17,17 +17,16 @@ from salttesting.mock import (
     patch
 )
 
-import salt.ext.six
-from salt.ext.six.moves import range
-
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.ext.six as six
+from salt.ext.six.moves import range
 from salt.modules import dockerng as dockerng_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
-if salt.ext.six.PY3:
+if six.PY3:
     from contextlib import ExitStack
 else:
     from contextlib import nested
@@ -38,7 +37,7 @@ dockerng_mod.__opts__ = {}
 
 
 def _docker_py_version():
-    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else None
+    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else (0,)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -687,10 +686,12 @@ class DockerngTestCase(TestCase):
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
 
-    def test_call_success(self):
+    @skipIf(six.PY2, 'This test only runs on Python 3.')
+    def test_call_success_py3(self):
         '''
         test module calling inside containers
         '''
+        ret = None
         docker_run_all_mock = MagicMock(
             return_value={
                 'retcode': 0,
@@ -704,90 +705,105 @@ class DockerngTestCase(TestCase):
         client = Mock()
         client.put_archive = Mock()
 
-        if salt.ext.six.PY2:
-            with nested(
-                patch.dict(
-                dockerng_mod.__opts__, {'cachedir': '/tmp'}),
-                patch.dict(
+        with ExitStack() as stack:
+            stack.enter_context(patch.dict(
+                dockerng_mod.__opts__, {'cachedir': '/tmp'}))
+            stack.enter_context(patch.dict(
                 dockerng_mod.__salt__, {
-                'dockerng.run_all': docker_run_all_mock,
-                'dockerng.copy_to': docker_copy_to_mock,
-                }),
-                patch.dict(
+                    'dockerng.run_all': docker_run_all_mock,
+                    'dockerng.copy_to': docker_copy_to_mock,
+                }))
+            stack.enter_context(patch.dict(
                 dockerng_mod.__context__, {
-                'docker.client': client
-                }
-                )
-                ):
-                # call twice to verify tmp path later
-                for i in range(2):
-                    ret = dockerng_mod.call(
-                        'ID',
-                        'test.arg',
-                        1, 2,
-                        arg1='val1')
-            # Check that the directory is different each time
-            # [ call(name, [args]), ...
-            self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-            self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                                docker_run_all_mock.mock_calls[3][1][1])
+                    'docker.client': client
+                }))
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = dockerng_mod.call(
+                    'ID',
+                    'test.arg',
+                    1, 2,
+                    arg1='val1')
 
-            self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
-            self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
-                                docker_run_all_mock.mock_calls[4][1][1])
+        # Check that the directory is different each time
+        # [ call(name, [args]), ...
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
+                            docker_run_all_mock.mock_calls[3][1][1])
 
-            # check directory cleanup
-            self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
-            self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
-                                docker_run_all_mock.mock_calls[5][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
 
-            self.assertEqual(
-                {"retcode": 0, "comment": "container cmd"}, ret)
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[5][1][1])
 
-        elif salt.ext.six.PY2:
-            with ExitStack() as stack:
-                stack.enter_context(patch.dict(
-                    dockerng_mod.__opts__, {'cachedir': '/tmp'}))
-                stack.enter_context(patch.dict(
-                    dockerng_mod.__salt__, {
-                        'dockerng.run_all': docker_run_all_mock,
-                        'dockerng.copy_to': docker_copy_to_mock,
-                    }))
-                stack.enter_context(patch.dict(
-                    dockerng_mod.__context__, {
-                        'docker.client': client
-                    }))
-                # call twice to verify tmp path later
-                for i in range(2):
-                    ret = dockerng_mod.call(
-                        'ID',
-                        'test.arg',
-                        1, 2,
-                        arg1='val1')
+        self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
-            # Check that the directory is different each time
-            # [ call(name, [args]), ...
-            self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-            self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                                docker_run_all_mock.mock_calls[3][1][1])
+    @skipIf(six.PY3, 'This test only runs on Python 2.')
+    def test_call_success_py2(self):
+        '''
+        test module calling inside containers
+        '''
+        ret = None
+        docker_run_all_mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{"retcode": 0, "comment": "container cmd"}',
+                'stderr': 'err',
+            })
+        docker_copy_to_mock = MagicMock(
+            return_value={
+                'retcode': 0
+            })
+        client = Mock()
+        client.put_archive = Mock()
 
-            self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
-            self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
-                                docker_run_all_mock.mock_calls[4][1][1])
+        with nested(
+            patch.dict(
+            dockerng_mod.__opts__, {'cachedir': '/tmp'}),
+            patch.dict(
+            dockerng_mod.__salt__, {
+            'dockerng.run_all': docker_run_all_mock,
+            'dockerng.copy_to': docker_copy_to_mock,
+            }),
+            patch.dict(
+            dockerng_mod.__context__, {
+            'docker.client': client
+            }
+            )
+            ):
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = dockerng_mod.call(
+                    'ID',
+                    'test.arg',
+                    1, 2,
+                    arg1='val1')
+        # Check that the directory is different each time
+        # [ call(name, [args]), ...
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
+                            docker_run_all_mock.mock_calls[3][1][1])
 
-            # check directory cleanup
-            self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
-            self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
-            self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
-                                docker_run_all_mock.mock_calls[5][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
 
-            self.assertEqual(
-                {"retcode": 0, "comment": "container cmd"}, ret)
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[5][1][1])
+
+        self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
     def test_images_with_empty_tags(self):
         """
