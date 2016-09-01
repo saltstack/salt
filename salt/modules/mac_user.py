@@ -272,7 +272,7 @@ def chshell(name, shell):
     return info(name).get('shell') == shell
 
 
-def chhome(name, home):
+def chhome(name, home, **kwargs):
     '''
     Change the home directory of the user
 
@@ -282,6 +282,13 @@ def chhome(name, home):
 
         salt '*' user.chhome foo /Users/foo
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    persist = kwargs.pop('persist', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+    if persist:
+        log.info('Ignoring unsupported \'persist\' argument to user.chhome')
+
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User {0!r} does not exist'.format(name))
