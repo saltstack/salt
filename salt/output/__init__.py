@@ -36,14 +36,20 @@ def try_printout(data, out, opts):
     fall back to nested and then to raw
     '''
     try:
-        return get_printout(out, opts)(data).rstrip()
-    except (KeyError, AttributeError):
+        printout = get_printout(out, opts)(data)
+        if printout is not None:
+            return printout.rstrip()
+    except (KeyError, AttributeError, TypeError):
         log.debug(traceback.format_exc())
         try:
-            return get_printout('nested', opts)(data).rstrip()
-        except (KeyError, AttributeError):
+            printout = get_printout('nested', opts)(data)
+            if printout is not None:
+                return printout.rstrip()
+        except (KeyError, AttributeError, TypeError):
             log.error('Nested output failed: ', exc_info=True)
-            return get_printout('raw', opts)(data).rstrip()
+            printout = get_printout('raw', opts)(data)
+            if printout is not None:
+                return printout.rstrip()
 
 
 def get_progress(opts, out, progress):
