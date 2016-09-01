@@ -875,7 +875,7 @@ def refresh_db():
             key = line.split('\'')[1].strip()
             if 'is up to date' in line:
                 ret[key] = False
-        elif line.strip().startswith('Building')  and '\'' in line:
+        elif line.strip().startswith('Building') and '\'' in line:
             key = line.split('\'')[1].strip()
             if 'done' in line:
                 ret[key] = True
