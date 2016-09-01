@@ -438,7 +438,7 @@ def create(vm_):
             )
             return False
 
-    if 'ERRORARRAY' in result and len(result['ERRORARRAY']) > 0:
+    if 'ERRORARRAY' in result:
         for error_data in result['ERRORARRAY']:
             log.error('Error creating {0} on Linode\n\n'
                     'The Linode API returned the following: {1}\n'.format(
