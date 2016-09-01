@@ -65,7 +65,7 @@ def __virtual__():
         return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and __grains__['osmajorrelease'] == 9:
+    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
