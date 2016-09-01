@@ -389,6 +389,10 @@ Execution Module Deprecations
   dictionary. This updated function replaces the need for the ``human_readable``
   option.
 
+- The ``persist`` kwarg was removed from the ``win_useradd`` execution module. This
+  option is no longer supported for Windows. ``persist`` is only supported as part
+  of user management in UNIX/Linux.
+
 - The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
   instead.
 
