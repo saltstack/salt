@@ -278,7 +278,7 @@ def runas_system(cmd, username, password):
     if '\\' in username:
         domain, username = username.split('\\')
 
-    # Logon User and Get Token
+    # Load User and Get Token
     token = win32security.LogonUser(username,
                                     domain,
                                     password,
