@@ -138,12 +138,11 @@ import json
 import os
 
 # Import Salt Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
-from salt.ext.six import string_types
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext import six
 
 # Import 3rd party libs
 try:
@@ -549,7 +548,7 @@ def _user_policies_present(name, policies=None, region=None, key=None, keyid=Non
     policies_to_create = {}
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, string_types):
+        if isinstance(policy, six.string_types):
             dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
             dict_policy = _byteify(policy)
@@ -953,7 +952,7 @@ def _group_policies_present(
     policies_to_create = {}
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, string_types):
+        if isinstance(policy, six.string_types):
             dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
             dict_policy = _byteify(policy)
@@ -1407,12 +1406,12 @@ def policy_present(name, policy_document, path=None, description=None,
         ret['comment'] = ' '.join([ret['comment'], 'Policy {0} is present.'.format(name)])
         _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
                                                        region, key, keyid, profile).get('policy_version', {})
-        if isinstance(_describe['document'], string_types):
+        if isinstance(_describe['document'], six.string_types):
             describeDict = json.loads(_describe['document'])
         else:
             describeDict = _describe['document']
 
-        if isinstance(policy_document, string_types):
+        if isinstance(policy_document, six.string_types):
             policy_document = json.loads(policy_document)
 
         r = salt.utils.compare_dicts(describeDict, policy_document)
