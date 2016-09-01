@@ -1060,6 +1060,8 @@ def get_repo_data(saltenv='base'):
     #    return __context__['winrepo.data']
     repocache_dir = _get_local_repo_dir(saltenv=saltenv)
     winrepo = 'winrepo.p'
+    if not os.path.exists(os.path.join(repocache_dir, winrepo)):
+        refresh_db(saltenv=saltenv)
     try:
         with salt.utils.fopen(
                 os.path.join(repocache_dir, winrepo), 'rb') as repofile:
