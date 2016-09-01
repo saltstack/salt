@@ -1893,6 +1893,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
+        from_scratch = bool(kwargs.pop('__reload_config', False))
         cmd = '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         for key, value in six.iteritems(kwargs):
             cmd += ' {0}={1}'.format(key, _quote(value))
@@ -1905,7 +1906,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         # Have to create an empty dict and then update it, as the result from
         # self.get_config() is an ImmutableDict.
         opts = {}
-        opts.update(self.get_config('client_config'))
+        opts.update(self.get_config('client_config', from_scratch=from_scratch))
         opts_arg = list(arg)
         if kwargs:
             opts_arg.append({'__kwarg__': True})
