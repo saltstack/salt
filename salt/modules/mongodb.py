@@ -470,27 +470,30 @@ def update_one(objects, collection, user=None, password=None,
     _update_doc = document[1]
 
     # need a string to perform the test, so using objs[0]
-    test_f = find(collection, objs[0], user, password, host, port, 
-    database, authdb)
+    test_f = find(collection,
+                  objs[0],
+                  user,
+                  password,
+                  host,
+                  port,
+                  database,
+                  authdb)
     if not isinstance(test_f, list):
-        return "The find result is not well formatted. An error "+ \
-        "appears; cannot update."
+        return 'The find result is not well formatted. An error appears; cannot update.'
     elif len(test_f) < 1:
-        return "Did not find any result. You should try an insert before"
+        return 'Did not find any result. You should try an insert before.'
     elif len(test_f) > 1:
-        return "Too much results... Try to be more specific."
+        return 'Too many results. Please try to be more specific.'
     else:
         try:
-            log.info("Updating %r into %s.%s", _id_field, database, 
-            collection)
+            log.info("Updating %r into %s.%s", _id_field, database, collection)
             mdb = pymongo.database.Database(conn, database)
             col = getattr(mdb, collection)
-            ids = col.update_one( _id_field, {'$set': _update_doc} )
+            ids = col.update_one(_id_field, {'$set': _update_doc})
             nb_mod = ids.modified_count
             return "{0} objects updated".format(nb_mod)
         except pymongo.errors.PyMongoError as err:
-            log.error("Updating object %r failed with error %s", 
-            objects, err)
+            log.error('Updating object {0} failed with error {1}'.format(objects, err))
             return err
 
 
