@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError
 
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
-        or salt.utils.get_uid(salt.utils.get_user() != 0), 'Test requirements not met')
+        or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
 class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
@@ -29,28 +29,50 @@ class MacPowerModuleTest(integration.ModuleCase):
     WAKE_ON_MODEM = False
     WAKE_ON_NET = False
     RESTART_POWER = False
-    RESTART_FREEZE = False
     SLEEP_ON_BUTTON = False
-    DESKTOP = False
-
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self.desktop = False
-        if self.run_function('grains.item', ['model_name']) in ['Mac mini', 'iMac']:
-            DESKTOP = True
+    WAKE_ON_MOD_AVAIL = None
+    WAKE_ON_NET_AVAIL = None
+    RESTART_POW_AVAIL = None
+    SLEEP_ON_POW_AVAIL = None
 
     def setUp(self):
         '''
         Get current settings
         '''
+        # Determine if these functions are available
+        # This is necessary because they may not be available if this test is run
+        # on a laptop vs a desktop or in a vm
+        if self.RESTART_POW_AVAIL is None:
+            self.RESTART_POW_AVAIL = True
+	    ret = self.run_function('power.get_restart_power_failure')
+            if 'Not supported' in ret:
+                self.RESTART_POW_AVAIL = False
+        if self.SLEEP_ON_POW_AVAIL is None:
+            self.SLEEP_ON_POW_AVAIL = True
+            ret = self.run_function('power.get_sleep_on_power)')
+            if 'not supported' in ret:
+                self.SLEEP_ON_POW_AVAIL = False
+        if self.WAKE_ON_NET_AVAIL is None:
+            self.WAKE_ON_NET_AVAIL = True
+            ret = self.run_function('power.get_wake_on_network')
+            if 'Not supported' in ret:
+                self.WAKE_ON_NET_AVAIL = False
+        if self.WAKE_ON_MOD_AVAIL is None:
+            self.WAKE_ON_MOD_AVAIL = True
+            ret = self.run_function('power.get_wake_on_modem')
+            if 'Not supported' in ret:
+                self.WAKE_ON_MOD_AVAIL = False
+        # Get current settings
         self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
         self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
         self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
-        if self.DESKTOP:
+        if self.WAKE_ON_MOD_AVAIL:
             self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
+        if self.WAKE_ON_NET_AVAIL:
             self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
+        if self.RESTART_POW_AVAIL:
             self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
-            self.RESTART_FREEZE = self.run_function('power.get_restart_freeze')
+        if self.SLEEP_ON_POW_AVAIL:
             self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
 
     def tearDown(self):
@@ -60,12 +82,14 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.run_function('power.set_computer_sleep', [self.COMPUTER_SLEEP])
         self.run_function('power.set_display_sleep', [self.DISPLAY_SLEEP])
         self.run_function('power.set_harddisk_sleep', [self.HARD_DISK_SLEEP])
-        if self.DESKTOP:
+        if self.WAKE_ON_MOD_AVAIL:
             self.run_function('power.set_wake_on_modem', [self.WAKE_ON_MODEM])
+        if self.WAKE_ON_NET_AVAIL:
             self.run_function('power.set_wake_on_network', [self.WAKE_ON_NET])
+        if self.RESTART_POW_AVAIL:
             self.run_function('power.set_restart_power_failure',
                               [self.RESTART_POWER])
-            self.run_function('power.set_restart_freeze', [self.RESTART_FREEZE])
+        if self.SLEEP_ON_POW_AVAIL:
             self.run_function('power.set_sleep_on_power_button',
                               [self.SLEEP_ON_BUTTON])
 
@@ -158,7 +182,8 @@ class MacPowerModuleTest(integration.ModuleCase):
         Test power.get_wake_on_modem
         Test power.set_wake_on_modem
         '''
-        if self.DESKTOP:
+        # If available on this system, test it
+        if self.WAKE_ON_MOD_AVAIL:
             self.assertTrue(
                     self.run_function('power.set_wake_on_modem', ['on']))
             self.assertTrue(self.run_function('power.get_wake_on_modem'))
@@ -167,7 +192,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             self.assertFalse(self.run_function('power.get_wake_on_modem'))
         else:
             # Check for failure if not a desktop
-            ret = self.run_function('power.set_wake_on_modem', ['on'])
+            ret = self.run_function('power.get_wake_on_modem')
             self.assertIn('Error', ret)
 
     def test_wake_on_network(self):
@@ -175,7 +200,8 @@ class MacPowerModuleTest(integration.ModuleCase):
         Test power.get_wake_on_network
         Test power.set_wake_on_network
         '''
-        if self.DESKTOP:
+        # If available on this system, test it
+        if self.WAKE_ON_NET_AVAIL:
             self.assertTrue(
                     self.run_function('power.set_wake_on_network', ['on']))
             self.assertTrue(self.run_function('power.get_wake_on_network'))
@@ -184,7 +210,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             self.assertFalse(self.run_function('power.get_wake_on_network'))
         else:
             # Check for failure if not a desktop
-            ret = self.run_function('power.set_wake_on_network', ['on'])
+            ret = self.run_function('power.get_wake_on_network')
             self.assertIn('Error', ret)
 
     def test_restart_power_failure(self):
@@ -192,7 +218,8 @@ class MacPowerModuleTest(integration.ModuleCase):
         Test power.get_restart_power_failure
         Test power.set_restart_power_failure
         '''
-        if self.DESKTOP:
+        # If available on this system, test it
+        if self.RESTART_POW_AVAIL:
             self.assertTrue(
                 self.run_function('power.set_restart_power_failure', ['on']))
             self.assertTrue(
@@ -203,7 +230,7 @@ class MacPowerModuleTest(integration.ModuleCase):
                 self.run_function('power.get_restart_power_failure'))
         else:
             # Check for failure if not a desktop
-            ret = self.run_function('power.set_restart_power_failure', ['on'])
+            ret = self.run_function('power.get_restart_power_failure')
             self.assertIn('Error', ret)
 
     def test_restart_freeze(self):
@@ -214,24 +241,20 @@ class MacPowerModuleTest(integration.ModuleCase):
         # Normal Functionality
         self.assertTrue(self.run_function('power.set_restart_freeze', ['on']))
         self.assertTrue(self.run_function('power.get_restart_freeze'))
-        if self.DESKTOP:
-            self.assertTrue(
-                    self.run_function('power.set_restart_freeze', ['off']))
-            self.assertFalse(self.run_function('power.get_restart_freeze'))
-        else:
-            # Non desktop will fail to set
-            self.assertFalse(
-                    self.run_function('power.set_restart_freeze', ['off']))
-            # Non desktop is always True
-            self.assertTrue(self.run_function('power.get_restart_freeze'))
+        # This will return False because mac fails to actually make the change
+        self.assertFalse(
+	    self.run_function('power.set_restart_freeze', ['off']))
+        # Even setting to off returns true, it actually is never set
+        # This is an apple bug
+        self.assertTrue(self.run_function('power.get_restart_freeze'))
 
     def test_sleep_on_power_button(self):
         '''
         Test power.get_sleep_on_power_button
         Test power.set_sleep_on_power_button
         '''
-        # Normal Functionality
-        if self.DESKTOP:
+        # If available on this system, test it
+        if self.SLEEP_ON_POW_AVAIL:
             self.assertTrue(
                 self.run_function('power.set_sleep_on_power_button', ['on']))
             self.assertTrue(
@@ -241,8 +264,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             self.assertFalse(
                 self.run_function('power.get_sleep_on_power_button'))
         else:
-            # Check for failure if not a desktop
-            ret = self.run_function('power.set_sleep_on_power_button', ['on'])
+            ret = self.run_function('power.get_sleep_on_power_button')
             self.assertIn('Error', ret)
 
 
