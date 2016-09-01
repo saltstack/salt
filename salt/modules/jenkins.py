@@ -71,12 +71,6 @@ def _connect():
     if not jenkins_url:
         raise SaltInvocationError('No Jenkins URL found.')
 
-    if not jenkins_user:
-        raise SaltInvocationError('No Jenkins User found.')
-
-    if not jenkins_password:
-        raise SaltInvocationError('No Jenkins Password or API token found.')
-
     return jenkins.Jenkins(jenkins_url,
                            username=jenkins_user,
                            password=jenkins_password)
