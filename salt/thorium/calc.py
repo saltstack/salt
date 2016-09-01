@@ -25,7 +25,7 @@ def __virtual__():
     return HAS_STATS
 
 
-def calc(name, num, oper, ref=None):
+def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     '''
     Perform a calculation on the ``num`` most recent values. Requires a list.
     Valid values for ``oper`` are:
@@ -94,6 +94,12 @@ def calc(name, num, oper, ref=None):
             vals.append(regitem[ref])
 
     answer = ops[oper](vals)
+
+    if minimum > 0 and answer < minimum:
+        ret['result'] = False
+
+    if maximum > 0 and answer > maximum:
+        ret['result'] = False
 
     ret['changes'] = {
         'Number of values': len(vals),
