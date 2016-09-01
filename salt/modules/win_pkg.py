@@ -16,7 +16,6 @@ A module to manage software on Windows
 
 # Import python libs
 from __future__ import absolute_import
-import errno
 import os
 import locale
 import logging
@@ -40,7 +39,7 @@ except ImportError:
 import shlex
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltRenderError
+from salt.exceptions import SaltRenderError
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
