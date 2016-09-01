@@ -188,7 +188,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         self._add_user()
         data = self.run_key('-l acc --eauth pam --username {0} --password wrongpassword'.format(USERA))
-        expect = []
+        expect = ['Authentication failure of type "eauth" occurred for user {0}.'.format(USERA)]
         self.assertEqual(data, expect)
         self._remove_user()
 
