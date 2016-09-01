@@ -5,6 +5,7 @@ integration tests for mac_power
 
 # Import python libs
 from __future__ import absolute_import, print_function
+from six import string_types
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -14,7 +15,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
@@ -43,22 +43,22 @@ class MacPowerModuleTest(integration.ModuleCase):
         if self.RESTART_POW_AVAIL is None:
             self.RESTART_POW_AVAIL = True
             ret = self.run_function('power.get_restart_power_failure')
-            if 'Error' in ret:
+            if isinstance(ret, string_types) and 'Error' in ret:
                 self.RESTART_POW_AVAIL = False
         if self.SLEEP_ON_POW_AVAIL is None:
             self.SLEEP_ON_POW_AVAIL = True
             ret = self.run_function('power.get_sleep_on_power_button')
-            if 'Error' in ret:
+            if isinstance(ret, string_types) and 'Error' in ret:
                 self.SLEEP_ON_POW_AVAIL = False
         if self.WAKE_ON_NET_AVAIL is None:
             self.WAKE_ON_NET_AVAIL = True
             ret = self.run_function('power.get_wake_on_network')
-            if 'Error' in ret:
+            if isinstance(ret, string_types) and 'Error' in ret:
                 self.WAKE_ON_NET_AVAIL = False
         if self.WAKE_ON_MOD_AVAIL is None:
             self.WAKE_ON_MOD_AVAIL = True
             ret = self.run_function('power.get_wake_on_modem')
-            if 'Error' in ret:
+            if isinstance(ret, string_types) and 'Error' in ret:
                 self.WAKE_ON_MOD_AVAIL = False
 
     def setUp(self):
