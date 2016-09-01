@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+'''
+`salt` command-line executable.
+
+This is the front-end for communicating to the Salt master and
+dispatching commands to the Salt minions.
+'''
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
@@ -15,6 +22,7 @@ from salt.exceptions import (
         SaltInvocationError,
         EauthAuthenticationError
         )
+from salt.defaults import exitcodes
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -124,6 +132,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if not local:
             return
 
+        min_retcode = exitcodes.EX_OK
         retcodes = []
         errors = []
 
@@ -164,6 +173,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     try:
                         ret_, out, retcode = self._format_ret(full_ret)
                         retcodes.append(retcode)
+                        # Preserve the minimum retcode failure
+                        # as the most important.
+                        if retcode != exitcodes.EX_OK and (
+                                min_retcode == exitcodes.EX_OK
+                                or retcode < min_retcode
+                        ):
+                            min_retcode = retcode
                         self._output_ret(ret_, out)
                         ret.update(full_ret)
                     except KeyError:
@@ -180,9 +196,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # returned 'ok' with a retcode of 0.
             # This is the final point before the 'salt' cmd returns,
             # which is why we set the retcode here.
-            if retcodes.count(0) < len(retcodes):
-                sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+            if min_retcode != exitcodes.EX_OK:
+                sys.stderr.write(
+                    'ERROR: Minions returned with non-success exit code ({0})\n'.format(exitcodes.EX_OK)
+                )
+                if self.options.retcode_passthrough:
+                    sys.exit(min_retcode)
 
         except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
             ret = str(exc)
@@ -221,7 +240,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             try:
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-            except salt.exceptions.SaltClientError as exc:
+            except salt.exceptions.SaltClientError:
                 sys.exit(2)
 
             ret = {}
@@ -242,10 +261,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 if self.options.failhard:
                     for ret in six.itervalues(res):
                         retcode = self._get_retcode(ret)
-                        if retcode != 0:
+                        if retcode != exitcodes.EX_OK:
                             sys.stderr.write(
-                                '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
-                                    res
+                                '{0}\nERROR: Minions returned with non-success exit code ({1}).\n'.format(
+                                    res,
+                                    exitcodes.EX_OK,
                                 )
                             )
                             sys.exit(retcode)
@@ -315,7 +335,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if not hasattr(self, 'progress_bar'):
             try:
                 self.progress_bar = salt.output.get_progress(self.config, out, progress)
-            except Exception as exc:
+            except Exception:
                 raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
                                                   'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
@@ -341,7 +361,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         ret = {}
         out = ''
-        retcode = 0
+        retcode = exitcodes.EX_OK
         for key, data in six.iteritems(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
@@ -355,9 +375,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Determine a retcode for a given return
         '''
-        retcode = 0
+        retcode = exitcodes.EX_OK
         # if there is a dict with retcode, use that
-        if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+        if isinstance(ret, dict) and ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:

@@ -109,6 +109,7 @@ import logging
 import math
 import binascii
 import salt.utils
+from salt.defaults import exitcodes
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
 from datetime import datetime
@@ -552,7 +553,7 @@ def _check_onlyif_unless(onlyif, unless):
             if not onlyif:
                 ret = {'comment': 'onlyif execution failed', 'result': True}
         elif isinstance(onlyif, string_types):
-            if retcode(onlyif) != 0:
+            if retcode(onlyif) != exitcodes.EX_OK:
                 ret = {'comment': 'onlyif execution failed', 'result': True}
                 log.debug('onlyif execution failed')
     if unless is not None:
@@ -560,7 +561,7 @@ def _check_onlyif_unless(onlyif, unless):
             if unless:
                 ret = {'comment': 'unless execution succeeded', 'result': True}
         elif isinstance(unless, string_types):
-            if retcode(unless) == 0:
+            if retcode(unless) == exitcodes.EX_OK:
                 ret = {'comment': 'unless execution succeeded', 'result': True}
                 log.debug('unless execution succeeded')
     return ret
@@ -1366,7 +1367,7 @@ def create_ca_signed_cert(ca_name,
                 fhr.read()
             )
     except IOError:
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
         ret['comment'] = 'There is no CA named "{0}"'.format(ca_name)
         return ret
 
@@ -1377,7 +1378,7 @@ def create_ca_signed_cert(ca_name,
                 OpenSSL.crypto.FILETYPE_PEM,
                 fhr.read())
     except IOError:
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
         ret['comment'] = 'There is no CSR that matches the CN "{0}"'.format(
             cert_filename)
         return ret
@@ -1788,7 +1789,7 @@ def revoke_cert(
                         serial_number
                     )
                 except ValueError:
-                    ret['retcode'] = 1
+                    ret['retcode'] = exitcodes.EX_GENERIC
                     ret['comment'] = ("Revocation date '{0}' does not match"
                                       "format '{1}'".format(
                                           revoke_date,
@@ -1825,7 +1826,7 @@ def revoke_cert(
         )
 
     if os.path.isdir(crl_file):
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
         ret['comment'] = 'crl_file "{0}" is an existing directory'.format(
             crl_file)
         return ret

@@ -29,6 +29,10 @@ from __future__ import absolute_import
 import logging
 import re
 
+# Import salt libs
+from salt.defaults import exitcodes
+
+
 log = logging.getLogger(__name__)
 
 
@@ -76,7 +80,7 @@ def _do(name, gnome_kwargs, preferences):
             messages.append('{0} is already set to {1}'.format(key, value))
         else:
             result = __salt__['gnome.set'](**gnome_kwargs)
-            if result['retcode'] == 0:
+            if result['retcode'] == exitcodes.EX_OK:
                 messages.append('Setting {0} to {1}'.format(key, value))
                 ret['changes'][key] = '{0}:{1}'.format(key, value)
                 ret['result'] = True

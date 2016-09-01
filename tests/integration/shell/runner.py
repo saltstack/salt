@@ -22,7 +22,7 @@ import salt.utils
 
 class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
-    Test the salt-run command
+    Test the `salt-run` command line executable
     '''
 
     _call_binary_ = 'salt-run'
@@ -107,7 +107,6 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
 
         runner = testprogram.TestProgramSaltRun(
             name='run-unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         runner.setup()
@@ -130,7 +129,6 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
 
         runner = testprogram.TestProgramSaltRun(
             name='run-correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         runner.setup()

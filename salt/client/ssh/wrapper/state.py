@@ -20,6 +20,7 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.log
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 
 __func_alias__ = {
@@ -607,7 +608,7 @@ def single(fun, name, test=None, **kwargs):
     # state.fun -> [state, fun]
     comps = fun.split('.')
     if len(comps) < 2:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return 'Invalid function passed'
 
     # Create the low chunk, using kwargs as a base
@@ -633,7 +634,7 @@ def single(fun, name, test=None, **kwargs):
     # Verify the low chunk
     err = st_.verify_data(kwargs)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = exitcodes.EX_GENERIC
         return err
 
     # Must be a list of low-chunks

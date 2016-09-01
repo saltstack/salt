@@ -83,6 +83,7 @@ import shutil
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import tempfile
 import salt.utils.locales
@@ -981,7 +982,7 @@ def freeze(bin_env=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
-    if result['retcode'] > 0:
+    if result['retcode'] > exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     return result['stdout'].splitlines()
@@ -1015,7 +1016,7 @@ def list_(prefix=None,
         packages['pip'] = version(bin_env)
 
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
-    if result['retcode'] > 0:
+    if result['retcode'] > exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     for line in result['stdout'].splitlines():
@@ -1090,7 +1091,7 @@ def list_upgrades(bin_env=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
-    if result['retcode'] > 0:
+    if result['retcode'] > exitcodes.EX_OK:
         logger.error(result['stderr'])
         raise CommandExecutionError(result['stderr'])
 
@@ -1160,7 +1161,7 @@ def upgrade(bin_env=None,
     errors = False
     for pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd):
         result = __salt__['cmd.run_all'](cmd + [pkg], **cmd_kwargs)
-        if result['retcode'] != 0:
+        if result['retcode'] != exitcodes.EX_OK:
             errors = True
         if 'stderr' in result:
             ret['comment'] += result['stderr']

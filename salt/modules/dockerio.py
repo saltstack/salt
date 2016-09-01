@@ -168,6 +168,7 @@ import shutil
 import types
 
 # Import Salt libs
+from salt.defaults import exitcodes
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils
@@ -1865,7 +1866,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     comment = 'Executed {0}'.format(full_cmd)
     try:
         ret = __salt__[func](full_cmd, *args, **kwargs)
-        if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))
+        if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != exitcodes.EX_OK))
            or (func == 'cmd.retcode' and ret != 0)):
             _invalid(status, id_=container, out=ret, comment=comment)
         else:
@@ -1896,7 +1897,7 @@ def load(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
             ret = __salt__['cmd.run'](dockercmd, python_shell=False)
-            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != exitcodes.EX_OK):
                 return _invalid(status, id_=None,
                                 out=ret,
                                 comment='Command to load image {0} failed.'.format(imagepath))
@@ -1947,7 +1948,7 @@ def save(image, filename):
         try:
             dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
-            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != exitcodes.EX_OK):
                 return _invalid(status,
                                 id_=image,
                                 out=ret,
@@ -2187,7 +2188,7 @@ def _script(status,
             fn_ = __salt__['cp.cache_file'](source, saltenv)
             if not fn_:
                 return {'pid': 0,
-                        'retcode': 1,
+                        'retcode': exitcodes.EX_GENERIC,
                         'stdout': '',
                         'stderr': '',
                         'cache_error': True}

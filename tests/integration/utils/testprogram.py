@@ -30,7 +30,7 @@ from salttesting import TestCase
 
 import integration
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 if 'TimeoutError' not in __builtins__:
@@ -38,6 +38,65 @@ if 'TimeoutError' not in __builtins__:
         '''Compatibility exception with python3'''
         pass
     __builtins__['TimeoutError'] = TimeoutError
+
+
+class _TestDir(object):
+    '''
+    An object to track users of an ephemeral test directory.
+
+    Will ensure that the directory is not destroyed while in-use.
+    Also tracks users and can evict the users if the directory must be
+    destroyed.
+    '''
+    def __init__(self, path=None, prefix='salt-testdaemon-'):
+        if path:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            self._dir = path
+        else:
+            self._dir = tempfile.mkdtemp(prefix=prefix)
+        self._shutdown = set()
+        atexit.register(self.destroy)
+
+    def destroy(self):
+        '''Destroys the directory after shutting down all users.'''
+        for shutdown in self._shutdown:
+            if not shutdown:
+                continue
+            shutdown()
+        self._shutdown = set()
+
+        if self._dir and os.path.exists(self._dir):
+            shutil.rmtree(self._dir)
+        self._dir = None
+
+    def pend(self, meth):
+        '''Registers a user of the test directory.'''
+        self._shutdown.add(meth)
+        return self._dir
+
+    def vacate(self, meth):
+        '''Removes a user of the test directory.'''
+        if meth in self._shutdown:
+            self._shutdown.remove(meth)
+
+
+TEST_DIR = _TestDir()
+
+
+def wait_for_path(path, timeout=10, exception=False):
+    '''Wait for a path to exist'''
+
+    endtime = time.time() + timeout
+    while True:
+        if os.path.exists(path):
+            return True
+        if endtime < time.time():
+            if exception:
+                raise TimeoutError('Timeout waiting for path "{0}"'.format(path))
+            else:
+                return False
+        time.sleep(0.2)
 
 
 class TestProgramMeta(type):
@@ -192,8 +251,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         for multiple scripts.
         '''
         if self._parent_dir is None:
-            self.created_parent_dir = True
-            self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+            self._parent_dir = TEST_DIR.pend(self.cleanup)
         else:
             self._parent_dir = os.path.abspath(os.path.normpath(self._parent_dir))
             if not os.path.exists(self._parent_dir):
@@ -210,7 +268,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         cpath = self.abs_path(self.config_file_get(config))
         with open(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
-            log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
             cfo.flush()
 
@@ -260,14 +318,14 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         '''Create directory structure.'''
         subdirs = []
         for branch in self.dirtree:
-            log.debug('checking dirtree: {0}'.format(branch))
+            LOG.debug('checking dirtree: {0}'.format(branch))
             if not branch:
                 continue
             if isinstance(branch, six.string_types) and branch[0] == '&':
-                log.debug('Looking up dirtree branch "{0}"'.format(branch))
+                LOG.debug('Looking up dirtree branch "{0}"'.format(branch))
                 try:
                     dirattr = getattr(self, branch[1:], None)
-                    log.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
+                    LOG.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
                 except AttributeError:
                     raise ValueError(
                         'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}: {3}"'.format(
@@ -292,7 +350,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         for subdir in subdirs:
             path = self.abs_path(subdir)
             if not os.path.exists(path):
-                log.debug('make_dirtree: {0}'.format(path))
+                LOG.debug('make_dirtree: {0}'.format(path))
                 os.makedirs(path)
 
     def setup(self, *args, **kwargs):
@@ -317,10 +375,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 self.process.wait()
             except OSError:
                 pass
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
-        if self.created_parent_dir and os.path.exists(self.parent_dir):
-            shutil.rmtree(self.parent_dir)
+        TEST_DIR.vacate(self.cleanup)
 
     def run(
             self,
@@ -416,7 +471,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
         argv = [self.program]
         argv.extend(args)
-        log.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
+        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -634,7 +689,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                         continue
                 cfg[key] = _val
             cfg = self.config_merge(cfg_base, cfg)
-        log.debug('Generated config => {0}'.format(cfg))
+        LOG.debug('Generated config => {0}'.format(cfg))
         return cfg
 
     def config_stringify(self, config):
@@ -664,7 +719,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         lines.insert(0, '#!{0}\n'.format(sys.executable))
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
-        log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
+        LOG.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
         with open(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
@@ -720,6 +775,7 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self.pid_dir = kwargs.pop('pid_dir', self.pid_dir)
+        self._up = False
         self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
@@ -740,48 +796,55 @@ class TestDaemon(TestProgram):
             daemon_pid = salt.utils.process.get_pidfile(pid_path)
         return daemon_pid
 
-    def wait_for_daemon_pid(self, timeout=10):
+    def wait_for_daemon(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
-        endtime = time.time() + timeout
-        while True:
-            pid = self.daemon_pid
-            if pid:
-                return pid
-            if endtime < time.time():
-                raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(
-                    self.name, self.abs_path(self.pid_path)
-                ))
-            time.sleep(0.2)
+        wait_for_path(self.abs_path(self.pid_path), timeout=timeout, exception=True)
 
     def is_running(self):
         '''Is the daemon running?'''
         ret = False
         if not self._shutdown:
             try:
-                pid = self.wait_for_daemon_pid()
-                ret = psutils.pid_exists(pid)
+                self.wait_for_daemon()
+                ret = psutils.pid_exists(self.daemon_pid)
             except TimeoutError:
                 pass
         return ret
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
-        if not self._shutdown:
-            try:
-                pid = self.wait_for_daemon_pid(timeout)
-                integration.terminate_process_pid(pid)
-            except TimeoutError:
-                pass
-        if self.process:
-            integration.terminate_process_pid(self.process.pid)
-            self.process.wait()
-            self.process = None
-        self._shutdown = True
+        LOG.debug('Shutdown {0}.{1}'.format(self.__class__.__name__, self.name))
+        if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
+            future = datetime.now() + timedelta(seconds=timeout)
+            self.wait_for_daemon(timeout)
+            pid = self.daemon_pid
+            LOG.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
+            while True:
+                try:
+                    os.kill(pid, signum)
+                except OSError as err:
+                    if errno.ESRCH == err.errno:
+                        break
+                    raise
+                if datetime.now() > future:
+                    # One last attempt with a big hammer
+                    try:
+                        pgid = os.getpgid(pid)
+                        os.killpg(pgid, signum)
+                        time.sleep(0.1)
+                        LOG.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
+                        os.killpg(pgid, signal.SIGKILL)
+                        time.sleep(0.1)
+                        os.killpg(pgid, signal.SIGKILL)
+                    except OSError as err:
+                        if errno.ESRCH == err.errno:
+                            break
+                    raise TimeoutError('Timeout waiting for "{0}" pid {1} to shutdown'.format(self.name, pid))
+                time.sleep(0.1)
+            self._shutdown = True
 
     def cleanup(self, *args, **kwargs):
         '''Remove left-over scaffolding - antithesis of setup()'''
-
-        # Shutdown if not alreadt shutdown
         self.shutdown()
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
@@ -790,7 +853,10 @@ class TestSaltDaemon(six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSal
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-    pass
+    def __init__(self, *args, **kwargs):
+        if getattr(self, 'sock_dir', None) and 'sock_dir' in kwargs:
+            self.sock_dir = kwargs.pop('sock_dir')
+        super(TestSaltDaemon, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -798,12 +864,20 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    configs = {'master': {}}
+    configs = {'master': {'map': {'sock_dir': '{sock_dir}'}}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'master')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
         _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
+
+    def wait_for_daemon(self, timeout=10):
+        '''Wait for the daemon to be alive and responding'''
+        time_start = time.time()
+        super(TestDaemonSaltMaster, self).wait_for_daemon(timeout=timeout)
 
 
 class TestDaemonSaltMinion(TestSaltDaemon):
@@ -811,7 +885,13 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    configs = {'minion': {'map': {'id': '{name}'}}}
+    configs = {'minion': {'map': {
+        'id': '{name}',
+        'sock_dir': '{sock_dir}',
+    }}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'minion')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
@@ -871,13 +951,13 @@ class TestProgramCase(TestCase):
     def setUp(self):
         # Setup for scripts
         if not getattr(self, '_test_dir', None):
-            self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+            self._test_dir = TEST_DIR.pend(self.tearDown)
         super(TestProgramCase, self).setUp()
 
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
-            shutil.rmtree(self._test_dir)
+            TEST_DIR.vacate(self.tearDown)
             self._test_dir = None
         super(TestProgramCase, self).tearDown()
 
@@ -888,8 +968,8 @@ class TestProgramCase(TestCase):
 
         ex_val = getattr(exitcodes, ex_status)
         _message = '' if not message else ' ({0})'.format(message)
-        _stdout = '' if not stdout else '\nstdout: {0}'.format(stdout)
-        _stderr = '' if not stderr else '\nstderr: {0}'.format(stderr)
+        _stdout = '' if not stdout else '\nstdout: {0}'.format('\nstdout: '.join(stdout))
+        _stderr = '' if not stderr else '\nstderr: {0}'.format('\nstderr: '.join(stderr))
         self.assertEqual(
             status,
             ex_val,

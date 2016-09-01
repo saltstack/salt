@@ -177,6 +177,7 @@ from __future__ import absolute_import
 import logging
 import salt.utils
 import salt.utils.http
+from salt.defaults import exitcodes
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['fx2']
@@ -253,7 +254,7 @@ def _grains(host, user, password):
     r = __salt__['dracr.system_info'](host=host,
                                       admin_username=user,
                                       admin_password=password)
-    if r.get('retcode', 0) == 0:
+    if r.get('retcode', exitcodes.EX_OK) == exitcodes.EX_OK:
         GRAINS_CACHE = r
     else:
         GRAINS_CACHE = {}
@@ -336,7 +337,7 @@ def chconfig(cmd, *args, **kwargs):
 
     # Catch password reset
     if 'dracr.'+cmd not in __salt__:
-        ret = {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
+        ret = {'retcode': exitcodes.EX_UNSET, 'message': 'dracr.' + cmd + ' is not available'}
     else:
         ret = __salt__['dracr.'+cmd](*args, **kwargs)
 
@@ -361,7 +362,7 @@ def ping():
     r = __salt__['dracr.system_info'](host=DETAILS['host'],
                                       admin_username=DETAILS['admin_username'],
                                       admin_password=DETAILS['admin_password'])
-    if r.get('retcode', 0) == 1:
+    if r.get('retcode', exitcodes.EX_OK) == exitcodes.EX_GENERIC:
         return False
     else:
         return True

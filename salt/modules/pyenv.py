@@ -20,6 +20,8 @@ try:
 except ImportError:
     from pipes import quote as _cmd_quote
 
+from salt.defaults import exitcodes
+
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -56,7 +58,7 @@ def _pyenv_exec(command, args='', env=None, runas=None, ret=None):
         ret.update(result)
         return ret
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         return result['stdout']
     else:
         return False
@@ -81,7 +83,7 @@ def _install_pyenv(path, runas=None):
     if os.path.isdir(path):
         return True
 
-    return 0 == __salt__['cmd.retcode'](
+    return exitcodes.EX_OK == __salt__['cmd.retcode'](
         'git clone https://github.com/yyuu/pyenv.git {0}'.format(path), runas=runas)
 
 
@@ -89,7 +91,7 @@ def _update_pyenv(path, runas=None):
     if not os.path.isdir(path):
         return False
 
-    return 0 == __salt__['cmd.retcode'](
+    return exitcodes.EX_OK == __salt__['cmd.retcode'](
         'cd {0} && git pull'.format(_cmd_quote(path)), runas=runas)
 
 
@@ -98,7 +100,7 @@ def _update_python_build(path, runas=None):
     if not os.path.isdir(path):
         return False
 
-    return 0 == __salt__['cmd.retcode'](
+    return exitcodes.EX_OK == __salt__['cmd.retcode'](
         'cd {0} && git pull'.format(_cmd_quote(path)), runas=runas)
 
 
@@ -176,7 +178,7 @@ def install_python(python, runas=None):
 
     ret = {}
     ret = _pyenv_exec('install', python, env=env, runas=runas, ret=ret)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         rehash(runas=runas)
         return ret['stderr']
     else:
@@ -300,7 +302,7 @@ def do(cmdline=None, runas=None):
         python_shell=True
     )
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         rehash(runas=runas)
         return result['stdout']
     else:

@@ -17,6 +17,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.crypt
+from salt.defaults import exitcodes
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -55,14 +56,14 @@ def connect(image):
         fdisk = 'fdisk -l'
     __salt__['cmd.run']('modprobe nbd max_part=63')
     for nbd in glob.glob('/dev/nbd?'):
-        if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
+        if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)) != exitcodes.EX_OK:
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__['cmd.run'](
                         'qemu-nbd -c {0} {1}'.format(nbd, image),
                         python_shell=False,
                         )
-                if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
+                if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)) == exitcodes.EX_OK:
                     break
             return nbd
     log.warning('Could not connect image: '

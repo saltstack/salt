@@ -28,8 +28,8 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
     The reactor has the capability to execute pre-programmed executions
     as reactions to events
     '''
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, log_queue=None, pm_queue=None):
+        super(Reactor, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -211,6 +211,8 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                 opts=self.opts,
                 listen=True)
         self.wrap = ReactWrap(self.opts)
+
+        self._notify_ready()
 
         for data in self.event.iter_events(full=True):
             # skip all events fired by ourselves

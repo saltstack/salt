@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import logging
 
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -97,7 +98,7 @@ def install(pkg=None,
 
     result = __salt__['cmd.run_all'](' '.join(cmd), runas=user, env=env)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     return result
@@ -176,7 +177,7 @@ def uninstall(pkg,
 
     result = __salt__['cmd.run_all'](' '.join(cmd), runas=user, env=env)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     return result

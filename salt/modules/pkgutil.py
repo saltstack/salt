@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import copy
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -42,7 +43,7 @@ def refresh_db():
 
         salt '*' pkgutil.refresh_db
     '''
-    return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == 0
+    return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == exitcodes.EX_OK
 
 
 def upgrade_available(name):

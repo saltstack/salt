@@ -21,6 +21,7 @@ import os.path
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -71,7 +72,7 @@ def start(name):
     '''
     __salt__['file.remove']('{0}/down'.format(_service_path(name)))
     cmd = 'svc -u {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 #-- states.service compatible args
@@ -87,7 +88,7 @@ def stop(name):
     '''
     __salt__['file.touch']('{0}/down'.format(_service_path(name)))
     cmd = 'svc -d {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def term(name):
@@ -101,7 +102,7 @@ def term(name):
         salt '*' daemontools.term <service name>
     '''
     cmd = 'svc -t {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 #-- states.service compatible

@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import salt.utils
+from salt.defaults import exitcodes
 import logging
 import re
 
@@ -545,7 +546,7 @@ def set_zone(timezone):
         salt '*' timezone.set_zone 'America/Denver'
     '''
     cmd = ['tzutil', '/s', LINTOWIN[timezone]]
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def zone_compare(timezone):

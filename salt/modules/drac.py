@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 # Import 3rd-party libs
@@ -51,7 +52,7 @@ def __execute_cmd(command):
     '''
     cmd = __salt__['cmd.run_all']('racadm {0}'.format(command))
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
         return False
 
@@ -70,7 +71,7 @@ def system_info():
     '''
     cmd = __salt__['cmd.run_all']('racadm getsysinfo')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
@@ -89,7 +90,7 @@ def network_info():
 
     cmd = __salt__['cmd.run_all']('racadm getniccfg')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
@@ -176,7 +177,7 @@ def list_users():
         cmd = __salt__['cmd.run_all']('racadm getconfig -g \
                 cfgUserAdmin -i {0}'.format(idx))
 
-        if cmd['retcode'] != 0:
+        if cmd['retcode'] != exitcodes.EX_OK:
             log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
