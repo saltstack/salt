@@ -1659,6 +1659,12 @@ class Minion(MinionBase):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
+        elif package.startswith('salt/auth/creds'):
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            key = tuple(data['key'])
+            log.debug('Updating auth data for {0}: {1} -> {2}'.format(
+                    key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']))
+            salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
 
     def _fallback_cleanups(self):
         '''
