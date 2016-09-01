@@ -13,6 +13,9 @@ to the correct service manager
 # Import Python libs
 from __future__ import absolute_import
 
+# Import Salt modules
+import salt.utils.systemd
+
 # Define the module's virtual name
 __virtualname__ = 'service'
 
@@ -21,7 +24,8 @@ def __virtual__():
     '''
     Only work on systems which default to systemd
     '''
-    if __grains__['os'] == 'Gentoo':
+    if __grains__['os'] == 'Gentoo' \
+            and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     return (False, 'The gentoo_service execution module cannot be loaded: '
             'only available on Gentoo systems.')
