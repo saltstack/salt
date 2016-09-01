@@ -292,12 +292,15 @@ def runas_system(cmd, username, password):
     if '\\' in username:
         domain, username = username.split('\\')
 
-    # Get User Token
+    # Load User and Get Token
     token = win32security.LogonUser(username,
                                     domain,
                                     password,
                                     win32con.LOGON32_LOGON_INTERACTIVE,
                                     win32con.LOGON32_PROVIDER_DEFAULT)
+
+    # Load the User Profile
+    handle_reg = win32profile.LoadUserProfile(token, {'UserName': username})
 
     try:
         # Get Unrestricted Token (UAC) if this is an Admin Account
@@ -394,6 +397,9 @@ def runas_system(cmd, username, password):
 
     # Close handle to process
     win32api.CloseHandle(hProcess)
+
+    # Unload the User Profile
+    win32profile.UnloadUserProfile(token, handle_reg)
 
     return ret
 
