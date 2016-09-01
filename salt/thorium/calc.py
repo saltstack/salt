@@ -109,7 +109,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     return ret
 
 
-def add(name, num, ref=None):
+def add(name, num, minimum=0, maximum=0, ref=None):
     '''
     Adds together the ``num`` most recent values. Requires a list.
 
@@ -125,7 +125,7 @@ def add(name, num, ref=None):
     return calc(name, num, 'add', ref)
 
 
-def mul(name, num, ref=None):
+def mul(name, num, minimum=0, maximum=0, ref=None):
     '''
     Multiplies together the ``num`` most recent values. Requires a list.
 
@@ -141,7 +141,7 @@ def mul(name, num, ref=None):
     return calc(name, num, 'mul', ref)
 
 
-def mean(name, num, ref=None):
+def mean(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
 
@@ -157,7 +157,7 @@ def mean(name, num, ref=None):
     return calc(name, num, 'mean', ref)
 
 
-def median(name, num, ref=None):
+def median(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
 
@@ -173,7 +173,7 @@ def median(name, num, ref=None):
     return calc(name, num, 'median', ref)
 
 
-def median_low(name, num, ref=None):
+def median_low(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the low mean of the ``num`` most recent values. Requires a list.
 
@@ -189,7 +189,7 @@ def median_low(name, num, ref=None):
     return calc(name, num, 'median_low', ref)
 
 
-def median_high(name, num, ref=None):
+def median_high(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the high mean of the ``num`` most recent values. Requires a list.
 
@@ -205,7 +205,7 @@ def median_high(name, num, ref=None):
     return calc(name, num, 'median_high', ref)
 
 
-def median_grouped(name, num, ref=None):
+def median_grouped(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the grouped mean of the ``num`` most recent values. Requires a
     list.
@@ -222,7 +222,7 @@ def median_grouped(name, num, ref=None):
     return calc(name, num, 'median_grouped', ref)
 
 
-def mode(name, num, ref=None):
+def mode(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mode of the ``num`` most recent values. Requires a list.
 
