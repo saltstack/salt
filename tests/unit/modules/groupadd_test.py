@@ -113,10 +113,10 @@ class GroupAddTestCase(TestCase):
         Tests if specified user gets added in the group.
         '''
         os_version_list = [
-            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': 5},
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': ('gpasswd', '-a', 'root', 'test')},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': 11},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
              'cmd': ('usermod', '-A', 'test', 'root')},
 
             {'grains': {'kernel': 'Linux'},
