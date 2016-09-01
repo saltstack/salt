@@ -14,10 +14,10 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-
+from salt.exceptions import CommandExecutionError
 
 @skipIf(not salt.utils.is_darwin()
-        or not salt.utils.which('systemsetup'
+        or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user() != 0)), 'Test requirements not met')
 class MacPowerModuleTest(integration.ModuleCase):
     '''
@@ -31,6 +31,13 @@ class MacPowerModuleTest(integration.ModuleCase):
     RESTART_POWER = False
     RESTART_FREEZE = False
     SLEEP_ON_BUTTON = False
+    DESKTOP = False
+
+    def __init__(self, arg):
+        super(self.__class__, self).__init__(arg)
+        self.desktop = False
+        if self.run_function('grains.item', ['model_name']) in ['Mac mini', 'iMac']:
+            DESKTOP = True
 
     def setUp(self):
         '''
@@ -39,11 +46,12 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
         self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
         self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
-        self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
-        self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
-        self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
-        self.RESTART_FREEZE = self.run_function('power.get_restart_freeze')
-        self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
+        if self.DESKTOP:
+            self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
+            self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
+            self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
+            self.RESTART_FREEZE = self.run_function('power.get_restart_freeze')
+            self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
 
     def tearDown(self):
         '''
@@ -52,13 +60,14 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.run_function('power.set_computer_sleep', [self.COMPUTER_SLEEP])
         self.run_function('power.set_display_sleep', [self.DISPLAY_SLEEP])
         self.run_function('power.set_harddisk_sleep', [self.HARD_DISK_SLEEP])
-        self.run_function('power.set_wake_on_modem', [self.WAKE_ON_MODEM])
-        self.run_function('power.set_wake_on_network', [self.WAKE_ON_NET])
-        self.run_function('power.set_restart_power_failure',
-                          [self.RESTART_POWER])
-        self.run_function('power.set_restart_freeze', [self.RESTART_FREEZE])
-        self.run_function('power.set_sleep_on_power_button',
-                          [self.SLEEP_ON_BUTTON])
+        if self.DESKTOP:
+            self.run_function('power.set_wake_on_modem', [self.WAKE_ON_MODEM])
+            self.run_function('power.set_wake_on_network', [self.WAKE_ON_NET])
+            self.run_function('power.set_restart_power_failure',
+                              [self.RESTART_POWER])
+            self.run_function('power.set_restart_freeze', [self.RESTART_FREEZE])
+            self.run_function('power.set_sleep_on_power_button',
+                              [self.SLEEP_ON_BUTTON])
 
     @destructiveTest
     def test_computer_sleep(self):
@@ -148,72 +157,93 @@ class MacPowerModuleTest(integration.ModuleCase):
         '''
         Test power.get_wake_on_modem
         Test power.set_wake_on_modem
-
-        Commands don't seem to be supported on el capitan. Perhaps it works on
-        OS X Server or older versions
         '''
-        self.assertTrue(self.run_function('power.set_wake_on_modem', ['on']))
-        self.assertTrue(self.run_function('power.get_wake_on_modem'))
-        self.assertTrue(self.run_function('power.set_wake_on_modem', ['off']))
-        self.assertFalse(self.run_function('power.get_wake_on_modem'))
+        if self.DESKTOP:
+            self.assertTrue(
+                    self.run_function('power.set_wake_on_modem', ['on']))
+            self.assertTrue(self.run_function('power.get_wake_on_modem'))
+            self.assertTrue(
+                    self.run_function('power.set_wake_on_modem', ['off']))
+            self.assertFalse(self.run_function('power.get_wake_on_modem'))
+        else:
+            # Check for failure if not a desktop
+            ret = self.run_function('power.set_wake_on_modem', ['on'])
+            self.assertIn('Error', ret)
 
     def test_wake_on_network(self):
         '''
         Test power.get_wake_on_network
         Test power.set_wake_on_network
-
-        Commands don't seem to be supported on el capitan. Perhaps it works on
-        OS X Server or older versions
         '''
-        self.assertTrue(self.run_function('power.set_wake_on_network', ['on']))
-        self.assertTrue(self.run_function('power.get_wake_on_network'))
-        self.assertTrue(self.run_function('power.set_wake_on_network', ['off']))
-        self.assertFalse(self.run_function('power.get_wake_on_network'))
+        if self.DESKTOP:
+            self.assertTrue(
+                    self.run_function('power.set_wake_on_network', ['on']))
+            self.assertTrue(self.run_function('power.get_wake_on_network'))
+            self.assertTrue(
+                    self.run_function('power.set_wake_on_network', ['off']))
+            self.assertFalse(self.run_function('power.get_wake_on_network'))
+        else:
+            # Check for failure if not a desktop
+            ret = self.run_function('power.set_wake_on_network', ['on'])
+            self.assertIn('Error', ret)
 
     def test_restart_power_failure(self):
         '''
         Test power.get_restart_power_failure
         Test power.set_restart_power_failure
-
-        Commands don't seem to be supported on el capitan. Perhaps it works on
-        OS X Server or older versions
         '''
-        self.assertTrue(
-            self.run_function('power.set_restart_power_failure', ['on']))
-        self.assertTrue(self.run_function('power.get_restart_power_failure'))
-        self.assertTrue(
-            self.run_function('power.set_restart_power_failure', ['off']))
-        self.assertFalse(self.run_function('power.get_restart_power_failure'))
+        if self.DESKTOP:
+            self.assertTrue(
+                self.run_function('power.set_restart_power_failure', ['on']))
+            self.assertTrue(
+                self.run_function('power.get_restart_power_failure'))
+            self.assertTrue(
+                self.run_function('power.set_restart_power_failure', ['off']))
+            self.assertFalse(
+                self.run_function('power.get_restart_power_failure'))
+        else:
+            # Check for failure if not a desktop
+            ret = self.run_function('power.set_restart_power_failure', ['on'])
+            self.assertIn('Error', ret)
 
     def test_restart_freeze(self):
         '''
         Test power.get_restart_freeze
         Test power.set_restart_freeze
-
-        Though the set command completes successfully, the setting isn't
-        actually changed
         '''
         # Normal Functionality
         self.assertTrue(self.run_function('power.set_restart_freeze', ['on']))
         self.assertTrue(self.run_function('power.get_restart_freeze'))
-        self.assertTrue(self.run_function('power.set_restart_freeze', ['off']))
-        self.assertFalse(self.run_function('power.get_restart_freeze'))
+        if self.DESKTOP:
+            self.assertTrue(
+                    self.run_function('power.set_restart_freeze', ['off']))
+            self.assertFalse(self.run_function('power.get_restart_freeze'))
+        else:
+            # Non desktop will fail to set
+            self.assertFalse(
+                    self.run_function('power.set_restart_freeze', ['off']))
+            # Non desktop is always True
+            self.assertTrue(self.run_function('power.get_restart_freeze'))
 
     def test_sleep_on_power_button(self):
         '''
         Test power.get_sleep_on_power_button
         Test power.set_sleep_on_power_button
-
-        Commands don't seem to be supported on el capitan. Perhaps it works on
-        OS X Server or older versions
         '''
         # Normal Functionality
-        self.assertTrue(
-            self.run_function('power.set_sleep_on_power_button', ['on']))
-        self.assertTrue(self.run_function('power.get_sleep_on_power_button'))
-        self.assertTrue(
-            self.run_function('power.set_sleep_on_power_button', ['off']))
-        self.assertFalse(self.run_function('power.get_sleep_on_power_button'))
+        if self.DESKTOP:
+            self.assertTrue(
+                self.run_function('power.set_sleep_on_power_button', ['on']))
+            self.assertTrue(
+                self.run_function('power.get_sleep_on_power_button'))
+            self.assertTrue(
+                self.run_function('power.set_sleep_on_power_button', ['off']))
+            self.assertFalse(
+                self.run_function('power.get_sleep_on_power_button'))
+        else:
+            # Check for failure if not a desktop
+            ret = self.run_function('power.set_sleep_on_power_button', ['on'])
+            self.assertIn('Error', ret)
 
 
 if __name__ == '__main__':
