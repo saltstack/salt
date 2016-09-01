@@ -140,10 +140,10 @@ class GroupAddTestCase(TestCase):
         Tests if specified user gets deleted from the group.
         '''
         os_version_list = [
-            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': 5},
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': ('gpasswd', '-d', 'root', 'test')},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': 11},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
              'cmd': ('usermod', '-R', 'test', 'root')},
 
             {'grains': {'kernel': 'Linux'},
