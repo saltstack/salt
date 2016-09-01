@@ -302,6 +302,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True]))
     @patch('os.path.isdir', MagicMock(return_value=False))
+    @skipIf(sys.version_info < (2, 7), 'Python 2.7 required to compare diff properly')
     def test_diff_text_files(self):
         fopen_effect = [
             mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,
