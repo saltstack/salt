@@ -430,11 +430,12 @@ def insert(objects, collection, user=None, password=None,
         return err
 
 
-def update_one(objects, collection, user=None, password=None,
-           host=None, port=None, database='admin', authdb=None):
-    """
+def update_one(objects, collection, user=None, password=None, host=None, port=None, database='admin', authdb=None):
+    '''
     Update an object into a collection
     http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
+
+    .. versionadded:: Carbon
 
     CLI Example:
 
@@ -442,7 +443,7 @@ def update_one(objects, collection, user=None, password=None,
 
         salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database>
 
-    """
+    '''
     conn = _connect(user, password, host, port, database, authdb)
     if not conn:
         return "Failed to connect to mongo database"
