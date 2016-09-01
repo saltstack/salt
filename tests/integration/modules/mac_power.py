@@ -23,57 +23,67 @@ class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
     '''
-    COMPUTER_SLEEP = 0
-    DISPLAY_SLEEP = 0
-    HARD_DISK_SLEEP = 0
-    WAKE_ON_MODEM = False
-    WAKE_ON_NET = False
-    RESTART_POWER = False
-    SLEEP_ON_BUTTON = False
+    COMPUTER_SLEEP = None
+    DISPLAY_SLEEP = None
+    HARD_DISK_SLEEP = None
+    WAKE_ON_MODEM = None
+    WAKE_ON_NET = None
+    RESTART_POWER = None
+    SLEEP_ON_BUTTON = None
     WAKE_ON_MOD_AVAIL = None
     WAKE_ON_NET_AVAIL = None
     RESTART_POW_AVAIL = None
     SLEEP_ON_POW_AVAIL = None
 
-    def setUp(self):
-        '''
-        Get current settings
-        '''
+    def __init__(self, arg):
+        super(self.__class__, self).__init__(arg)
         # Determine if these functions are available
         # This is necessary because they may not be available if this test is run
         # on a laptop vs a desktop or in a vm
         if self.RESTART_POW_AVAIL is None:
             self.RESTART_POW_AVAIL = True
-	    ret = self.run_function('power.get_restart_power_failure')
-            if 'Not supported' in ret:
+            ret = self.run_function('power.get_restart_power_failure')
+            if 'Error' in ret:
                 self.RESTART_POW_AVAIL = False
         if self.SLEEP_ON_POW_AVAIL is None:
             self.SLEEP_ON_POW_AVAIL = True
-            ret = self.run_function('power.get_sleep_on_power)')
-            if 'not supported' in ret:
+            ret = self.run_function('power.get_sleep_on_power_button')
+            if 'Error' in ret:
                 self.SLEEP_ON_POW_AVAIL = False
         if self.WAKE_ON_NET_AVAIL is None:
             self.WAKE_ON_NET_AVAIL = True
             ret = self.run_function('power.get_wake_on_network')
-            if 'Not supported' in ret:
+            if 'Error' in ret:
                 self.WAKE_ON_NET_AVAIL = False
         if self.WAKE_ON_MOD_AVAIL is None:
             self.WAKE_ON_MOD_AVAIL = True
             ret = self.run_function('power.get_wake_on_modem')
-            if 'Not supported' in ret:
+            if 'Error' in ret:
                 self.WAKE_ON_MOD_AVAIL = False
+
+    def setUp(self):
+        '''
+        Get current settings
+        '''
         # Get current settings
-        self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
-        self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
-        self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
+        if self.COMPUTER_SLEEP is None:
+            self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
+        if self.DISPLAY_SLEEP is None:
+            self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
+        if self.HARD_DISK_SLEEP is None:
+            self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
         if self.WAKE_ON_MOD_AVAIL:
-            self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
+            if self.WAKE_ON_MODEM is None:
+                self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
         if self.WAKE_ON_NET_AVAIL:
-            self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
+            if self.WAKE_ON_NET is None:
+                self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
         if self.RESTART_POW_AVAIL:
-            self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
+            if self.RESTART_POWER is None:
+                self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
         if self.SLEEP_ON_POW_AVAIL:
-            self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
+            if self.SLEEP_ON_BUTTON is None:
+                self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
 
     def tearDown(self):
         '''
