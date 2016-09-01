@@ -1061,6 +1061,7 @@ def get_repo_data(saltenv='base'):
     repocache_dir = _get_local_repo_dir(saltenv=saltenv)
     winrepo = 'winrepo.p'
     if not os.path.exists(os.path.join(repocache_dir, winrepo)):
+        log.debug('No winrepo.p cache file. Refresh pkg db now.')
         refresh_db(saltenv=saltenv)
     try:
         with salt.utils.fopen(
