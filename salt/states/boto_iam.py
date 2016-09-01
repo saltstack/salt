@@ -157,6 +157,24 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'boto_iam'
 
 
+if six.PY2:
+    def _byteify(thing):
+        # Note that we intentionally don't treat odicts here - they won't compare equal
+        # in many circumstances where AWS treats them the same...
+        if isinstance(thing, dict):
+            return dict([(_byteify(k), _byteify(v)) for k, v in thing.iteritems()])
+        elif isinstance(thing, list):
+            return [_byteify(m) for m in thing]
+        elif isinstance(thing, unicode):  # pylint: disable=W1699
+            return thing.encode('utf-8')
+        else:
+            return thing
+
+else:  # six.PY3
+    def _byteify(text):
+        return text
+
+
 def __virtual__():
     '''
     Only load if elementtree xml library and boto are available.
@@ -532,15 +550,12 @@ def _user_policies_present(name, policies=None, region=None, key=None, keyid=Non
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
         if isinstance(policy, string_types):
-            dict_policy = json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
-            dict_policy = policy
-        _policy = __salt__['boto_iam.get_user_policy'](
-            name, policy_name, region, key, keyid, profile
-        )
+            dict_policy = _byteify(policy)
+        _policy = _byteify(__salt__['boto_iam.get_user_policy'](name, policy_name, region, key, keyid, profile))
         if _policy != dict_policy:
+            log.debug("Policy mismatch:\n{0}\n{1}".format(_policy, dict_policy))
             policies_to_create[policy_name] = policy
     _list = __salt__['boto_iam.get_all_user_policies'](
         user_name=name, region=region, key=key, keyid=keyid, profile=profile
@@ -939,15 +954,12 @@ def _group_policies_present(
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
         if isinstance(policy, string_types):
-            dict_policy = json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
-            dict_policy = policy
-        _policy = __salt__['boto_iam.get_group_policy'](
-            name, policy_name, region, key, keyid, profile
-        )
+            dict_policy = _byteify(policy)
+        _policy = _byteify(__salt__['boto_iam.get_group_policy'](name, policy_name, region, key, keyid, profile))
         if _policy != dict_policy:
+            log.debug("Policy mismatch:\n{0}\n{1}".format(_policy, dict_policy))
             policies_to_create[policy_name] = policy
     _list = __salt__['boto_iam.get_all_group_policies'](
         name, region, key, keyid, profile
