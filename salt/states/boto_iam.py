@@ -138,11 +138,11 @@ import json
 import os
 
 # Import Salt Libs
-import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
+from salt.ext import six
 
 # Import 3rd party libs
 try:
