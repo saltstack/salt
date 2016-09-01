@@ -32,7 +32,7 @@ class StateRunnerTest(integration.ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        ret = self.run_run_plus('state.orchestrate', '', 'orch.simple')
+        ret = self.run_run_plus('state.orchestrate', 'orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
                     '      Result: True',

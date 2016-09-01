@@ -25,14 +25,16 @@ class ManageTest(integration.ShellCase):
         self.assertIsInstance(ret['fun'], list)
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.dir_list',
-                                args=['backend="roots"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(
+            fun='fileserver.dir_list',
+            backend='roots')
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.dir_list',
-                                args=['backend="[roots]"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(
+            fun='fileserver.dir_list',
+            backend=['roots'])
+        self.assertIsInstance(ret['return'], list)
 
     def test_empty_dir_list(self):
         '''
@@ -42,14 +44,16 @@ class ManageTest(integration.ShellCase):
         self.assertIsInstance(ret['fun'], list)
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.empty_dir_list',
-                                args=['backend="roots"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(
+            fun='fileserver.empty_dir_list',
+            backend='roots')
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.empty_dir_list',
-                                args=['backend="[roots]"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(
+            fun='fileserver.empty_dir_list',
+            backend=['roots'])
+        self.assertIsInstance(ret['return'], list)
 
     def test_envs(self):
         '''
@@ -59,14 +63,12 @@ class ManageTest(integration.ShellCase):
         self.assertIsInstance(ret['fun'], list)
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.envs',
-                                args=['backend="roots"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(fun='fileserver.envs', backend='roots')
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.envs',
-                                args=['backend="[roots]"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(fun='fileserver.envs', backend=['roots'])
+        self.assertIsInstance(ret['return'], list)
 
     def test_file_list(self):
         '''
@@ -76,14 +78,12 @@ class ManageTest(integration.ShellCase):
         self.assertIsInstance(ret['fun'], list)
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.file_list',
-                                args=['backend="roots"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(fun='fileserver.file_list', backend='roots')
+        self.assertIsInstance(ret['return'], list)
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.file_list',
-                                args=['backend="[roots]"'])
-        self.assertIsInstance(ret['fun'], list)
+        ret = self.run_run_plus(fun='fileserver.file_list', backend=['roots'])
+        self.assertIsInstance(ret['return'], list)
 
     def test_symlink_list(self):
         '''
@@ -93,14 +93,12 @@ class ManageTest(integration.ShellCase):
         self.assertIsInstance(ret['fun'], dict)
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.symlink_list',
-                                args=['backend="roots"'])
-        self.assertIsInstance(ret['fun'], dict)
+        ret = self.run_run_plus(fun='fileserver.symlink_list', backend='roots')
+        self.assertIsInstance(ret['return'], dict)
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.symlink_list',
-                                args=['backend="[roots]"'])
-        self.assertIsInstance(ret['fun'], dict)
+        ret = self.run_run_plus(fun='fileserver.symlink_list', backend=['roots'])
+        self.assertIsInstance(ret['return'], dict)
 
     def test_update(self):
         '''
@@ -110,14 +108,12 @@ class ManageTest(integration.ShellCase):
         self.assertTrue(ret['fun'])
 
         # Backend submitted as a string
-        ret = self.run_run_plus(fun='fileserver.update',
-                                args=['backend="roots"'])
-        self.assertTrue(ret['fun'])
+        ret = self.run_run_plus(fun='fileserver.update', backend='roots')
+        self.assertTrue(ret['return'])
 
         # Backend submitted as a list
-        ret = self.run_run_plus(fun='fileserver.update',
-                                args=['backend="[roots]"'])
-        self.assertTrue(ret['fun'])
+        ret = self.run_run_plus(fun='fileserver.update', backend=['roots'])
+        self.assertTrue(ret['return'])
 
 if __name__ == '__main__':
     from integration import run_tests

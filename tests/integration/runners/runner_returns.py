@@ -83,7 +83,6 @@ class RunnerReturnsTest(integration.ShellCase):
         self.write_conf({'runner_returns': False})
         ret = self.run_run_plus(
             'test.arg',
-            '',
             'foo',
             bar='hello world!',
             __reload_config=True)
@@ -106,7 +105,6 @@ class RunnerReturnsTest(integration.ShellCase):
         self.write_conf({'runner_returns': True})
         ret = self.run_run_plus(
             'test.arg',
-            '',
             'foo',
             bar='hello world!',
             __reload_config=True)

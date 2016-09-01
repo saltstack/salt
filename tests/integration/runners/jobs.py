@@ -30,7 +30,7 @@ class ManageTest(integration.ShellCase):
         '''
         jobs.lookup_jid
         '''
-        ret = self.run_run_plus('jobs.lookup_jid', '', '23974239742394')
+        ret = self.run_run_plus('jobs.lookup_jid', '23974239742394')
         self.assertEqual(ret['fun'], {})
         self.assertEqual(ret['out'], [])
 
