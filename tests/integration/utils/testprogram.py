@@ -30,7 +30,7 @@ from salttesting import TestCase
 
 import integration
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 if 'TimeoutError' not in __builtins__:
@@ -210,7 +210,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         cpath = self.abs_path(self.config_file_get(config))
         with open(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
-            log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
             cfo.flush()
 
@@ -260,14 +260,14 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         '''Create directory structure.'''
         subdirs = []
         for branch in self.dirtree:
-            log.debug('checking dirtree: {0}'.format(branch))
+            LOG.debug('checking dirtree: {0}'.format(branch))
             if not branch:
                 continue
             if isinstance(branch, six.string_types) and branch[0] == '&':
-                log.debug('Looking up dirtree branch "{0}"'.format(branch))
+                LOG.debug('Looking up dirtree branch "{0}"'.format(branch))
                 try:
                     dirattr = getattr(self, branch[1:], None)
-                    log.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
+                    LOG.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
                 except AttributeError:
                     raise ValueError(
                         'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}: {3}"'.format(
@@ -292,7 +292,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         for subdir in subdirs:
             path = self.abs_path(subdir)
             if not os.path.exists(path):
-                log.debug('make_dirtree: {0}'.format(path))
+                LOG.debug('make_dirtree: {0}'.format(path))
                 os.makedirs(path)
 
     def setup(self, *args, **kwargs):
@@ -416,7 +416,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
         argv = [self.program]
         argv.extend(args)
-        log.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
+        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -634,7 +634,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                         continue
                 cfg[key] = _val
             cfg = self.config_merge(cfg_base, cfg)
-        log.debug('Generated config => {0}'.format(cfg))
+        LOG.debug('Generated config => {0}'.format(cfg))
         return cfg
 
     def config_stringify(self, config):
@@ -664,7 +664,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         lines.insert(0, '#!{0}\n'.format(sys.executable))
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
-        log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
+        LOG.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
         with open(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
@@ -766,20 +766,10 @@ class TestDaemon(TestProgram):
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
-        children = []
-        if self.process:
-            # Last resort, a brute force approach to make sure we leave no child processes running
-            try:
-                parent = psutils.Process(self.process.pid)
-                if hasattr(parent, 'children'):
-                    children = parent.children(recursive=True)
-            except psutils.NoSuchProcess:
-                pass
-
         if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
             future = datetime.now() + timedelta(seconds=timeout)
             pid = self.wait_for_daemon_pid(timeout)
-            log.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
+            LOG.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
             while True:
                 try:
                     os.kill(pid, signum)
@@ -793,7 +783,7 @@ class TestDaemon(TestProgram):
                         pgid = os.getpgid(pid)
                         os.killpg(pgid, signum)
                         time.sleep(0.1)
-                        log.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
+                        LOG.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
                         os.killpg(pgid, signal.SIGKILL)
                         time.sleep(0.1)
                         os.killpg(pgid, signal.SIGKILL)
@@ -802,31 +792,10 @@ class TestDaemon(TestProgram):
                             break
                     raise TimeoutError('Timeout waiting for "{0}" pid {1} to shutdown'.format(self.name, pid))
                 time.sleep(0.1)
-            self.process = None
-
-        # Child processes cleanup
-        if children:
-            def kill_children():
-                for child in children[:]:
-                    try:
-                        cmdline = child.cmdline()
-                        log.warning('runtests.py left behind the following child process: %s', cmdline)
-                        child.kill()
-                        children.remove(child)
-                    except psutils.NoSuchProcess:
-                        children.remove(child)
-
-            kill_children()
-
-            if children:
-                psutils.wait_procs(children, timeout=5, callback=kill_children)
-
-        self._shutdown = True
+            self._shutdown = True
 
     def cleanup(self, *args, **kwargs):
         '''Remove left-over scaffolding - antithesis of setup()'''
-
-        # Shutdown if not alreadt shutdown
         self.shutdown()
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
