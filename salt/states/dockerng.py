@@ -501,6 +501,8 @@ def image_present(name,
     Docker registry, built from a Dockerfile, or loaded from a saved image.
     Image names can be specified either using ``repo:tag`` notation, or just
     the repo name (in which case a tag of ``latest`` is assumed).
+    Repo identifier is mandatory, we don't assume the default repository
+    is docker hub.
 
     If neither of the ``build`` or ``load`` arguments are used, then Salt will
     pull from the :ref:`configured registries <docker-authentication>`. If the
