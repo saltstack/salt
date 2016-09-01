@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError
 
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
-        or salt.utils.get_uid(salt.utils.get_user() != 0)), 'Test requirements not met')
+        or salt.utils.get_uid(salt.utils.get_user() != 0), 'Test requirements not met')
 class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
