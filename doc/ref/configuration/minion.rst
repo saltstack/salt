@@ -998,6 +998,30 @@ If certain returners should be disabled, this is the place
     disable_returners:
       - mongo_return
 
+
+.. conf_minion:: enable_whitelist_modules
+
+``whitelist_modules``
+----------------------------
+
+Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config option
+will cause only the listed modules to be enabled.  Modules not in the list will
+not be loaded.)
+
+This option is the reverse of disable_modules.
+
+Note that this is a very large hammer and it can be quite difficult to keep the minion working
+the way you think it should since Salt uses many modules internally itself.  At a bare minimum
+you need the following enabled or else the minion won't start.
+
+.. code-block:: yaml
+
+    whitelist_modules:
+      - cmdmod
+      - test
+      - config
+
+
 .. conf_minion:: module_dirs
 
 ``module_dirs``

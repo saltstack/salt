@@ -255,10 +255,10 @@ VALID_OPTS = {
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these modules
     'disable_modules': list,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these returners
     'disable_returners': list,
 
     # Tell the loader to only load modules in this list
