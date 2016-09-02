@@ -257,7 +257,7 @@ def create(vm_):
     # TODO: check name qemu/libvirt will choke on some characters (like '/')?
     name = vm_['name']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
@@ -266,7 +266,8 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
-        transport = __opts__['transport']
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
     )
 
     key_filename = config.get_cloud_config_value(
@@ -304,13 +305,16 @@ def create(vm_):
                 'base_domain': base,
             }
 
-            salt.utils.cloud.fire_event(
+            __utils__['cloud.fire_event'](
                 'event',
                 'requesting instance',
                 'salt/cloud/{0}/requesting'.format(name),
                 {'kwargs': kwargs},
+                sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
             )
+
+            log.debug("Source machine XML '{0}'".format(xml))
 
             domainXml = ElementTree.fromstring(xml)
             domainXml.find('./name').text = name
@@ -333,10 +337,12 @@ def create(vm_):
                 #  is org.qemu.guest_agent.0 an option?
                 if agentXml.find("""./target[@type='virtio'][@name='org.qemu.guest_agent.0']""") is not None:
                     sourceElement = agentXml.find("""./source[@mode='bind']""")
-                    path = sourceElement.attrib['path']
-                    newPath = path.replace('/domain-{0}/'.format(base), '/domain-{0}/'.format(name))
-                    log.debug("Rewriting agent socket path to {0}".format(newPath))
-                    sourceElement.attrib['path'] = newPath
+                    # see if there is a path element that needs rewriting
+                    if 'path' in sourceElement.attrib:
+                        path = sourceElement.attrib['path']
+                        newPath = path.replace('/domain-{0}/'.format(base), '/domain-{0}/'.format(name))
+                        log.debug("Rewriting agent socket path to {0}".format(newPath))
+                        sourceElement.attrib['path'] = newPath
 
             for disk in domainXml.findall("""./devices/disk[@device='disk'][@type='file']"""):
                 # print "Disk: ", ElementTree.tostring(disk)
@@ -368,11 +374,17 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
+            log.debug("Clone XML '{0}'".format(domainXml))
             cloneXml = ElementTree.tostring(domainXml)
 
             cloneDomain = conn.defineXMLFlags(cloneXml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
             cleanup.append({ 'what': 'domain', 'item': cloneDomain })
             cloneDomain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
+
+        log.debug("VM '{0}'".format(vm_))
+
+        if not 'ip_source' in vm_:
+            raise SaltCloudExecutionFailure("No ip-source specified in profile possible options (qemu-agent|ip-learning)")
 
         ipSource = None
         if vm_['ip_source'] == 'qemu-agent':
@@ -396,9 +408,9 @@ def create(vm_):
 
         # the bootstrap script needs to be installed first in /etc/salt/cloud.deploy.d/
         # salt-cloud -u is your friend
-        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+        ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'created instance',
             'salt/cloud/{0}/created'.format(name),
@@ -407,6 +419,7 @@ def create(vm_):
                 'profile': vm_['profile'],
                 'provider': vm_['driver'],
             },
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -472,21 +485,23 @@ def destroy(name, call=None):
         return "{0} doesn't identify a unique machine leaving things".format(name)
 
     try:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(name),
             {'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
         destroyDomain(found[0]['conn'], found[0]['domain'])
 
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
     except:
