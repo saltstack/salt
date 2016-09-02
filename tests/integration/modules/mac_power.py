@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
@@ -253,7 +254,7 @@ class MacPowerModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('power.get_restart_freeze'))
         # This will return False because mac fails to actually make the change
         self.assertFalse(
-	    self.run_function('power.set_restart_freeze', ['off']))
+            self.run_function('power.set_restart_freeze', ['off']))
         # Even setting to off returns true, it actually is never set
         # This is an apple bug
         self.assertTrue(self.run_function('power.get_restart_freeze'))
