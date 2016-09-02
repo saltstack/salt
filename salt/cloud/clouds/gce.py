@@ -1942,6 +1942,7 @@ def reboot(vm_name, call=None):
 
     return result
 
+
 def start(vm_name, call=None):
     '''
     Call GCE 'start on the instance.
@@ -1983,6 +1984,7 @@ def start(vm_name, call=None):
 
     return result
 
+
 def stop(vm_name, call=None):
     '''
     Call GCE 'stop' on the instance.
@@ -2023,6 +2025,7 @@ def stop(vm_name, call=None):
     )
 
     return result
+
 
 def destroy(vm_name, call=None):
     '''
