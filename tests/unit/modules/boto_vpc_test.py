@@ -1783,6 +1783,13 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_replacing_result)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
     @mock_ec2
@@ -1795,7 +1802,8 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue('msg' in boto_vpc.request_vpc_peering_connection(
             name='my_peering',
             requester_vpc_id=my_vpc.id,
-            peer_vpc_id=other_vpc.id))
+            peer_vpc_id=other_vpc.id,
+            **conn_parameters))
 
     @mock_ec2
     def test_raises_error_if_both_vpc_name_and_vpc_id_are_specified(self):
@@ -1808,11 +1816,13 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto_vpc.request_vpc_peering_connection(name='my_peering',
                                                     requester_vpc_id=my_vpc.id,
                                                     requester_vpc_name='foobar',
-                                                    peer_vpc_id=other_vpc.id)
+                                                    peer_vpc_id=other_vpc.id,
+                                                    **conn_parameters)
 
         boto_vpc.request_vpc_peering_connection(name='my_peering',
                                                 requester_vpc_name='my_peering',
-                                                peer_vpc_id=other_vpc.id)
+                                                peer_vpc_id=other_vpc.id,
+                                                **conn_parameters)
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
