@@ -581,7 +581,7 @@ class SaltEvent(object):
             self.opts['max_event_size'],
             is_msgpacked=True,
         )
-        log.debug('Sending event - data = {0}'.format(data))
+        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
         event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(salt.utils.to_bytes(event, 'utf-8'))
