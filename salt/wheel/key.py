@@ -211,8 +211,8 @@ def reject_dict(match, include_accepted=False, include_denied=False):
     match
         The dictionary of keys to reject.
 
-    include_rejected
-        To include rejected keys in the match along with pending keys, set this
+    include_accepted
+        To include accepted keys in the match along with pending keys, set this
         to ``True``. Defaults to ``False``.
 
         .. versionadded:: 2016.3.4
