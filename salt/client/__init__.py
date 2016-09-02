@@ -1508,10 +1508,6 @@ class LocalClient(object):
                                                  master_uri=master_uri)
 
         try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
