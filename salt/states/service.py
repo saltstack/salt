@@ -532,8 +532,8 @@ def mod_watch(name,
         The name of the init or rc script used to manage the service
 
     sfun
-        Required.  The original function which triggered the mod_watch call.
-        Must be one of ``running`` or ``dead``.
+        The original function which triggered the mod_watch call
+        (`service.running`, for example).
 
     sig
         The string to search for when looking for the service process with ps
@@ -587,7 +587,7 @@ def mod_watch(name,
         if not past_participle:
             past_participle = verb + 'ed'
     else:
-        ret['comment'] = 'sfun must be set to either "running" or "dead"'
+        ret['comment'] = 'Unable to trigger watch for service.{0}'.format(sfun)
         ret['result'] = False
         return ret
 

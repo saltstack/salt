@@ -255,7 +255,7 @@ class ServiceTestCase(TestCase):
                 'comment': 'Service is already stopped', 'name': 'salt',
                 'result': True},
                {'changes': {},
-                'comment': 'sfun must be set to either "running" or "dead"',
+                'comment': 'Unable to trigger watch for service.stack',
                 'name': 'salt', 'result': False},
                {'changes': {},
                 'comment': 'Service is set to be started', 'name': 'salt',
