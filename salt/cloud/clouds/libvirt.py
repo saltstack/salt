@@ -46,6 +46,8 @@ Tested on:
 
 TODO: look at event descriptions here:
   https://docs.saltstack.com/en/latest/topics/cloud/reactor.html
+TODO: support reboot? salt-cloud -a reboot vm1 vm2 vm2
+
 '''
 
 # Import python libs
@@ -252,13 +254,7 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # RK: no clue if we need this?
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
-    # TODO: check name ?
+    # TODO: check name qemu/libvirt will choke on some characters (like '/')?
     name = vm_['name']
 
     salt.utils.cloud.fire_event(
