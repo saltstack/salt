@@ -33,8 +33,6 @@ Set up the provider cloud configuration file at ``/etc/salt/cloud.providers`` or
       driver: libvirt
       url: qemu:///system
 
-TODO: there's probably more that can be configured.
-
 Cloud Profiles
 ==============
 Virtual machines get cloned from so called Cloud Profiles. Profiles can be set up at ``/etc/salt/cloud.profiles`` or
@@ -54,8 +52,10 @@ Virtual machines get cloned from so called Cloud Profiles. Profiles can be set u
       # /tmp is mounted noexec.. do workaround
       deploy_command: sh /tmp/.saltcloud/deploy.sh
       script_args: -F
+      # grains to add to the minion
       grains:
         clones-are-awesome: true
+      # override minion settings
       minion:
         master: 192.168.16.1
         master_port: 5506
@@ -67,10 +67,8 @@ The profile can be realized now with a salt command:
 
     # salt-cloud -p centos7 my-centos7-clone
 
-This will create an instance named ``my-centos7-clone`` on the cloud host.
-
-TODO: this true? The
-minion that is installed on this instance will have a ``hostname`` of ``myubuntu``.
+This will create an instance named ``my-centos7-clone`` on the cloud host. Also
+the minion id will be set to ``my-centos7-clone``.
 
 If the command was executed on the salt-master, its Salt key will automatically
 be signed on the master.
@@ -87,54 +85,38 @@ Required Settings
 =================
 The following settings are always required for libvirt:
 
-* Using the new cloud configuration format:
-
 .. code-block:: yaml
 
-    my-proxmox-config:
-      driver: proxmox
-      user: saltcloud@pve
-      password: xyzzy
-      url: your.proxmox.host
+    centos7:
+      provider: local-kvm
+      # the domain to clone
+      base_domain: base-centos7-64
+      # how to obtain the IP address of the cloned instance
+      # ip-learning or qemu-agent
+      ip_source: ip-learning
+
+The ``ip_source`` setting controls how the IP address of the cloned instance is determined.
+When using ``ip-learning`` the IP is requested from libvirt. This needs a recent libvirt
+version and may only work for NAT networks. Another option is to use ``qemu-agent`` this requires
+that the qemu-agent is installed and configured to run at startup in the base domain.
 
 Optional Settings
 =================
-Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a
-``size`` setting. This is because Proxmox allows the end-user to specify a
-more detailed configuration for their instances, than is allowed by many other
-cloud providers. The following options are available to be used in a profile,
-with their default settings listed.
 
 .. code-block:: yaml
 
-    # Description of the instance.
-    desc: <instance_name>
-
-    # How many CPU cores, and how fast they are (in MHz)
-    cpus: 1
-    cpuunits: 1000
-
-    # How many megabytes of RAM
-    memory: 256
-
-    # How much swap space in MB
-    swap: 256
-
-    # Whether to auto boot the vm after the host reboots
-    onboot: 1
-
-    # Size of the instance disk (in GiB)
-    disk: 10
-
-    # Host to create this vm on
-    host: myvmhost
-
-    # Nameservers. Defaults to host
-    nameserver: 8.8.8.8 8.8.4.4
-
     # Username and password
     ssh_username: root
-    password: <value from PROXMOX.password>
+    password: my-secret-password
 
-    # The name of the image, from ``salt-cloud --list-images proxmox``
-    image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
+    # Cloning strategy: full or quick
+    clone_strategy: quick
+
+The ``clone_strategy`` controls how the clone is done. In case of ``full`` the disks
+are copied creating a standalone clone. If ``quick`` is used the disks of the base domain
+are used as backing disks for the clone. This results in nearly instantaneous clones at
+the expense of slower write performance. The quick strategy has a number of requirements:
+
+* The disks must be of type qcow2
+* The base domain must be turned off
+* The base domain must not change after creating the clone
