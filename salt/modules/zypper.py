@@ -866,11 +866,11 @@ def refresh_db():
     for line in out.splitlines():
         if not line:
             continue
-        if line.strip().startswith('Repository'):
+        if line.strip().startswith('Repository') and '\'' in line:
             key = line.split('\'')[1].strip()
             if 'is up to date' in line:
                 ret[key] = False
-        elif line.strip().startswith('Building'):
+        elif line.strip().startswith('Building') and '\'' in line:
             key = line.split('\'')[1].strip()
             if 'done' in line:
                 ret[key] = True
