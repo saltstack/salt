@@ -5,16 +5,16 @@ integration tests for mac_power
 
 # Import python libs
 from __future__ import absolute_import, print_function
-from six import string_types
 
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+
+ensure_in_syspath('../../')
 
 
 @skipIf(not salt.utils.is_darwin()
