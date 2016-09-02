@@ -12,6 +12,8 @@ import signal
 import tempfile
 import textwrap
 import yaml
+import threading
+from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
 from salttesting import skipIf
@@ -29,6 +31,14 @@ class StateRunnerTest(integration.ShellCase):
     '''
     Test the state runner.
     '''
+    def add_to_queue(self, q, cmd):
+        '''
+        helper method to add salt-run
+        return data to a queue
+        '''
+        ret = self.run_run(cmd)
+        q.put(ret)
+        q.task_done()
 
     def test_orchestrate_output(self):
         '''
@@ -58,6 +68,25 @@ class StateRunnerTest(integration.ShellCase):
         for item in good_out:
             self.assertIn(item, ret_output)
 
+    def test_state_event(self):
+        '''
+        test to ensure state.event
+        runner returns correct data
+        '''
+        q = queue.Queue(maxsize=0)
+
+        cmd = 'state.event salt/job/*/new count=1'
+        expect = '"minions": ["minion"]'
+        server_thread = threading.Thread(target=self.add_to_queue, args=(q, cmd))
+        server_thread.setDaemon(True)
+        server_thread.start()
+
+        while q.empty():
+            self.run_salt('minion test.ping --static')
+        out = q.get()
+        self.assertIn(expect, str(out))
+
+        server_thread.join()
 
 @skipIf(salt.utils.is_windows(), '*NIX-only test')
 class OrchEventTest(integration.ShellCase):
