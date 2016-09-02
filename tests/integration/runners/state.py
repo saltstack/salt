@@ -5,15 +5,24 @@ Tests for the state runner
 
 # Import Python Libs
 from __future__ import absolute_import
+import errno
+import os
+import shutil
+import signal
+import tempfile
+import textwrap
+import yaml
 
 # Import Salt Testing Libs
-from salttesting.helpers import (
-    ensure_in_syspath,
-)
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
-# Import Salt Libs
 import integration
+
+# Import Salt Libs
+import salt.utils
+import salt.utils.event
 
 
 class StateRunnerTest(integration.ShellCase):
@@ -50,6 +59,118 @@ class StateRunnerTest(integration.ShellCase):
             self.assertIn(item, ret_output)
 
 
+@skipIf(salt.utils.is_windows(), '*NIX-only test')
+class OrchEventTest(integration.ShellCase):
+    '''
+    Tests for orchestration events
+    '''
+    def setUp(self):
+        self.timeout = 15
+        self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
+        try:
+            os.makedirs(self.master_d_dir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+        self.conf = tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.conf',
+            dir=self.master_d_dir,
+            delete=True,
+        )
+        self.base_env = tempfile.mkdtemp(dir=integration.TMP)
+
+    def tearDown(self):
+        shutil.rmtree(self.base_env)
+        self.conf.close()
+        # Force a reload of the configuration now that our temp config file has
+        # been removed.
+        self.run_run_plus('test.arg', __reload_config=True)
+
+    def alarm_handler(self, signal, frame):
+        raise Exception('Timeout of {0} seconds reached'.format(self.timeout))
+
+    def write_conf(self, data):
+        '''
+        Dump the config dict to the conf file
+        '''
+        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.flush()
+
+    def test_jid_in_ret_event(self):
+        '''
+        Test to confirm that the ret event for the orchestration contains the
+        jid for the jobs spawned.
+        '''
+        self.write_conf({
+            'fileserver_backend': ['roots'],
+            'file_roots': {
+                'base': [self.base_env],
+            },
+        })
+
+        state_sls = os.path.join(self.base_env, 'test_state.sls')
+        with salt.utils.fopen(state_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                date:
+                  cmd.run
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'test_orch.sls')
+        with salt.utils.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                date_cmd:
+                  salt.state:
+                    - tgt: minion
+                    - sls: test_state
+
+                ping_minion:
+                  salt.function:
+                    - name: test.ping
+                    - tgt: minion
+
+                fileserver.file_list:
+                  salt.runner
+
+                config.values:
+                  salt.wheel
+            '''))
+
+        listener = salt.utils.event.get_event(
+            'master',
+            sock_dir=self.master_opts['sock_dir'],
+            transport=self.master_opts['transport'],
+            opts=self.master_opts)
+
+        jid = self.run_run_plus(
+            'state.orchestrate',
+            'test_orch',
+            __reload_config=True).get('jid')
+
+        if jid is None:
+            raise Exception('jid missing from run_run_plus output')
+
+        signal.signal(signal.SIGALRM, self.alarm_handler)
+        signal.alarm(self.timeout)
+        try:
+            while True:
+                event = listener.get_event(full=True)
+                if event is None:
+                    continue
+
+                if event['tag'] == 'salt/run/{0}/ret'.format(jid):
+                    # Don't wrap this in a try/except. We want to know if the
+                    # data structure is different from what we expect!
+                    ret = event['data']['return']['data']['master']
+                    for job in ret:
+                        self.assertTrue('__jid__' in ret[job])
+                    break
+        finally:
+            signal.alarm(0)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(StateRunnerTest)
+    run_tests(OrchEventTest)
