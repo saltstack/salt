@@ -700,7 +700,7 @@ class DockerngTestCase(TestCase):
         with patch.dict(dockerng_mod.__opts__, {'cachedir': '/tmp'}):
             with patch.dict(dockerng_mod.__salt__, {'dockerng.run_all': docker_run_all_mock,
                                                     'dockerng.copy_to': docker_copy_to_mock}):
-                with patch.dict(dockerng_mod.__context__, {'docker.client': client}):
+                with patch.dict(dockerng_mod.__context__, {'dockerng.client': client}):
                     # call twice to verify tmp path later
                     for i in range(2):
                         ret = dockerng_mod.call(
