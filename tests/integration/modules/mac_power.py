@@ -144,6 +144,56 @@ class MacPowerModuleTest(integration.ModuleCase):
 @skipIf(not salt.utils.is_darwin()
         or not salt.utils.which('systemsetup')
         or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
+class MacPowerModuleTestSleepOnPowerButton(integration.ModuleCase):
+    '''
+    Test power.get_sleep_on_power_button
+    Test power.set_sleep_on_power_button
+    '''
+    SLEEP_ON_BUTTON = None
+
+    def setUp(self):
+        '''
+        Check if function is available
+        Get existing value
+        '''
+        # Is the function available
+        ret = self.run_function('power.get_sleep_on_power_button')
+        if isinstance(ret, bool):
+            self.SLEEP_ON_BUTTON = self.run_function(
+                'power.get_sleep_on_power_button')
+
+    def tearDown(self):
+        '''
+        Reset to original value
+        '''
+        if self.SLEEP_ON_BUTTON is not None:
+            self.run_function(
+                'power.set_sleep_on_power_button', [self.SLEEP_ON_BUTTON])
+
+    def test_sleep_on_power_button(self):
+        '''
+        Test power.get_sleep_on_power_button
+        Test power.set_sleep_on_power_button
+        '''
+        # If available on this system, test it
+        if self.SLEEP_ON_BUTTON is None:
+            # Check for not available
+            ret = self.run_function('power.get_sleep_on_power_button')
+            self.assertIn('Error', ret)
+        else:
+            self.assertTrue(
+                self.run_function('power.set_sleep_on_power_button', ['on']))
+            self.assertTrue(
+                self.run_function('power.get_sleep_on_power_button'))
+            self.assertTrue(
+                self.run_function('power.set_sleep_on_power_button', ['off']))
+            self.assertFalse(
+                self.run_function('power.get_sleep_on_power_button'))
+
+
+@skipIf(not salt.utils.is_darwin()
+        or not salt.utils.which('systemsetup')
+        or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
 class MacPowerModuleTestRestartPowerFailure(integration.ModuleCase):
     '''
     Test power.get_restart_power_failure
@@ -151,7 +201,7 @@ class MacPowerModuleTestRestartPowerFailure(integration.ModuleCase):
     '''
     RESTART_POWER = None
 
-    def setup(self):
+    def setUp(self):
         '''
         Check if function is available
         Get existing value
@@ -161,7 +211,7 @@ class MacPowerModuleTestRestartPowerFailure(integration.ModuleCase):
         if isinstance(ret, bool):
             self.RESTART_POWER = ret
 
-    def teardown(self):
+    def tearDown(self):
         '''
         Reset to original value
         '''
@@ -200,7 +250,7 @@ class MacPowerModuleTestWakeOnNet(integration.ModuleCase):
     '''
     WAKE_ON_NET = None
 
-    def setup(self):
+    def setUp(self):
         '''
         Check if function is available
         Get existing value
@@ -210,7 +260,7 @@ class MacPowerModuleTestWakeOnNet(integration.ModuleCase):
         if isinstance(ret, bool):
             self.WAKE_ON_NET = ret
 
-    def teardown(self):
+    def tearDown(self):
         '''
         Reset to original value
         '''
@@ -246,7 +296,7 @@ class MacPowerModuleTestWakeOnModem(integration.ModuleCase):
     '''
     WAKE_ON_MODEM = None
 
-    def setup(self):
+    def setUp(self):
         '''
         Check if function is available
         Get existing value
@@ -256,7 +306,7 @@ class MacPowerModuleTestWakeOnModem(integration.ModuleCase):
         if isinstance(ret, bool):
             self.WAKE_ON_MODEM = ret
 
-    def teardown(self):
+    def tearDown(self):
         '''
         Reset to original value
         '''
@@ -285,6 +335,7 @@ class MacPowerModuleTestWakeOnModem(integration.ModuleCase):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(MacPowerModuleTest,
+              MacPowerModuleTestSleepOnPowerButton,
               MacPowerModuleTestRestartPowerFailure,
               MacPowerModuleTestWakeOnNet,
               MacPowerModuleTestWakeOnModem)
