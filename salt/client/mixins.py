@@ -349,7 +349,7 @@ class SyncClientMixin(object):
                 kwargs = low['kwargs']
 
             # Update the event data with loaded args and kwargs
-            data['fun_args'] = args + ([kwargs] if kwargs else [])
+            data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
             func_globals['__jid_event__'].fire_event(data, 'new')
 
             # Initialize a context for executing the method.
