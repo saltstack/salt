@@ -41,7 +41,7 @@ def accept(match, include_rejected=False, include_denied=False):
     return skey.accept(match, include_rejected=include_rejected, include_denied=include_denied)
 
 
-def accept_dict(match):
+def accept_dict(match, include_rejected=False, include_denied=False):
     '''
     Accept keys based on a dict of keys
 
@@ -59,7 +59,9 @@ def accept_dict(match):
         }
     '''
     skey = salt.key.Key(__opts__)
-    return skey.accept(match_dict=match)
+    return skey.accept(match_dict=match,
+            include_rejected=include_rejected,
+            include_denied=include_denied)
 
 
 def delete(match):
@@ -86,12 +88,14 @@ def reject(match, include_accepted=False, include_denied=False):
     return skey.reject(match, include_accepted=include_accepted, include_denied=include_denied)
 
 
-def reject_dict(match):
+def reject_dict(match, include_accepted=False, include_denied=False):
     '''
     Reject keys based on a dict of keys
     '''
     skey = salt.key.Key(__opts__)
-    return skey.reject(match_dict=match)
+    return skey.reject(match_dict=match,
+            include_accepted=include_accepted,
+            include_denied=include_denied)
 
 
 def key_str(match):
