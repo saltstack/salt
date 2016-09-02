@@ -385,7 +385,7 @@ def _netstat_route_freebsd():
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
-        if __grains__['os'] == 'FreeBSD' and __grains__.get('osmajorrelease', 0) < 10:
+        if __grains__['os'] == 'FreeBSD' and int(__grains__.get('osmajorrelease', 0)) < 10:
             ret.append({
                 'addr_family': 'inet',
                 'destination': comps[0],
