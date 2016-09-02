@@ -41,14 +41,14 @@ class StateRunnerTest(integration.ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        ret = self.run_run_plus('state.orchestrate', 'orch.simple')
+        #ret_output = self.run_run_plus('state.orchestrate', 'orch.simple')['out']
+        ret_output = self.run_run('state.orchestrate orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
                     '      Result: True',
                     'Succeeded: 1 (changed=1)',
                     'Failed:    0',
                     'Total states run:     1']
-        ret_output = ret.get('out')
 
         # First, check that we don't have the "bad" output that was displaying in
         # Issue #31330 where only the highstate outputter was listed
