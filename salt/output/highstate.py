@@ -297,10 +297,14 @@ def _format_host(host, data):
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
             ]
             if __opts__.get('state_output_profile', True):
-                state_lines.extend([
-                    u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                    u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
-                ])
+                try:
+                    state_lines.extend([
+                        u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                        u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
+                    ])
+                except KeyError:
+                    # Old minions do not return all time data
+                    pass
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
                 state_lines.insert(
@@ -534,7 +538,11 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
             )
         fmt_string += u'{0}'
         if __opts__.get('state_output_profile', True):
-            fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
+            try:
+                fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
+            except KeyError:
+                # Old minion does not report all data
+                pass
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
         fmt_string = tabular
@@ -546,7 +554,11 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
             )
         fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
         if __opts__.get('state_output_profile', True):
-            fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
+            try:
+                fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
+            except KeyError:
+                # Old minion does not report all data
+                pass
         fmt_string += u'{5}'
 
     msg = fmt_string.format(tcolor,
