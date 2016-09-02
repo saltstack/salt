@@ -1330,10 +1330,14 @@ class Jobs(LowDataAdapter):
         ret = {}
         if jid:
             ret['info'] = [job_ret_info[0]]
-            try:
-                ret['return'] = [dict((k, job_ret_info[0]['Result'][k]['return']) for k in job_ret_info[0]['Result'])]
-            except (TypeError, KeyError):
-                ret['return'] = [{}]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
             ret['return'] = [job_ret_info[0]]
 
