@@ -227,6 +227,10 @@ documentation, but in short:
   <salt.wheel.key>` exposes similar functionality as the ``salt-key`` CLI
   command.
 
+Most clients have variants like synchronous or asyncronous execution as well as
+others like batch execution. See the :ref:`full list of client interfaces
+<netapi-clients>`.
+
 Each client requires different arguments and sometimes has different syntax.
 For example, ``LocalClient`` requires the ``tgt`` argument because it forwards
 the command to Minions and the other client interfaces do not. ``LocalClient``
