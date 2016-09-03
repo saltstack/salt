@@ -362,6 +362,16 @@ CLI tool can reformat strings passed in at the CLI into complex data
 structures, and that behavior also works via salt-api, but that can be brittle
 and since salt-api can accept JSON it is best just to send JSON.
 
+Here is an example of sending urlencoded data:
+
+.. code-block:: bash
+
+    curl -sSik https://localhost:8000 \\
+        -b ~/cookies.txt \\
+        -d client=runner \\
+        -d fun='jobs.lookup_jid' \\
+        -d jid='20150129182456704682'
+
 .. admonition:: urlencoded data caveats
 
     * Only a single command may be sent per HTTP request.
@@ -370,8 +380,9 @@ and since salt-api can accept JSON it is best just to send JSON.
 
       Note, some popular frameworks and languages (notably jQuery, PHP, and
       Ruby on Rails) will automatically append empty brackets onto repeated
-      parameters. E.g., ``arg=one``, ``arg=two`` will be sent as ``arg[]=one``,
-      ``arg[]=two``. This is not supported; send JSON or YAML instead.
+      query string parameters. E.g., ``?foo[]=fooone&foo[]=footwo``. This is
+      **not** supported; send ``?foo=fooone&foo=footwo`` instead, or send JSON
+      or YAML.
 
     A note about ``curl``
 
@@ -1017,11 +1028,10 @@ class LowDataAdapter(object):
         .. code-block:: bash
 
             curl -sSik https://localhost:8000 \\
-                    -H "Accept: application/x-yaml" \\
-                    -H "X-Auth-Token: d40d1e1e<...snip...>" \\
-                    -d client=local \\
-                    -d tgt='*' \\
-                    -d fun='test.ping' \\
+                -b ~/cookies.txt \\
+                -H "Accept: application/x-yaml" \\
+                -H "Content-type: application/json" \\
+                -d '[{"client": "local", "tgt": "*", "fun": "test.ping"}]'
 
         .. code-block:: http
 
@@ -1029,10 +1039,9 @@ class LowDataAdapter(object):
             Host: localhost:8000
             Accept: application/x-yaml
             X-Auth-Token: d40d1e1e
-            Content-Length: 36
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            fun=test.ping&client=local&tgt=*
+            [{"client": "local", "tgt": "*", "fun": "test.ping"}]
 
         **Example response:**
 
@@ -1045,55 +1054,10 @@ class LowDataAdapter(object):
 
             return:
             - ms-0: true
-                ms-1: true
-                ms-2: true
-                ms-3: true
-                ms-4: true
-
-        **Other examples**:
-
-        .. code-block:: bash
-
-            # Sending multiple positional args with urlencoded:
-            curl -sSik https://localhost:8000 \\
-                    -d client=local \\
-                    -d tgt='*' \\
-                    -d fun='cmd.run' \\
-                    -d arg='du -sh .' \\
-                    -d arg='/path/to/dir'
-
-            # Sending positional args and Keyword args with JSON:
-            echo '[
-                {
-                    "client": "local",
-                    "tgt": "*",
-                    "fun": "cmd.run",
-                    "arg": [
-                        "du -sh .",
-                        "/path/to/dir"
-                    ],
-                    "kwarg": {
-                        "shell": "/bin/sh",
-                        "template": "jinja"
-                    }
-                }
-            ]' | curl -sSik https://localhost:8000 \\
-                    -H 'Content-type: application/json' \\
-                    -d@-
-
-            # Calling runner functions:
-            curl -sSik https://localhost:8000 \\
-                    -d client=runner \\
-                    -d fun='jobs.lookup_jid' \\
-                    -d jid='20150129182456704682' \\
-                    -d outputter=highstate
-
-            # Calling wheel functions:
-            curl -sSik https://localhost:8000 \\
-                    -d client=wheel \\
-                    -d fun='key.gen_accept' \\
-                    -d id_=dave \\
-                    -d keysize=4096
+              ms-1: true
+              ms-2: true
+              ms-3: true
+              ms-4: true
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -1182,17 +1146,16 @@ class Minions(LowDataAdapter):
         .. code-block:: bash
 
             curl -sSi localhost:8000/minions \\
+                -b ~/cookies.txt \\
                 -H "Accept: application/x-yaml" \\
-                -d tgt='*' \\
-                -d fun='status.diskusage'
+                -d '[{"tgt": "*", "fun": "status.diskusage"}]'
 
         .. code-block:: http
 
             POST /minions HTTP/1.1
             Host: localhost:8000
             Accept: application/x-yaml
-            Content-Length: 26
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
             tgt=*&fun=status.diskusage
 
@@ -1608,20 +1571,25 @@ class Login(LowDataAdapter):
         .. code-block:: bash
 
             curl -si localhost:8000/login \\
-                    -H "Accept: application/json" \\
-                    -d username='saltuser' \\
-                    -d password='saltpass' \\
-                    -d eauth='pam'
+                -c ~/cookies.txt \\
+                -H "Accept: application/json" \\
+                -H "Content-type: application/json" \\
+                -d '{
+                    "username": "saltuser",
+                    "password": "saltuser",
+                    "eauth": "auto"
+                }'
 
         .. code-block:: http
 
             POST / HTTP/1.1
             Host: localhost:8000
             Content-Length: 42
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
             Accept: application/json
 
-            username=saltuser&password=saltpass&eauth=pam
+            {"username": "saltuser", "password": "saltuser", "eauth": "auto"}
+
 
         **Example response:**
 
@@ -1761,12 +1729,15 @@ class Run(LowDataAdapter):
 
             curl -sS localhost:8000/run \\
                 -H 'Accept: application/x-yaml' \\
-                -d client='local' \\
-                -d tgt='*' \\
-                -d fun='test.ping' \\
-                -d username='saltdev' \\
-                -d password='saltdev' \\
-                -d eauth='pam'
+                -H 'Content-type: application/json' \\
+                -d '[{
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "test.ping",
+                    "username": "saltdev",
+                    "password": "saltdev",
+                    "eauth": "auto"
+                }]'
 
         .. code-block:: http
 
@@ -1774,9 +1745,9 @@ class Run(LowDataAdapter):
             Host: localhost:8000
             Accept: application/x-yaml
             Content-Length: 75
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
+            [{"client": "local", "tgt": "*", "fun": "test.ping", "username": "saltdev", "password": "saltdev", "eauth": "auto"}]
 
         **Example response:**
 
@@ -1788,17 +1759,19 @@ class Run(LowDataAdapter):
 
             return:
             - ms-0: true
-                ms-1: true
-                ms-2: true
-                ms-3: true
-                ms-4: true
+              ms-1: true
+              ms-2: true
+              ms-3: true
+              ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh subsystem.
+        The /run enpoint can also be used to issue commands using the salt-ssh
+        subsystem.
 
-        When using salt-ssh, eauth credentials should not be supplied. Instad, authentication
-        should be handled by the SSH layer itself. The use of the salt-ssh client does not
-        require a salt master to be running. Instead, only a roster file must be present
-        in the salt configuration directory.
+        When using salt-ssh, eauth credentials should not be supplied. Instad,
+        authentication should be handled by the SSH layer itself. The use of
+        the salt-ssh client does not require a salt master to be running.
+        Instead, only a roster file must be present in the salt configuration
+        directory.
 
         All SSH client requests are synchronous.
 
@@ -2311,16 +2284,18 @@ class Webhook(object):
 
         .. code-block:: bash
 
-            curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+            curl -sS localhost:8000/hook \\
+                -H 'Content-type: application/json' \\
+                -d '{"foo": "Foo!", "bar": "Bar!"}'
 
         .. code-block:: http
 
             POST /hook HTTP/1.1
             Host: localhost:8000
             Content-Length: 16
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            foo=Foo&bar=Bar!
+            {"foo": "Foo!", "bar": "Bar!"}
 
         **Example response**:
 
