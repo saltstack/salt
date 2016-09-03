@@ -24,7 +24,7 @@ def sdb_get(uri, opts):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):])==0:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return uri
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -53,7 +53,7 @@ def sdb_set(uri, value, opts):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):])==0:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return uri
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -82,14 +82,14 @@ def sdb_delete(uri, opts):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):])==0:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return uri
 
     profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
         return uri
 
-    fun = '{0}.get'.format(profile['driver'])
+    fun = '{0}.delete'.format(profile['driver'])
     query = uri[indx+1:]
 
     loaded_db = salt.loader.sdb(opts, fun)
