@@ -3288,7 +3288,6 @@ def api_config(path):
     return opts
 
 
-
 def spm_config(path):
     '''
     Read in the salt master config file and add additional configs that
