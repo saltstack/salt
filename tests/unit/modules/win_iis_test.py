@@ -117,7 +117,7 @@ LIST_VDIRS_SRVMGR = {
 CONTAINER_SETTING = {
     'retcode': 0,
     'stdout': json.dumps([{
-        'managedPipelineMode':'Integrated'
+        'managedPipelineMode': 'Integrated'
     }])
 }
 
