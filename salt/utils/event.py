@@ -653,7 +653,7 @@ class SaltEvent(object):
             self.opts['max_event_size'],
             is_msgpacked=True,
         )
-        log.debug('Sending event - data = {0}'.format(data))
+        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
         event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
@@ -733,7 +733,7 @@ class SaltEvent(object):
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async(event_handler)
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
