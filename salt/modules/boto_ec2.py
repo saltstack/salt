@@ -422,6 +422,118 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
         return False
 
 
+def assign_private_ip_addresses(network_interface_name=None, network_interface_id=None,
+                                private_ip_addresses=None, secondary_private_ip_address_count=None,
+                                allow_reassignment=False, region=None, key=None,
+                                keyid=None, profile=None):
+    '''
+    Assigns one or more secondary private IP addresses to a network interface.
+
+    network_interface_id
+        (string) - ID of the network interface to associate the IP with (exclusive with 'network_interface_name')
+    network_interface_name
+        (string) - Name of the network interface to associate the IP with (exclusive with 'network_interface_id')
+    private_ip_addresses
+        (list) - Assigns the specified IP addresses as secondary IP addresses to the network interface (exclusive with 'secondary_private_ip_address_count')
+    secondary_private_ip_address_count
+        (int) - The number of secondary IP addresses to assign to the network interface. (exclusive with 'private_ip_addresses')
+    allow_reassociation
+        (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
+
+    returns
+        (bool)   - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
+        salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni secondary_private_ip_address_count=2
+
+    .. versionadded:: 2016.3.0
+    '''
+    if not salt.utils.exactly_one((network_interface_name,
+                                   network_interface_id)):
+        raise SaltInvocationError("Exactly one of 'network_interface_name', "
+                                  "'network_interface_id' must be provided")
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if network_interface_name:
+        try:
+            network_interface_id = get_network_interface_id(
+                network_interface_name, region=region, key=key, keyid=keyid,
+                profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+        if not network_interface_id:
+            log.error("Given network_interface_name '{0}' cannot be mapped to "
+                      "an network_interface_id".format(network_interface_name))
+            return False
+
+    try:
+        return conn.assign_private_ip_addresses(network_interface_id=network_interface_id,
+                                                private_ip_addresses=private_ip_addresses,
+                                                secondary_private_ip_address_count=secondary_private_ip_address_count,
+                                                allow_reassignment=allow_reassignment)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def unassign_private_ip_addresses(network_interface_name=None, network_interface_id=None,
+                                  private_ip_addresses=None, region=None,
+                                  key=None, keyid=None, profile=None):
+    '''
+    Unassigns one or more secondary private IP addresses from a network interface
+
+    network_interface_id
+        (string) - ID of the network interface to associate the IP with (exclusive with 'network_interface_name')
+    network_interface_name
+        (string) - Name of the network interface to associate the IP with (exclusive with 'network_interface_id')
+    private_ip_addresses
+        (list) - Assigns the specified IP addresses as secondary IP addresses to the network interface.
+
+    returns
+        (bool)   - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.unassign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
+
+    .. versionadded:: 2016.3.0
+    '''
+    if not salt.utils.exactly_one((network_interface_name,
+                                   network_interface_id)):
+        raise SaltInvocationError("Exactly one of 'network_interface_name', "
+                                  "'network_interface_id' must be provided")
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if network_interface_name:
+        try:
+            network_interface_id = get_network_interface_id(
+                network_interface_name, region=region, key=key, keyid=keyid,
+                profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+        if not network_interface_id:
+            log.error("Given network_interface_name '{0}' cannot be mapped to "
+                      "an network_interface_id".format(network_interface_name))
+            return False
+
+    try:
+        return conn.unassign_private_ip_addresses(network_interface_id=network_interface_id,
+                                                  private_ip_addresses=private_ip_addresses)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def get_zones(region=None, key=None, keyid=None, profile=None):
     '''
     Get a list of AZs for the configured region.
