@@ -96,12 +96,15 @@ import salt.ext.six as six
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
+    from salt.modules.win_pkg import _get_repo_src_dest
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
+    _get_repo_src_dest = _namespaced_function(_get_repo_src_dest, globals())
     _get_latest_pkg_version = \
         _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
