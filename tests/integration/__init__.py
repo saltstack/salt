@@ -60,10 +60,16 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
+from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from shlex import quote as _quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote
 
 try:
     import salt.master
@@ -75,6 +81,7 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
+from salt.ext.six.moves import cStringIO
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
@@ -1867,21 +1874,39 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
                                                   async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
-    def run_run_plus(self, fun, options='', *arg, **kwargs):
+    def run_run_plus(self, fun, *arg, **kwargs):
         '''
-        Execute Salt run and the salt run function and return the data from
-        each in a dict
+        Execute the runner function and return the return data and output in a dict
         '''
-        ret = {}
-        ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
-        )
+        ret = {'fun': fun}
+        from_scratch = bool(kwargs.pop('__reload_config', False))
+        # Have to create an empty dict and then update it, as the result from
+        # self.get_config() is an ImmutableDict which cannot be updated.
         opts = {}
-        opts.update(self.get_config('client_config'))
-        opts.update({'doc': False, 'fun': fun, 'arg': arg})
+        opts.update(self.get_config('client_config', from_scratch=from_scratch))
+        opts_arg = list(arg)
+        if kwargs:
+            opts_arg.append({'__kwarg__': True})
+            opts_arg[-1].update(kwargs)
+        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
-            ret['fun'] = runner.run()
+            ret['return'] = runner.run()
+            try:
+                ret['jid'] = runner.jid
+            except AttributeError:
+                ret['jid'] = None
+
+        # Compile output
+        # TODO: Support outputters other than nested
+        opts['color'] = False
+        opts['output_file'] = cStringIO()
+        try:
+            salt.output.display_output(ret['return'], opts=opts)
+            ret['out'] = opts['output_file'].getvalue().splitlines()
+        finally:
+            opts['output_file'].close()
+
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
