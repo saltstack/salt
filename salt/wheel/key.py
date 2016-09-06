@@ -114,12 +114,24 @@ def accept(match, include_rejected=False, include_denied=False):
     return skey.accept(match, include_rejected=include_rejected, include_denied=include_denied)
 
 
-def accept_dict(match):
+def accept_dict(match, include_rejected=False, include_denied=False):
     '''
     Accept keys based on a dict of keys. Returns a dictionary.
 
     match
         The dictionary of keys to accept.
+
+    include_rejected
+        To include rejected keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
 
     Example to move a list of keys from the ``minions_pre`` (pending) directory
     to the ``minions`` (accepted) directory:
@@ -137,7 +149,9 @@ def accept_dict(match):
         {'minions': ['jerry', 'stuart', 'bob']}
     '''
     skey = get_key(__opts__)
-    return skey.accept(match_dict=match)
+    return skey.accept(match_dict=match,
+            include_rejected=include_rejected,
+            include_denied=include_denied)
 
 
 def delete(match):
@@ -203,12 +217,24 @@ def reject(match, include_accepted=False, include_denied=False):
     return skey.reject(match, include_accepted=include_accepted, include_denied=include_denied)
 
 
-def reject_dict(match):
+def reject_dict(match, include_accepted=False, include_denied=False):
     '''
     Reject keys based on a dict of keys. Returns a dictionary.
 
     match
         The dictionary of keys to reject.
+
+    include_accepted
+        To include accepted keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
 
     .. code-block:: python
 
@@ -223,7 +249,9 @@ def reject_dict(match):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     '''
     skey = get_key(__opts__)
-    return skey.reject(match_dict=match)
+    return skey.reject(match_dict=match,
+            include_accepted=include_accepted,
+            include_denied=include_denied)
 
 
 def key_str(match):

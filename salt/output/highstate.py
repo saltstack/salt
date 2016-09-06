@@ -310,7 +310,7 @@ def _format_host(host, data):
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
             ]
-            if __opts__.get('state_output_profile', True):
+            if __opts__.get('state_output_profile', True) and 'start_time' in ret:
                 state_lines.extend([
                     u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
                     u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
@@ -547,7 +547,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u'{0}'
-        if __opts__.get('state_output_profile', True):
+        if __opts__.get('state_output_profile', True) and 'start_time' in ret:
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
@@ -559,7 +559,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
-        if __opts__.get('state_output_profile', True):
+        if __opts__.get('state_output_profile', True) and 'start_time' in ret:
             fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
         fmt_string += u'{5}'
 
