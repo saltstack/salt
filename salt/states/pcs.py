@@ -156,6 +156,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.ext.six as six
 
@@ -304,7 +305,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     # item_id was provided,
     # return code 0 indicates, that resource already exists
     else:
-        if is_existing['retcode'] in [0]:
+        if is_existing['retcode'] in [exitcodes.EX_OK]:
             item_create_required = False
 
     if not item_create_required:
@@ -326,7 +327,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
 
     log.trace('Output of pcs.item_create: {0}'.format(str(item_create)))
 
-    if item_create['retcode'] in [0]:
+    if item_create['retcode'] in [exitcodes.EX_OK]:
         ret['comment'] += 'Created {0} {1} ({2})\n'.format(str(item), str(item_id), str(item_type))
         ret['changes'].update({item_id: {'old': '', 'new': str(item_id)}})
     else:
@@ -657,7 +658,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
     cib_create = __salt__['pcs.cib_create'](cibfile=cibfile_tmp, scope=scope, extra_args=extra_args)
     log.trace('Output of pcs.cib_create: {0}'.format(str(cib_create)))
 
-    if cib_create['retcode'] not in [0] or not os.path.exists(cibfile_tmp):
+    if cib_create['retcode'] not in [exitcodes.EX_OK] or not os.path.exists(cibfile_tmp):
         ret['result'] = False
         ret['comment'] += 'Failed to get live CIB\n'
         return ret
@@ -782,7 +783,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     cib_push = __salt__['pcs.cib_push'](cibfile=cibfile, scope=scope, extra_args=extra_args)
     log.trace('Output of pcs.cib_push: {0}'.format(str(cib_push)))
 
-    if cib_push['retcode'] in [0]:
+    if cib_push['retcode'] in [exitcodes.EX_OK]:
         ret['comment'] += 'Pushed CIB {0}\n'.format(cibname)
         ret['changes'].update({'cibfile_pushed': cibfile})
     else:

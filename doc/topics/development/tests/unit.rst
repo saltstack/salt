@@ -446,6 +446,7 @@ with.
 .. code-block:: python
 
     # Import Salt Libs
+    from salt.defaults import exitcodes
     from salt.modules import linux_sysctl
     from salt.exceptions import CommandExecutionError
 
@@ -476,7 +477,7 @@ with.
             '''
             Tests if /proc/sys/<kernel-subsystem> exists or not
             '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
+            cmd = {'pid': 1337, 'retcode': exitcodes.EX_OK, 'stderr': '',
                    'stdout': 'net.ipv4.ip_forward = 1'}
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
@@ -489,7 +490,7 @@ with.
             '''
             Tests if the assignment was successful or not
             '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr':
+            cmd = {'pid': 1337, 'retcode': exitcodes.EX_OK, 'stderr':
                    'sysctl: setting key "net.ipv4.ip_forward": Invalid argument',
                    'stdout': 'net.ipv4.ip_forward = backward'}
             mock_cmd = MagicMock(return_value=cmd)
@@ -503,7 +504,7 @@ with.
             '''
             Tests the return of successful assign function
             '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
+            cmd = {'pid': 1337, 'retcode': exitcodes.EX_OK, 'stderr': '',
                    'stdout': 'net.ipv4.ip_forward = 1'}
             ret = {'net.ipv4.ip_forward': '1'}
             mock_cmd = MagicMock(return_value=cmd)

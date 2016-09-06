@@ -21,6 +21,7 @@ import copy
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 from salt.utils import locales
@@ -193,7 +194,7 @@ def add(name,
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         return False
 
     # At this point, the user was successfully created, so return true
@@ -242,7 +243,7 @@ def delete(name, remove=False, force=False, root=None):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         # Command executed with no errors
         return True
 
@@ -420,14 +421,14 @@ def chgroups(name, groups, append=False, root=None):
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
     if __grains__['kernel'] != 'OpenBSD':
-        if result['retcode'] != 0 and 'not found in' in result['stderr']:
+        if result['retcode'] != exitcodes.EX_OK and 'not found in' in result['stderr']:
             ret = True
             for group in groups:
                 cmd = ['gpasswd', '-a', '{0}'.format(name), '{1}'.format(group)]
-                if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+                if __salt__['cmd.retcode'](cmd, python_shell=False) != exitcodes.EX_OK:
                     ret = False
             return ret
-    return result['retcode'] == 0
+    return result['retcode'] == exitcodes.EX_OK
 
 
 def chfullname(name, fullname):

@@ -10,6 +10,7 @@ import logging
 import pipes
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 # Import 3rd-party libs
@@ -64,7 +65,7 @@ def cluster_create(version,
     cmd += [version, name]
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
-    if ret.get('retcode', 0) != 0:
+    if ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
         log.error('Error creating a Postgresql'
                   ' cluster {0}/{1}'.format(version, name))
         return False
@@ -85,7 +86,7 @@ def cluster_list(verbose=False):
     '''
     cmd = [salt.utils.which('pg_lsclusters'), '--no-header']
     ret = __salt__['cmd.run_all'](' '.join([pipes.quote(c) for c in cmd]))
-    if ret.get('retcode', 0) != 0:
+    if ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
         log.error('Error listing clusters')
     cluster_dict = _parse_pg_lscluster(ret['stdout'])
     if verbose:
@@ -134,7 +135,7 @@ def cluster_remove(version,
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
-    if ret.get('retcode', 0) != 0:
+    if ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
         log.error('Error removing a Postgresql'
                   ' cluster {0}/{1}'.format(version, name))
     else:

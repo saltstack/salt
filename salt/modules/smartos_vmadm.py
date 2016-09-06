@@ -17,6 +17,7 @@ except ImportError:
 import salt.ext.six as six
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def _create_update_from_file(mode='create', uuid=None, path=None):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
@@ -104,7 +105,7 @@ def _create_update_from_file(mode='create', uuid=None, path=None):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
@@ -139,7 +140,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
@@ -156,7 +157,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
@@ -211,7 +212,7 @@ def start(vm, options=None, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -253,7 +254,7 @@ def stop(vm, force=False, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
     return True
@@ -295,7 +296,7 @@ def reboot(vm, force=False, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -336,7 +337,7 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Tr
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = OrderedDict() if keyed else []
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
 
@@ -392,7 +393,7 @@ def lookup(search=None, order=None, one=False):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = []
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
 
@@ -443,7 +444,7 @@ def sysrq(vm, action='nmi', key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -480,7 +481,7 @@ def delete(vm, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -517,7 +518,7 @@ def get(vm, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return json.loads(res['stdout'])
@@ -562,7 +563,7 @@ def info(vm, info_type='all', key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return json.loads(res['stdout'])
@@ -615,7 +616,7 @@ def create_snapshot(vm, name, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -665,7 +666,7 @@ def delete_snapshot(vm, name, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -715,7 +716,7 @@ def rollback_snapshot(vm, name, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -758,7 +759,7 @@ def reprovision(vm, image, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
@@ -873,7 +874,7 @@ def send(vm, target, key='uuid'):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     vmobj = get(vm)
@@ -891,7 +892,7 @@ def send(vm, target, key='uuid'):
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=True)
         retcode = res['retcode']
-        if retcode != 0:
+        if retcode != exitcodes.EX_OK:
             ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
             return ret
     return True
@@ -928,7 +929,7 @@ def receive(uuid, source):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0 and not res['stderr'].endswith('datasets'):
+    if retcode != exitcodes.EX_OK and not res['stderr'].endswith('datasets'):
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     vmobj = get(uuid)
@@ -946,7 +947,7 @@ def receive(uuid, source):
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=True)
         retcode = res['retcode']
-        if retcode != 0:
+        if retcode != exitcodes.EX_OK:
             ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
             return ret
     cmd = '{vmadm} install {uuid}'.format(
@@ -955,7 +956,7 @@ def receive(uuid, source):
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
-    if retcode != 0 and not res['stderr'].endswith('datasets'):
+    if retcode != exitcodes.EX_OK and not res['stderr'].endswith('datasets'):
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True

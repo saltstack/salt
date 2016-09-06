@@ -34,6 +34,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.syspaths as syspaths
+from salt.defaults import exitcodes
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -797,7 +798,7 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd != 0 and ret['result'] is False:
+                if cmd != exitcodes.EX_OK and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed',
                                 'skip_watch': True,
                                 'result': True})
@@ -818,7 +819,7 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd == 0 and ret['result'] is False:
+                if cmd == exitcodes.EX_OK and ret['result'] is False:
                     ret.update({'comment': 'unless execution succeeded',
                                 'skip_watch': True,
                                 'result': True})
@@ -841,7 +842,7 @@ class State(object):
             cmd = self.functions['cmd.retcode'](
                 entry, ignore_retcode=True, python_shell=True, **cmd_opts)
             log.debug('Last command return code: {0}'.format(cmd))
-            if cmd == 0 and ret['result'] is False:
+            if cmd == exitcodes.EX_OK and ret['result'] is False:
                 ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
             elif cmd != 0:
                 ret.update({'comment': 'check_cmd determined the state failed', 'result': False})

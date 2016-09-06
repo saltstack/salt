@@ -7,6 +7,7 @@ Manage HP ILO
 from __future__ import absolute_import
 
 from salt._compat import ElementTree as ET
+from salt.defaults import exitcodes
 import salt.utils
 import os
 import tempfile
@@ -48,7 +49,7 @@ def __execute_cmd(name, xml):
     # Clean up the temp file
     __salt__['file.remove'](tmpfilename)
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         for i in cmd['stderr'].splitlines():
             if i.startswith('     MESSAGE='):
                 return {'Failed': i.split('=')[-1]}

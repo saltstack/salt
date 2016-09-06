@@ -17,6 +17,7 @@ except ImportError:  # python 2
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.mac_utils
 from salt.exceptions import SaltInvocationError
@@ -67,7 +68,7 @@ def _execute_command(cmd, at_time=None):
     '''
     if at_time:
         cmd = 'echo \'{0}\' | at {1}'.format(cmd, _cmd_quote(at_time))
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=True))
+    return bool(__salt__['cmd.retcode'](cmd, python_shell=True)) == exitcodes.EX_OK
 
 
 def halt(at_time=None):

@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import os
 import logging
 
+from salt.defaults import exitcodes
+
 __outputter__ = {
     'display': 'txt',
     'install': 'txt',
@@ -54,7 +56,7 @@ def display(name):
     '''
     cmd = [_get_cmd(), '--display', name]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] > 0 and out['stderr'] != '':
+    if out['retcode'] > exitcodes.EX_OK and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
 
@@ -95,7 +97,7 @@ def check_exists(name, path):
     cmd = [_get_cmd(), '--display', name]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if out['retcode'] > 0 and out['stderr'] != '':
+    if out['retcode'] > exitcodes.EX_OK and out['stderr'] != '':
         return False
 
     return any((line.startswith(path) for line in out['stdout'].splitlines()))
@@ -127,7 +129,7 @@ def install(name, link, path, priority):
     '''
     cmd = [_get_cmd(), '--install', link, name, path, str(priority)]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] > 0 and out['stderr'] != '':
+    if out['retcode'] > exitcodes.EX_OK and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
 
@@ -144,7 +146,7 @@ def remove(name, path):
     '''
     cmd = [_get_cmd(), '--remove', name, path]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         return out['stderr']
     return out['stdout']
 
@@ -162,7 +164,7 @@ def auto(name):
     '''
     cmd = [_get_cmd(), '--auto', name]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         return out['stderr']
     return out['stdout']
 
@@ -179,6 +181,6 @@ def set_(name, path):
     '''
     cmd = [_get_cmd(), '--set', name, path]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] > 0:
+    if out['retcode'] > exitcodes.EX_OK:
         return out['stderr']
     return out['stdout']

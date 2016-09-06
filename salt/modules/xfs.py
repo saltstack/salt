@@ -33,6 +33,7 @@ import time
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -54,7 +55,7 @@ def _verify_run(out, cmd=None):
     '''
     Crash to the log if command execution was not successful.
     '''
-    if out.get("retcode", 0) and out['stderr']:
+    if out.get("retcode", exitcodes.EX_OK) != exitcodes.EX_OK and out['stderr']:
         if cmd:
             log.debug('Command: "{0}"'.format(cmd))
 

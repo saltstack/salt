@@ -14,6 +14,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -47,9 +48,9 @@ def _check_server_manager():
 
     Returns: True if import is successful, otherwise returns False
     '''
-    return not __salt__['cmd.retcode']('Import-Module ServerManager',
-                                       shell='powershell',
-                                       python_shell=True)
+    return __salt__['cmd.retcode']('Import-Module ServerManager',
+                                   shell='powershell',
+                                   python_shell=True) == exitcodes.EX_OK
 
 
 def _pshell_json(cmd, cwd=None):

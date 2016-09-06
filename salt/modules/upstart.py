@@ -54,6 +54,7 @@ import itertools
 import fnmatch
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.modules.cmdmod
 import salt.utils.systemd
@@ -351,7 +352,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = ['service', name, 'start']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -365,7 +366,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = ['service', name, 'stop']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -379,7 +380,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = ['service', name, 'restart']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def full_restart(name):
@@ -393,7 +394,7 @@ def full_restart(name):
         salt '*' service.full_restart <service name>
     '''
     cmd = ['service', name, '--full-restart']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -407,7 +408,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = ['service', name, 'reload']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def force_reload(name):
@@ -421,7 +422,7 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     cmd = ['service', name, 'force-reload']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -446,8 +447,7 @@ def status(name, sig=None):
     # decide result base on retcode, thus ignore output (set quite)
     # because there is no way to avoid logging at error lvl when
     # service is not running - retcode != 0 (which is totally relevant).
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
-                                            quite=True))
+    return __salt__['cmd.retcode'](cmd, python_shell=False, quite=True) == exitcodes.EX_OK
 
 
 def _get_service_exec():
@@ -505,7 +505,7 @@ def enable(name, **kwargs):
         return _upstart_enable(name)
     executable = _get_service_exec()
     cmd = '{0} -f {1} defaults'.format(executable, name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def disable(name, **kwargs):
@@ -522,7 +522,7 @@ def disable(name, **kwargs):
         return _upstart_disable(name)
     executable = _get_service_exec()
     cmd = [executable, '-f', name, 'remove']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def enabled(name, **kwargs):

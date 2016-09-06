@@ -70,7 +70,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         if self.config['hash_type'].lower() in ['md5', 'sha1']:
             log.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
                         'sha256 in Salt {d_name} config!'.format(
-                        h_type=self.config['hash_type'], d_name=self.__class__.__name__))
+                            h_type=self.config['hash_type'], d_name=self.__class__.__name__))
 
     def action_log_info(self, action):
         '''
@@ -188,6 +188,9 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
             import salt.daemons.flo
             self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
+
+    def _notify_ready(self):
+        '''Notify the system that the process is ready'''
         self.set_pidfile()
         salt.utils.process.notify_systemd()
 
@@ -205,7 +208,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         if check_user(self.config['user']):
             self.action_log_info('Starting up')
             self.verify_hash_type()
-            self.master.start()
+            self.master.start(notify_ready=self._notify_ready)
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''

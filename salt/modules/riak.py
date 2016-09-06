@@ -5,6 +5,7 @@ Riak Salt Module
 from __future__ import absolute_import
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 
@@ -40,7 +41,7 @@ def start():
 
     cmd = __execute_cmd('riak', 'start')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stderr']
     else:
         ret['comment'] = cmd['stdout']
@@ -65,7 +66,7 @@ def stop():
 
     cmd = __execute_cmd('riak', 'stop')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stderr']
     else:
         ret['comment'] = cmd['stdout']
@@ -95,7 +96,7 @@ def cluster_join(username, hostname):
         'riak-admin', 'cluster join {0}@{1}'.format(username, hostname)
     )
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stdout']
     else:
         ret['comment'] = cmd['stdout']
@@ -125,7 +126,7 @@ def cluster_leave(username, hostname):
         'riak-admin', 'cluster leave {0}@{1}'.format(username, hostname)
     )
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stdout']
     else:
         ret['comment'] = cmd['stdout']
@@ -148,7 +149,7 @@ def cluster_plan():
     '''
     cmd = __execute_cmd('riak-admin', 'cluster plan')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         return False
 
     return True
@@ -170,7 +171,7 @@ def cluster_commit():
 
     cmd = __execute_cmd('riak-admin', 'cluster commit')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stdout']
     else:
         ret['comment'] = cmd['stdout']
@@ -263,7 +264,7 @@ def test():
 
     cmd = __execute_cmd('riak-admin', 'test')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         ret['comment'] = cmd['stdout']
     else:
         ret['comment'] = cmd['stdout']
