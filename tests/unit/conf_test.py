@@ -134,6 +134,60 @@ class ConfTest(TestCase):
             )
         )
 
+    def test_conf_cloud_profiles_d_files_are_commented(self):
+        '''
+        All cloud profile sample configs in salt/conf/cloud.profiles.d/* must be completely
+        commented out. This test loops through all of the files in that directory to check
+        for any lines that are not commented or blank.
+        '''
+        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.profiles.d/')
+        for conf_file in cloud_sample_files:
+            profile_conf = SAMPLE_CONF_DIR + 'cloud.profiles.d/' + conf_file
+            ret = salt.config._read_conf_file(profile_conf)
+            self.assertEqual(
+                ret,
+                {},
+                'Sample config file \'{0}\' must be commented out.'.format(
+                    conf_file
+                )
+            )
+
+    def test_conf_cloud_providers_d_files_are_commented(self):
+        '''
+        All cloud profile sample configs in salt/conf/cloud.providers.d/* must be completely
+        commented out. This test loops through all of the files in that directory to check
+        for any lines that are not commented or blank.
+        '''
+        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.providers.d/')
+        for conf_file in cloud_sample_files:
+            provider_conf = SAMPLE_CONF_DIR + 'cloud.providers.d/' + conf_file
+            ret = salt.config._read_conf_file(provider_conf)
+            self.assertEqual(
+                ret,
+                {},
+                'Sample config file \'{0}\' must be commented out.'.format(
+                    conf_file
+                )
+            )
+
+    def test_conf_cloud_maps_d_files_are_commented(self):
+        '''
+        All cloud profile sample configs in salt/conf/cloud.maps.d/* must be completely
+        commented out. This test loops through all of the files in that directory to check
+        for any lines that are not commented or blank.
+        '''
+        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.maps.d/')
+        for conf_file in cloud_sample_files:
+            map_conf = SAMPLE_CONF_DIR + 'cloud.maps.d/' + conf_file
+            ret = salt.config._read_conf_file(map_conf)
+            self.assertEqual(
+                ret,
+                {},
+                'Sample config file \'{0}\' must be commented out.'.format(
+                    conf_file
+                )
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
