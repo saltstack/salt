@@ -18,9 +18,9 @@ def set_(name, add, match):
     '''
     Add a value to the named set
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.set:
@@ -55,7 +55,7 @@ def list_(name, add, match, stamp=False, prune=0):
     if ``prune`` is set to an integer higher than ``0``, then only the last
         ``prune`` values will be kept in the list.
 
-    USAGE::
+    USAGE:
 
     code-block:: yaml
 
@@ -98,7 +98,7 @@ def mean(name, add, match):
     of the values in the given register. If the specified value is not numeric
     it will be skipped
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -137,7 +137,7 @@ def clear(name):
     '''
     Clear the namespace from the register
 
-    USAGE::
+    USAGE:
 
     code-block:: yaml
 
@@ -158,7 +158,7 @@ def delete(name):
     '''
     Delete the namespace from the register
 
-    USAGE::
+    USAGE:
 
     code-block:: yaml
 

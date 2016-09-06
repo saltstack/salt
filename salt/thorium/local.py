@@ -21,9 +21,9 @@ def cmd(
     '''
     Execute a remote execution command
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         run_remote_ex:
           local.cmd:

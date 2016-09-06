@@ -49,9 +49,9 @@ def save(name, filter=False):
     Save the register to <salt cachedir>/thorium/saves/<name>, or to an
     absolute path.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           file.save

@@ -14,7 +14,7 @@ def hold(name, seconds):
     this state allows for an action to be blocked for evaluation based on
     time
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 

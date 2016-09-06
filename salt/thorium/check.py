@@ -15,7 +15,7 @@ def gt(name, value):
     Only succeed if the value in the given register location is greater than
     the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -48,7 +48,7 @@ def gte(name, value):
     Only succeed if the value in the given register location is greater or equal
     than the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -81,7 +81,7 @@ def lt(name, value):
     Only succeed if the value in the given register location is less than
     the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -114,7 +114,7 @@ def lte(name, value):
     Only succeed if the value in the given register location is less than
     or equal the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -147,7 +147,7 @@ def eq(name, value):
     Only succeed if the value in the given register location is equal to
     the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -180,7 +180,7 @@ def ne(name, value):
     Only succeed if the value in the given register location is not equal to
     the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -213,7 +213,7 @@ def contains(name, value):
     Only succeed if the value in the given register location contains
     the given value
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
@@ -249,7 +249,7 @@ def event(name):
     Chekcs for a specific event match and returns result True if the match
     happens
 
-    USAGE::
+    USAGE:
 
     .. code-block:: yaml
 
