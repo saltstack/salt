@@ -58,6 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.utils
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
