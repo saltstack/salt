@@ -1323,7 +1323,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_whitelist': [],
     'event_return_blacklist': [],
     'event_match_type': 'startswith',
-    'runner_returns': False,
+    'runner_returns': True,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',

@@ -12,13 +12,12 @@ import sys
 import errno
 import logging
 import traceback
-from salt.ext.six import string_types
 
 # Import salt libs
 import salt.loader
 import salt.utils
-from salt.utils import print_cli
 import salt.ext.six as six
+from salt.utils import print_cli
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
@@ -96,7 +95,15 @@ def display_output(data, out=None, opts=None):
     try:
         # output filename can be either '' or None
         if output_filename:
-            with salt.utils.fopen(output_filename, 'a') as ofh:
+            if not hasattr(output_filename, 'write'):
+                ofh = salt.utils.fopen(output_filename, 'a')
+                fh_opened = True
+            else:
+                # Filehandle/file-like object
+                ofh = output_filename
+                fh_opened = False
+
+            try:
                 fdata = display_data
                 if isinstance(fdata, six.text_type):
                     try:
@@ -105,11 +112,15 @@ def display_output(data, out=None, opts=None):
                         # try to let the stream write
                         # even if we didn't encode it
                         pass
-                if six.PY3:
-                    ofh.write(fdata.decode())
-                else:
-                    ofh.write(fdata)
-                ofh.write('\n')
+                if fdata:
+                    if six.PY3:
+                        ofh.write(fdata.decode())
+                    else:
+                        ofh.write(fdata)
+                    ofh.write('\n')
+            finally:
+                if fh_opened:
+                    ofh.close()
             return
         if display_data:
             print_cli(display_data)
