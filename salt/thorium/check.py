@@ -14,6 +14,21 @@ def gt(name, value):
     '''
     Only succeed if the value in the given register location is greater than
     the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.gt:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -32,6 +47,21 @@ def gte(name, value):
     '''
     Only succeed if the value in the given register location is greater or equal
     than the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.gte:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -50,6 +80,21 @@ def lt(name, value):
     '''
     Only succeed if the value in the given register location is less than
     the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.lt:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -68,6 +113,21 @@ def lte(name, value):
     '''
     Only succeed if the value in the given register location is less than
     or equal the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.lte:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -86,6 +146,21 @@ def eq(name, value):
     '''
     Only succeed if the value in the given register location is equal to
     the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.eq:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -104,6 +179,21 @@ def ne(name, value):
     '''
     Only succeed if the value in the given register location is not equal to
     the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.ne:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -120,8 +210,23 @@ def ne(name, value):
 
 def contains(name, value):
     '''
-    Only succeed if the value in the given register location is greater than
+    Only succeed if the value in the given register location contains
     the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.contains:
+            - value: itni
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
     '''
     ret = {'name': name,
            'result': False,
@@ -144,9 +249,9 @@ def event(name):
     Chekcs for a specific event match and returns result True if the match
     happens
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         salt/foo/*/bar:
           check.event

@@ -18,6 +18,8 @@ Then the file will be saved to:
 
 You may also provide an absolute path for the file to be saved to:
 
+.. code-block:: yaml
+
     /tmp/foo.save:
         file.save
 
@@ -25,6 +27,8 @@ Files will be saved in JSON format. However, JSON does not support ``set()``s.
 If you are saving a register entry that contains a ``set()``, then it will fail
 to save to JSON format. However, you may pass data through a filter which makes
 it JSON compliant:
+
+.. code-block:: yaml
 
     foo:
       file.save:
@@ -46,7 +50,18 @@ from salt.utils import simple_types_filter
 
 def save(name, filter=False):
     '''
-    Save the register to <salt cachedir>/thorium/saves/<name>
+    Save the register to <salt cachedir>/thorium/saves/<name>, or to an
+    absolute path.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          file.save
+
+        /tmp/foo:
+          file.save
     '''
     ret = {'name': name,
            'changes': {},

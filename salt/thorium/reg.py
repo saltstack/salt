@@ -17,6 +17,15 @@ __func_alias__ = {
 def set_(name, add, match):
     '''
     Add a value to the named set
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          reg.set:
+            - add: bar
+            - match: my/custom/event
     '''
     ret = {'name': name,
            'changes': {},
@@ -46,9 +55,9 @@ def list_(name, add, match, stamp=False, prune=0):
     if ``prune`` is set to an integer higher than ``0``, then only the last
         ``prune`` values will be kept in the list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.list:
@@ -88,6 +97,15 @@ def mean(name, add, match):
     Accept a numeric value from the matched events and store a running average
     of the values in the given register. If the specified value is not numeric
     it will be skipped
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          reg.mean:
+            - add: data_field
+            - match: my/custom/event
     '''
     ret = {'name': name,
            'changes': {},
@@ -99,10 +117,14 @@ def mean(name, add, match):
         __reg__[name]['total'] = 0
         __reg__[name]['count'] = 0
     for event in __events__:
+        try:
+            event_data = event['data']['data']
+        except KeyError:
+            event_data = event['data']
         if salt.utils.expr_match(event['tag'], match):
-            if add in event['data']['data']:
+            if add in event_data:
                 try:
-                    comp = int(event['data']['data'])
+                    comp = int(event_data)
                 except ValueError:
                     continue
             __reg__[name]['total'] += comp
@@ -115,9 +137,9 @@ def clear(name):
     '''
     Clear the namespace from the register
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         clearns:
           reg.clear:
@@ -136,9 +158,9 @@ def delete(name):
     '''
     Delete the namespace from the register
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         deletens:
           reg.delete:

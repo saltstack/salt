@@ -40,9 +40,9 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
       - mode: Calculate mode of last ``num`` values
 
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.calc:
@@ -113,9 +113,9 @@ def add(name, num, minimum=0, maximum=0, ref=None):
     '''
     Adds together the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.add:
@@ -129,9 +129,9 @@ def mul(name, num, minimum=0, maximum=0, ref=None):
     '''
     Multiplies together the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mul:
@@ -145,9 +145,9 @@ def mean(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mean:
@@ -161,9 +161,9 @@ def median(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mean of the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median:
@@ -177,9 +177,9 @@ def median_low(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the low mean of the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_low:
@@ -193,9 +193,9 @@ def median_high(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the high mean of the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_high:
@@ -210,9 +210,9 @@ def median_grouped(name, num, minimum=0, maximum=0, ref=None):
     Calculates the grouped mean of the ``num`` most recent values. Requires a
     list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_grouped:
@@ -226,9 +226,9 @@ def mode(name, num, minimum=0, maximum=0, ref=None):
     '''
     Calculates the mode of the ``num`` most recent values. Requires a list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mode:

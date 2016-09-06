@@ -16,14 +16,23 @@ def cmd(
     '''
     Execute a runner async:
 
+    USAGE:
+
     .. code-block:: yaml
 
         run_cloud:
           runner.cmd:
             - fun: cloud.create
-            - args:
+            - arg:
                 - my-ec2-config
                 - myinstance
+
+        run_cloud:
+          runner.cmd:
+            - fun: cloud.create
+            - kwargs:
+                provider: my-ec2-config
+                instances: myinstance
     '''
     ret = {'name': name,
            'changes': {},
