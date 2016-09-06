@@ -46,6 +46,9 @@ class ProxyTest(testprogram.TestProgramCase):
             verbatim_args=True,   # prevents --proxyid from being added automatically
             catch_stderr=True,
             with_retcode=True,
+            # The proxy minion had a bug where it would loop forever
+            # without daemonizing - protect that with a timeout.
+            timeout=60,
         )
         self.assert_exit_status(
             status, 'EX_USAGE',
@@ -62,7 +65,7 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_user',
-            config_base={'user': 'unknown'},
+            config_base={'user': 'some_unknown_user_xyz'},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist

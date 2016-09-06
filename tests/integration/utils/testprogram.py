@@ -384,8 +384,9 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 for path in sys.path:
                     if path not in env_pypath:
                         env_pypath.append(path)
-                if integration.CODE_DIR not in env_pypath:
-                    env_pypath.append(integration.CODE_DIR)
+            # Always ensure that the test tree is searched first for python modules
+            if integration.CODE_DIR != env_pypath[0]:
+                env_pypath.insert(0, integration.CODE_DIR)
             env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
