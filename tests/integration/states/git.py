@@ -150,6 +150,53 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    def test_latest_with_local_changes(self):
+        '''
+        Ensure that we fail the state when there are local changes and succeed
+        when force_reset is True.
+        '''
+        name = os.path.join(integration.TMP, 'salt_repo')
+        try:
+            # Clone repo
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                target=name
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
+
+            # Make change to LICENSE file.
+            with salt.utils.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
+                fp_.write('Lorem ipsum dolor blah blah blah....\n')
+
+            # Make sure that we now have uncommitted changes
+            self.assertTrue(self.run_function('git.diff', [name, 'HEAD']))
+
+            # Re-run state with force_reset=False, this should fail
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                target=name,
+                force_reset=False
+            )
+            self.assertSaltFalseReturn(ret)
+
+            # Now run the state with force_reset=True, this should succeed
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                target=name,
+                force_reset=True
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Make sure that we no longer have uncommitted changes
+            self.assertFalse(self.run_function('git.diff', [name, 'HEAD']))
+
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
     def test_present(self):
         '''
         git.present
