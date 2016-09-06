@@ -504,8 +504,9 @@ class ProcessManager(object):
                     continue
                 log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
                 try:
-                    os.kill(signal.SIGKILL, pid)
-                except OSError:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError as exc:
+                    log.exception(exc)
                     # in case the process has since decided to die, os.kill returns OSError
                     if not p_map['Process'].is_alive():
                         # The process is no longer alive, remove it from the process map dictionary
