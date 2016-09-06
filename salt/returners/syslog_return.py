@@ -88,7 +88,6 @@ To override individual configuration items, append
 '''
 from __future__ import absolute_import
 import logging
-import six
 
 # Import python libs
 import json
@@ -101,6 +100,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 # Define the module's virtual name
