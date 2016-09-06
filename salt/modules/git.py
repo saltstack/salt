@@ -93,7 +93,7 @@ def _config_getter(get_opt,
         command.append(value_regex)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=False)
@@ -146,7 +146,7 @@ def _format_opts(opts):
     return opts
 
 
-def _git_run(command, cwd=None, runas=None, password=None, identity=None,
+def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
              saltenv='base', **kwargs):
     '''
@@ -213,7 +213,7 @@ def _git_run(command, cwd=None, runas=None, password=None, identity=None,
                 tmp_file = salt.utils.mkstemp()
                 salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
                 os.chmod(tmp_file, 0o500)
-                os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
+                os.chown(tmp_file, __salt__['file.user_to_uid'](user), -1)
                 env['GIT_SSH'] = tmp_file
 
             if 'salt-call' not in _salt_cli \
@@ -235,7 +235,7 @@ def _git_run(command, cwd=None, runas=None, password=None, identity=None,
                 result = __salt__['cmd.run_all'](
                     command,
                     cwd=cwd,
-                    runas=runas,
+                    runas=user,
                     password=password,
                     env=env,
                     python_shell=False,
@@ -276,7 +276,7 @@ def _git_run(command, cwd=None, runas=None, password=None, identity=None,
         result = __salt__['cmd.run_all'](
             command,
             cwd=cwd,
-            runas=runas,
+            runas=user,
             password=password,
             env=env,
             python_shell=False,
@@ -311,7 +311,7 @@ def _get_toplevel(path, user=None, password=None):
     return _git_run(
         ['git', 'rev-parse', '--show-toplevel'],
         cwd=path,
-        runas=user,
+        user=user,
         password=password)['stdout']
 
 
@@ -412,7 +412,7 @@ def add(cwd,
     command.extend(['--', filename])
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -556,7 +556,7 @@ def archive(cwd,
     command.extend(['--output', output, rev])
     _git_run(command,
              cwd=cwd,
-             runas=user,
+             user=user,
              password=password,
              ignore_retcode=ignore_retcode)
     # No output (unless --verbose is used, and we don't want all files listed
@@ -635,7 +635,7 @@ def branch(cwd,
         command.append(name)
     _git_run(command,
              cwd=cwd,
-             runas=user,
+             user=user,
              password=password,
              ignore_retcode=ignore_retcode)
     return True
@@ -722,7 +722,7 @@ def checkout(cwd,
     # Checkout message goes to stderr
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=True)['stdout']
@@ -868,7 +868,7 @@ def clone(cwd,
         clone_cwd = '/tmp' if not salt.utils.is_windows() else None
     _git_run(command,
              cwd=clone_cwd,
-             runas=user,
+             user=user,
              password=password,
              identity=identity,
              ignore_retcode=ignore_retcode,
@@ -951,7 +951,7 @@ def commit(cwd,
         command.extend(['--', filename])
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -1265,7 +1265,7 @@ def config_set(key,
         command.extend([key, value])
         _git_run(command,
                  cwd=cwd,
-                 runas=user,
+                 user=user,
                  password=password,
                  ignore_retcode=ignore_retcode)
     else:
@@ -1278,7 +1278,7 @@ def config_set(key,
             command.extend([key, target])
             _git_run(command,
                      cwd=cwd,
-                     runas=user,
+                     user=user,
                      password=password,
                      ignore_retcode=ignore_retcode)
     return config_get(key,
@@ -1372,7 +1372,7 @@ def config_unset(key,
         command.append(value_regex)
     ret = _git_run(command,
                    cwd=cwd if cwd != 'global' else None,
-                   runas=user,
+                   user=user,
                    password=password,
                    ignore_retcode=ignore_retcode,
                    failhard=False)
@@ -1445,7 +1445,7 @@ def current_branch(cwd,
     command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -1500,7 +1500,7 @@ def describe(cwd,
     command.append(rev)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -1645,7 +1645,7 @@ def diff(cwd,
 
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=failhard,
@@ -1777,7 +1777,7 @@ def fetch(cwd,
         command.extend(refspec_list)
     output = _git_run(command,
                       cwd=cwd,
-                      runas=user,
+                      user=user,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
@@ -1908,7 +1908,7 @@ def init(cwd,
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(command,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -2023,7 +2023,7 @@ def list_branches(cwd,
                'refs/{0}/'.format('heads' if not remote else 'remotes')]
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout'].splitlines()
 
@@ -2068,7 +2068,7 @@ def list_tags(cwd,
                'refs/tags/']
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout'].splitlines()
 
@@ -2149,7 +2149,7 @@ def list_worktrees(cwd,
         '''
         return _git_run(['git', 'tag', '--points-at', rev],
                         cwd=cwd,
-                        runas=user,
+                        user=user,
                         password=password)['stdout'].splitlines()
 
     def _desired(is_stale, all_, stale):
@@ -2186,7 +2186,7 @@ def list_worktrees(cwd,
     if has_native_list_subcommand:
         out = _git_run(['git', 'worktree', 'list', '--porcelain'],
                        cwd=cwd,
-                       runas=user,
+                       user=user,
                        password=password)
         if out['retcode'] != 0:
             msg = 'Failed to list worktrees'
@@ -2494,7 +2494,7 @@ def ls_remote(cwd=None,
         command.extend([ref])
     output = _git_run(command,
                       cwd=cwd,
-                      runas=user,
+                      user=user,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
@@ -2594,7 +2594,7 @@ def merge(cwd,
         command.append(rev)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -2778,7 +2778,7 @@ def merge_base(cwd,
             command.append(str(ref))
     result = _git_run(command,
                       cwd=cwd,
-                      runas=user,
+                      user=user,
                       password=password,
                       ignore_retcode=ignore_retcode,
                       failhard=False if is_ancestor else True)
@@ -2858,7 +2858,7 @@ def merge_tree(cwd,
     command.extend([base, ref1, ref2])
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -2941,7 +2941,7 @@ def pull(cwd,
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
@@ -3070,7 +3070,7 @@ def push(cwd,
     command.extend([remote, ref])
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
@@ -3138,7 +3138,7 @@ def rebase(cwd,
     command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3299,7 +3299,7 @@ def remote_refs(url,
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
     output = _git_run(command,
-                      runas=user,
+                      user=user,
                       password=password,
                       identity=identity,
                       ignore_retcode=ignore_retcode,
@@ -3396,7 +3396,7 @@ def remote_set(cwd,
         command = ['git', 'remote', 'rm', remote]
         _git_run(command,
                  cwd=cwd,
-                 runas=user,
+                 user=user,
                  password=password,
                  ignore_retcode=ignore_retcode)
     # Add remote
@@ -3414,7 +3414,7 @@ def remote_set(cwd,
     command = ['git', 'remote', 'add', remote, url]
     _git_run(command,
              cwd=cwd,
-             runas=user,
+             user=user,
              password=password,
              ignore_retcode=ignore_retcode)
     if push_url:
@@ -3430,7 +3430,7 @@ def remote_set(cwd,
         command = ['git', 'remote', 'set-url', '--push', remote, push_url]
         _git_run(command,
                  cwd=cwd,
-                 runas=user,
+                 user=user,
                  password=password,
                  ignore_retcode=ignore_retcode)
     return remote_get(cwd=cwd,
@@ -3492,7 +3492,7 @@ def remotes(cwd,
     ret = {}
     output = _git_run(command,
                       cwd=cwd,
-                      runas=user,
+                      user=user,
                       password=password,
                       ignore_retcode=ignore_retcode)['stdout']
     for remote_line in salt.utils.itertools.split(output, '\n'):
@@ -3570,7 +3570,7 @@ def reset(cwd,
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3642,7 +3642,7 @@ def rev_parse(cwd,
         command.append(rev)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3696,7 +3696,7 @@ def revision(cwd,
     command.append(rev)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3761,7 +3761,7 @@ def rm_(cwd,
     command.extend(['--', filename])
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3822,7 +3822,7 @@ def stash(cwd,
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -3874,7 +3874,7 @@ def status(cwd,
     command = ['git', 'status', '-z', '--porcelain']
     output = _git_run(command,
                       cwd=cwd,
-                      runas=user,
+                      user=user,
                       password=password,
                       ignore_retcode=ignore_retcode)['stdout']
     for line in output.split('\0'):
@@ -4012,7 +4012,7 @@ def submodule(cwd,
     cmd.extend(_format_opts(opts))
     return _git_run(cmd,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     identity=identity,
                     ignore_retcode=ignore_retcode,
@@ -4092,7 +4092,7 @@ def symbolic_ref(cwd,
         command.extend(value)
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
@@ -4269,7 +4269,7 @@ def worktree_add(cwd,
     # Checkout message goes to stderr
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=True)['stdout']
@@ -4360,7 +4360,7 @@ def worktree_prune(cwd,
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
-                    runas=user,
+                    user=user,
                     password=password,
                     ignore_retcode=ignore_retcode)['stdout']
 
