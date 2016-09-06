@@ -108,6 +108,18 @@ def accept_dict(match, include_rejected=False, include_denied=False):
     match
         The dictionary of keys to accept.
 
+    include_rejected
+        To include rejected keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
+
     Example to move a list of keys from the ``minions_pre`` (pending) directory
     to the ``minions`` (accepted) directory:
 
@@ -198,6 +210,18 @@ def reject_dict(match, include_accepted=False, include_denied=False):
 
     match
         The dictionary of keys to reject.
+
+    include_accepted
+        To include accepted keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+        .. versionadded:: 2016.3.4
 
     .. code-block:: python
 
