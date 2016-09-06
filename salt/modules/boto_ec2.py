@@ -450,7 +450,7 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni secondary_private_ip_address_count=2
 
-    .. versionadded:: 2016.3.0
+    .. versionadded:: Nitrogen
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
@@ -504,7 +504,7 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
 
         salt myminion boto_ec2.unassign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
 
-    .. versionadded:: 2016.3.0
+    .. versionadded:: Nitrogen
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
