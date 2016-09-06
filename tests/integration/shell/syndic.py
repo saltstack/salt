@@ -94,7 +94,7 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         syndic = testprogram.TestDaemonSaltSyndic(
             name='unknown_user',
-            config_base={'user': 'unknown'},
+            config_base={'user': 'some_unknown_user_xyz'},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
