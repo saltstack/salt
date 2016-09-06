@@ -283,7 +283,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_user',
-            configs={'minion': {'map': {'user': 'unknown'}}},
+            configs={'minion': {'map': {'user': 'some_unknown_user_xyz'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
