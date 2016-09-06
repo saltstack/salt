@@ -96,7 +96,11 @@ import salt.ext.six as six
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
+    # pylint: disable=W0611
+    # pylint: disable=import-error,no-name-in-module
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    # pylint: disable=import-error
+    # pylint: enable=W0611
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_repo_src_dest
