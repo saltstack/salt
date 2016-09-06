@@ -846,13 +846,22 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             log.info("EIP not requested.")
 
     if public_ip or allocation_id:
-        r = __salt__['boto_ec2.get_eip_address_info'](
-                addresses=public_ip, allocation_ids=allocation_id,
-                region=region, key=key, keyid=keyid, profile=profile)
+        # This can take a bit to show up, give it a chance to...
+        tries = 10
+        secs = 3
+        for t in range(tries):
+            r = __salt__['boto_ec2.get_eip_address_info'](
+                    addresses=public_ip, allocation_ids=allocation_id,
+                    region=region, key=key, keyid=keyid, profile=profile)
+            if r:
+                break
+            else:
+                log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
+                        tries * secs, public_ip or allocation_id))
+                time.sleep(secs)
         if not r:
             ret['result'] = False
-            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip if
-                    public_ip else allocation_id)
+            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip or allocation_id)
             return ret
         ip = r[0]['public_ip']
         if r[0].get('instance_id'):
