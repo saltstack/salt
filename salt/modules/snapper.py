@@ -17,7 +17,10 @@ import logging
 import os
 import time
 import difflib
-from pwd import getpwuid
+try:
+    from pwd import getpwuid
+except ImportError:
+    pass
 
 from salt.exceptions import CommandExecutionError
 import salt.utils
