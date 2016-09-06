@@ -46,7 +46,18 @@ from salt.utils import simple_types_filter
 
 def save(name, filter=False):
     '''
-    Save the register to <salt cachedir>/thorium/saves/<name>
+    Save the register to <salt cachedir>/thorium/saves/<name>, or to an
+    absolute path.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          file.save
+
+        /tmp/foo:
+          file.save
     '''
     ret = {'name': name,
            'changes': {},
