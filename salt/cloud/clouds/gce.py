@@ -1947,6 +1947,8 @@ def start(vm_name, call=None):
     '''
     Call GCE 'start on the instance.
 
+    .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -1988,6 +1990,8 @@ def start(vm_name, call=None):
 def stop(vm_name, call=None):
     '''
     Call GCE 'stop' on the instance.
+
+    .. versionadded:: Nitrogen
 
     CLI Example:
 
