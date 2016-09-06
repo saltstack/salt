@@ -128,7 +128,6 @@ except ImportError:
                     cmdline = process.as_dict()
                 except psutil.NoSuchProcess as exc:
                     log.debug('No such process found. Stacktrace: {0}'.format(exc))
-
             log.info('Sending %s to process: %s', sigint_name, cmdline)
             process.send_signal(sigint)
             try:
@@ -641,8 +640,9 @@ class SaltMaster(SaltDaemonScriptBase):
     def get_check_ports(self):
         #return set([self.config['runtests_conn_check_port']])
         return set([self.config['ret_port'],
-                    self.config['publish_port'],
-                    self.config['runtests_conn_check_port']])
+                    self.config['publish_port']])
+        # Disabled along with Pytest config until fixed.
+#                    self.config['runtests_conn_check_port']])
 
     def get_script_args(self):
         #return ['-l', 'debug']
@@ -1151,22 +1151,7 @@ class TestDaemon(object):
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
 
-        master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        syndic_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        syndic_master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-
         for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
-            if 'engines' not in conf:
-                conf['engines'] = []
-            conf['engines'].append({'salt_runtests': {}})
-
-            if 'engines_dirs' not in conf:
-                conf['engines_dirs'] = []
-
-            conf['engines_dirs'].insert(0, ENGINES_DIR)
-
             if 'log_handlers_dirs' not in conf:
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
