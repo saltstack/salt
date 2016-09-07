@@ -645,7 +645,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(salt.defaults.exitcodes.EX_OK)
+        self.close()
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 def _set_tcp_keepalive(zmq_socket, opts):
