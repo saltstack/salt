@@ -303,6 +303,22 @@ def _run(cmd,
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
+    if _check_loglevel(output_loglevel) is not None:
+        # Always log the shell commands at INFO unless quiet logging is
+        # requested. The command output is what will be controlled by the
+        # 'loglevel' parameter.
+        msg = (
+            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+                '\'' if not isinstance(cmd, list) else '',
+                cmd,
+                'as user \'{0}\' '.format(runas) if runas else '',
+                cwd,
+                '. Executing command in the background, no output will be '
+                'logged.' if bg else ''
+            )
+        )
+        log.info(log_callback(msg))
+
     if runas and salt.utils.is_windows():
         if not password:
             msg = 'password is a required argument for runas on Windows'
@@ -367,21 +383,6 @@ def _run(cmd,
                     runas
                 )
             )
-
-    if _check_loglevel(output_loglevel) is not None:
-        # Always log the shell commands at INFO unless quiet logging is
-        # requested. The command output is what will be controlled by the
-        # 'loglevel' parameter.
-        msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
-                '\'' if not isinstance(cmd, list) else '',
-                cmd,
-                'as user \'{0}\' '.format(runas) if runas else '',
-                cwd,
-                ' in the background, no output will be logged' if bg else ''
-            )
-        )
-        log.info(log_callback(msg))
 
     if reset_system_locale is True:
         if not salt.utils.is_windows():
