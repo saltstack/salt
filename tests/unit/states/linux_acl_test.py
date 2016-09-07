@@ -35,7 +35,7 @@ class LinuxAclTestCase(TestCase):
         '''
         Test to ensure a Linux ACL is present
         '''
-        name = '/root'
+        name = '/etc'
         acl_type = 'users'
         acl_name = 'damian'
         perms = 'rwx'
@@ -72,7 +72,7 @@ class LinuxAclTestCase(TestCase):
         '''
         Test to ensure a Linux ACL does not exist
         '''
-        name = '/root'
+        name = '/etc'
         acl_type = 'users'
         acl_name = 'damian'
         perms = 'rwx'
