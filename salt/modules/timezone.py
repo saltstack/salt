@@ -77,6 +77,7 @@ def _get_adjtime_timezone():
         # There is no RTC.
         return None
 
+
 def _get_zone_sysconfig():
     tzfile = '/etc/sysconfig/clock'
     with salt.utils.fopen(tzfile, 'r') as fp_:
