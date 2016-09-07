@@ -609,11 +609,10 @@ def agent_join(consul_url=None, address=None, **kwargs):
                  query_params=query_params)
     if res['res']:
         ret['res'] = True
-        ret['message'] = ('Agent maintenance mode '
-                          '{0}ed.'.format(kwargs['enable']))
+        ret['message'] = 'Agent joined the cluster'
     else:
         ret['res'] = False
-        ret['message'] = 'Unable to change maintenance mode for agent.'
+        ret['message'] = 'Unable to join the cluster.'
     return ret
 
 
