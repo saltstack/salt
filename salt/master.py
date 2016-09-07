@@ -683,6 +683,21 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.key = key
         self.secrets = secrets
 
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], state['key'], state['mkey'],
+                      log_queue=state['log_queue'], secrets=state['secrets'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'key': self.key,
+                'mkey': self.master_key,
+                'log_queue': self.log_queue,
+                'secrets': self.secrets}
+
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
         super(ReqServer, self)._handle_signals(signum, sigframe)
