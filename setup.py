@@ -429,7 +429,7 @@ class DownloadWindowsDlls(Command):
         import platform
         from pip.utils.logging import indent_log
         platform_bits, _ = platform.architecture()
-        url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
+        url = 'http://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
             for fname in ('libeay32', 'ssleay32', 'libsodium', 'msvcr120'):
@@ -459,11 +459,11 @@ class DownloadWindowsDlls(Command):
                         if req.getcode() == 200:
                             with open(fdest, 'wb') as wfh:
                                 while True:
-                                    for chunk in req.read(4096):
-                                        if not chunk:
-                                            break
-                                        wfh.write(chunk)
-                                        wfh.flush()
+                                    chunk = req.read(4096)
+                                    if not chunk:
+                                        break
+                                    wfh.write(chunk)
+                                    wfh.flush()
                         else:
                             log.error(
                                 'Failed to download {0}.dll to {1} from {2}'.format(
