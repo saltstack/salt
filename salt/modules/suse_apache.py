@@ -9,7 +9,6 @@ loading under the ``apache`` namespace.
 from __future__ import absolute_import
 
 # Import python libs
-import os
 import logging
 
 # Import salt libs
@@ -24,7 +23,7 @@ def __virtual__():
     '''
     Only load the module if apache is installed.
     '''
-    if salt.utils.which('apache2ctl') and __grains__['os_family'] == 'Suse':
+    if salt.utils.which('apache2ctl') and __grains__['os_family'] == 'SUSE':
         return __virtualname__
     return (False, 'apache execution module not loaded: apache not installed.')
 
