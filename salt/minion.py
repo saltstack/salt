@@ -83,6 +83,7 @@ import salt.engines
 import salt.payload
 import salt.syspaths
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.context
 import salt.utils.jid
 import salt.pillar
@@ -835,6 +836,10 @@ class MinionManager(MinionBase):
         for minion in self.minions:
             minion.destroy()
 
+    def reload(self):
+        for minion in self.minions:
+            minion.reload()
+
 
 class Minion(MinionBase):
     '''
@@ -948,6 +953,14 @@ class Minion(MinionBase):
             raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
+
+    def reload(self):
+        log.info('Minion reloading config')
+        disk_opts = salt.config.minion_config(os.path.join(salt.syspaths.CONFIG_DIR, 'minion'))  # FIXME POC
+        self.opts = salt.utils.dictupdate.merge_overwrite(self.opts, disk_opts)
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        self.schedule.functions = self.functions
+        self.schedule.returners = self.returners
 
     @tornado.gen.coroutine
     def connect_master(self):
