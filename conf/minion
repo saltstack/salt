@@ -353,7 +353,17 @@
 # access the master has to the minion.
 #disable_modules: [cmd,test]
 #disable_returners: []
-#
+
+# This is the reverse of disable_modules.  The default, like disable_modules, is the empty list,
+# but if this option is set to *anything* then *only* those modules will load.
+# Note that this is a very large hammer and it can be quite difficult to keep the minion working
+# the way you think it should since Salt uses many modules internally itself.  At a bare minimum
+# you need the following enabled or else the minion won't start.
+#whitelist_modules:
+#  - cmdmod
+#  - test
+#  - config
+
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
 # of third party modules. Modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and
