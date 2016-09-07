@@ -1915,10 +1915,120 @@ def reboot(vm_name, call=None):
         raise SaltCloudSystemExit(
             'The reboot action must be called with -a or --action.'
         )
+
     conn = get_conn()
-    return conn.reboot_node(
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'reboot instance',
+        'salt/cloud/{0}/rebooting'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.reboot_node(
         conn.ex_get_node(vm_name)
     )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'reboot instance',
+        'salt/cloud/{0}/rebooted'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
+
+
+def start(vm_name, call=None):
+    '''
+    Call GCE 'start on the instance.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start myinstance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'start instance',
+        'salt/cloud/{0}/starting'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.ex_start_node(
+        conn.ex_get_node(vm_name)
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'start instance',
+        'salt/cloud/{0}/started'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
+
+
+def stop(vm_name, call=None):
+    '''
+    Call GCE 'stop' on the instance.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop myinstance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'stop instance',
+        'salt/cloud/{0}/stopping'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.ex_stop_node(
+        conn.ex_get_node(vm_name)
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'stop instance',
+        'salt/cloud/{0}/stopped'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
 
 
 def destroy(vm_name, call=None):
@@ -2215,7 +2325,7 @@ def update_pricing(kwargs=None, call=None):
     price_json = http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
@@ -2251,7 +2361,7 @@ def show_pricing(kwargs=None, call=None):
 
     size = 'CP-COMPUTEENGINE-VMIMAGE-{0}'.format(profile['size'].upper())
     pricefile = os.path.join(
-        __opts__['cachedir'], 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     if not os.path.exists(pricefile):
         update_pricing()

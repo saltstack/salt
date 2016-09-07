@@ -27,7 +27,10 @@ def check_status():
     '''
     Check the status of the rubygems source
     '''
-    ret = salt.utils.http.query('https://rubygems.org', status=True)
+    try:
+        ret = salt.utils.http.query('https://rubygems.org', status=True)
+    except Exception:
+        return False
     return ret['status'] == 200
 
 

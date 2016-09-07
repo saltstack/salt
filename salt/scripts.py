@@ -11,6 +11,8 @@ import time
 import logging
 import threading
 import traceback
+import signal
+import functools
 from random import randint
 
 # Import salt libs
@@ -53,9 +55,13 @@ def minion_process():
     '''
     import salt.utils
     import salt.cli.daemons
+
     # salt_minion spawns this function in a new process
 
     salt.utils.appendproctitle('KeepAlive')
+
+    def handle_hup(manager, sig, frame):
+        manager.minion.reload()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -81,6 +87,9 @@ def minion_process():
         thread.start()
 
     minion = salt.cli.daemons.Minion()
+    signal.signal(signal.SIGHUP,
+                  functools.partial(handle_hup,
+                                    minion))
 
     try:
         minion.start()
@@ -101,9 +110,6 @@ def salt_minion():
     Start the salt minion in a subprocess.
     Auto restart minion on error.
     '''
-    import signal
-    import functools
-
     import salt.utils.process
     salt.utils.process.notify_systemd()
 
@@ -142,6 +148,9 @@ def salt_minion():
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
             signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGHUP,
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
         except Exception:  # pylint: disable=broad-except

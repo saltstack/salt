@@ -58,6 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.utils
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -846,13 +847,22 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             log.info("EIP not requested.")
 
     if public_ip or allocation_id:
-        r = __salt__['boto_ec2.get_eip_address_info'](
-                addresses=public_ip, allocation_ids=allocation_id,
-                region=region, key=key, keyid=keyid, profile=profile)
+        # This can take a bit to show up, give it a chance to...
+        tries = 10
+        secs = 3
+        for t in range(tries):
+            r = __salt__['boto_ec2.get_eip_address_info'](
+                    addresses=public_ip, allocation_ids=allocation_id,
+                    region=region, key=key, keyid=keyid, profile=profile)
+            if r:
+                break
+            else:
+                log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
+                        tries * secs, public_ip or allocation_id))
+                time.sleep(secs)
         if not r:
             ret['result'] = False
-            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip if
-                    public_ip else allocation_id)
+            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip or allocation_id)
             return ret
         ip = r[0]['public_ip']
         if r[0].get('instance_id'):
@@ -1003,20 +1013,33 @@ def instance_absent(name, instance_name=None, instance_id=None,
     if release_eip:
         ip = getattr(instance, 'ip_address', None)
         if ip:
-            args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+            base_args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+            public_ip = None
+            alloc_id = None
+            assoc_id = None
             if getattr(instance, 'vpc_id', None):
-                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **args)
-                if len(r):
-                    args.update({'allocation_ids': r[0].allocation_id})
+                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
+                if len(r) and 'allocation_id' in r[0]:
+                    alloc_id = r[0]['allocation_id']
+                    assoc_id = r[0].get('association_id')
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret['result'] = False
                     ret['comment'] = "Can't determine AllocationId for address {0}.".format(ip)
                     return ret
             else:
-                args.update({'public_ip': instance.ip_address})
-            if __salt__['boto_ec2.release_eip_address'](**args):
-                ret['changes']['old'] = {'public_ip': ip}
+                public_ip = instance.ip_address
+
+            if assoc_id:
+                # Race here - sometimes the terminate above will already have dropped this
+                if not __salt__['boto_ec2.disassociate_eip_address'](association_id=assoc_id,
+                                                                     **base_args):
+                    log.warning("Failed to disassociate EIP {0}.".format(ip))
+
+            if __salt__['boto_ec2.release_eip_address'](allocation_id=alloc_id, public_ip=public_ip,
+                                                        **base_args):
+                log.info("Released EIP address {0}".format(public_ip or r[0]['public_ip']))
+                ret['changes']['old']['public_ip'] = public_ip or r[0]['public_ip']
             else:
                 ret['result'] = False
                 ret['comment'] = "Failed to release EIP {0}.".format(ip)

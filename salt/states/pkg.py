@@ -100,8 +100,6 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
-    from salt.modules.win_pkg import _get_local_repo_dir
-    _get_local_repo_dir = _namespaced_function(_get_local_repo_dir, globals())
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
     _get_latest_pkg_version = \
@@ -1863,15 +1861,21 @@ def latest(
     problems = []
     for pkg in desired_pkgs:
         if not avail[pkg]:
+            # Package either a) is up-to-date, or b) does not exist
             if not cur[pkg]:
+                # Package does not exist
                 msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
             elif watch_flags \
                     and __grains__.get('os') == 'Gentoo' \
                     and __salt__['portage_config.is_changed_uses'](pkg):
-                targets[pkg] = avail[pkg]
+                # Package is up-to-date, but Gentoo USE flags are changing so
+                # we need to add it to the targets
+                targets[pkg] = cur[pkg]
         else:
+            # Package either a) is not installed, or b) is installed and has an
+            # upgrade available
             targets[pkg] = avail[pkg]
 
     if problems:

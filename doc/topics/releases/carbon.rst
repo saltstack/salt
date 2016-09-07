@@ -332,8 +332,11 @@ Execution Module Deprecations
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
 
-- The ``contains_regex_multiline`` function was removed from the ``file`` execution module.
-  Use ``file.search`` instead.
+- File module deprecations:
+
+  - The ``contains_regex_multiline`` function was removed. Use ``file.search`` instead.
+  - Additional command line options for ``file.grep`` should be passed one at a time.
+    Please do not pass more than one in a single argument.
 
 - The ``lxc`` execution module has the following changes:
 
@@ -386,8 +389,18 @@ Execution Module Deprecations
   dictionary. This updated function replaces the need for the ``human_readable``
   option.
 
+- The ``persist`` kwarg was removed from the ``win_useradd`` execution module. This
+  option is no longer supported for Windows. ``persist`` is only supported as part
+  of user management in UNIX/Linux.
+
 - The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
   instead.
+
+
+Outputter Module Deprecations
+-----------------------------
+
+- The ``compact`` outputter has been removed. Set ``state_verbose`` to ``False`` instead.
 
 
 Runner Module Deprecations

@@ -7,6 +7,7 @@ integration tests for shadow linux
 from __future__ import absolute_import
 import random
 import string
+import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -209,6 +210,28 @@ class ShadowModuleTest(integration.ModuleCase):
 
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function('shadow.set_expire', [self._no_user, '2016-08-25']))
+
+    @destructiveTest
+    def test_set_del_root_password(self):
+        '''
+        Test set/del password for root
+        '''
+        #saving shadow file
+        if not os.access("/etc/shadow", os.R_OK | os.W_OK):
+            self.skipTest('Could not save initial state of /etc/shadow')
+        with salt.utils.fopen('/etc/shadow', 'r') as sFile:
+            shadow = sFile.read()
+        #set root password
+        self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
+        self.assertEqual(
+            self.run_function('shadow.info', ['root'])['passwd'], self._password)
+        #delete root password
+        self.assertTrue(self.run_function('shadow.del_password', ['root']))
+        self.assertEqual(
+            self.run_function('shadow.info', ['root'])['passwd'], '')
+        #restore shadow file
+        with salt.utils.fopen('/etc/shadow', 'w') as sFile:
+            sFile.write(shadow)
 
 
 if __name__ == '__main__':

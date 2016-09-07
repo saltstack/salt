@@ -384,8 +384,9 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 for path in sys.path:
                     if path not in env_pypath:
                         env_pypath.append(path)
-                if integration.CODE_DIR not in env_pypath:
-                    env_pypath.append(integration.CODE_DIR)
+            # Always ensure that the test tree is searched first for python modules
+            if integration.CODE_DIR != env_pypath[0]:
+                env_pypath.insert(0, integration.CODE_DIR)
             env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
@@ -766,61 +767,16 @@ class TestDaemon(TestProgram):
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
-        children = []
-        if self.process:
-            # Last resort, a brute force approach to make sure we leave no child processes running
+        if not self._shutdown:
             try:
-                parent = psutils.Process(self.process.pid)
-                if hasattr(parent, 'children'):
-                    children = parent.children(recursive=True)
-            except psutils.NoSuchProcess:
+                pid = self.wait_for_daemon_pid(timeout)
+                integration.terminate_process_pid(pid)
+            except TimeoutError:
                 pass
-
-        if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
-            future = datetime.now() + timedelta(seconds=timeout)
-            pid = self.wait_for_daemon_pid(timeout)
-            log.info('Attempting to shutdown "{0}" pid {1} with {2}'.format(self.name, pid, signum))
-            while True:
-                try:
-                    os.kill(pid, signum)
-                except OSError as err:
-                    if errno.ESRCH == err.errno:
-                        break
-                    raise
-                if datetime.now() > future:
-                    # One last attempt with a big hammer
-                    try:
-                        pgid = os.getpgid(pid)
-                        os.killpg(pgid, signum)
-                        time.sleep(0.1)
-                        log.warn('Sending SIGKILL to "{0}" pid {1}'.format(self.name, pid))
-                        os.killpg(pgid, signal.SIGKILL)
-                        time.sleep(0.1)
-                        os.killpg(pgid, signal.SIGKILL)
-                    except OSError as err:
-                        if errno.ESRCH == err.errno:
-                            break
-                    raise TimeoutError('Timeout waiting for "{0}" pid {1} to shutdown'.format(self.name, pid))
-                time.sleep(0.1)
+        if self.process:
+            integration.terminate_process_pid(self.process.pid)
+            self.process.wait()
             self.process = None
-
-        # Child processes cleanup
-        if children:
-            def kill_children():
-                for child in children[:]:
-                    try:
-                        cmdline = child.cmdline()
-                        log.warning('runtests.py left behind the following child process: %s', cmdline)
-                        child.kill()
-                        children.remove(child)
-                    except psutils.NoSuchProcess:
-                        children.remove(child)
-
-            kill_children()
-
-            if children:
-                psutils.wait_procs(children, timeout=5, callback=kill_children)
-
         self._shutdown = True
 
     def cleanup(self, *args, **kwargs):

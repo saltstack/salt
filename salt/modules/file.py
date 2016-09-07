@@ -3499,13 +3499,21 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        if urlparsed_source.scheme == 'salt':
+        parsed_scheme = urlparsed_source.scheme
+        parsed_path = os.path.join(
+                urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+
+        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            parsed_path = ':'.join([parsed_scheme, parsed_path])
+            parsed_scheme = 'file'
+
+        if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and urlparsed_source.scheme == 'file':
-            source_sum = _get_local_file_source_sum(urlparsed_source.path)
-        elif not source_hash and source.startswith('/'):
+        elif not source_hash and parsed_scheme == 'file':
+            source_sum = _get_local_file_source_sum(parsed_path)
+        elif not source_hash and source.startswith(os.sep):
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
@@ -3555,7 +3563,7 @@ def get_managed(
                     )
                     return '', {}, msg
 
-    if source and (template or urlparsed_source.scheme in remote_protos):
+    if source and (template or parsed_scheme in remote_protos):
         # Check if we have the template or remote file cached
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
@@ -4608,7 +4616,14 @@ def makedirs_(path,
             break
 
         directories_to_create.append(dirname)
+        current_dirname = dirname
         dirname = os.path.dirname(dirname)
+
+        if current_dirname == dirname:
+            raise SaltInvocationError(
+                'Recursive creation for path \'{0}\' would result in an '
+                'infinite loop. Please use an absolute path.'.format(dirname)
+            )
 
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
@@ -5221,17 +5236,16 @@ def grep(path,
     split_opts = []
     for opt in opts:
         try:
-            opt = salt.utils.shlex_split(opt)
+            split = salt.utils.shlex_split(opt)
         except AttributeError:
-            opt = salt.utils.shlex_split(str(opt))
-        if len(opt) > 1:
-            salt.utils.warn_until(
-                'Carbon',
-                'Additional command line options for file.grep should be '
-                'passed one at a time, please do not pass more than one in a '
-                'single argument.'
+            split = salt.utils.shlex_split(str(opt))
+        if len(split) > 1:
+            raise SaltInvocationError(
+                'Passing multiple command line arguments in a single string '
+                'is not supported, please pass the following arguments '
+                'separately: {0}'.format(opt)
             )
-        split_opts.extend(opt)
+        split_opts.extend(split)
 
     cmd = ['grep'] + split_opts + [pattern, path]
     try:

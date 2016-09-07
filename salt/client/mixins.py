@@ -252,6 +252,28 @@ class SyncClientMixin(object):
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
+    @property
+    def store_job(self):
+        '''
+        Helper that allows us to turn off storing jobs for different classes
+        that may incorporate this mixin.
+        '''
+        try:
+            class_name = self.__class__.__name__.lower()
+        except AttributeError:
+            log.warning(
+                'Unable to determine class name',
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return True
+
+        try:
+            return self.opts['{0}_returns'.format(class_name)]
+        except KeyError:
+            # No such option, assume this isn't one we care about gating and
+            # just return True.
+            return True
+
     def _low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
@@ -368,6 +390,10 @@ class SyncClientMixin(object):
             data['fun_args'] = args + ([kwargs] if kwargs else [])
             func_globals['__jid_event__'].fire_event(data, 'new')
 
+            # Update the event data with loaded args and kwargs
+            data['fun_args'] = args + ([kwargs] if kwargs else [])
+            func_globals['__jid_event__'].fire_event(data, 'new')
+
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 data['return'] = self.functions[fun](*args, **kwargs)
@@ -385,21 +411,22 @@ class SyncClientMixin(object):
 
         namespaced_event.fire_event(data, 'ret')
 
-        try:
-            salt.utils.job.store_job(
-                self.opts,
-                {
-                    'id': self.opts['id'],
-                    'tgt': self.opts['id'],
-                    'jid': data['jid'],
-                    'return': data,
-                },
-                event=None,
-                mminion=self.mminion,
-                )
-        except salt.exceptions.SaltCacheError:
-            log.error('Could not store job cache info. '
-                      'Job details for this run may be unavailable.')
+        if self.store_job:
+            try:
+                salt.utils.job.store_job(
+                    self.opts,
+                    {
+                        'id': self.opts['id'],
+                        'tgt': self.opts['id'],
+                        'jid': data['jid'],
+                        'return': data,
+                    },
+                    event=None,
+                    mminion=self.mminion,
+                    )
+            except salt.exceptions.SaltCacheError:
+                log.error('Could not store job cache info. '
+                          'Job details for this run may be unavailable.')
 
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger

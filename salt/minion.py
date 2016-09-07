@@ -83,6 +83,7 @@ import salt.engines
 import salt.payload
 import salt.syspaths
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.context
 import salt.utils.jid
 import salt.pillar
@@ -286,7 +287,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 _args.append(arg)
             elif string_kwarg:
                 salt.utils.warn_until(
-                    'Carbon',
+                    'Nitrogen',
                     'The list of function args and kwargs should be parsed '
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
@@ -574,8 +575,21 @@ class MinionBase(object):
                 opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
                 try:
-                    pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
-                    yield pub_channel.connect()
+                    if self.opts['transport'] == 'detect':
+                        self.opts['detect_mode'] = True
+                        for trans in ('zeromq', 'tcp'):
+                            if trans == 'zeromq' and not HAS_ZMQ:
+                                continue
+                            self.opts['transport'] = trans
+                            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                            yield pub_channel.connect()
+                            if not pub_channel.auth.authenticated:
+                                continue
+                            del self.opts['detect_mode']
+                            break
+                    else:
+                        pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
+                        yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token('salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
@@ -822,6 +836,10 @@ class MinionManager(MinionBase):
         for minion in self.minions:
             minion.destroy()
 
+    def reload(self):
+        for minion in self.minions:
+            minion.reload()
+
 
 class Minion(MinionBase):
     '''
@@ -894,7 +912,7 @@ class Minion(MinionBase):
 
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
-            signal.signal(signal.SIGINT, self._handle_signals)
+            signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -903,6 +921,7 @@ class Minion(MinionBase):
         self.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.process_manager.kill_children()
+        time.sleep(1)
         sys.exit(0)
 
     def sync_connect_master(self, timeout=None):
@@ -934,6 +953,14 @@ class Minion(MinionBase):
             raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
+
+    def reload(self):
+        log.info('Minion reloading config')
+        disk_opts = salt.config.minion_config(os.path.join(salt.syspaths.CONFIG_DIR, 'minion'))  # FIXME POC
+        self.opts = salt.utils.dictupdate.merge_overwrite(self.opts, disk_opts)
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        self.schedule.functions = self.functions
+        self.schedule.returners = self.returners
 
     @tornado.gen.coroutine
     def connect_master(self):
@@ -2485,6 +2512,14 @@ class SyndicManager(MinionBase):
                 break
             master_id = masters.pop(0)
 
+    def _reset_event_aggregation(self):
+        self.job_rets = {}
+        self.raw_events = []
+
+    def reconnect_event_bus(self, something):
+        future = self.local.event.set_event_handler(self._process_event)
+        self.io_loop.add_future(future, self.reconnect_event_bus)
+
     # Syndic Tune In
     def tune_in(self):
         '''
@@ -2501,7 +2536,9 @@ class SyndicManager(MinionBase):
         # register the event sub to the poller
         self.job_rets = {}
         self.raw_events = []
-        self.local.event.set_event_handler(self._process_event)
+        self._reset_event_aggregation()
+        future = self.local.event.set_event_handler(self._process_event)
+        self.io_loop.add_future(future, self.reconnect_event_bus)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,

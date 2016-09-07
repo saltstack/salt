@@ -438,6 +438,16 @@ def create(vm_):
             )
             return False
 
+    if 'ERRORARRAY' in result:
+        for error_data in result['ERRORARRAY']:
+            log.error('Error creating {0} on Linode\n\n'
+                    'The Linode API returned the following: {1}\n'.format(
+                        name,
+                        error_data['ERRORMESSAGE']
+                        )
+                    )
+            return False
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
@@ -446,7 +456,6 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
     node_id = _clean_data(result)['LinodeID']
     data['id'] = node_id
 
@@ -868,9 +877,11 @@ def get_distribution_id(vm_):
     if not distro_id:
         raise SaltCloudNotFound(
             'The DistributionID for the \'{0}\' profile could not be found.\n'
-            'The \'{1}\' instance could not be provisioned.'.format(
+            'The \'{1}\' instance could not be provisioned. The following distributions '
+            'are available:\n{2}'.format(
                 vm_image_name,
-                vm_['name']
+                vm_['name'],
+                pprint.pprint(sorted([distro['LABEL'].encode(__salt_system_encoding__) for distro in distributions]))
             )
         )
 

@@ -135,7 +135,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
         get_content = MagicMock(return_value=[obj_mock])
         with patch('salt.utils.vmware.get_content', get_content):
             ret = salt.utils.vmware.get_mors_with_properties(
-                self.si, self.obj_type, self.prop_list, 
+                self.si, self.obj_type, self.prop_list,
                 self.container_ref, self.traversal_spec,
                 local_properties=True)
         get_content.assert_called_once_with(
@@ -153,11 +153,11 @@ class GetMorsWithPropertiesTestCase(TestCase):
         # obj.obj
         inner_obj_mock = MagicMock()
         obj_prop = PropertyMock(return_value=inner_obj_mock)
-        type(obj_mock).obj= obj_prop 
+        type(obj_mock).obj = obj_prop
         get_content = MagicMock(return_value=[obj_mock])
         with patch('salt.utils.vmware.get_content', get_content):
             ret = salt.utils.vmware.get_mors_with_properties(
-                self.si, self.obj_type, self.prop_list, 
+                self.si, self.obj_type, self.prop_list,
                 self.container_ref, self.traversal_spec)
             get_content.assert_called_once_with(
                 self.si, self.obj_type,
@@ -403,7 +403,7 @@ class GetContentTestCase(TestCase):
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=False,
+            name='traverseEntities', path='view', skip=True,
             type=vim.view.ContainerView)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.container_view_mock,
@@ -441,7 +441,7 @@ class GetContentTestCase(TestCase):
                             self.si_mock,
                             self.obj_type_mock)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=False,
+            name='traverseEntities', path='view', skip=True,
             type=vim.view.ContainerView)
         self.property_spec_mock.assert_called_once_with(
             type=self.obj_type_mock, all=True, pathSet=None)
@@ -458,7 +458,7 @@ class GetContentTestCase(TestCase):
             with patch(self.property_spec_method_name, self.property_spec_mock):
                 with patch(self.obj_spec_method_name, self.obj_spec_mock):
                     salt.utils.vmware.get_content(
-                        self.si_mock, 
+                        self.si_mock,
                         self.obj_type_mock,
                         container_ref=container_ref_mock,
                         local_properties=True)
@@ -472,4 +472,3 @@ if __name__ == '__main__':
     run_tests(WaitForTaskTestCase, needs_daemon=False)
     run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
     run_tests(GetContentTestCase, needs_daemon=False)
-    
