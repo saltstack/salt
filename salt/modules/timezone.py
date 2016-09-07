@@ -69,7 +69,7 @@ def _get_adjtime_timezone():
     if os.path.exists(adjtime_file):
         cmd = ['tail', '-n', '1', adjtime_file]
         return __salt__['cmd.run'](cmd, python_shell=False)
-    elif os.path.exists('/etc/rtc'):
+    elif os.path.exists('/dev/rtc'):
         raise CommandExecutionError(
             'Unable to get hwclock timezone from ' + adjtime_file
         )
