@@ -24,8 +24,8 @@ class ManageTest(integration.ShellCase):
         ret = self.run_run_plus('manage.up')
         self.assertIn('minion', ret['return'])
         self.assertIn('sub_minion', ret['return'])
-        self.assertIn('- minion', ret['out'])
-        self.assertIn('- sub_minion', ret['out'])
+        self.assertTrue(any('- minion' in out for out in ret['out']))
+        self.assertTrue(any('- sub_minion' in out for out in ret['out']))
 
     def test_down(self):
         '''
