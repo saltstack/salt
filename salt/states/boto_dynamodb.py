@@ -434,7 +434,7 @@ def _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
     '''Handles global secondary index for the table present state.'''
     ret = {'result': True}
     if provisioned_indexes:
-        provisioned_gsi_config = {index['IndexName']: index for index in provisioned_indexes}
+        provisioned_gsi_config = dict((index['IndexName'], index) for index in provisioned_indexes)
     else:
         provisioned_gsi_config = {}
     provisioned_index_names = set(provisioned_gsi_config.keys())
@@ -453,7 +453,7 @@ def _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
                     index_name = entry.values()[0]
             if not index_name:
                 ret['result'] = False
-                ret['comment'] = 'Index name not found for table {}'.format(name)
+                ret['comment'] = 'Index name not found for table {0}'.format(name)
                 return ret
             gsi_config[index_name] = index
 
