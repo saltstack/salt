@@ -1589,6 +1589,7 @@ def create_disk(kwargs=None, call=None):
     location = kwargs.get('location', None)
     size = kwargs.get('size', None)
     snapshot = kwargs.get('snapshot', None)
+    disk_type = kwargs.get('type', 'pd-standard')
 
     if location is None:
         log.error(
@@ -1628,7 +1629,7 @@ def create_disk(kwargs=None, call=None):
     )
 
     disk = conn.create_volume(
-        size, name, location, snapshot, image, use_existing
+        size, name, location, snapshot, image, use_existing, disk_type
     )
 
     __utils__['cloud.fire_event'](
@@ -2153,6 +2154,38 @@ def destroy(vm_name, call=None):
     return inst_deleted
 
 
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    if isinstance(kwargs['volumes'], str):
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs['volumes']
+
+    node = kwargs['node']
+    node_data = _expand_node(node)
+    letter = ord('a') - 1
+
+    for idx, volume in enumerate(volumes):
+      volume_name = '{0}-sd{1}'.format(name, chr(letter + 2 + idx))
+
+      volume_dict = {
+        'disk_name': volume_name,
+        'location': node_data['extra']['zone']['name'],
+        'size': volume['size'],
+        'type': volume['type'],
+        'image': volume['image'],
+        'snapshot': volume['snapshot']
+      }
+
+      disk = create_disk(volume_dict, 'function')
+      attach_disk(name, volume_dict, 'action')
+
+
 def request_instance(vm_):
     '''
     Request a single GCE instance from a data dict.
@@ -2254,6 +2287,31 @@ def request_instance(vm_):
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
+
+    # attempt to use volumes ala EC2
+    volumes = config.get_cloud_config_value(
+        'volumes', vm_, __opts__, search_global=True
+    )
+
+    if volumes:
+        __utils__['cloud.fire_event'](
+            'event',
+            'attaching volumes',
+            'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
+            args={'volumes': volumes},
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport']
+        )
+
+        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        created = create_attach_volumes(
+            vm_['name'],
+            {
+                'volumes': volumes,
+                'node': node_data
+            },
+            call='action'
+        )
 
     try:
         node_dict = show_instance(node_data['name'], 'action')
