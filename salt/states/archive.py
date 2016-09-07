@@ -94,6 +94,7 @@ def extracted(name,
               if_missing=None,
               keep=False,
               trim_output=False,
+              skip_verify=False,
               source_hash_update=None,
               use_cmd_unzip=False,
               **kwargs):
@@ -174,6 +175,13 @@ def extracted(name,
         changed. This would extract regardless of the ``if_missing`` parameter.
 
         .. versionadded:: 2016.3.0
+
+    skip_verify:False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.4
 
     archive_format
         ``tar``, ``zip`` or ``rar``
@@ -326,6 +334,7 @@ def extracted(name,
                                                source=source,
                                                source_hash=source_hash,
                                                makedirs=True,
+                                               skip_verify=skip_verify,
                                                saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
