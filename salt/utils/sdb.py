@@ -54,11 +54,11 @@ def sdb_set(uri, value, opts):
     indx = uri.find('/', sdlen)
 
     if (indx == -1) or len(uri[(indx+1):]) == 0:
-        return uri
+        return False
 
     profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
-        return uri
+        return False
 
     fun = '{0}.set'.format(profile['driver'])
     query = uri[indx+1:]
@@ -77,17 +77,17 @@ def sdb_delete(uri, opts):
         return False
 
     if not uri.startswith('sdb://'):
-        return uri
+        return False
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
     if (indx == -1) or len(uri[(indx+1):]) == 0:
-        return uri
+        return False
 
     profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
-        return uri
+        return False
 
     fun = '{0}.delete'.format(profile['driver'])
     query = uri[indx+1:]
