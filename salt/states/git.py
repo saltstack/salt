@@ -221,6 +221,8 @@ def latest(name,
            https_pass=None,
            onlyif=False,
            unless=False,
+           refspec_branch='*',
+           refspec_tag='*',
            **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is
@@ -577,8 +579,8 @@ def latest(name,
         return ret
 
     refspecs = [
-        'refs/heads/*:refs/remotes/{0}/*'.format(remote),
-        '+refs/tags/*:refs/tags/*'
+        'refs/heads/{0}:refs/remotes/{1}/{0}'.format(refspec_branch, remote),
+        '+refs/tags/{0}:refs/tags/{0}'.format(refspec_tag)
     ] if fetch_tags else []
 
     log.info('Checking remote revision for {0}'.format(name))
