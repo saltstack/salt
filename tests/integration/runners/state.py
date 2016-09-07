@@ -88,6 +88,7 @@ class StateRunnerTest(integration.ShellCase):
 
         server_thread.join()
 
+
 @skipIf(salt.utils.is_windows(), '*NIX-only test')
 class OrchEventTest(integration.ShellCase):
     '''
