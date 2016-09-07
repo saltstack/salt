@@ -344,6 +344,15 @@ def _run(cmd,
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
+    def _get_stripped(cmd):
+        # Return stripped command string copies to improve logging.
+        if isinstance(cmd, list):
+            return [x.strip() if isinstance(x, str) else x for x in cmd]
+        elif isinstance(cmd, str):
+            return cmd.strip()
+        else:
+            return cmd
+
     if _check_loglevel(output_loglevel) is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
@@ -351,7 +360,7 @@ def _run(cmd,
         msg = (
             'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
                 '\'' if not isinstance(cmd, list) else '',
-                cmd,
+                _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
                 cwd,
                 '. Executing command in the background, no output will be '
