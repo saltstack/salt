@@ -1566,9 +1566,10 @@ def delete_disk(kwargs=None, call=None):
 def create_disk(kwargs=None, call=None):
 
     '''
-    Create a new persistent disk. Must specify `disk_name` and `location`.
-    Can also specify an `image` or `snapshot` but if neither of those are
-    specified, a `size` (in GB) is required.
+    Create a new persistent disk. Must specify `disk_name` and `location`,
+    and optionally can specify 'disk_type' as pd-standard or pd-ssd, which
+    defaults to pd-standard. Can also specify an `image` or `snapshot` but
+    if neither of those are specified, a `size` (in GB) is required.
 
     CLI Example:
 
@@ -2154,36 +2155,48 @@ def destroy(vm_name, call=None):
     return inst_deleted
 
 
-def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
+def create_attach_volumes(name, kwargs, call=None):
+    '''
+    Create and attach multiple volumes to a node. The 'volumes' and 'node'
+    arguments are required, where 'node' is a libcloud node, and 'volumes'
+    is a list of maps, where each map contains:
+
+    'size': The size of the new disk in GB. Required.
+    'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
+    'image': An image to use for this new disk. Optional.
+    'snapshot': A snapshot to use for this new disk. Optional.
+    
+    Volumes are attached in the order in which they are given, thus on a new
+    node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
+
+    .. versionadded:: Nitrogen
+    '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_attach_volumes action must be called with '
             '-a or --action.'
         )
 
-    if isinstance(kwargs['volumes'], str):
-        volumes = yaml.safe_load(kwargs['volumes'])
-    else:
-        volumes = kwargs['volumes']
 
+    volumes = kwargs['volumes']
     node = kwargs['node']
     node_data = _expand_node(node)
     letter = ord('a') - 1
 
     for idx, volume in enumerate(volumes):
-      volume_name = '{0}-sd{1}'.format(name, chr(letter + 2 + idx))
+        volume_name = '{0}-sd{1}'.format(name, chr(letter + 2 + idx))
 
-      volume_dict = {
-        'disk_name': volume_name,
-        'location': node_data['extra']['zone']['name'],
-        'size': volume['size'],
-        'type': volume['type'],
-        'image': volume['image'],
-        'snapshot': volume['snapshot']
-      }
+        volume_dict = {
+          'disk_name': volume_name,
+          'location': node_data['extra']['zone']['name'],
+          'size': volume['size'],
+          'type': volume['type'],
+          'image': volume['image'],
+          'snapshot': volume['snapshot']
+        }
 
-      disk = create_disk(volume_dict, 'function')
-      attach_disk(name, volume_dict, 'action')
+        create_disk(volume_dict, 'function')
+        attach_disk(name, volume_dict, 'action')
 
 
 def request_instance(vm_):
@@ -2288,7 +2301,6 @@ def request_instance(vm_):
         )
         return False
 
-    # attempt to use volumes ala EC2
     volumes = config.get_cloud_config_value(
         'volumes', vm_, __opts__, search_global=True
     )
@@ -2304,7 +2316,7 @@ def request_instance(vm_):
         )
 
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
-        created = create_attach_volumes(
+        create_attach_volumes(
             vm_['name'],
             {
                 'volumes': volumes,
