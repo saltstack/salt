@@ -1819,7 +1819,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                             ret['success'] = False
                             ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
                             return ret
-        ret['changes'].update(changes) if changes['old'] or changes['new'] else None # pylint: disable=W0106
+        ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
     return ret
 
 
