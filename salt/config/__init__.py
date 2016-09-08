@@ -43,6 +43,8 @@ import salt.defaults.exitcodes
 
 try:
     import psutil
+    if not hasattr(psutil, 'virtual_memory'):
+        raise ImportError('Version of psutil too old.')
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
