@@ -787,7 +787,7 @@ def push(path, keep_symlinks=False, upload_path=None):
     load_path_normal = os.path.normpath(load_path)
 
     # If this is Windows and a drive letter is present, remove it
-    load_path_split_drive = os.path.splitdrive(load_path_normal)[1:]
+    load_path_split_drive = os.path.splitdrive(load_path_normal)[1]
 
     # Finally, split the remaining path into a list for delivery to the master
     load_path_list = os.path.split(load_path_split_drive)
