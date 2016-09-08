@@ -8,8 +8,12 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import libcloud.security
 
+try:
+    import libcloud.security
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Import Salt Libs
 from salt.cloud.clouds import gce
