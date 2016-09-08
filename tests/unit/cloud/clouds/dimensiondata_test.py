@@ -8,7 +8,13 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import libcloud.security
+
+try:
+    import libcloud.security
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
 import platform
 import os
 
@@ -44,7 +50,7 @@ ON_SUSE = True if 'SuSE' in platform.dist() else False
 ON_MAC = True if 'Darwin' in platform.system() else False
 
 if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
-    if os.path.isfile('/etc/ssl/ca-bundle.pem'):
+    if os.path.isfile('/etc/ssl/ca-bundle.pem') and HAS_LIBCLOUD:
         libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
     else:
         HAS_CERTS = False

@@ -84,17 +84,22 @@ class LinuxSysctlTestCase(TestCase):
             self.assertEqual(linux_sysctl.assign(
                 'net.ipv4.ip_forward', 1), ret)
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_persist_no_conf_failure(self):
         '''
         Tests adding of config file failure
         '''
-        with patch('salt.utils.fopen', mock_open()) as m_open:
-            helper_open = m_open()
-            helper_open.write.assertRaises(CommandExecutionError,
-                                           linux_sysctl.persist,
-                                           'net.ipv4.ip_forward',
-                                           1, config=None)
+        asn_cmd = {'pid': 1337, 'retcode': 0,
+            'stderr': "sysctl: permission denied", 'stdout': ''}
+        mock_asn_cmd = MagicMock(return_value=asn_cmd)
+        cmd = "sysctl -w net.ipv4.ip_forward=1"
+        mock_cmd = MagicMock(return_value=cmd)
+        with patch.dict(linux_sysctl.__salt__, {'cmd.run_stdout': mock_cmd,
+                                                'cmd.run_all': mock_asn_cmd}):
+            with patch('salt.utils.fopen', mock_open()) as m_open:
+                self.assertRaises(CommandExecutionError,
+                                  linux_sysctl.persist,
+                                  'net.ipv4.ip_forward',
+                                  1, config=None)
 
     @patch('os.path.isfile', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
