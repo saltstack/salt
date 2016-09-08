@@ -31,7 +31,6 @@ import pprint
 import logging
 
 # Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -253,7 +252,7 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
     '''
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
@@ -381,7 +380,7 @@ def create(vm_):
             return node_data
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             __query_node_data,
             update_args=(vm_['name'],),
             timeout=config.get_cloud_config_value(
@@ -456,12 +455,12 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
-    deploy_script = salt.utils.cloud.os_script(
+    deploy_script = __utils__['cloud.os_script'](
         config.get_cloud_config_value('script', vm_, __opts__),
         vm_,
         __opts__,
-        salt.utils.cloud.salt_config_to_yaml(
-            salt.utils.cloud.minion_config(__opts__, vm_)
+        __utils__['cloud.salt_config_to_yaml'](
+            __utils__['cloud.minion_config'](__opts__, vm_)
         )
     )
     return deploy_script
