@@ -25,6 +25,7 @@ linux_acl.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not sys.platform.startswith('linux'), 'Test for Linux only')
 class LinuxAclTestCase(TestCase):
     '''
     Test cases for salt.states.linux_acl
@@ -35,7 +36,7 @@ class LinuxAclTestCase(TestCase):
         '''
         Test to ensure a Linux ACL is present
         '''
-        name = '/etc'
+        name = '/root'
         acl_type = 'users'
         acl_name = 'damian'
         perms = 'rwx'
@@ -72,7 +73,7 @@ class LinuxAclTestCase(TestCase):
         '''
         Test to ensure a Linux ACL does not exist
         '''
-        name = '/etc'
+        name = '/root'
         acl_type = 'users'
         acl_name = 'damian'
         perms = 'rwx'
