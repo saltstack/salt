@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import contextlib
 import logging
 import os
+import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPInputError
@@ -465,8 +466,8 @@ class Client(object):
         url_path = os.path.join(
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_scheme and url_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
-            url_path = ':'.join([url_scheme, url_path])
+        if url_scheme and url_scheme.lower() in string.ascii_lowercase:
+            url_path = ':'.join((url_scheme, url_path))
             url_scheme = 'file'
 
         if url_scheme in ('file', ''):
