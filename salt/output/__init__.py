@@ -29,24 +29,24 @@ from salt.utils import print_cli
 log = logging.getLogger(__name__)
 
 
-def try_printout(data, out, opts):
+def try_printout(data, out, opts, **kwargs):
     '''
     Safely get the string to print out, try the configured outputter, then
     fall back to nested and then to raw
     '''
     try:
-        printout = get_printout(out, opts)(data)
+        printout = get_printout(out, opts)(data, **kwargs)
         if printout is not None:
             return printout.rstrip()
     except (KeyError, AttributeError, TypeError):
         log.debug(traceback.format_exc())
         try:
-            printout = get_printout('nested', opts)(data)
+            printout = get_printout('nested', opts)(data, **kwargs)
             if printout is not None:
                 return printout.rstrip()
         except (KeyError, AttributeError, TypeError):
             log.error('Nested output failed: ', exc_info=True)
-            printout = get_printout('raw', opts)(data)
+            printout = get_printout('raw', opts)(data, **kwargs)
             if printout is not None:
                 return printout.rstrip()
 
@@ -82,13 +82,13 @@ def progress_end(progress_iter):
     return None
 
 
-def display_output(data, out=None, opts=None):
+def display_output(data, out=None, opts=None, **kwargs):
     '''
     Print the passed data using the desired output
     '''
     if opts is None:
         opts = {}
-    display_data = try_printout(data, out, opts)
+    display_data = try_printout(data, out, opts, **kwargs)
 
     output_filename = opts.get('output_file', None)
     log.trace('data = {0}'.format(data))
@@ -178,11 +178,11 @@ def get_printout(out, opts=None, **kwargs):
     return outputters[out]
 
 
-def out_format(data, out, opts=None):
+def out_format(data, out, opts=None, **kwargs):
     '''
     Return the formatted outputter string for the passed data
     '''
-    return try_printout(data, out, opts)
+    return try_printout(data, out, opts, **kwargs)
 
 
 def strip_esc_sequence(txt):
