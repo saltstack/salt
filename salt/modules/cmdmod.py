@@ -303,6 +303,22 @@ def _run(cmd,
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
+    if _check_loglevel(output_loglevel) is not None:
+        # Always log the shell commands at INFO unless quiet logging is
+        # requested. The command output is what will be controlled by the
+        # 'loglevel' parameter.
+        msg = (
+            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+                '\'' if not isinstance(cmd, list) else '',
+                cmd,
+                'as user \'{0}\' '.format(runas) if runas else '',
+                cwd,
+                '. Executing command in the background, no output will be '
+                'logged.' if bg else ''
+            )
+        )
+        log.info(log_callback(msg))
+
     if runas and salt.utils.is_windows():
         if not password:
             msg = 'password is a required argument for runas on Windows'
@@ -367,21 +383,6 @@ def _run(cmd,
                     runas
                 )
             )
-
-    if _check_loglevel(output_loglevel) is not None:
-        # Always log the shell commands at INFO unless quiet logging is
-        # requested. The command output is what will be controlled by the
-        # 'loglevel' parameter.
-        msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
-                '\'' if not isinstance(cmd, list) else '',
-                cmd,
-                'as user \'{0}\' '.format(runas) if runas else '',
-                cwd,
-                ' in the background, no output will be logged' if bg else ''
-            )
-        )
-        log.info(log_callback(msg))
 
     if reset_system_locale is True:
         if not salt.utils.is_windows():
@@ -680,6 +681,7 @@ def run(cmd,
         saltenv='base',
         use_vt=False,
         bg=False,
+        password=None,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -699,8 +701,8 @@ def run(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -848,7 +850,7 @@ def run(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None),
+               password=password,
                bg=bg)
 
     log_callback = _check_cb(log_callback)
@@ -888,6 +890,7 @@ def shell(cmd,
         saltenv='base',
         use_vt=False,
         bg=False,
+        password=None,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -906,15 +909,16 @@ def shell(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
     :param int shell: Shell to execute under. Defaults to the system default
       shell.
 
-    :param bool bg: If True, run command in background and do not await or deliver it's results
+    :param bool bg: If True, run command in background and do not await or
+      deliver its results
 
     :param list env: A list of environment variables to be set prior to
       execution.
@@ -1053,6 +1057,7 @@ def shell(cmd,
                use_vt=use_vt,
                python_shell=python_shell,
                bg=bg,
+               password=password,
                **kwargs)
 
 
@@ -1074,6 +1079,7 @@ def run_stdout(cmd,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
+               password=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1090,8 +1096,8 @@ def run_stdout(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1212,6 +1218,7 @@ def run_stdout(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
+               password=password,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1255,6 +1262,7 @@ def run_stderr(cmd,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
+               password=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1271,8 +1279,8 @@ def run_stderr(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1394,7 +1402,7 @@ def run_stderr(cmd,
                saltenv=saltenv,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
-               password=kwargs.get('password', None))
+               password=password)
 
     log_callback = _check_cb(log_callback)
 
@@ -1438,6 +1446,7 @@ def run_all(cmd,
             saltenv='base',
             use_vt=False,
             redirect_stderr=False,
+            password=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1454,8 +1463,8 @@ def run_all(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1587,7 +1596,7 @@ def run_all(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               password=password)
 
     log_callback = _check_cb(log_callback)
 
@@ -1629,6 +1638,7 @@ def retcode(cmd,
             ignore_retcode=False,
             saltenv='base',
             use_vt=False,
+            password=None,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -1645,8 +1655,8 @@ def retcode(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1770,7 +1780,7 @@ def retcode(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               password=password)
 
     log_callback = _check_cb(log_callback)
 
@@ -1807,6 +1817,7 @@ def _retcode_quiet(cmd,
                    ignore_retcode=False,
                    saltenv='base',
                    use_vt=False,
+                   password=None,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -1829,6 +1840,7 @@ def _retcode_quiet(cmd,
                    ignore_retcode=ignore_retcode,
                    saltenv=saltenv,
                    use_vt=use_vt,
+                   password=password,
                    **kwargs)
 
 
@@ -1851,6 +1863,7 @@ def script(source,
            saltenv='base',
            use_vt=False,
            bg=False,
+           password=None,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1879,8 +1892,8 @@ def script(source,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2038,8 +2051,8 @@ def script(source,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None),
-               bg=bg)
+               bg=bg,
+               password=password)
     _cleanup_tempfile(path)
     return ret
 
@@ -2061,6 +2074,7 @@ def script_retcode(source,
                    output_loglevel='debug',
                    log_callback=None,
                    use_vt=False,
+                   password=None,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2093,8 +2107,8 @@ def script_retcode(source,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2201,6 +2215,7 @@ def script_retcode(source,
                   output_loglevel=output_loglevel,
                   log_callback=log_callback,
                   use_vt=use_vt,
+                  password=password,
                   **kwargs)['retcode']
 
 
@@ -2348,10 +2363,10 @@ def run_chroot(root,
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
     within a chroot, with dev and proc mounted in the chroot
 
-    root:
+    root
         Path to the root of the jail to use.
 
-    cmd:
+    cmd
         The command to run. ex: 'ls -lart /home'
 
     cwd
@@ -2586,6 +2601,7 @@ def powershell(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
+        password=None,
         **kwargs):
     '''
     Execute the passed PowerShell command and return the output as a string.
@@ -2613,8 +2629,8 @@ def powershell(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2727,6 +2743,7 @@ def powershell(cmd,
                    saltenv=saltenv,
                    use_vt=use_vt,
                    python_shell=python_shell,
+                   password=password,
                    **kwargs)
 
     try:
@@ -2749,7 +2766,9 @@ def run_bg(cmd,
         output_loglevel='debug',
         log_callback=None,
         reset_system_locale=True,
+        ignore_retcode=False,
         saltenv='base',
+        password=None,
         **kwargs):
     r'''
     .. versionadded: 2016.3.0
@@ -2770,6 +2789,11 @@ def run_bg(cmd,
 
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
+
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
+
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2896,12 +2920,11 @@ def run_bg(cmd,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               # ignore_retcode=ignore_retcode,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
-               # password=kwargs.get('password', None),
-               )
+               password=password)
 
     return {
         'pid': res['pid']
