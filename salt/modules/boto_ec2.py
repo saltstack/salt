@@ -1705,15 +1705,16 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
 def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                     region=None, key=None, keyid=None, profile=None):
     '''
-    tag_maps
-        (list) - List of dicts of filters and tags, where 'filters' is a dict suitable for passing
-                 to the 'filters' argument of get_all_volumes() above, and 'tags' is a dict of tags
-                 to be set on volumes (via create_tags/delete_tags) as matched by the given filters.
-                 The filter syntax is extended to permit passing either a list of volume_ids or an
-                 instance_name (with instance_name being the Name tag of the instance to which the
-                 desired volumes are mapped).  Each mapping in the list is applied separately, so
-                 multiple sets of volumes can be all tagged differently with one call to this
-                 function.
+    tag_maps (list)
+        List of dicts of filters and tags, where 'filters' is a dict suitable for passing to the
+        'filters' argument of get_all_volumes() above, and 'tags' is a dict of tags to be set on
+        volumes (via create_tags/delete_tags) as matched by the given filters.  The filter syntax
+        is extended to permit passing either a list of volume_ids or an instance_name (with
+        instance_name being the Name tag of the instance to which the desired volumes are mapped).
+        Each mapping in the list is applied separately, so multiple sets of volumes can be all
+        tagged differently with one call to this function.  If filtering by instance Name, You may
+        additionally limit the instances matched by passing in a list of desired instance states.
+        The default set of states is ('pending', 'rebooting', 'running', 'stopping', 'stopped').
 
     YAML example fragment:
 
@@ -1727,6 +1728,9 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
           tags:
             ManagedSnapshots: true
             BillingGroup: bubba.hotep@aws-foo.com
+          in_states:
+          - stopped
+          - terminated
         - filters:
             instance_name: prd-foo-01.aws-foo.com
           tags:
@@ -1737,19 +1741,21 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
           tags:
             BillingGroup: infra-team@aws-foo.com
 
-    authoritative
-        (bool) - If true, any existing tags on the matched volumes, and not explicitly requested
-                 here, will be removed.
-    dry_run
-        (bool) - If true, don't change anything, just return a dictionary describing any changes
-                 which would have been applied.
+    authoritative (bool)
+        If true, any existing tags on the matched volumes, and not explicitly requested here, will
+        be removed.
 
-    returns
-        (dict) - A dict dsecribing status and any changes.
+    dry_run (bool)
+        If true, don't change anything, just return a dictionary describing any changes which
+        would have been applied.
+
+    returns (dict)
+        A dict dsecribing status and any changes.
 
     .. versionadded:: Carbon
     '''
-    ret = {'success': True, 'comment': "", 'changes': {}}
+    ret = {'success': True, 'comment': '', 'changes': {}}
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     for tm in tag_maps:
         filters = tm.get('filters')
         tags = tm.get('tags')
@@ -1760,23 +1766,27 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
         log.debug('got filters: {0}'.format(filters))
-        for k, v in six.iteritems(filters):
-            if k == 'volume_ids':
-                args['volume_ids'] = v
-            elif k == 'instance_name':
-                try:
-                    instance_id = get_id(name=v, region=region, key=key, keyid=keyid, profile=profile)
-                except CommandExecutionError as e:
-                    log.warning(e)
-                    continue  # Hmme, abort or do what we can...?  Guess the latter for now.
-                if not instance_id:
-                    log.warning("Couldn't resolve instance Name {0} to an ID.".format(v))
-                    continue
-                new_filters['attachment.instance_id'] = instance_id
-            else:
-                new_filters[k] = v
+        instance_id = None
+        in_states = tm.get('in_states', running_states)
+        try:
+            for k, v in six.iteritems(filters):
+                if k == 'volume_ids':
+                    args['volume_ids'] = v
+                elif k == 'instance_name':
+                    instance_id = get_id(name=v, in_states=in_states, region=region, key=key,
+                                         keyid=keyid, profile=profile)
+                    if not instance_id:
+                        msg = "Couldn't resolve instance Name {0} to an ID.".format(v)
+                        raise CommandExecutionError(msg)
+                    new_filters['attachment.instance_id'] = instance_id
+                else:
+                    new_filters[k] = v
+        except CommandExecutionError as e:
+            log.warning(e)
+            continue  # Hmme, abort or do what we can...?  Guess the latter for now.
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
+        log.debug('got volume list: {0}'.format(volumes))
         changes = {'old': {}, 'new': {}}
         for vol in volumes:
             log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
@@ -1809,7 +1819,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                             ret['success'] = False
                             ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
                             return ret
-    ret['changes'] = changes if changes['old'] or changes['new'] else {}
+        ret['changes'].update(changes) if changes['old'] or changes['new'] else None # pylint: disable=W0106
     return ret
 
 
