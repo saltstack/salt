@@ -477,6 +477,12 @@ class ParallelsTestCase(TestCase):
             self.assertEqual(parallels._validate_snap_name(name, '3.14159'), snap_id)
             mock_snap_numb.assert_called_once_with(name, u'3.14159', strict=True, runas=None)
 
+        # Validate not strict (think neutrino oscillation)
+        mock_snap_non_strict = MagicMock(return_value=snap_id)
+        with patch.object(parallels, 'snapshot_name_to_id', mock_snap_non_strict):
+            self.assertEqual(parallels._validate_snap_name(name, u'e_ν', strict=False), snap_id)
+            mock_snap_non_strict.assert_called_once_with(name, u'e_ν', strict=False, runas=None)
+
     def test_list_snapshots(self):
         '''
         Test parallels.list_snapshots
@@ -561,18 +567,44 @@ class ParallelsTestCase(TestCase):
         '''
         Test parallels.delete_snapshot
         '''
+        delete_message = ('Delete the snapshot...\n'
+                          'The snapshot has been successfully deleted.')
+
+        # Validate single ID
         name = 'macvm'
         snap_name = 'kaon'
         snap_id = 'c2eab062-a635-4ccd-b9ae-998370f898b5'
 
         mock_snap_name = MagicMock(return_value=snap_id)
         with patch.object(parallels, '_validate_snap_name', mock_snap_name):
-            mock_delete = MagicMock(return_value='')
+            mock_delete = MagicMock(return_value=delete_message)
             with patch.object(parallels, 'prlctl', mock_delete):
-                parallels.delete_snapshot(name, snap_name)
+                ret = parallels.delete_snapshot(name, snap_name)
+                self.assertEqual(ret, delete_message)
                 mock_delete.assert_called_once_with('snapshot-delete',
                                                     [name, '--id', snap_id],
                                                     runas=None)
+
+        # Validate multiple IDs
+        name = 'macvm'
+        snap_name = 'higgs doublet'
+        snap_ids = ['c2eab062-a635-4ccd-b9ae-998370f898b5',
+                    '8aca07c5-a0e1-4dcb-ba75-cb154d46d516']
+
+        mock_snap_ids = MagicMock(return_value=snap_ids)
+        with patch.object(parallels, '_validate_snap_name', mock_snap_ids):
+            mock_delete = MagicMock(return_value=delete_message)
+            with patch.object(parallels, 'prlctl', mock_delete):
+                ret = parallels.delete_snapshot(name, snap_name, all=True)
+                mock_ret = {snap_ids[0]: delete_message,
+                            snap_ids[1]: delete_message}
+                self.assertDictEqual(ret, mock_ret)
+                mock_delete.assert_any_call('snapshot-delete',
+                                            [name, '--id', snap_ids[0]],
+                                            runas=None)
+                mock_delete.assert_any_call('snapshot-delete',
+                                            [name, '--id', snap_ids[1]],
+                                            runas=None)
 
     def test_revert_snapshot(self):
         '''
