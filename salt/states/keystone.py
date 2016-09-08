@@ -79,7 +79,7 @@ _OS_IDENTITY_API_VERSION = 2
 _TENANT_ID = 'tenant_id'
 
 
-def _api_version(**connection_args):
+def _api_version(profile=None, **connection_args):
     '''
     Sets global variables _OS_IDENTITY_API_VERSION and _TENANT_ID
     depending on API version.
@@ -87,7 +87,7 @@ def _api_version(**connection_args):
     global _TENANT_ID
     global _OS_IDENTITY_API_VERSION
     try:
-        if __salt__['keystone.api_version'](**connection_args) >= 'v3':
+        if float(__salt__['keystone.api_version'](profile=profile, **connection_args).strip('v')) >= 3:
             _TENANT_ID = 'project_id'
             _OS_IDENTITY_API_VERSION = 3
     except KeyError:
@@ -145,7 +145,7 @@ def user_present(name,
            'result': True,
            'comment': 'User "{0}" will be updated'.format(name)}
 
-    _api_version(**connection_args)
+    _api_version(profile=profile, **connection_args)
 
     if project and not tenant:
         tenant = project
@@ -337,7 +337,7 @@ def tenant_present(name, description=None, enabled=True, profile=None,
            'result': True,
            'comment': 'Tenant / project "{0}" already exists'.format(name)}
 
-    _api_version(**connection_args)
+    _api_version(profile=profile, **connection_args)
 
     # Check if tenant is already present
     tenant = __salt__['keystone.tenant_get'](name=name,
@@ -644,7 +644,7 @@ def endpoint_present(name,
            'result': True,
            'comment': 'Endpoint for service "{0}" already exists'.format(name)}
 
-    _api_version(**connection_args)
+    _api_version(profile=profile, **connection_args)
 
     endpoint = __salt__['keystone.endpoint_get'](name,
                                                  profile=profile,
@@ -742,6 +742,7 @@ def endpoint_present(name,
                 region=region,
                 url=url,
                 interface=interface,
+                profile=profile,
                 **connection_args)
         else:
             ret['changes'] = __salt__['keystone.endpoint_create'](
