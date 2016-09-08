@@ -291,33 +291,6 @@ def exists(name, runas=None):
     return False
 
 
-def state(name, runas=None):
-    '''
-    Return the state of the VM
-
-    .. versionadded:: Carbon
-
-    :param str name:
-        Name/ID of VM
-
-    :param str runas:
-        The user that the prlctl command will be run as
-
-    Example:
-
-    .. code-block:: bash
-
-        salt '*' parallels.state macvm runas=macdev
-    '''
-    vm_info = list_vms(name, info=True, runas=runas).splitlines()
-    for info_line in vm_info:
-        if 'State: ' in info_line:
-            return info_line.split('State: ')[1]
-
-    log.error('Cannot find state of VM named {0}'.format(name))
-    return ''
-
-
 def start(name, runas=None):
     '''
     Start a VM

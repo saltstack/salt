@@ -247,26 +247,6 @@ class ParallelsTestCase(TestCase):
         with patch.object(parallels, 'list_vms', mock_list):
             self.assertFalse(parallels.exists('winvm', runas=runas))
 
-    def test_state(self):
-        '''
-        Test parallels.state
-        '''
-        name = 'macvm'
-        runas = 'macdev'
-
-        # Validate state
-        mock_list = MagicMock(return_value='Name: {0}\nState: cantering'.format(name))
-        with patch.object(parallels, 'list_vms', mock_list):
-            self.assertEqual(parallels.state(name, runas=runas), 'cantering')
-
-        # Validate cannot find state
-        mock_list = MagicMock(return_value='Name: {0}\nFavorite Color: unknown'.format(name))
-        mock_log_error = MagicMock()
-        with patch.object(parallels, 'list_vms', mock_list):
-            with patch.object(parallels.log, 'error', mock_log_error):
-                self.assertEqual(parallels.state(name, runas=runas), '')
-                mock_log_error.assert_called_once_with('Cannot find state of VM named {0}'.format(name))
-
     def test_start(self):
         '''
         Test parallels.start
