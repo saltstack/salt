@@ -15,9 +15,6 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-import platform
-import os
-
 # Import Salt Libs
 from salt.cloud.clouds import dimensiondata
 from salt.exceptions import SaltCloudSystemExit
