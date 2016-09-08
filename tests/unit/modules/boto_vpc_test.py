@@ -125,6 +125,13 @@ def _has_required_moto():
 context = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcTestCaseBase(TestCase):
     conn3 = None
 
@@ -253,13 +260,6 @@ class BotoVpcTestCaseMixin(object):
         return rtbl
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     '''
     TestCase for salt.modules.boto_vpc module
