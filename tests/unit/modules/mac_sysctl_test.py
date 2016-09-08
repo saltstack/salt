@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import darwin_sysctl
+from salt.modules import mac_sysctl
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
@@ -25,13 +25,13 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Globals
-darwin_sysctl.__salt__ = {}
+mac_sysctl.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DarwinSysctlTestCase(TestCase):
     '''
-    TestCase for salt.modules.darwin_sysctl module
+    TestCase for salt.modules.mac_sysctl module
     '''
 
     def test_get(self):
@@ -39,8 +39,8 @@ class DarwinSysctlTestCase(TestCase):
         Tests the return of get function
         '''
         mock_cmd = MagicMock(return_value='foo')
-        with patch.dict(darwin_sysctl.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(darwin_sysctl.get('kern.ostype'), 'foo')
+        with patch.dict(mac_sysctl.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(mac_sysctl.get('kern.ostype'), 'foo')
 
     def test_assign_cmd_failed(self):
         '''
@@ -49,9 +49,9 @@ class DarwinSysctlTestCase(TestCase):
         cmd = {'pid': 3548, 'retcode': 1, 'stderr': '',
                'stdout': 'net.inet.icmp.icmplim: 250 -> 50'}
         mock_cmd = MagicMock(return_value=cmd)
-        with patch.dict(darwin_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.dict(mac_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertRaises(CommandExecutionError,
-                              darwin_sysctl.assign,
+                              mac_sysctl.assign,
                               'net.inet.icmp.icmplim', 50)
 
     def test_assign(self):
@@ -62,8 +62,8 @@ class DarwinSysctlTestCase(TestCase):
                'stdout': 'net.inet.icmp.icmplim: 250 -> 50'}
         ret = {'net.inet.icmp.icmplim': '50'}
         mock_cmd = MagicMock(return_value=cmd)
-        with patch.dict(darwin_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(darwin_sysctl.assign(
+        with patch.dict(mac_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(mac_sysctl.assign(
                 'net.inet.icmp.icmplim', 50), ret)
 
     @patch('os.path.isfile', MagicMock(return_value=False))
@@ -72,11 +72,11 @@ class DarwinSysctlTestCase(TestCase):
         Tests adding of config file failure
         '''
         with patch('salt.utils.fopen', mock_open()) as m_open:
-            helper_open = m_open()
-            helper_open.write.assertRaises(CommandExecutionError,
-                                           darwin_sysctl.persist,
-                                           'net.inet.icmp.icmplim',
-                                           50, config=None)
+            m_open.side_effect = IOError(13, 'Permission denied', '/file')
+            self.assertRaises(CommandExecutionError,
+                              mac_sysctl.persist,
+                              'net.inet.icmp.icmplim',
+                              50, config=None)
 
     @patch('os.path.isfile', MagicMock(return_value=False))
     def test_persist_no_conf_success(self):
@@ -84,7 +84,7 @@ class DarwinSysctlTestCase(TestCase):
         Tests successful add of config file when previously not one
         '''
         with patch('salt.utils.fopen', mock_open()) as m_open:
-            darwin_sysctl.persist('net.inet.icmp.icmplim', 50)
+            mac_sysctl.persist('net.inet.icmp.icmplim', 50)
             helper_open = m_open()
             helper_open.write.assert_called_once_with(
                 '#\n# Kernel sysctl configuration\n#\n')
@@ -97,7 +97,7 @@ class DarwinSysctlTestCase(TestCase):
         to_write = '#\n# Kernel sysctl configuration\n#\n'
         m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50', '\n'])]
         with patch('salt.utils.fopen', mock_open(read_data=to_write)) as m_open:
-            darwin_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
+            mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
             helper_open = m_open()
             calls_list = helper_open.method_calls
             self.assertEqual(calls_list, m_calls_list)

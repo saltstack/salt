@@ -48,7 +48,7 @@ class LoadAuthTestCase(TestCase):
                 'eauth': 'pam'
             }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             ret = self.lauth.load_name(valid_eauth_load)
-            format_call_mock.assert_has_calls(expected_ret)
+            format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
     def test_get_groups(self):
         valid_eauth_load = {'username': 'test_user',
@@ -63,7 +63,7 @@ class LoadAuthTestCase(TestCase):
                 'eauth': 'pam'
                 }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             self.lauth.get_groups(valid_eauth_load)
-            format_call_mock.assert_has_calls(expected_ret)
+            format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
 
 @patch('zmq.Context', MagicMock())

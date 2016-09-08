@@ -19,7 +19,10 @@ def __virtual__():
     '''
     Only run on Darwin (OS X) systems
     '''
-    return __virtualname__ if __grains__['os'] == 'MacOS' else False
+    if __grains__['os'] == 'MacOS':
+        return __virtualname__
+    return (False, 'The darwin_sysctl execution module cannot be loaded: '
+            'only available on MacOS systems.')
 
 
 def show(config_file=False):
