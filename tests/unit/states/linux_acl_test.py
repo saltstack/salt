@@ -4,6 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
