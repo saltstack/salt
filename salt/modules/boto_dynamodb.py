@@ -224,6 +224,12 @@ def create_global_secondary_index(table_name, global_index, region=None,
                                   key=None, keyid=None, profile=None):
     '''
     Creates a single global secondary index on a DynamoDB table.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.create_global_secondary_index table_name /
+        index_name
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
@@ -234,6 +240,12 @@ def update_global_secondary_index(table_name, global_indexes, region=None,
                                   key=None, keyid=None, profile=None):
     '''
     Updates the throughput of the given global secondary indexes.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.update_global_secondary_index table_name /
+        indexes
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
