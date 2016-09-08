@@ -5,6 +5,11 @@ Salt 2016.3.3 Release Notes
 Version 2016.3.3 is a bugfix release for :doc:`2016.3.0
 </topics/releases/2016.3.0>`.
 
+Known Issues
+------------
+
+:issue:`36055`: Salt Cloud events (``salt/cloud``) are not generated on the
+master event bus when provisioning cloud systems.
 
 Changes for v2016.3.2..2016.3.3
 -------------------------------
