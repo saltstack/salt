@@ -580,6 +580,8 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
 
         if __grains__['os'] == 'FreeBSD' and origin:
             cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
+        elif __grains__['os'] == 'OpenBSD':
+            cver = new_pkgs.get(pkgname.split('%')[0])
         elif __grains__['os_family'] == 'Debian':
             cver = new_pkgs.get(pkgname.split('=')[0])
         else:
