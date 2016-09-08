@@ -10,23 +10,23 @@ from __future__ import absolute_import
 import logging
 
 try:
-	from sense_hat import SenseHat
+    from sense_hat import SenseHat
     _sensehat = SenseHat()
-	has_sense_hat = True
+    has_sense_hat = True
 except ImportError, NameError:
     _sensehat = None
-	has_sense_hat = False
+    has_sense_hat = False
 
 log = logging.getLogger(__name__)
 
 def __virtual__():
-	'''
-	Only load the module if SenseHat is available
-	'''
-	if has_sense_hat:
-		return True
-	else:
-		return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a raspberry pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
+    '''
+    Only load the module if SenseHat is available
+    '''
+    if has_sense_hat:
+        return True
+    else:
+        return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a raspberry pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
 
 def set_rotation(rotation, redraw=True):
     '''
@@ -72,18 +72,18 @@ def low_light(low_light=True):
 
 def show_message(message, msg_type=None,
         scroll_speed=0.1, text_color=[255, 255, 255], back_color=[0, 0, 0]):
-	'''
-	Displays a message on the LED matrix.
+    '''
+    Displays a message on the LED matrix.
 
     message
         The message to display
     msg_type
         The type of the message. Changes the appearence of the message.
         Available types are:
-    		error:		red text
-    		warning:	orange text
+            error:        red text
+            warning:    orange text
             success:    green text
-    		info:		blue text
+            info:        blue text
     scroll_speed
         The speed at which the message moves over the LED matrix.
         This value represents the time paused for between shifting the text
@@ -97,11 +97,11 @@ def show_message(message, msg_type=None,
 
     .. code-block:: bash
 
-		salt 'raspberry' sensehat.show_message 'Status ok'
-		salt 'raspberry' sensehat.show_message 'Something went wrong' error
-		salt 'raspberry' sensehat.show_message 'Red' text_color='[255, 0, 0]'
-		salt 'raspberry' sensehat.show_message 'Hello world' None 0.2 [0, 0, 255] [255, 255, 0]
-	'''
+        salt 'raspberry' sensehat.show_message 'Status ok'
+        salt 'raspberry' sensehat.show_message 'Something went wrong' error
+        salt 'raspberry' sensehat.show_message 'Red' text_color='[255, 0, 0]'
+        salt 'raspberry' sensehat.show_message 'Hello world' None 0.2 [0, 0, 255] [255, 255, 0]
+    '''
 
     color_by_type = {
         'error': [255, 0, 0],
@@ -113,8 +113,8 @@ def show_message(message, msg_type=None,
     if msg_type in color_by_type:
         text_color = color_by_type[msg_type]
 
-	_sensehat.show_message(message, scroll_speed, text_color, back_color)
-	return {'message': message}
+    _sensehat.show_message(message, scroll_speed, text_color, back_color)
+    return {'message': message}
 
 def show_letter(letter, text_color, back_color):
     '''
@@ -136,7 +136,7 @@ def show_letter(letter, text_color, back_color):
     salt 'raspberry' sensehat.show_letter B [0, 0, 255] [255, 255, 0]
     '''
     _sensehat.show_letter(letter, text_color, back_color)
-	return {'letter': letter}
+    return {'letter': letter}
 
 def show_image(image):
     '''
