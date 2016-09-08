@@ -875,9 +875,12 @@ def refresh_db():
         if not line:
             continue
         if line.strip().startswith('Repository') and '\'' in line:
-            key = line.split('\'')[1].strip()
-            if 'is up to date' in line:
-                ret[key] = False
+            try:
+                key = line.split('\'')[1].strip()
+                if 'is up to date' in line:
+                    ret[key] = False
+            except IndexError:
+                continue
         elif line.strip().startswith('Building') and '\'' in line:
             key = line.split('\'')[1].strip()
             if 'done' in line:
