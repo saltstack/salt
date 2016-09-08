@@ -2165,7 +2165,7 @@ def create_attach_volumes(name, kwargs, call=None):
     'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
     'image': An image to use for this new disk. Optional.
     'snapshot': A snapshot to use for this new disk. Optional.
-    
+
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
 
@@ -2176,7 +2176,6 @@ def create_attach_volumes(name, kwargs, call=None):
             'The create_attach_volumes action must be called with '
             '-a or --action.'
         )
-
 
     volumes = kwargs['volumes']
     node = kwargs['node']
