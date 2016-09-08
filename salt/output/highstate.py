@@ -492,12 +492,12 @@ def _nested_changes(changes):
     # anyway so have to restore it after the other outputter is done
     if __opts__['color']:
         __opts__['color'] = u'CYAN'
-    __opts__['nested_indent'] = 14
     ret = u'\n'
     ret += salt.output.out_format(
             changes,
             'nested',
-            __opts__)
+            __opts__,
+            nested_indent=14)
     __opts__ = opts
     return ret
 
