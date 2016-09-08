@@ -7,6 +7,7 @@ integration tests for mac_service
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
@@ -14,7 +15,11 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-
+@skipIf(not salt.utils.is_darwin(), 'Test only available on Mac OS X')
+@skipIf(not salt.utils.which('launchctl'), 'Test requires launchctl binary')
+@skipIf(not salt.utils.which('plutil'), 'Test requires plutil binary')
+@skipIf(salt.utils.get_uid(salt.utils.get_user()) != 0,
+        'Test requires root')
 class MacServiceModuleTest(integration.ModuleCase):
     '''
     Validate the mac_service module
@@ -24,26 +29,14 @@ class MacServiceModuleTest(integration.ModuleCase):
 
     def setUp(self):
         '''
-        Get current settings
+        Get current state of the test service
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on Mac OS X')
-
-        if not salt.utils.which('launchctl'):
-            self.skipTest('Test requires launchctl binary')
-
-        if not salt.utils.which('plutil'):
-            self.skipTest('Test requires plutil binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.SERVICE_ENABLED = self.run_function('service.enabled',
                                                  [self.SERVICE_NAME])
 
     def tearDown(self):
         '''
-        Reset to original settings
+        Reset the test service to the original state
         '''
         if self.SERVICE_ENABLED:
             self.run_function('service.start', [self.SERVICE_NAME])
@@ -79,8 +72,8 @@ class MacServiceModuleTest(integration.ModuleCase):
 
         # Raise an error
         self.assertIn(
-            ' Failed to error service',
-            self.run_function('service.launchctl', ['error']))
+            'Failed to error service',
+            self.run_function('service.launchctl', ['error', 'bootstrap']))
 
     def test_list(self):
         '''
