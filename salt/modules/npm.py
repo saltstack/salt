@@ -181,10 +181,19 @@ def _extract_json(npm_output):
     log.error(lines)
 
     # Strip all lines until JSON output starts
-    while lines and not lines[0].startswith('{') and not lines[0].startswith('['):
-        lines = lines[1:]
-    while lines and not lines[-1].startswith('}') and not lines[-1].startswith(']'):
-        lines = lines[:-1]
+    # Mac OSX (or maybe it's NPM 3.10) includes the following line in the return
+    # when a new module is installed which is invalid JSON:
+    #     [fsevents] Success: "..."
+    if salt.utils.is_darwin():
+        while lines and not lines[0].startswith('{'):
+            lines = lines[1:]
+        while lines and not lines[-1].startswith('}'):
+            lines = lines[:-1]
+    else:
+        while lines and not lines[0].startswith('{') and not lines[0].startswith('['):
+            lines = lines[1:]
+        while lines and not lines[-1].startswith('}') and not lines[-1].startswith(']'):
+            lines = lines[:-1]
     try:
         return json.loads(''.join(lines))
     except ValueError:
