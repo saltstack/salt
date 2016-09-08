@@ -63,10 +63,11 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         # Expected Functionality
         self.assertTrue(
-            self.run_function('service.launchctl', ['error', 'bootstrap', 64]))
+            self.run_function('service.launchctl',
+                              ['error', 'bootstrap', '64']))
         self.assertEqual(
             self.run_function('service.launchctl',
-                              ['error', 'bootstrap', 64],
+                              ['error', 'bootstrap', '64'],
                               return_stdout=True),
             '64: unknown error code')
 
