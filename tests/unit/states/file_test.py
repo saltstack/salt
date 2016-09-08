@@ -1367,26 +1367,6 @@ class FileTestCase(TestCase):
                                                      (name, source,
                                                       preserve=True), ret)
 
-                    with patch.object(os.path, 'isdir', mock_t):
-                        with patch.dict(filestate.__opts__, {'test': False}):
-                            with patch.object(shutil, 'copy',
-                                              MagicMock(side_effect=[IOError,
-                                                                     True])):
-                                comt = ('Failed to copy "{0}" to "{1}"'
-                                        .format(source, name))
-                                ret.update({'comment': comt, 'result': False})
-                                self.assertDictEqual(filestate.copy
-                                                     (name, source,
-                                                      preserve=True), ret)
-
-                                comt = ('Copied "{0}" to "{1}"'.format(source,
-                                                                       name))
-                                ret.update({'comment': comt, 'result': True,
-                                            'changes': {name: source}})
-                                self.assertDictEqual(filestate.copy
-                                                     (name, source,
-                                                      preserve=True), ret)
-
     # 'rename' function tests: 1
 
     def test_rename(self):
