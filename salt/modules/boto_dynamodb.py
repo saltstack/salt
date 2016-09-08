@@ -269,6 +269,9 @@ def extract_index(index_data, global_index=False):
     '''
     Instantiates and returns an AllIndex object given a valid index
     configuration
+
+    CLI Example:
+        salt myminion boto_dynamodb.extract_index index
     '''
     parsed_data = {}
     keys = []
