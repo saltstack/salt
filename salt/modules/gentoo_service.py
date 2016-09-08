@@ -10,9 +10,8 @@ to the correct service manager
     <module-provider-override>`.
 '''
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs

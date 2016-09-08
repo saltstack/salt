@@ -2607,13 +2607,16 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     all cachedirs to find the minion's cache file.
     Needs `update_cachedir` set to True.
     '''
-    if opts.get('update_cachedir', False) is False:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if __opts__.get('update_cachedir', False) is False:
         return
 
     if base is None:
         base = __opts__['cachedir']
 
-    driver = next(six.iterkeys(opts['providers'][provider]))
+    driver = next(six.iterkeys(__opts__['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
     for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2839,7 +2842,10 @@ def cache_node(node, provider, opts):
 
     .. versionadded:: 2014.7.0
     '''
-    if 'update_cachedir' not in opts or not opts['update_cachedir']:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if 'update_cachedir' not in __opts__ or not __opts__['update_cachedir']:
         return
 
     if not os.path.exists(os.path.join(__opts__['cachedir'], 'active')):

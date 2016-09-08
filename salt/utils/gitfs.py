@@ -1317,7 +1317,7 @@ class Pygit2(GitProvider):
                 self.repo.config.set_multivar(
                     'http.sslVerify',
                     '',
-                    self.ssl_verify
+                    str(self.ssl_verify).lower()
                 )
             except os.error:
                 # This exception occurs when two processes are trying to write

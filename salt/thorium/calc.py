@@ -42,7 +42,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.calc:
@@ -115,7 +115,7 @@ def add(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.add:
@@ -131,7 +131,7 @@ def mul(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mul:
@@ -147,7 +147,7 @@ def mean(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mean:
@@ -163,7 +163,7 @@ def median(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median:
@@ -179,7 +179,7 @@ def median_low(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_low:
@@ -195,7 +195,7 @@ def median_high(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_high:
@@ -212,7 +212,7 @@ def median_grouped(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.median_grouped:
@@ -228,7 +228,7 @@ def mode(name, num, minimum=0, maximum=0, ref=None):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.mode:
