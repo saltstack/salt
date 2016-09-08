@@ -120,7 +120,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
