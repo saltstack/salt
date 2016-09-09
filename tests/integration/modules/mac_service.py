@@ -15,6 +15,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+
 @skipIf(not salt.utils.is_darwin(), 'Test only available on Mac OS X')
 @skipIf(not salt.utils.which('launchctl'), 'Test requires launchctl binary')
 @skipIf(not salt.utils.which('plutil'), 'Test requires plutil binary')
