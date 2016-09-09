@@ -1820,6 +1820,12 @@ class Minion(MinionBase):
         elif package.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+        elif package.startswith('__schedule_return'):
+            # reporting current connection with master
+            if data['schedule'] == '__master_alive':
+                if data['return']:
+                    if data['fun_args'] and type(data['fun_args'][0]) is dict and data['fun_args'][0].get('master', None):
+                        log.debug('Connected to master {0}'.format(data['fun_args'][0]['master']))
         elif package.startswith('__master_disconnected') or package.startswith('__master_failback'):
             # if the master disconnect event is for a different master, raise an exception
             if package.startswith('__master_disconnected') and data['master'] != self.opts['master']:
