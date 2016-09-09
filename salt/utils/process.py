@@ -409,6 +409,10 @@ class ProcessManager(object):
         '''
         Kill all of the children
         '''
+        # first lets reset signal handlers to default one to prevent running this twice
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         # check that this is the correct process, children inherit this
         # handler, if we are in a child lets just run the original handler
         if os.getpid() != self._pid:
@@ -433,7 +437,10 @@ class ProcessManager(object):
                 log.trace('Terminating pid {0}: {1}'.format(pid, p_map['Process']))
                 if args:
                     # escalate the signal to the process
-                    os.kill(pid, args[0])
+                    try:
+                        os.kill(pid, args[0])
+                    except OSError:
+                        pass
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
@@ -477,7 +484,7 @@ class ProcessManager(object):
                     continue
                 log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
                 try:
-                    os.kill(signal.SIGKILL, pid)
+                    os.kill(pid, signal.SIGKILL)
                 except OSError:
                     # in case the process has since decided to die, os.kill returns OSError
                     if not p_map['Process'].is_alive():
@@ -648,6 +655,8 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = '{0} received a '.format(self.__class__.__name__)
         if signum == signal.SIGINT:
             msg += 'SIGINT'
