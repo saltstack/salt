@@ -76,10 +76,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-from salt.utils import is_true
-
-# Import Salt Cloud Libs
-import salt.utils.cloud
+import salt.utils
 
 # Import Third Party Libs
 try:
@@ -337,7 +334,7 @@ def list_nodes_select(call=None):
             'The list_nodes_full function must be called with -f or --function.'
         )
 
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
@@ -993,7 +990,7 @@ def create(vm_):
             return node_data
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             __query_node_data,
             update_args=(vm_['name'],),
             timeout=config.get_cloud_config_value(
@@ -1037,7 +1034,7 @@ def create(vm_):
     vm_['username'] = ssh_username
     vm_['key_filename'] = key_filename
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret['id'] = data['id']
     ret['image'] = vm_['image']
@@ -1115,7 +1112,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__['cloud.delete_minion_cachedir'](
             name,
             __active_provider_name__.split(':')[0],
             __opts__
@@ -1460,7 +1457,7 @@ def image_persistent(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.persistent(auth, int(image_id), is_true(persist))
+    response = server.one.image.persistent(auth, int(image_id), salt.utils.is_true(persist))
 
     data = {
         'action': 'image.persistent',
@@ -1807,7 +1804,7 @@ def show_instance(name, call=None):
         )
 
     node = _get_node(name)
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
 
     return node
 
@@ -2673,7 +2670,7 @@ def vm_allocate(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vm.allocate(auth, data, is_true(hold))
+    response = server.one.vm.allocate(auth, data, salt.utils.is_true(hold))
 
     ret = {
         'action': 'vm.allocate',
@@ -2903,7 +2900,7 @@ def vm_deploy(name, kwargs=None, call=None):
     response = server.one.vm.deploy(auth,
                                     int(vm_id),
                                     int(host_id),
-                                    is_true(capacity_maintained),
+                                    salt.utils.is_true(capacity_maintained),
                                     int(datastore_id))
 
     data = {
@@ -3372,8 +3369,8 @@ def vm_migrate(name, kwargs=None, call=None):
     response = server.one.vm.migrate(auth,
                                      vm_id,
                                      int(host_id),
-                                     is_true(live_migration),
-                                     is_true(capacity_maintained),
+                                     salt.utils.is_true(live_migration),
+                                     salt.utils.is_true(capacity_maintained),
                                      int(datastore_id))
 
     data = {
@@ -3491,7 +3488,7 @@ def vm_resize(name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    response = server.one.vm.resize(auth, vm_id, data, is_true(capacity_maintained))
+    response = server.one.vm.resize(auth, vm_id, data, salt.utils.is_true(capacity_maintained))
 
     ret = {
         'action': 'vm.resize',
