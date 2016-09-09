@@ -1985,7 +1985,6 @@ class Minion(MinionBase):
                 log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
                 self._fire_master(data, tag)
         elif tag.startswith('salt/auth/creds'):
-            mtag, data = salt.utils.event.MinionEvent.unpack(tag)
             key = tuple(data['key'])
             log.debug('Updating auth data for {0}: {1} -> {2}'.format(
                     key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']))
