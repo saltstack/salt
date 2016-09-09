@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for controlling the LED matrix on the SenseHat of a Raspberry Pi.
+
 :maintainer:    Benedikt Werner <1benediktwerner@gmail.com>
 :maturity:      new
 :depends:       sense_hat Python module
@@ -46,6 +47,9 @@ def set_rotation(rotation, redraw=True):
     salt 'raspberry' sensehat.set_rotation 90
     salt 'raspberry' sensehat.set_rotation 180 False
     '''
+    if rotation not in [0, 90, 180, 270]:
+        log.error("{0} is not a valid rotation.".format(rotation))
+        raise TypeError("Rotation must be one of 0, 90, 180, 270. Found: {0}".format(rotation))
     _sensehat.set_rotation(rotation, redraw)
     return {'rotation': rotation}
 
@@ -202,12 +206,11 @@ def show_image(image):
 
     salt 'raspberry' sensehat.show_image /tmp/my_image.png
     '''
-    _sensehat.load_image(image)
-    return True
+    return _sensehat.load_image(image)
 
 def clear(color=None):
     '''
-    Sets the LED matrix to a single color or turns all LEDs off
+    Sets the LED matrix to a single color or turns all LEDs off.
 
     CLI Example:
 
@@ -221,3 +224,34 @@ def clear(color=None):
     else:
         _sensehat.clear(color)
     return True
+
+def get_humidity():
+    '''
+    Get the percentage of relative humidity from the humidity sensor.
+    '''
+    return _sensehat.get_humidity()
+
+def get_pressure():
+    '''
+    Gets the current pressure in Millibars from the pressure sensor.
+    '''
+    return _sensehat.get_pressure()
+
+def get_temperature():
+    '''
+    Gets the temperature in degrees Celsius from the humidity sensor.
+    Equivalent to calling `get_temperature_from_humidity`
+    '''
+    return _sensehat.get_temperature()
+
+def get_temperature_from_humidity():
+    '''
+    Gets the temperature in degrees Celsius from the humidity sensor.
+    '''
+    return _sensehat.get_temperature_from_humidity()
+
+def get_temperature_from_pressure():
+    '''
+    Gets the temperature in degrees Celsius from the pressure sensor.
+    '''
+    return _sensehat.get_temperature_from_pressure()
