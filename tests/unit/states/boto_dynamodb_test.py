@@ -52,13 +52,16 @@ class BotoDynamodbTestCase(TestCase):
                          'config.option': dict_mock,
                          'pillar.get': pillar_mock,
                          'boto_dynamodb.create_table': mock_bool}):
-            comt = ('DynamoDB table {0} exists,\nDynamoDB table {0} throughput'
-                    ' matches'.format(name))
+            comt = ('DynamoDB table {0} exists,\n'
+                    'DynamoDB table {0} throughput matches,\n'
+                    'All global secondary indexes match,\n'.format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(boto_dynamodb.present(name), ret)
 
             with patch.dict(boto_dynamodb.__opts__, {'test': True}):
-                comt = ('DynamoDB table {0} is set to be created.'.format(name))
+                comt = ('DynamoDB table {0} is set to be created.,\n'
+                        'DynamoDB table {0} throughput matches,\n'
+                        'All global secondary indexes match,\n'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_dynamodb.present(name), ret)
 
@@ -74,7 +77,7 @@ class BotoDynamodbTestCase(TestCase):
 
             with patch.dict(boto_dynamodb.__opts__, {'test': False}):
                 comt = ('DynamoDB table {0} was successfully created,\n'
-                        'DynamoDB table new_table throughput matches'
+                        'DynamoDB table new_table throughput matches,\n'
                         .format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
