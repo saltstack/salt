@@ -364,7 +364,7 @@ class Pillar(object):
             if self.opts['pillarenv']:
                 # If file roots environment for the pillar does not match pillarenv, dont look for top file
                 if self.opts['pillarenv'] not in self.opts['file_roots']:
-                    log.debug("Pillarenv NOT equal to file_roots")
+                    log.debug('pillarenv (%s) not present in pillar_roots', self.opts['pillarenv'])
                 else:
                     tops[self.opts['pillarenv']] = [
                             compile_template(

@@ -318,7 +318,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             # If pillarenv is set, only grab pillars with that match pillarenv
             if opts['pillarenv'] and env != opts['pillarenv']:
                 log.debug(
-                    "Env '{0}' does not match pillarenv '{1}' - skipping pillar".format(env,opts['pillarenv'])
+                    "Env '{0}' does not match pillarenv '{1}' - skipping pillar".format(env, opts['pillarenv'])
                 )
                 continue
             log.debug(

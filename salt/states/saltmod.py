@@ -124,6 +124,8 @@ def state(
     pillarenv
         The pillar environment to grab pillars from
 
+        .. versionadded:: Nitrogen
+
     saltenv
         The default salt environment to pull sls files from
 
