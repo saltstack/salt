@@ -143,7 +143,11 @@ def _prior_running_states(jid):
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
-        if int(data['jid']) < int(jid):
+        try:
+            data_jid = int(data['jid'])
+        except ValueError:
+            continue
+        if data_jid < int(jid):
             ret.append(data)
     return ret
 
