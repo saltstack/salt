@@ -389,7 +389,7 @@ def absent(name,
            'comment': ''}
 
     if __opts__['test']:
-        status = _check_cron(user, name)
+        status = _check_cron(user, name, identifier=identifier)
         ret['result'] = None
         if status == 'absent':
             ret['result'] = True

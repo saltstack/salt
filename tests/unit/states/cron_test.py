@@ -187,6 +187,25 @@ class CronTestCase(TestCase):
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
     def test_remove(self):
+        cron.__opts__['test'] = True
+        set_crontab(
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 1 * * * foo')
+        result = cron.absent(name='bar', identifier='1')
+        self.assertEqual(
+            result,
+            {'changes': {},
+             'comment': 'Cron bar is set to be removed',
+             'name': 'bar',
+             'result': None}
+        )
+        self.assertEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 1 * * * foo')
+        cron.__opts__['test'] = False
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
