@@ -61,6 +61,7 @@ def set_pixels(pixels):
         A list of 64 color values [R, G, B].
     '''
     _sensehat.set_pixels(pixels)
+    return {'pixels': pixels}
 
 def get_pixels():
     '''
@@ -99,6 +100,7 @@ def set_pixel(x, y, color):
     salt 'raspberry' sensehat.set_pixel 0 0 [255, 0, 0]
     '''
     _sensehat.set_pixel(x, y, color)
+    return {'color': color}
 
 def get_pixel(x, y):
     '''
@@ -111,7 +113,7 @@ def get_pixel(x, y):
 
     Note: Please read the note for `get_pixels`
     '''
-    _sensehat.get_pixel(x, y)
+    return _sensehat.get_pixel(x, y)
 
 def low_light(low_light=True):
     '''
@@ -124,6 +126,8 @@ def low_light(low_light=True):
     salt 'raspberry' sensehat.low_light
     salt 'raspberry' sensehat.low_light False
     '''
+    _sensehat.low_light = low_light
+    return {'low_light': low_light}
 
 def show_message(message, msg_type=None,
         scroll_speed=0.1, text_color=[255, 255, 255], back_color=[0, 0, 0]):
@@ -223,7 +227,7 @@ def clear(color=None):
         _sensehat.clear()
     else:
         _sensehat.clear(color)
-    return True
+    return {'color': color}
 
 def get_humidity():
     '''
