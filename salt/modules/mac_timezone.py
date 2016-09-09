@@ -351,3 +351,30 @@ def set_time_server(time_server='time.apple.com'):
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return time_server in get_time_server()
+
+
+def get_hwclock():
+    '''
+    Get current hardware clock setting (UTC or localtime)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_hwclock
+    '''
+    if salt.utils.which('timedatectl'):
+        ret = _timedatectl()
+        for line in (x.strip() for x in ret['stdout'].splitlines()):
+            if 'rtc in local tz' in line.lower():
+                try:
+                    if line.split(':')[-1].strip().lower() == 'yes':
+                        return 'localtime'
+                    else:
+                        return 'UTC'
+                except IndexError:
+                    pass
+
+        msg = ('Failed to parse timedatectl output: {0}\n'
+               'Please file an issue with SaltStack').format(ret['stdout'])
+        raise CommandExecutionError(msg)
