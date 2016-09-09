@@ -15,6 +15,7 @@ import fnmatch
 import logging
 import threading
 import traceback
+import subprocess
 import contextlib
 import multiprocessing
 from random import randint, shuffle
@@ -196,6 +197,20 @@ def resolve_dns(opts, fallback=True):
     ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
                                                    port=opts['master_port'])
     return ret
+
+
+def srv_lookup(name, protocol='TCP', domain=None):
+    if domain:
+        domain = '.' + domain
+    record_name = '_{0}_._{1}{2}'.format(name, protocol.lower(), domain or '')
+    cmd = ['dig', '+short', record_name, 'SRV']
+    try:
+        result = subprocess.check_output(cmd)
+    except subprocess.CalledProcessError as err:
+        raise err
+    else:
+        regex = re.compile('(?P<prio>\d+) (?P<weight>\d+) (?P<port>\d+) (?P<host>.+)')
+        return [match.groupdict() for match in regex.finditer(result)]
 
 
 def prep_ip_port(opts):
@@ -422,6 +437,12 @@ class MinionBase(object):
             log.warning('Master is set to disable, skipping connection')
             self.connected = False
             raise tornado.gen.Return((None, None))
+        # do we discover our masters via dns SRV records?
+        elif opts['master_dns_discovery'] is True:
+            lookup = srv_lookup('saltmaster', domain=opts['master_dns_discovery_domain'])
+            masters = [record['host'] for record in lookup]
+            if masters:
+                opts['master'] = masters
         # check if master_type was altered from its default
         elif opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword

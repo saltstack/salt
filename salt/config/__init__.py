@@ -121,6 +121,14 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
 
+    # Query dns server for a SRV entry for 'saltmaster' and use the response to connect
+    # to the discovered masters (needs: dig binary installed to work).
+    'master_dns_discovery': bool,
+
+    # Domain that is used for dns discovery of salt master via SRV records. Only used
+    # if 'master_dns_discovery' is true.
+    'master_dns_discovery_domain': str,
+
     # Selects a random master when starting a minion up in multi-master mode
     'master_shuffle': bool,
 
