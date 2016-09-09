@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for controlling the LED matrix on the SenseHat of a Raspberry Pi.
-:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>, Joachim Werner <joe@suse.com>
+:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>
 :maturity:      new
 :depends:       sense_hat Python module
 '''
@@ -26,7 +26,7 @@ def __virtual__():
     if has_sense_hat:
         return True
     else:
-        return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a raspberry pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
+        return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a Raspberry Pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
 
 def set_rotation(rotation, redraw=True):
     '''
@@ -57,6 +57,57 @@ def set_pixels(pixels):
         A list of 64 color values [R, G, B].
     '''
     _sensehat.set_pixels(pixels)
+
+def get_pixels():
+    '''
+    Returns a list of 64 smaller lists of `[R, G, B]` pixels representing the
+    the currently displayed image on the LED matrix.
+
+    Note: When using `set_pixels` the pixel values can sometimes change when
+    you read them again using `get_pixels`. This is because we specify each
+    pixel element as 8 bit numbers (0 to 255) but when they're passed into the
+    Linux frame buffer for the LED matrix the numbers are bit shifted down
+    to fit into RGB 565. 5 bits for red, 6 bits for green and 5 bits for blue.
+    The loss of binary precision when performing this conversion
+    (3 bits lost for red, 2 for green and 3 for blue) accounts for the
+    discrepancies you see.
+
+    The `get_pixels` method provides an accurate representation of how the
+    pixels end up in frame buffer memory after you have called `set_pixels`.
+    '''
+    return _sensehat.get_pixels()
+
+def set_pixel(x, y, color):
+    '''
+    Sets the a single pixel on the LED matrix to a specified color.
+
+    x
+        The x coodrinate of th pixel. Ranges from 0 on the left to 7 on the right.
+    y
+        The y coodrinate of th pixel. Ranges from 0 at the top to 7 at the bottom.
+    color
+        The new color of the pixel as a list of `[R, G, B]` values.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'raspberry' sensehat.set_pixel 0 0 [255, 0, 0]
+    '''
+    _sensehat.set_pixel(x, y, color)
+
+def get_pixel(x, y):
+    '''
+    Returns the color of a single pixel on the LED matrix.
+
+    x
+        The x coodrinate of th pixel. Ranges from 0 on the left to 7 on the right.
+    y
+        The y coodrinate of th pixel. Ranges from 0 at the top to 7 at the bottom.
+
+    Note: Please read the note for `get_pixels`
+    '''
+    _sensehat.get_pixel(x, y)
 
 def low_light(low_light=True):
     '''
@@ -154,7 +205,7 @@ def show_image(image):
     _sensehat.load_image(image)
     return True
 
-def clear(*args):
+def clear(color=None):
     '''
     Sets the LED matrix to a single color or turns all LEDs off
 
@@ -164,15 +215,9 @@ def clear(*args):
 
     salt 'raspberry' sensehat.clear
     salt 'raspberry' sensehat.clear [255, 0, 0]
-    salt 'raspberry' sensehat.clear 255 100 0
     '''
-    arg_count = len(args)
-    if arg_count == 0:
+    if color is None:
         _sensehat.clear()
-    elif arg_count == 1:
-        _sensehat.clear(args[0])
-    elif arg_count == 3:
-        _sensehat.clear(arg[0], arg[1], arg[2])
     else:
-        raise TypeError('This function expects either no arguments, a list of three integers or three single integers')
+        _sensehat.clear(color)
     return True
