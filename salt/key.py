@@ -233,37 +233,44 @@ class KeyCLI(object):
         cmd = self.opts['fun']
 
         veri = None
-        if cmd in ('accept', 'reject', 'delete'):
-            ret = self._run_cmd('name_match')
-            if not isinstance(ret, dict):
+        ret = None
+        try:
+            if cmd in ('accept', 'reject', 'delete'):
+                ret = self._run_cmd('name_match')
+                if not isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                    return ret
+                ret = self._filter_ret(cmd, ret)
+                if not ret:
+                    self._print_no_match(cmd, self.opts['match'])
+                    return
+                print('The following keys are going to be {0}ed:'.format(cmd))
                 salt.output.display_output(ret, 'key', opts=self.opts)
-                return ret
-            ret = self._filter_ret(cmd, ret)
-            if not ret:
-                self._print_no_match(cmd, self.opts['match'])
-                return
-            print('The following keys are going to be {0}ed:'.format(cmd))
-            salt.output.display_output(ret, 'key', opts=self.opts)
 
-            if not self.opts.get('yes', False):
-                try:
-                    if cmd.startswith('delete'):
-                        veri = input('Proceed? [N/y] ')
-                        if not veri:
-                            veri = 'n'
-                    else:
-                        veri = input('Proceed? [n/Y] ')
-                        if not veri:
-                            veri = 'y'
-                except KeyboardInterrupt:
-                    raise SystemExit("\nExiting on CTRL-c")
+                if not self.opts.get('yes', False):
+                    try:
+                        if cmd.startswith('delete'):
+                            veri = input('Proceed? [N/y] ')
+                            if not veri:
+                                veri = 'n'
+                        else:
+                            veri = input('Proceed? [n/Y] ')
+                            if not veri:
+                                veri = 'y'
+                    except KeyboardInterrupt:
+                        raise SystemExit("\nExiting on CTRL-c")
 
-        if veri is None or veri.lower().startswith('y'):
-            ret = self._run_cmd(cmd)
-            if isinstance(ret, dict):
-                salt.output.display_output(ret, 'key', opts=self.opts)
-            else:
-                salt.output.display_output({'return': ret}, 'key', opts=self.opts)
+            if veri is None or veri.lower().startswith('y'):
+                ret = self._run_cmd(cmd)
+                if isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                else:
+                    salt.output.display_output({'return': ret}, 'key', opts=self.opts)
+        except salt.exceptions.SaltException as exc:
+            ret = '{0}'.format(exc)
+            if not self.opts.get('quiet', False):
+                salt.output.display_output(ret, 'nested', self.opts)
+        return ret
 
 
 class MultiKeyCLI(KeyCLI):

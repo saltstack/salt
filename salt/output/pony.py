@@ -50,7 +50,7 @@ def __virtual__():
     return os.path.isfile('/usr/bin/ponysay')
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Mane function
     '''
