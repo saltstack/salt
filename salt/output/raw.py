@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import salt.utils.locales
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Rather basic....
     '''
