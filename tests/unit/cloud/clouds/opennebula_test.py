@@ -20,6 +20,8 @@ from salt.exceptions import SaltCloudSystemExit, SaltCloudNotFound
 # Global Variables
 opennebula.__active_provider_name__ = ''
 opennebula.__opts__ = {}
+opennebula.__utils__ = {}
+opennebula.__utils__['cloud.cache_node'] = MagicMock()
 VM_NAME = 'my-vm'
 
 
@@ -761,7 +763,6 @@ class OpenNebulaTestCase(TestCase):
 
     @patch('salt.cloud.clouds.opennebula._get_node',
            MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}}))
-    @patch('salt.utils.cloud.cache_node', MagicMock())
     def test_show_instance_success(self):
         '''
         Tests that the node was found successfully.

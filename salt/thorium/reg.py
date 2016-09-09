@@ -57,7 +57,7 @@ def list_(name, add, match, stamp=False, prune=0):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.list:
@@ -139,7 +139,7 @@ def clear(name):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         clearns:
           reg.clear:
@@ -160,7 +160,7 @@ def delete(name):
 
     USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         deletens:
           reg.delete:

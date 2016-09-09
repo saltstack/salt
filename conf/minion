@@ -415,7 +415,7 @@
 # Note that this is a very large hammer and it can be quite difficult to keep the minion working
 # the way you think it should since Salt uses many modules internally itself.  At a bare minimum
 # you need the following enabled or else the minion won't start.
-whitelist_modules:
+#whitelist_modules:
 #  - cmdmod
 #  - test
 #  - config

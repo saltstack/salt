@@ -17,7 +17,11 @@ import logging
 import os
 import time
 import difflib
-from pwd import getpwuid
+try:
+    from pwd import getpwuid
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
 import salt.utils
@@ -82,6 +86,8 @@ def __virtual__():
         return False, error_msg.format(snapper_error)
     elif not bus:
         return False, error_msg.format(system_bus_error)
+    elif not HAS_PWD:
+        return False, error_msg.format('pwd module not available')
 
     return 'snapper'
 

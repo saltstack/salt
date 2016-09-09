@@ -473,7 +473,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     data['network_profile']['network_interfaces'] = ifaces
     data['resource_group'] = resource_group
 
-    salt.utils.cloud.cache_node(
+    __utils__['cloud.cache_node'](
         salt.utils.simple_types_filter(data),
         __active_provider_name__,
         __opts__
@@ -1118,7 +1118,7 @@ def create(vm_):
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
@@ -1179,7 +1179,7 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
     result.wait()
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     cleanup_disks = config.get_cloud_config_value(
         'cleanup_disks',

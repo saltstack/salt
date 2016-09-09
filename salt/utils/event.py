@@ -687,7 +687,7 @@ class SaltEvent(object):
             is_msgpacked=True,
             use_bin_type=six.PY3
         )
-        log.debug('Sending event - data = {0}'.format(data))
+        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
         if six.PY2:
             event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         else:
