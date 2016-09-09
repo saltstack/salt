@@ -12,7 +12,6 @@ A module to manage software on Windows
 
 # Import python libs
 from __future__ import absolute_import
-import errno
 import os
 import locale
 import logging
@@ -28,7 +27,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltRenderError
+from salt.exceptions import SaltRenderError
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
@@ -1061,6 +1060,9 @@ def get_repo_data(saltenv='base'):
     #    return __context__['winrepo.data']
     repocache_dir = _get_local_repo_dir(saltenv=saltenv)
     winrepo = 'winrepo.p'
+    if not os.path.exists(os.path.join(repocache_dir, winrepo)):
+        log.debug('No winrepo.p cache file. Refresh pkg db now.')
+        refresh_db(saltenv=saltenv)
     try:
         with salt.utils.fopen(
                 os.path.join(repocache_dir, winrepo), 'rb') as repofile:
@@ -1071,12 +1073,6 @@ def get_repo_data(saltenv='base'):
                 log.exception(exc)
                 return {}
     except IOError as exc:
-        if exc.errno == errno.ENOENT:
-            # File doesn't exist
-            raise CommandExecutionError(
-                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
-                'needed'
-            )
         log.error('Not able to read repo file')
         log.exception(exc)
         return {}
