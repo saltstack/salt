@@ -144,7 +144,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ret = {}
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
-        pkg_version = line.split('-')[-2]
+        pkg_version = '-'.join(line.split('-')[-2:])
         pkg_name = '-'.join(line.split('-')[:-2])
         __salt__['pkg_resource.add_pkg'](ret, pkg_name, pkg_version)
 
