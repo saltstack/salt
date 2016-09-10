@@ -706,9 +706,9 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
             name = 'MWorker-{0}'.format(ind)
             self.process_manager.add_process(MWorker,
                                             args=(self.opts,
+                                                self.master_key,
                                                 self.key,
                                                 req_channels,
-                                                self.master_key,
                                                 name
                                                 ),
                                             kwargs=kwargs,
@@ -750,10 +750,10 @@ class MWorker(SignalHandlingMultiprocessingProcess):
     '''
     def __init__(self,
                  opts,
+                 mkey,
                  key,
-                 req_channels=None,
-                 mkey=None,
-                 name=None,
+                 req_channels,
+                 name,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -765,10 +765,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
-        if name:
-            kwargs['name'] = name
-        super(MWorker, self).__init__(**kwargs)
-        self.kwargs = kwargs
+        kwargs['name'] = name
+        SignalHandlingMultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -783,18 +781,22 @@ class MWorker(SignalHandlingMultiprocessingProcess):
     # non-Windows platforms.
     def __setstate__(self, state):
         self._is_child = True
-        super(MWorker, self).__init__(**state)
+        SignalHandlingMultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
+        self.opts = state['opts']
+        self.req_channels = state['req_channels']
+        self.mkey = state['mkey']
+        self.key = state['key']
         self.k_mtime = state['k_mtime']
         SMaster.secrets = state['secrets']
 
     def __getstate__(self):
         return {'opts': self.opts,
-                'key': self.key,
                 'req_channels': self.req_channels,
                 'mkey': self.mkey,
+                'key': self.key,
                 'k_mtime': self.k_mtime,
-                'secrets': SMaster.secrets,
-                'kwargs': self.kwargs}
+                'log_queue': self.log_queue,
+                'secrets': SMaster.secrets}
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, 'req_channels', ()):
