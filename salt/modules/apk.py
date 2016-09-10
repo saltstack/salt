@@ -112,6 +112,7 @@ def refresh_db():
 
     return ret
 
+
 def list_pkgs(versions_as_list=False, **kwargs):                                                
     '''
     List the packages currently installed in a dict::
@@ -151,6 +152,55 @@ def list_pkgs(versions_as_list=False, **kwargs):
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+    return ret
+
+def latest_version(*names, **kwargs):
+    '''
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
+    '''
+    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+
+    if len(names) == 0:
+        return ''
+
+    ret = {}
+    for name in names:
+        ret[name] = ''
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db()
+
+    cmd = ['apk', 'upgrade', '-s']
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
+        try:
+            name = line.split(' ')[2]
+            _oldversion = line.split(' ')[3].strip('(')
+            newversion = line.split(' ')[5].strip(')')
+            if name in names:
+                ret[name] = newversion
+        except ValueError:
+            pass
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
     return ret
 
 
