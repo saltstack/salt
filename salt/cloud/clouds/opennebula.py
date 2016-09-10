@@ -24,6 +24,21 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       password: JHGhgsayu32jsa
       driver: opennebula
 
+This driver supports accessing new VM instances via DNS entry instead
+of IP address.  To enable this feature, in the provider or profile file
+add `fqdn_base` with a value matching the base of your fully-qualified
+domain name.  Example:
+
+.. code-block:: yaml
+
+    my-opennebula-config:
+      [...]
+      fqdn_base: <my.basedomain.com>
+      [...]
+
+The driver will prepend the hostname to the fqdn_base and do a DNS lookup
+to find the IP of the new VM.
+
 .. note:
 
     Whenever ``data`` is provided as a kwarg to a function and the
@@ -61,10 +76,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-from salt.utils import is_true
-
-# Import Salt Cloud Libs
-import salt.utils.cloud
+import salt.utils
 
 # Import Third Party Libs
 try:
@@ -322,7 +334,7 @@ def list_nodes_select(call=None):
             'The list_nodes_full function must be called with -f or --function.'
         )
 
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
@@ -747,6 +759,27 @@ def get_template_id(kwargs=None, call=None):
     return ret
 
 
+def get_template(vm_):
+    r'''
+    Return the template id for a VM.
+
+    .. versionadded:: Carbon
+
+    vm\_
+        The VM dictionary for which to obtain a template.
+    '''
+
+    vm_template = str(config.get_cloud_config_value(
+        'template', vm_, __opts__, search_global=False
+    ))
+    try:
+        return list_templates()[vm_template]['id']
+    except KeyError:
+        raise SaltCloudNotFound(
+            'The specified template, \'{0}\', could not be found.'.format(vm_template)
+        )
+
+
 def get_vm_id(kwargs=None, call=None):
     '''
     Returns a virtual machine's ID from the given virtual machine's name.
@@ -826,11 +859,27 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    CLI Example:
+    Optional vm_ dict options for overwriting template:
 
-    .. code-block:: bash
+    region_id
+        Optional - OpenNebula Zone ID
 
-        salt-cloud -p my-opennebula-profile vm_name
+    memory
+        Optional - In MB
+
+    cpu
+        Optional - Percent of host CPU to allocate
+
+    vcpu
+        Optional - Amount of vCPUs to allocate
+
+     CLI Example:
+
+     .. code-block:: bash
+
+         salt-cloud -p my-opennebula-profile vm_name
+
+        salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
 
     '''
     try:
@@ -851,20 +900,23 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     kwargs = {
         'name': vm_['name'],
-        'image_id': get_image(vm_),
+        'template_id': get_template(vm_),
         'region_id': get_location(vm_),
     }
+    if 'template' in vm_:
+        kwargs['image_id'] = get_template_id({'name': vm_['template']})
 
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None
@@ -875,20 +927,41 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
     )
 
-    region = ''
-    if kwargs['region_id'] is not None:
-        region = 'SCHED_REQUIREMENTS="ID={0}"'.format(kwargs['region_id'])
+    template = []
+    if kwargs.get('region_id'):
+        template.append('SCHED_REQUIREMENTS="ID={0}"'.format(kwargs.get('region_id')))
+    if vm_.get('memory'):
+        template.append('MEMORY={0}'.format(vm_.get('memory')))
+    if vm_.get('cpu'):
+        template.append('CPU={0}'.format(vm_.get('cpu')))
+    if vm_.get('vcpu'):
+        template.append('VCPU={0}'.format(vm_.get('vcpu')))
+    template_args = "\n".join(template)
+
     try:
         server, user, password = _get_xml_rpc()
         auth = ':'.join([user, password])
-        server.one.template.instantiate(auth,
-                                        int(kwargs['image_id']),
+        cret = server.one.template.instantiate(auth,
+                                        int(kwargs['template_id']),
                                         kwargs['name'],
                                         False,
-                                        region)
+                                        template_args)
+        if not cret[0]:
+            log.error(
+                'Error creating {0} on OpenNebula\n\n'
+                'The following error was returned when trying to '
+                'instantiate the template: {1}'.format(
+                    vm_['name'],
+                    cret[1]
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
     except Exception as exc:
         log.error(
             'Error creating {0} on OpenNebula\n\n'
@@ -902,6 +975,10 @@ def create(vm_):
         )
         return False
 
+    fqdn = vm_.get('fqdn_base')
+    if fqdn is not None:
+        fqdn = '{0}.{1}'.format(vm_['name'], fqdn)
+
     def __query_node_data(vm_name):
         node_data = show_instance(vm_name, call='action')
         if not node_data:
@@ -913,7 +990,7 @@ def create(vm_):
             return node_data
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             __query_node_data,
             update_args=(vm_['name'],),
             timeout=config.get_cloud_config_value(
@@ -940,10 +1017,15 @@ def create(vm_):
             )
         )
 
-    try:
-        private_ip = data['private_ips'][0]
-    except KeyError:
-        private_ip = data['template']['nic']['ip']
+    if fqdn:
+        vm_['ssh_host'] = fqdn
+        private_ip = '0.0.0.0'
+    else:
+        try:
+            private_ip = data['private_ips'][0]
+        except KeyError:
+            private_ip = data['template']['nic']['ip']
+            vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -951,9 +1033,8 @@ def create(vm_):
 
     vm_['username'] = ssh_username
     vm_['key_filename'] = key_filename
-    vm_['ssh_host'] = private_ip
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret['id'] = data['id']
     ret['image'] = vm_['image']
@@ -974,11 +1055,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
     )
 
     return ret
@@ -1011,7 +1093,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
     )
 
     server, user, password = _get_xml_rpc()
@@ -1024,11 +1107,12 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__['cloud.delete_minion_cachedir'](
             name,
             __active_provider_name__.split(':')[0],
             __opts__
@@ -1373,7 +1457,7 @@ def image_persistent(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.persistent(auth, int(image_id), is_true(persist))
+    response = server.one.image.persistent(auth, int(image_id), salt.utils.is_true(persist))
 
     data = {
         'action': 'image.persistent',
@@ -1720,7 +1804,7 @@ def show_instance(name, call=None):
         )
 
     node = _get_node(name)
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
 
     return node
 
@@ -2586,7 +2670,7 @@ def vm_allocate(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vm.allocate(auth, data, is_true(hold))
+    response = server.one.vm.allocate(auth, data, salt.utils.is_true(hold))
 
     ret = {
         'action': 'vm.allocate',
@@ -2816,7 +2900,7 @@ def vm_deploy(name, kwargs=None, call=None):
     response = server.one.vm.deploy(auth,
                                     int(vm_id),
                                     int(host_id),
-                                    is_true(capacity_maintained),
+                                    salt.utils.is_true(capacity_maintained),
                                     int(datastore_id))
 
     data = {
@@ -3285,8 +3369,8 @@ def vm_migrate(name, kwargs=None, call=None):
     response = server.one.vm.migrate(auth,
                                      vm_id,
                                      int(host_id),
-                                     is_true(live_migration),
-                                     is_true(capacity_maintained),
+                                     salt.utils.is_true(live_migration),
+                                     salt.utils.is_true(capacity_maintained),
                                      int(datastore_id))
 
     data = {
@@ -3404,7 +3488,7 @@ def vm_resize(name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    response = server.one.vm.resize(auth, vm_id, data, is_true(capacity_maintained))
+    response = server.one.vm.resize(auth, vm_id, data, salt.utils.is_true(capacity_maintained))
 
     ret = {
         'action': 'vm.resize',
@@ -4336,8 +4420,7 @@ def _list_nodes(full=False):
         for nic in vm.find('TEMPLATE').findall('NIC'):
             try:
                 private_ips.append(nic.find('IP').text)
-            except AttributeError:
-                # There is no private IP; skip it
+            except Exception:
                 pass
 
         vms[name]['id'] = vm.find('ID').text

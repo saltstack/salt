@@ -103,6 +103,11 @@ if _has_required_boto():
                       ruleDisabled=True)
 
 
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto3_version))
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTestCaseBase(TestCase):
     conn = None
 
@@ -128,11 +133,6 @@ class BotoIoTTestCaseMixin(object):
     pass
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot module

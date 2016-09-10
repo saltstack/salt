@@ -103,28 +103,38 @@ def mounted(name,
         device otherwise.
 
     extra_mount_invisible_options
-        A list of extra options that are not visible through the /proc/self/mountinfo
-        interface. If a option is not visible through this interface it will always
-        remount the device. This Option extends the builtin mount_invisible_options list.
+        A list of extra options that are not visible through the
+        ``/proc/self/mountinfo`` interface.
+
+        If a option is not visible through this interface it will always remount
+        the device. This option extends the builtin ``mount_invisible_options``
+        list.
 
     extra_mount_invisible_keys
-        A list of extra key options that are not visible through the /proc/self/mountinfo
-        interface. If a key option is not visible through this interface it will always
-        remount the device. This Option extends the builtin mount_invisible_keys list.
-        A good example for a key Option is the password Option:
+        A list of extra key options that are not visible through the
+        ``/proc/self/mountinfo`` interface.
+
+        If a key option is not visible through this interface it will always
+        remount the device. This option extends the builtin
+        ``mount_invisible_keys`` list.
+
+        A good example for a key option is the password option::
+
             password=badsecret
 
     extra_ignore_fs_keys
         A dict of filesystem options which should not force a remount. This will update
-        the internal dictionary. The dict should look like this:
+        the internal dictionary. The dict should look like this::
+
             {
                 'ramfs': ['size']
             }
 
     extra_mount_translate_options
         A dict of mount options that gets translated when mounted. To prevent a remount
-        add additional Options to the default dictionary. This will update the internal
-        dictionary. The dictionary should look like this:
+        add additional options to the default dictionary. This will update the internal
+        dictionary. The dictionary should look like this::
+
             {
                 'tcp': 'proto=tcp',
                 'udp': 'proto=udp'
