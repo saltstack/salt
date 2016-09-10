@@ -65,8 +65,6 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return True
 def list_pkgs(versions_as_list=False):
     return True
-def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
-    return True
 def upgrade_available(name):
     return True
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
@@ -436,8 +434,11 @@ def list_upgrades(refresh=True):
         out = call['stdout']
 
     for line in out.splitlines():
-        name, _oldversion, newversion = line.split(' - ')
-        ret[name] = newversion
+        if not line.startswith('OK:'):
+            name = line.split(' ')[2]
+            _oldversion = line.split(' ')[3].strip('(')
+            newversion = line.split(' ')[5].strip(')')
+            ret[name] = newversion
 
     return ret
 
