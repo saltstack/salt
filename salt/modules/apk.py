@@ -154,6 +154,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -308,11 +309,13 @@ def install(name=None,
 
     return ret
 
+
 def purge(name=None, pkgs=None, **kwargs):
     '''
     Alias to remove
     '''
     return remove(name=name, pkgs=pkgs, purge=True)
+
 
 def remove(name=None, pkgs=None, purge=False, **kwargs):  # pylint: disable=unused-argument
     '''
@@ -381,6 +384,7 @@ def remove(name=None, pkgs=None, purge=False, **kwargs):  # pylint: disable=unus
         )
 
     return ret
+
 
 def upgrade(name=None, pkgs=None, refresh=True):
     '''
@@ -482,6 +486,7 @@ def list_upgrades(refresh=True):
 
     return ret
 
+
 def file_list(*packages):
     '''
     List the files that belong to a package. Not specifying any packages will
@@ -537,6 +542,7 @@ def file_dict(*packages):
 
     return {'errors': errors, 'packages': ret}
 
+
 def owner(*paths):
     '''
     Return the name of the package that owns the file. Multiple file paths can
@@ -572,3 +578,5 @@ def owner(*paths):
             ret[path] = 'Error running %s' % (cmd)
 
     return ret
+
+
