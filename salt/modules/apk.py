@@ -47,41 +47,39 @@ def __virtual__():
         return __virtualname__
     return (False, "Module apk only works on Alpine Linux based systems")
 
-# Unavailable function that will just return true
+# Unavailable function that will return 'Not available'
 def latest_version(*names, **kwargs):
-    return True
+    return 'Not available'
 def version(*names, **kwargs):
-    return True
+    return 'Not available'
 def autoremove(list_only=False, purge=False):
-    return True
+    return 'Not available'
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
-    return True
+    return 'Not available'
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
-    return True
-def list_pkgs(versions_as_list=False):
-    return True
+    return 'Not available'
 def upgrade_available(name):
-    return True
+    return 'Not available'
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
-    return True
+    return 'Not available'
 def list_repos():
-    return True
+    return 'Not available'
 def get_repo(repo, **kwargs):
-    return True
+    return 'Not available'
 def del_repo(repo, **kwargs):
-    return True
+    return 'Not available'
 def del_repo_key(name=None, **kwargs):
-    return True
+    return 'Not available'
 def mod_repo(repo, saltenv='base', **kwargs):
-    return True
+    return 'Not available'
 def expand_repo_def(**kwargs):
-    return True
+    return 'Not available'
 def get_selections(pattern=None, state=None):
-    return True
+    return 'Not available'
 def set_selections(path=None, selection=None, clear=False, saltenv='base'):
-    return True
+    return 'Not available'
 def info_installed(*names):
-    return True
+    return 'Not available'
 
 def refresh_db():
     '''
