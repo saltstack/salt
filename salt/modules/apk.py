@@ -10,11 +10,6 @@ Support for apk
 
 .. versionadded: 2016.3.0
 
-.. note::
-
-    For version comparison support, the ``opkg-utils`` package must be
-    installed.
-
 '''
 from __future__ import absolute_import
 
@@ -163,8 +158,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-# TODO: opkg doesn't support installation of a specific version of a package
-#       (opkg issue 176). Once fixed, this function should add support.
+# TODO: Support specific version installation
 def install(name=None,
             refresh=False,
             pkgs=None,
