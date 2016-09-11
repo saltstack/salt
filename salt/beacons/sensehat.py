@@ -36,9 +36,10 @@ def beacon(config):
     out of range.
 
     Units:
-    * humidity:     percent
-    * temperature:  degrees Celsius
-    * pressure:     Millibars
+    * humidity:                     percent
+    * temperature:                  degrees Celsius
+    * temperature_from_pressure:    degrees Celsius
+    * pressure:                     Millibars
 
     .. code-block:: yaml
 
@@ -46,6 +47,7 @@ def beacon(config):
           sensehat:
             humidity: 70%
             temperature: [20, 40]
+            temperature_from_pressure: 40
             pressure: 1500
     '''
     ret = []
