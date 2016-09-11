@@ -15,23 +15,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
-import os
-import re
 import logging
-from salt.ext import six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
-from salt.utils.decorators import which as _which
 
-from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError
-)
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +69,10 @@ def __virtual__():
 #def info_installed(*names):
 #    return 'Not available'
 
+
 def refresh_db():
     '''
-    Updates the package list 
+    Updates the package list
 
     - ``True``: Database updated successfully
     - ``False``: Problem updating database
@@ -113,7 +104,7 @@ def refresh_db():
     return ret
 
 
-def list_pkgs(versions_as_list=False, **kwargs):                                                
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -575,8 +566,6 @@ def owner(*paths):
             else:
                 ret[path] = output.split('by ')[1].strip()
         else:
-            ret[path] = 'Error running %s' % (cmd)
+            ret[path] = 'Error running {0}'.format(cmd)
 
     return ret
-
-
