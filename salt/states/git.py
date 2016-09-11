@@ -405,6 +405,20 @@ def latest(name,
         A command to run as a check, only run the named command if the command
         passed to the ``unless`` option returns false
 
+    refspec_branch : *
+        A glob expression defining which branches to retrieve when fetching.
+        See `git-fetch(1)`_ for more information on how refspecs work.
+
+        .. versionadded:: Nitrogen
+
+    refspec_tag : *
+        A glob expression defining which tags to retrieve when fetching. See
+        `git-fetch(1)`_ for more information on how refspecs work.
+
+        .. versionadded:: Nitrogen
+
+    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
+
     .. note::
         Clashing ID declarations can be avoided when including different
         branches from the same git repository in the same sls file by using the
