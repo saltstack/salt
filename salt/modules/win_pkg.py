@@ -440,8 +440,8 @@ def _refresh_db_conditional(saltenv, **kwargs):
         )
 
     if refresh:
-        if expired_min == 0 and (repo_age_sec < 60):
-            log.warning(
+        if expired_min == 0 and repo_age_sec > -1 and repo_age_sec < 60:
+            log.debug(
                 'pkg metadata db for %s less than a minute old and been asked to refresh it',
                 saltenv
                 )
