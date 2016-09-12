@@ -418,7 +418,7 @@ class GitProvider(object):
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = salt.utils.path_join(self.cachedir, self.root).rstrip(os.sep)
+        root_dir = salt.utils.path_join(self.cachedir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(

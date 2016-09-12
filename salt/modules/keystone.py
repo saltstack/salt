@@ -88,37 +88,10 @@ def __virtual__():
 __opts__ = {}
 
 
-def api_version():
+def _get_kwargs(profile=None, **connection_args):
     '''
-    Returns the API version derived from endpoint's response.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keystone.api_version
+    get connection args
     '''
-    auth_url = __salt__['config.get']('keystone.auth_url', None)
-    if not auth_url:
-        auth_url = __salt__['config.get']('keystone.endpoint', None)
-    try:
-        return salt.utils.http.query(auth_url, decode=True, decode_type='json',
-                                     verify_ssl=False)['dict']['version']['id']
-    except KeyError:
-        return None
-
-
-def auth(profile=None, **connection_args):
-    '''
-    Set up keystone credentials. Only intended to be used within Keystone-enabled modules.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keystone.auth
-    '''
-
     if profile:
         prefix = profile + ":keystone."
     else:
@@ -153,8 +126,41 @@ def auth(profile=None, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs['insecure'] = True
+    return kwargs
 
-    if api_version() >= 'v3':
+
+def api_version(profile=None, **connection_args):
+    '''
+    Returns the API version derived from endpoint's response.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystone.api_version
+    '''
+    kwargs = _get_kwargs(profile=profile, **connection_args)
+    auth_url = kwargs.get('auth_url', kwargs.get('endpoint', None))
+    try:
+        return salt.utils.http.query(auth_url, decode=True, decode_type='json',
+                                     verify_ssl=False)['dict']['version']['id']
+    except KeyError:
+        return None
+
+
+def auth(profile=None, **connection_args):
+    '''
+    Set up keystone credentials. Only intended to be used within Keystone-enabled modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystone.auth
+    '''
+    kwargs = _get_kwargs(profile=profile, **connection_args)
+
+    if float(api_version(profile=profile, **connection_args).strip('v')) >= 3:
         global _OS_IDENTITY_API_VERSION
         global _TENANTS
         _OS_IDENTITY_API_VERSION = 3
