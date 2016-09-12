@@ -105,6 +105,7 @@ if salt.utils.is_windows():
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
     # pylint: disable=import-error
     # pylint: enable=W0611
+    import time
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_repo_src_dest_details
