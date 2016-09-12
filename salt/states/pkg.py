@@ -2491,7 +2491,13 @@ def group_installed(name, skip=None, include=None, **kwargs):
             if not isinstance(item, six.string_types):
                 include[idx] = str(item)
 
-    diff = __salt__['pkg.group_diff'](name)
+    try:
+        diff = __salt__['pkg.group_diff'](name)
+    except CommandExecutionError as err:
+        ret['comment'] = ('An error was encountered while installing/updating '
+                          'group \'{0}\': {1}.'.format(name, err))
+        return ret
+
     mandatory = diff['mandatory']['installed'] + \
         diff['mandatory']['not installed']
 

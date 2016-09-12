@@ -359,6 +359,21 @@ def eval_master_func(opts):
         log.info('Evaluated master from module: {0}'.format(mod_fun))
 
 
+def master_event(type, master=None):
+    '''
+    Centralized master event function which will return event type based on event_map
+    '''
+    event_map = {'connected': '__master_connected',
+                 'disconnected': '__master_disconnected',
+                 'failback': '__master_failback',
+                 'alive': '__master_alive'}
+
+    if type == 'alive' and master is not None:
+        return '{0}_{1}'.format(event_map.get(type), master)
+
+    return event_map.get(type, None)
+
+
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
@@ -1003,7 +1018,7 @@ class Minion(MinionBase):
             self.opts,
             self.functions,
             self.returners,
-            cleanup=['__master_alive'])
+            cleanup=[master_event(type='alive')])
 
         # add default scheduling jobs to the minions scheduler
         if self.opts['mine_enabled'] and 'mine.update' in self.functions:
@@ -1026,7 +1041,7 @@ class Minion(MinionBase):
                 self.opts['master_alive_interval'] > 0 and
                 self.connected):
             self.schedule.add_job({
-                '__master_alive_{0}'.format(self.opts['master']):
+                master_event(type='alive', master=self.opts['master']):
                 {
                     'function': 'status.master',
                     'seconds': self.opts['master_alive_interval'],
@@ -1041,7 +1056,7 @@ class Minion(MinionBase):
                     'master_list' in self.opts and \
                     self.opts['master'] != self.opts['master_list'][0]:
                 self.schedule.add_job({
-                    '__master_failback':
+                    master_event(type='failback'):
                     {
                         'function': 'status.ping_master',
                         'seconds': self.opts['master_failback_interval'],
@@ -1052,10 +1067,10 @@ class Minion(MinionBase):
                     }
                 }, persist=True)
             else:
-                self.schedule.delete_job('__master_failback', persist=True)
+                self.schedule.delete_job(master_event(type='failback'), persist=True)
         else:
-            self.schedule.delete_job('__master_alive_{0}'.format(self.opts['master']), persist=True)
-            self.schedule.delete_job('__master_failback', persist=True)
+            self.schedule.delete_job(master_event(type='alive', master=self.opts['master']), persist=True)
+            self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         self.grains_cache = self.opts['grains']
         self.ready = True
@@ -1874,12 +1889,17 @@ class Minion(MinionBase):
         elif tag.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif tag.startswith('__master_disconnected') or tag.startswith('__master_failback'):
+        elif package.startswith('__schedule_return'):
+            # reporting current connection with master
+            if data['schedule'].startswith(master_event(type='alive', master='')):
+                if data['return']:
+                    log.debug('Connected to master {0}'.format(data['schedule'].split(master_event(type='alive', master=''))[1]))
+        elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
-            if tag.startswith('__master_disconnected') and data['master'] != self.opts['master']:
+            if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
                 # not mine master, ignore
                 return
-            if tag.startswith('__master_failback'):
+            if tag.startswith(master_event(type='failback')):
                 # if the master failback event is not for the top master, raise an exception
                 if data['master'] != self.opts['master_list'][0]:
                     raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
@@ -1902,7 +1922,7 @@ class Minion(MinionBase):
                        'kwargs': {'master': self.opts['master'],
                                   'connected': False}
                     }
-                    self.schedule.modify_job(name='__master_alive_{0}'.format(self.opts['master']),
+                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
                                              schedule=schedule)
 
                 log.info('Connection to master {0} lost'.format(self.opts['master']))
@@ -1924,7 +1944,7 @@ class Minion(MinionBase):
                         master, self.pub_channel = yield self.eval_master(
                                                             opts=self.opts,
                                                             failed=True,
-                                                            failback=package.startswith('__master_failback'))
+                                                            failback=package.startswith(master_event(type='failback')))
                     except SaltClientError:
                         pass
 
@@ -1950,7 +1970,7 @@ class Minion(MinionBase):
                                'kwargs': {'master': self.opts['master'],
                                           'connected': True}
                             }
-                            self.schedule.modify_job(name='__master_alive_{0}'.format(self.opts['master']),
+                            self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
                                                      schedule=schedule)
 
                             if self.opts['master_failback'] and 'master_list' in self.opts:
@@ -1963,15 +1983,15 @@ class Minion(MinionBase):
                                        'return_job': False,
                                        'kwargs': {'master': self.opts['master_list'][0]}
                                     }
-                                    self.schedule.modify_job(name='__master_failback',
+                                    self.schedule.modify_job(name=master_event(type='failback'),
                                                              schedule=schedule)
                                 else:
-                                    self.schedule.delete_job(name='__master_failback', persist=True)
+                                    self.schedule.delete_job(name=master_event(type='failback'), persist=True)
                     else:
                         self.restart = True
                         self.io_loop.stop()
 
-        elif tag.startswith('__master_connected'):
+        elif tag.startswith(master_event(type='connected')):
             # handle this event only once. otherwise it will pollute the log
             if not self.connected:
                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
@@ -1989,7 +2009,7 @@ class Minion(MinionBase):
                                   'connected': True}
                     }
 
-                    self.schedule.modify_job(name='__master_alive_{0}'.format(self.opts['master']),
+                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
                                              schedule=schedule)
         elif tag.startswith('__schedule_return'):
             self._return_pub(data, ret_cmd='_return', sync=False)
@@ -1998,7 +2018,6 @@ class Minion(MinionBase):
                 log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
                 self._fire_master(data, tag)
         elif tag.startswith('salt/auth/creds'):
-            mtag, data = salt.utils.event.MinionEvent.unpack(tag)
             key = tuple(data['key'])
             log.debug('Updating auth data for {0}: {1} -> {2}'.format(
                     key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']))
@@ -3028,7 +3047,7 @@ class ProxyMinion(Minion):
         if (self.opts['transport'] != 'tcp' and
                 self.opts['master_alive_interval'] > 0):
             self.schedule.add_job({
-                '__master_alive_{0}'.format(self.opts['master']):
+                master_event(type='alive', master=self.opts['master']):
                     {
                         'function': 'status.master',
                         'seconds': self.opts['master_alive_interval'],
@@ -3043,7 +3062,7 @@ class ProxyMinion(Minion):
                     'master_list' in self.opts and \
                     self.opts['master'] != self.opts['master_list'][0]:
                 self.schedule.add_job({
-                    '__master_failback':
+                    master_event(type='failback'):
                     {
                         'function': 'status.ping_master',
                         'seconds': self.opts['master_failback_interval'],
@@ -3054,10 +3073,10 @@ class ProxyMinion(Minion):
                     }
                 }, persist=True)
             else:
-                self.schedule.delete_job('__master_failback', persist=True)
+                self.schedule.delete_job(master_event(type='failback'), persist=True)
         else:
-            self.schedule.delete_job('__master_alive_{0}'.format(self.opts['master']), persist=True)
-            self.schedule.delete_job('__master_failback', persist=True)
+            self.schedule.delete_job(master_event(type='alive', master=self.opts['master']), persist=True)
+            self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')

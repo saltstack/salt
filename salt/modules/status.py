@@ -995,10 +995,10 @@ def master(master=None, connected=True):
     '''
     .. versionadded:: 2014.7.0
 
-    Fire an event if the minion gets disconnected from its master. This
-    function is meant to be run via a scheduled job from the minion. If
-    master_ip is an FQDN/Hostname, it must be resolvable to a valid IPv4
-    address.
+    Return the connection status with master. Fire an event if the
+    connection to master is not as expected. This function is meant to be
+    run via a scheduled job from the minion. If master_ip is an FQDN/Hostname,
+    it must be resolvable to a valid IPv4 address.
 
     CLI Example:
 
@@ -1023,22 +1023,23 @@ def master(master=None, connected=True):
             master_ip = tmp_ip
 
     ips = _remote_port_tcp(port)
+    master_connection_status = master_ip in ips
 
-    if connected:
-        if master_ip not in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_disconnected')
-    else:
-        if master_ip in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_connected')
+    if master_connection_status is not connected:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        if master_connection_status:
+            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+        else:
+            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+
+    return master_connection_status
 
 
 def ping_master(master):
     '''
     .. versionadded:: 2016.3.0
 
-    Sends ping request to the given master. Fires '__master_alive' event on success.
+    Sends ping request to the given master. Fires '__master_failback' event on success.
     Returns bool result.
 
     CLI Example:
@@ -1073,7 +1074,7 @@ def ping_master(master):
 
     if result:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, '__master_failback')
+        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
 

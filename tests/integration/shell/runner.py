@@ -19,6 +19,10 @@ import integration
 from integration.utils import testprogram
 import salt.utils
 
+USERA = 'saltdev'
+USERA_PWD = 'saltdev'
+HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
+
 
 class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
@@ -26,6 +30,33 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
     '''
 
     _call_binary_ = 'salt-run'
+
+    def _add_user(self):
+        '''
+        helper method to add user
+        '''
+        try:
+            add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
+            add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
+                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+            self.assertTrue(add_user)
+            self.assertTrue(add_pwd)
+            user_list = self.run_call('user.list_users')
+            self.assertIn(USERA, str(user_list))
+        except AssertionError:
+            self.run_call('user.delete {0} remove=True'.format(USERA))
+            self.skipTest(
+                'Could not add user or password, skipping test'
+                )
+
+    def _remove_user(self):
+        '''
+        helper method to remove user
+        '''
+        user_list = self.run_call('user.list_users')
+        for user in user_list:
+            if USERA in user:
+                self.run_call('user.delete {0} remove=True'.format(USERA))
 
     def test_in_docs(self):
         '''
@@ -143,6 +174,40 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             message='correct usage',
             stdout=stdout, stderr=stderr
         )
+
+    def test_salt_run_with_eauth_all_args(self):
+        '''
+        test salt-run with eauth
+        tests all eauth args
+        '''
+        args = ['--auth', '--eauth', '--external-auth', '-a']
+        self._add_user()
+        for arg in args:
+            run_cmd = self.run_run('{0} pam --username {1} --password {2}\
+                                   test.arg arg kwarg=kwarg1'.format(arg, USERA, USERA_PWD))
+            expect = ['args:', '    - arg', 'kwargs:', '    ----------', '    kwarg:', '        kwarg1']
+            self.assertEqual(expect, run_cmd)
+        self._remove_user()
+
+    def test_salt_run_with_eauth_bad_passwd(self):
+        '''
+        test salt-run with eauth and bad password
+        '''
+        self._add_user()
+        run_cmd = self.run_run('-a pam --username {0} --password wrongpassword\
+                               test.arg arg kwarg=kwarg1'.format(USERA))
+        expect = ['Authentication failure of type "eauth" occurred for user saltdev.']
+        self.assertEqual(expect, run_cmd)
+        self._remove_user()
+
+    def test_salt_run_with_wrong_eauth(self):
+        '''
+        test salt-run with wrong eauth parameter
+        '''
+        run_cmd = self.run_run('-a wrongeauth --username {0} --password {1}\
+                               test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
+        expect = ['The specified external authentication system "wrongeauth" is not available']
+        self.assertEqual(expect, run_cmd)
 
 
 if __name__ == '__main__':
