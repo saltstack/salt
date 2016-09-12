@@ -1363,6 +1363,36 @@ is impacted.
 
     fileserver_limit_traversal: False
 
+.. conf_master:: fileserver_list_cache_time
+
+``fileserver_list_cache_time``
+------------------------------
+
+.. versionadded:: 2014.1.0
+.. versionchanged:: Carbon
+    The default was changed from ``30`` seconds to ``20``.
+
+Default: ``20``
+
+Salt caches the list of files/symlinks/directories for each fileserver backend
+and environment as they are requested, to guard against a performance
+bottleneck at scale when many minions all ask the fileserver which files are
+available simultaneously. This configuration parameter allows for the max age
+of that cache to be altered.
+
+Set this value to ``0`` to disable use of this cache altogether, but keep in
+mind that this may increase the CPU load on the master when running a highstate
+on a large number of minions.
+
+.. note::
+    Rather than altering this configuration parameter, it may be advisable to
+    use the :mod:`fileserver.clear_list_cache
+    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+
+.. code-block:: yaml
+
+    fileserver_list_cache_time: 5
+
 .. conf_master:: hash_type
 
 ``hash_type``
