@@ -209,7 +209,7 @@ def get_pkg_id(pkg):
         pkg (str): The location of the pkg file
 
     Returns:
-        list: List of all of the package ID's
+        list: List of all of the package IDs
 
     CLI Example:
 
@@ -251,13 +251,13 @@ def get_pkg_id(pkg):
 
 def get_mpkg_ids(mpkg):
     '''
-    Attempt to get the package ids from a mounted .mpkg file
+    Attempt to get the package IDs from a mounted .mpkg file
 
     Args:
         mpkg (str): The location of the mounted mpkg file
 
     Returns:
-        list: List of package ID's
+        list: List of package IDs
 
     CLI Example:
 
