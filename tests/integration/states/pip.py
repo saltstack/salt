@@ -365,7 +365,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # previously installed
             ret = self.run_function(
                 'pip.install', ['pip==6.0'], upgrade=True,
-                ignore_installed=True,
                 bin_env=venv_dir
             )
             try:
@@ -379,7 +378,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 6.0 installed
+            # Let's make sure we have pip 6.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
                 {'pip': '6.0'}
