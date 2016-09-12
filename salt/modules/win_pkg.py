@@ -71,6 +71,9 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
 
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: Salt environment. Default 'base'
+    :param bool refresh: Refresh package metadata. Default 'True'
     '''
     if len(names) == 0:
         return ''
@@ -81,12 +84,11 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
 
     saltenv = kwargs.get('saltenv', 'base')
-
     # Refresh before looking for the latest version available
-    if salt.utils.is_true(kwargs.get('refresh', True)):
-        _refresh_db(saltenv)
-
-    installed_pkgs = list_pkgs(versions_as_list=True, saltenv=saltenv)
+    refresh=salt.utils.is_true(kwargs.get('refresh', True))
+    # no need to call _refresh_db_conditional as list_pkgs will do it
+    
+    installed_pkgs = list_pkgs(versions_as_list=True, saltenv=saltenv, refresh=refresh)
     log.trace('List of installed packages: {0}'.format(installed_pkgs))
 
     # iterate over all requested package names
@@ -135,9 +137,17 @@ def latest_version(*names, **kwargs):
     return ret
 
 
-def upgrade_available(name):
+def upgrade_available(name,**kwargs):
     '''
     Check whether or not an upgrade is available for a given package
+
+    :param name: The name of a single package
+    :return: Return True if newer version available
+    :rtype: bool
+
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: Salt environment
+    :param bool refresh: Refresh package metadata. Default 'True'
 
     CLI Example:
 
@@ -145,12 +155,22 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    saltenv = kwargs.get('saltenv', 'base')
+    # Refresh before looking for the latest version available,
+    # same default as latest_version
+    refresh=salt.utils.is_true(kwargs.get('refresh', True))
+    
+    return latest_version(name,saltenv=saltenv,refresh=refresh) != ''
 
 
-def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0613
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
+
+    :param bool refresh: Refresh package metadata. Default 'True'
+
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: Salt environment. Default 'base'
 
     CLI Example:
 
@@ -158,9 +178,10 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
-        _refresh_db(saltenv)
-
+    saltenv = kwargs.get('saltenv', 'base')
+    refresh=salt.utils.is_true(refresh)
+    _refresh_db_conditional(saltenv,force=refresh)
+    
     ret = {}
     for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
         if version(name):
@@ -170,32 +191,51 @@ def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0
     return ret
 
 
-def list_available(saltenv='base', *names):
+def list_available(*names, **kwargs):
     '''
     Return a list of available versions of the specified package.
 
+    :param str name: One or more package names
+    :return:
+        For multiple package names listed returns dict of package names and versions
+        For single package name returns a version string
+    :rtype: dict or string
+    .. code-block:: cfg
+        {'<package name>': ['<version>', '<version>', ]}
+    
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: The salt environment to use. Default ``base``.
+    :param bool refresh: Refresh package metadata. Default ``True``.
+    :param bool return_dict_always: Default ``False`` dict when a single package name is queried.
+    
     CLI Example:
-
     .. code-block:: bash
-
-        salt '*' pkg.list_available <package name>
+        salt '*' pkg.list_available <package name> return_dict_always=True
         salt '*' pkg.list_available <package name01> <package name02>
     '''
     if not names:
         return ''
-    if len(names) == 1:
+
+    saltenv = kwargs.get('saltenv', 'base')
+    refresh=salt.utils.is_true(kwargs.get('refresh', False))
+    _refresh_db_conditional(saltenv,force=refresh)
+    return_dict_always = \
+        salt.utils.is_true(kwargs.get('return_dict_always', False))
+    if len(names) == 1 and not return_dict_always:
         pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:
             return ''
         versions = list(pkginfo.keys())
+        versions = sorted(versions, cmp=_reverse_cmp_pkg_versions)
     else:
         versions = {}
         for name in names:
             pkginfo = _get_package_info(name, saltenv=saltenv)
             if not pkginfo:
                 continue
-            versions[name] = list(pkginfo.keys()) if pkginfo else []
-    versions = sorted(versions, cmp=_reverse_cmp_pkg_versions)
+            verlist = list(pkginfo.keys()) if pkginfo else []
+            verlist=sorted(verlist, cmp=_reverse_cmp_pkg_versions)
+            versions[name] = verlist
     return versions
 
 
@@ -203,12 +243,24 @@ def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
+    :param str name: One or more package names
+    :return:
+        For multiple package names listed returns dict of package names and current version
+        For single package name returns a current version string
+    :rtype: dict or string
+    .. code-block:: cfg
+        {'<package name>': ['<version>', '<version>', ]}
+
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: The salt environment to use. Default ``base``.
+    :param bool refresh: Refresh package metadata. Default ``True``.
+
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package name01> <package name02>
     '''
+    # pkg_resource calls list_pkgs refresh kwargs will be passed on
     ret = {}
     if len(names) == 1:
         val = __salt__['pkg_resource.version'](*names, **kwargs)
@@ -230,9 +282,13 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
+
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: The salt environment to use. Default ``base``.
+    :param bool refresh: Refresh package metadata. Default ``True``.
 
         {'<package_name>': '<version>'}
 
@@ -248,13 +304,9 @@ def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
     if any([salt.utils.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
-
-    if kwargs.get('refresh', False):
-        # _get_name_map() needs a refresh_db if cache is not present
-        if versions_as_list:  # Assume we are being called by the state/pkg.py
-            _refresh_db(saltenv)
-        else:  # Assume being called by a user
-            refresh_db(saltenv=saltenv)
+    saltenv = kwargs.get('saltenv', 'base')
+    refresh=salt.utils.is_true(kwargs.get('refresh', False))
+    _refresh_db_conditional(saltenv,force=refresh)
 
     ret = {}
     name_map = _get_name_map(saltenv)
@@ -353,35 +405,54 @@ def _get_reg_software():
     return reg_software
 
 
-def _refresh_db(saltenv, **kwargs):
+def _refresh_db_conditional(saltenv, **kwargs):
     '''
     Internal use only in this module, has a different set of defaults and
     returns True or False. And supports check the age of the existing
-    generated meta data.
+    generated metadata db, as well as ensure metadata db exists to begin with
 
-    :param str setenv: salt environment
-    :return: Trupple of salt url source and local cache path
-    :rtype: tuple
+    :param str setenv: Salt environment
+    :return: True Fetched or Cache uptodate, False to indicate an issue
+    :rtype: bool
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
-    raise_error = kwargs.pop('raise_error', False)
-    expire_age = kwargs.pop('expire', 0)
+    refresh_force = salt.utils.is_true(kwargs.pop('force', False))
+    raise_error = salt.utils.is_true(kwargs.pop('raise_error', False))
+    expired_max=21600  # 6hr same as yum
+    expired_min=0  # i.e. ignore force request if less than this young
+    if 'winrepo_cache_expire_max' in __opts__:
+        try:
+            expired_max=int(__opts__['winrepo_cache_expire_max'])
+        except:
+            pass
 
-    (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
-    repo_age_sec = _repo_age(saltenv)
+    if 'winrepo_cache_expire_min' in __opts__:
+        try:
+            expired_min=int(__opts__['winrepo_cache_expire_min'])
+        except:
+            pass
+    (_, _, _, repo_age_sec) = _get_repo_src_dest_details(saltenv)
 
-    if repo_age_sec > -1:  # the file exists
-        if expire_age > 0 and (repo_age_sec < expire_age):
-            log.debug(
-                'Using existing pkg meta db as of %d minutes ago',
+    # repo_age_sec is -1 if repo db does not exist
+    refresh = ( repo_age_sec == -1 or 
+        (refresh_force and ( expired_min == 0 or repo_age_sec < expired_min)) or
+        (repo_age_sec > expired_max)
+        )
+
+    if refresh:
+        if expired_min == 0 and (repo_age_sec < 60):
+            log.warning(
+                'pkg metadata db for %s less than a minute old and been asked to refresh it',
+                saltenv
+                )
+    else:
+        log.debug(
+                'Using existing pkg metadata db for %s which is %d minutes old',
+                saltenv,
                 int(repo_age_sec/60)
                 )
-            return True
-        if expire_age == 0 and (repo_age_sec < 60):
-            log.warning(
-                'pkg meta db less than a minute old and been asked to refresh it'
-            )
+        return True
 
     results = refresh_db(saltenv=saltenv, verbose=False, raise_error=False)
     if results.get('failed', 0) > 0:
@@ -398,43 +469,27 @@ def _refresh_db(saltenv, **kwargs):
 
 def refresh_db(**kwargs):
     '''
-    Compile the repository from the local cached state files and return a dict
-    of the results & status. See also pkg.genrepo
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.refresh_db
-        salt '*' pkg.refresh_db saltenv=base
+    Fectches and compile the metadata repository for windows packaging and returns status
+    of the results. See also pkg.genrepo
 
     *Keyword Arguments (kwargs)*
-        See pkg.genrepo
+    See genrepo
+    
+    CLI Example:
+    .. code-block:: bash
+        salt '*' pkg.refresh_db
+        salt '*' pkg.refresh_db saltenv=base
     '''
     saltenv = kwargs.pop('saltenv', 'base')
-    verbose = kwargs.pop('verbose', False)
-    raise_error = kwargs.pop('raise_error', True)
+    verbose = salt.utils.is_true(kwargs.pop('verbose', False))
+    raise_error = salt.utils.is_true(kwargs.pop('raise_error', True))
     __context__.pop('winrepo.data', None)
-    (winrepo_source_dir, repo_path) = _get_repo_src_dest(saltenv)
+    (winrepo_source_dir, repo_path, _ , _) = _get_repo_src_dest_details(saltenv)
 
-    # Do some safety checks on the repo_path before removing its contents
-    for pathchecks in [
-            '[a-z]\\:\\\\$',
-            '\\\\',
-            re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
-            ]:
-        if re.match(pathchecks, repo_path, flags=re.IGNORECASE) is not None:
-            log.error(
-                'Local cache dir seems a bad choice "%s"',
-                repo_path
-                )
-            raise CommandExecutionError(
-                'Error local cache dir seems a bad choice',
-                info=repo_path
-                )
+
     # Clear minion repo-ng cache see #35342 discussion
     log.info('Removing all *.sls files of "%s" tree', repo_path)
-    for root, _, files in os.walk(repo_path):
+    for root, _, files in os.walk(repo_path, followlinks=False):
         for name in files:
             if name.endswith('.sls'):
                 full_filename = os.path.join(root, name)
@@ -446,8 +501,6 @@ def refresh_db(**kwargs):
                         format(full_filename, exc)
                         )
 
-    if not os.path.exists(repo_path):
-        os.makedirs(repo_path)
     # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
         winrepo_source_dir,
@@ -466,7 +519,7 @@ def refresh_db(**kwargs):
         return results
 
 
-def _get_repo_src_dest(saltenv):
+def _get_repo_src_dest_details(saltenv):
     '''
     :param str setenv: salt environment
     :return: Trupple of salt url source and local cache path
@@ -482,40 +535,63 @@ def _get_repo_src_dest(saltenv):
     else:
         winrepo_source_dir = __opts__['winrepo_source_dir']
 
-    #dest_path = '{0}\\files\\{1}\\win\\repo-ng'\
-    #    .format(__opts__['cachedir'], saltenv)
-
     dirs = [__opts__['cachedir'], 'files', saltenv]
     url_parts = _urlparse(winrepo_source_dir)
     dirs.append(url_parts.netloc)
     dirs.extend(url_parts.path.strip('/').split('/'))
-    dest_path = os.sep.join(dirs)
-    return (winrepo_source_dir, dest_path)
-
-
-def _repo_age(saltenv):
-    '''
-    Returns age in seconds of the generated repo
-    '''
-    (repo_remote, repo_local) = _get_repo_src_dest(saltenv)
-    if not os.path.exists(repo_local):
-        os.makedirs(repo_local)
-    winrepo = os.path.join(repo_local, 'winrepo.p')
-
-    try:
-        if os.path.isfile(winrepo):
-            file_time = os.stat(winrepo).st_mtime
+    local_dest_path = os.sep.join(dirs)
+    
+    winrepo_file=os.path.join(local_dest_path, 'winrepo.p') # Default
+    if 'winrepo_cachefile' in __opts__:
+        # Check for a valid windows file name
+        if re.search(
+            '[\\\\/:*?"<>|]',
+            __opts__['winrepo_cachefile'],
+            flags=re.IGNORECASE
+            ) is None:
+            winrepo_file=os.path.join(
+                local_dest_path,
+                __opts__['winrepo_cachefile']
+                )
         else:
-            return -1
-    except:
-        raise
+            log.error('minion cofiguration option "winrepo_cachefile" ignored,'
+                'set to an invalid value %s, ensure its a valid file name',
+                __opts__['winrepo_cachefile']
+                )
+    
+    # Do some safety checks on the repo_path as its contents can be removed,
+    # this includes check for bad coding
+    for pathchecks in [
+            '[a-z]\\:\\\\$',
+            '\\\\$',
+            re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
+            ]:
+        if re.match(pathchecks, local_dest_path, flags=re.IGNORECASE) is not None:
+            log.error(
+                'Local cache dir seems a bad choice "%s"',
+                local_dest_path
+                )
+            raise CommandExecutionError(
+                'Error local cache dir seems a bad choice',
+                info=local_dest_path
+                )
 
-    return time.time()-file_time
+    if not os.path.exists(local_dest_path):
+        os.makedirs(local_dest_path)
+
+    winrepo_age = -1
+    try:
+        if os.path.isfile(winrepo_file):
+            winrepo_age = time.time()-os.stat(winrepo_file).st_mtime
+    except:
+        pass
+
+    return (winrepo_source_dir, local_dest_path, winrepo_file, winrepo_age)
 
 
 def genrepo(**kwargs):
     '''
-    Generate winrepo db based on sls files in the winrepo_source_dir
+    Generate package metedata db based on files within the winrepo_source_dir
 
     CLI Example:
 
@@ -527,8 +603,7 @@ def genrepo(**kwargs):
 
     *Keyword Arguments (kwargs)*
 
-    :param str saltenv:
-        Default 'base'
+    :param str saltenv: Salt environment. Default 'base'
 
     :param bool verbose:
         Return verbose data structure which includes 'success_list', a list of
@@ -542,20 +617,17 @@ def genrepo(**kwargs):
 
     '''
     saltenv = kwargs.pop('saltenv', 'base')
-    verbose = kwargs.pop('verbose', False)
-    raise_error = kwargs.pop('raise_error', True)
+    verbose = salt.utils.is_true(kwargs.pop('verbose', False))
+    raise_error = salt.utils.is_true(kwargs.pop('raise_error', True))
 
     ret = {}
     successful_verbose = {}
     total_files_processed = 0
     ret['repo'] = {}
     ret['!errors'] = {}
-    (repo_remote, repo_local) = _get_repo_src_dest(saltenv)
-    if not os.path.exists(repo_local):
-        os.makedirs(repo_local)
-    winrepo = os.path.join(repo_local, 'winrepo.p')
+    (_, repo_local, winrepo, _) = _get_repo_src_dest_details(saltenv)
 
-    for root, _, files in os.walk(repo_local):
+    for root, _, files in os.walk(repo_local, followlinks=False):
         short_path = os.path.relpath(root, repo_local)
         if short_path == '.':
             short_path = ''
@@ -570,7 +642,8 @@ def genrepo(**kwargs):
                     )
     with salt.utils.fopen(winrepo, 'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
-
+    # save reading it back again. ! this breaks due to utf8 issues
+    #__context__['winrepo.data'] = ret
     successful_count = len(successful_verbose)
     error_count = len(ret['!errors'])
     if verbose:
@@ -723,7 +796,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
     return ret
 
 
-def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
+def install(name=None, refresh=False, pkgs=None, **kwargs):
     r'''
     Install the passed package(s) on the system using winrepo
 
@@ -740,8 +813,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         command.
 
     :type pkgs: list or None
-
-    :param str saltenv: The salt environment to use. Default is ``base``.
 
     *Keyword Arguments (kwargs)*
 
@@ -761,6 +832,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         True will copy the contents of the installer directory. This is useful
         for installations that are not a single file. Only applies to
         directories on ``salt://``
+
+    :param str saltenv: Salt environment. Default 'base'
 
     :param bool report_reboot_exit_codes:
         If the installer exits with a recognized exit code indicating that
@@ -843,8 +916,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             uninstaller: 'NTP/uninst.exe'
     '''
     ret = {}
-    if refresh:
-        refresh_db(saltenv=saltenv)
+    saltenv = kwargs.pop('saltenv', 'base')
+    refresh=salt.utils.is_true(refresh)
+    # no need to call _refresh_db_conditional as list_pkgs will do it
 
     # Make sure name or pkgs is passed
     if not name and not pkgs:
@@ -869,7 +943,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         }
 
     # Get a list of currently installed software for comparison at the end
-    old = list_pkgs(saltenv=saltenv)
+    old = list_pkgs(saltenv=saltenv,refresh=refresh)
 
     # Loop through each package
     changed = []
@@ -1112,10 +1186,14 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     return ret
 
 
-def upgrade(refresh=True):
+def upgrade(**kwargs):
     '''
-    Run a full system upgrade
-
+    Upgrade all software. Currently not implemented
+    
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: The salt environment to use. Default ``base``.
+    :param bool refresh: Refresh package metadata. Default ``True``.
+    
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -1128,7 +1206,8 @@ def upgrade(refresh=True):
         salt '*' pkg.upgrade
     '''
     log.warning('pkg.upgrade not implemented on Windows yet')
-
+    refresh=salt.utils.is_true(kwargs.get('refresh', False))
+    saltenv = kwargs.get('saltenv', 'base')
     # Uncomment the below once pkg.upgrade has been implemented
 
     # if salt.utils.is_true(refresh):
@@ -1136,7 +1215,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
+def remove(name=None, pkgs=None, version=None, **kwargs):
     '''
     Remove the passed package(s) from the system using winrepo
 
@@ -1160,6 +1239,10 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
 
     .. versionadded:: 0.16.0
 
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: Salt environment. Default 'base'
+    :param bool refresh: Refresh package metadata. Default 'False'
+    
     :return: Returns a dict containing the changes.
     :rtype: dict
 
@@ -1180,6 +1263,9 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
+    saltenv = kwargs.get('saltenv', 'base')
+    refresh=salt.utils.is_true(kwargs.get('refresh', False))
+    # no need to call _refresh_db_conditional as list_pkgs will do it
     ret = {}
 
     # Make sure name or pkgs is passed
@@ -1190,7 +1276,7 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs, **kwargs)[0]
 
     # Get a list of currently installed software for comparison at the end
-    old = list_pkgs(saltenv=saltenv)
+    old = list_pkgs(saltenv=saltenv,refresh=refresh)
 
     # Loop through each package
     changed = []
@@ -1350,7 +1436,7 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
     return ret
 
 
-def purge(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
+def purge(name=None, pkgs=None, version=None, **kwargs):
     '''
     Package purges are not supported, this function is identical to
     ``remove()``.
@@ -1370,6 +1456,10 @@ def purge(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    *Keyword Arguments (kwargs)*
+    :param str saltenv: Salt environment. Default 'base'
+    :param bool refresh: Refresh package metadata. Default 'False'
+
     .. versionadded:: 0.16.0
 
 
@@ -1386,13 +1476,18 @@ def purge(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
     return remove(name=name,
                   pkgs=pkgs,
                   version=version,
-                  saltenv=saltenv,
                   **kwargs)
 
 
 def get_repo_data(saltenv='base'):
     '''
-    Returns the cached winrepo data
+    Returns the existing package meteadata db.
+    Will create it, if it does not exist, however will not refresh it.
+
+    :param str saltenv: Salt environment. Default 'base'
+
+    :return: Returns a dict containing contents of metadata db.
+    :rtype: dict
 
     CLI Example:
 
@@ -1400,15 +1495,29 @@ def get_repo_data(saltenv='base'):
 
         salt '*' pkg.get_repo_data
     '''
-    # if 'winrepo.data' in __context__:
-    #     return __context__['winrepo.data']
-    (repo_remote, repocache_dir) = _get_repo_src_dest(saltenv)
-    winrepo = 'winrepo.p'
+
+    (_ , _ , winrepo, repo_age_sec) = _get_repo_src_dest_details(saltenv)
+
+    
+    # we only call refresh_db if it does not exist, as we want to return
+    # the existing data even if its old, other parts of the code call this,
+    # but they will call refresh if they need too.
+    if repo_age_sec == -1:
+        # no repo meta db
+        log.info('winrepo metadata db missing calling refresh_db to create')
+        _refresh_db_conditional(saltenv=saltenv)
+
+    if 'winrepo.data' in __context__:
+        log.trace('get_repo_data called return memory cache')
+        return __context__['winrepo.data']
+    else:
+        log.trace('get_repo_data called reading from disk')
+
     try:
-        with salt.utils.fopen(
-                os.path.join(repocache_dir, winrepo), 'rb') as repofile:
+        with salt.utils.fopen(winrepo, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
+                __context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
                 log.exception(exc)
@@ -1420,7 +1529,7 @@ def get_repo_data(saltenv='base'):
             # File doesn't exist
             raise CommandExecutionError(
                 'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
-                'needed'
+                'needed or permission problems'
             )
 
         return {}
@@ -1430,17 +1539,14 @@ def get_name_map(saltenv='base'):
     '''
     Return a reverse map of full pkg names to the names recognized by winrepo.
 
-    Args:
-        saltenv: The environment to pull use
+    :param str saltenv: Salt environment. Default 'base'
 
-    Returns: A dictionary of the name map
+    :return: A dictionary of the name map from contents of metadata db.
+    :rtype: dict
 
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' pkg.get_name_map
-
     '''
     return _get_name_map(saltenv)
 
