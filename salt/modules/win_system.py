@@ -354,7 +354,7 @@ def set_computer_name(name):
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
-    if name and not isinstance(name, str):
+    if name and isinstance(name, str):
         name = name.decode('utf-8')
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
