@@ -5,6 +5,7 @@ File server pluggable modules and generic backend functions
 
 # Import python libs
 from __future__ import absolute_import
+import collections
 import errno
 import fnmatch
 import logging
@@ -325,10 +326,18 @@ class Fileserver(object):
         if not back:
             back = self.opts['fileserver_backend']
         else:
-            try:
-                back = back.split(',')
-            except AttributeError:
-                back = six.text_type(back).split(',')
+            if not isinstance(back, list):
+                try:
+                    back = back.split(',')
+                except AttributeError:
+                    back = six.text_type(back).split(',')
+
+        if isinstance(back, collections.Sequence):
+            # The test suite uses an ImmutableList type (based on
+            # collections.Sequence) for lists, which breaks this function in
+            # the test suite. This normalizes the value from the opts into a
+            # list if it is based on collections.Sequence.
+            back = list(back)
 
         ret = []
         if not isinstance(back, list):
