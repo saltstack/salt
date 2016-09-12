@@ -635,6 +635,88 @@ class Fileserver(object):
         except (IndexError, TypeError):
             return '', None
 
+    def clear_file_list_cache(self, load):
+        '''
+        Deletes the file_lists cache files
+        '''
+        if 'env' in load:
+            salt.utils.warn_until(
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
+
+        saltenv = load.get('saltenv', [])
+        if saltenv is not None:
+            if not isinstance(saltenv, list):
+                try:
+                    saltenv = [x.strip() for x in saltenv.split(',')]
+                except AttributeError:
+                    saltenv = [x.strip() for x in str(saltenv).split(',')]
+
+            for idx, val in enumerate(saltenv):
+                if not isinstance(val, six.string_types):
+                    saltenv[idx] = six.text_type(val)
+
+        ret = {}
+        fsb = self._gen_back(load.pop('fsbackend', None))
+        list_cachedir = os.path.join(self.opts['cachedir'], 'file_lists')
+        try:
+            file_list_backends = os.listdir(list_cachedir)
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                log.debug('No file list caches found')
+                return {}
+            else:
+                log.error(
+                    'Failed to get list of saltenvs for which the master has '
+                    'cached file lists: %s', exc
+                )
+
+        for back in file_list_backends:
+            # Account for the fact that the file_list cache directory for gitfs
+            # is 'git', hgfs is 'hg', etc.
+            back_virtualname = re.sub('fs$', '', back)
+            try:
+                cache_files = os.listdir(os.path.join(list_cachedir, back))
+            except OSError as exc:
+                log.error(
+                    'Failed to find file list caches for saltenv \'%s\': %s',
+                    back, exc
+                )
+                continue
+            for cache_file in cache_files:
+                try:
+                    cache_saltenv, extension = cache_file.rsplit('.', 1)
+                except ValueError:
+                    # Filename has no dot in it. Not a cache file, ignore.
+                    continue
+                if extension != 'p':
+                    # Filename does not end in ".p". Not a cache file, ignore.
+                    continue
+                elif back_virtualname not in fsb or \
+                        (saltenv is not None and cache_saltenv not in saltenv):
+                    log.debug(
+                        'Skipping %s file list cache for saltenv \'%s\'',
+                        back, cache_saltenv
+                    )
+                    continue
+                try:
+                    os.remove(os.path.join(list_cachedir, back, cache_file))
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to remove %s: %s',
+                                  exc.filename, exc.strerror)
+                else:
+                    ret.setdefault(back, []).append(cache_saltenv)
+                    log.debug(
+                        'Removed %s file list cache for saltenv \'%s\'',
+                        cache_saltenv, back
+                    )
+        return ret
+
     def file_list(self, load):
         '''
         Return a list of files from the dominant environment
