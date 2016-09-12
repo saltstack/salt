@@ -188,6 +188,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default='',
             help='Directory to scan for additional tests. (Requires that --custom also be set)'
         )
+        self.add_option(
+            '--customroot',
+            default='',
+            help='Additional directories to append to Salt file roots for master/minion'
+        )
         self.output_options_group.add_option(
             '--no-colors',
             '--no-colours',
@@ -393,7 +398,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
         # Transplant configuration
-        TestDaemon.transplant_configs(transport=self.options.transport)
+        TestDaemon.transplant_configs(transport=self.options.transport, ext=self.options.customdir)
 
     def post_execution_cleanup(self):
         SaltCoverageTestingParser.post_execution_cleanup(self)
