@@ -7,3 +7,4 @@ Version 2016.3.4 is a bugfix release for :doc:`2016.3.0
 
 - The `disk.wipe` execution module function has been modified
   so that it correctly wipes a disk.
+- Add ability to clone from a snapshot to the VMWare salt-cloud driver.

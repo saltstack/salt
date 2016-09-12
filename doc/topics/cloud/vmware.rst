@@ -530,6 +530,32 @@ Example of a minimal profile:
      cluster: 'Prod'
 
 
+Cloning from a Snapshot
+=======================
+
+.. versionadded:: Carbon
+
+Cloning a template works similar to cloning a VM except for the fact that
+a snapshot number must be provided.
+
+Example of a minimal profile:
+
+.. code-block:: yaml
+
+  my-template-clone:
+     provider: vcenter01
+     clonefrom: 'salt_vm'
+     snapshot: 3
+
+.. image:: /_static/snapshot_manager.png
+    :align: center
+    :scale: 70%
+
+.. note::
+    The previous diagram shows how to identify the snapshot number. Selected
+    (third snapshot) is number 3.
+
+
 Creating a VM
 =============
 
