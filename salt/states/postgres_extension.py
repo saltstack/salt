@@ -38,12 +38,14 @@ def present(name,
             from_version=None,
             user=None,
             maintenance_db=None,
+            db_user=None,
             db_password=None,
             db_host=None,
-            db_port=None,
-            db_user=None):
+            db_port=None):
     '''
-    Ensure that the named extension is present with the specified privileges
+    Ensure that the named extension is present.
+    For more information about all of these options see `CREATE EXTENSION` SQL
+    command reference in the PostgreSQL documentation.
 
     name
         The name of the extension to manage
@@ -54,11 +56,11 @@ def present(name,
     schema
         Schema to install the extension into
 
-    from_version
-        Old extension version if already installed
-
     ext_version
         version to install
+
+    from_version
+        Old extension version if already installed
 
     user
         System user all operations should be performed on behalf of
@@ -146,18 +148,15 @@ def absent(name,
            cascade=None,
            user=None,
            maintenance_db=None,
+           db_user=None,
            db_password=None,
            db_host=None,
-           db_port=None,
-           db_user=None):
+           db_port=None):
     '''
-    Ensure that the named extension is absent
+    Ensure that the named extension is absent.
 
     name
         Extension name of the extension to remove
-
-    cascade
-        Drop on cascade
 
     if_exists
         Add if exist slug
@@ -165,11 +164,14 @@ def absent(name,
     restrict
         Add restrict slug
 
-    maintenance_db
-        Database to act on
+    cascade
+        Drop on cascade
 
     user
         System user all operations should be performed on behalf of
+
+    maintenance_db
+        Database to act on
 
     db_user
         database username if different from config or default
