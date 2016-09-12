@@ -1331,6 +1331,7 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
+            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
