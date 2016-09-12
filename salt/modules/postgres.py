@@ -2865,9 +2865,9 @@ def privileges_grant(name,
     _grants = ','.join(_privs)
 
     if object_type in ['table', 'sequence']:
-        on_part = '{0}.{1}'.format(prepend, object_name)
+        on_part = '{0}."{1}"'.format(prepend, object_name)
     else:
-        on_part = object_name
+        on_part = '"{0}"'.format(object_name)
 
     if grant_option:
         if object_type == 'group':
