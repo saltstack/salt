@@ -133,9 +133,6 @@ def output(data):
     ret = [
         _format_host(host, hostdata)[0]
         for host, hostdata in six.iteritems(data)
-        # Highstate return data must be a dict, if this is not the case
-        # then this value is likely a retcode.
-        if isinstance(hostdata, dict)
     ]
     if ret:
         return "\n".join(ret)
