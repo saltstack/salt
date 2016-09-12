@@ -8,7 +8,7 @@ Support for apk
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded: Nitrogen
 
 '''
 from __future__ import absolute_import
