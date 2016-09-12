@@ -1502,7 +1502,7 @@ def get_repo_data(saltenv='base'):
     # but they will call refresh if they need too.
     if repo_age_sec == -1:
         # no repo meta db
-        log.info('winrepo metadata db missing calling refresh_db to create')
+        log.debug('No winrepo.p cache file. Refresh pkg db now.')
         _refresh_db_conditional(saltenv=saltenv)
 
     if 'winrepo.data' in __context__:
@@ -1523,13 +1523,6 @@ def get_repo_data(saltenv='base'):
     except IOError as exc:
         log.error('Not able to read repo file')
         log.exception(exc)
-        if exc.errno == errno.ENOENT:
-            # File doesn't exist
-            raise CommandExecutionError(
-                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
-                'needed or permission problems'
-            )
-
         return {}
 
 
