@@ -84,8 +84,9 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
+# SaltRenderError required by win_pkg
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError
+    CommandExecutionError, MinionError, SaltInvocationError, SaltRenderError
 )
 from salt.modules.pkg_resource import _repack_pkgs
 
@@ -103,12 +104,23 @@ if salt.utils.is_windows():
     # pylint: enable=W0611
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
-    from salt.modules.win_pkg import _get_repo_src_dest
+    from salt.modules.win_pkg import _get_repo_src_dest_details
+    from salt.modules.win_pkg import _refresh_db_conditional
+    from salt.modules.win_pkg import refresh_db
+    from salt.modules.win_pkg import genrepo
+    from salt.modules.win_pkg import _repo_process_pkg_sls
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
-    _get_repo_src_dest = _namespaced_function(_get_repo_src_dest, globals())
+    _get_repo_src_dest_details = \
+        _namespaced_function(_get_repo_src_dest_details, globals())
+    _refresh_db_conditional = \
+        _namespaced_function(_refresh_db_conditional, globals())
+    refresh_db = _namespaced_function(refresh_db, globals())
+    genrepo = _namespaced_function(genrepo, globals())
+    _repo_process_pkg_sls = \
+        _namespaced_function(_repo_process_pkg_sls, globals())
     _get_latest_pkg_version = \
         _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
