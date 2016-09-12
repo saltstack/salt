@@ -12,7 +12,6 @@ A module to manage software on Windows
 # Import python future libs
 from __future__ import absolute_import
 from __future__ import unicode_literals
-import errno
 import os
 import time
 #import locale
@@ -1404,6 +1403,9 @@ def get_repo_data(saltenv='base'):
     #     return __context__['winrepo.data']
     (repo_remote, repocache_dir) = _get_repo_src_dest(saltenv)
     winrepo = 'winrepo.p'
+    if not os.path.exists(os.path.join(repocache_dir, winrepo)):
+        log.debug('No winrepo.p cache file. Refresh pkg db now.')
+        refresh_db(saltenv=saltenv)
     try:
         with salt.utils.fopen(
                 os.path.join(repocache_dir, winrepo), 'rb') as repofile:
@@ -1416,13 +1418,6 @@ def get_repo_data(saltenv='base'):
     except IOError as exc:
         log.error('Not able to read repo file')
         log.exception(exc)
-        if exc.errno == errno.ENOENT:
-            # File doesn't exist
-            raise CommandExecutionError(
-                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
-                'needed'
-            )
-
         return {}
 
 
