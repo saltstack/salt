@@ -291,33 +291,6 @@ def exists(name, runas=None):
     return False
 
 
-def state(name, runas=None):
-    '''
-    Return the state of the VM
-
-    .. versionadded:: Carbon
-
-    :param str name:
-        Name/ID of VM
-
-    :param str runas:
-        The user that the prlctl command will be run as
-
-    Example:
-
-    .. code-block:: bash
-
-        salt '*' parallels.state macvm runas=macdev
-    '''
-    vm_info = list_vms(name, info=True, runas=runas).splitlines()
-    for info_line in vm_info:
-        if 'State: ' in info_line:
-            return info_line.split('State: ')[1]
-
-    log.error('Cannot find state of VM named {0}'.format(name))
-    return ''
-
-
 def start(name, runas=None):
     '''
     Start a VM
@@ -591,12 +564,18 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
         return named_ids
 
 
-def _validate_snap_name(name, snap_name, runas=None):
+def _validate_snap_name(name, snap_name, strict=True, runas=None):
     '''
     Validate snapshot name and convert to snapshot ID
 
+    :param str name:
+        Name/ID of VM whose snapshot name is being validated
+
     :param str snap_name:
         Name/ID of snapshot
+
+    :param bool strict:
+        Raise an exception if multiple snapshot IDs are found
 
     :param str runas:
         The user that the prlctl command will be run as
@@ -607,7 +586,7 @@ def _validate_snap_name(name, snap_name, runas=None):
     if re.match(GUID_REGEX, snap_name):
         return snap_name.strip('{}')
     else:
-        return snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+        return snapshot_name_to_id(name, snap_name, strict=strict, runas=runas)
 
 
 def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
@@ -711,7 +690,7 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     return prlctl('snapshot', args, runas=runas)
 
 
-def delete_snapshot(name, snap_name, runas=None):
+def delete_snapshot(name, snap_name, runas=None, all=False):
     '''
     Delete a snapshot
 
@@ -729,21 +708,43 @@ def delete_snapshot(name, snap_name, runas=None):
     :param str runas:
         The user that the prlctl command will be run as
 
+    :param bool all:
+        Delete all snapshots having the name given
+
+        .. versionadded:: Carbon
+
     Example:
 
     .. code-block:: bash
 
         salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
+        salt '*' parallels.delete_snapshot macvm 'Snapshot for linked clone' all=True runas=macdev
     '''
+    # strict means raise an error if multiple snapshot IDs found for the name given
+    strict = not all
+
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _validate_snap_name(name, snap_name, runas=runas)
+    snap_ids = _validate_snap_name(name, snap_name, strict=strict, runas=runas)
+    if isinstance(snap_ids, six.string_types):
+        snap_ids = [snap_ids]
 
-    # Construct argument list
-    args = [name, '--id', snap_name]
+    # Delete snapshot(s)
+    ret = {}
+    for snap_id in snap_ids:
+        snap_id = snap_id.strip('{}')
+        # Construct argument list
+        args = [name, '--id', snap_id]
 
-    # Execute command and return output
-    return prlctl('snapshot-delete', args, runas=runas)
+        # Execute command
+        ret[snap_id] = prlctl('snapshot-delete', args, runas=runas)
+
+    # Return results
+    ret_keys = list(ret.keys())
+    if len(ret_keys) == 1:
+        return ret[ret_keys[0]]
+    else:
+        return ret
 
 
 def revert_snapshot(name, snap_name, runas=None):
