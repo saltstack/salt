@@ -86,7 +86,8 @@ from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 # SaltRenderError required by win_pkg
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError, SaltRenderError
+    CommandExecutionError, MinionError, SaltInvocationError,
+    SaltRenderError  # pylint: disable=W0611
 )
 from salt.modules.pkg_resource import _repack_pkgs
 
