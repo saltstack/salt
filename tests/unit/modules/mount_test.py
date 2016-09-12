@@ -100,7 +100,8 @@ class MountTestCase(TestCase):
         '''
         mock = MagicMock(return_value={})
         with patch.object(mount, 'fstab', mock):
-            self.assertTrue(mount.rm_fstab('name', 'device'))
+            with patch('salt.utils.fopen', mock_open()) as m_open:
+                self.assertTrue(mount.rm_fstab('name', 'device'))
 
         mock_fstab = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'fstab', mock_fstab):
