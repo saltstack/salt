@@ -12,7 +12,6 @@ A module to manage software on Windows
 # Import python future libs
 from __future__ import absolute_import
 from __future__ import unicode_literals
-import errno
 import os
 import time
 #import locale
