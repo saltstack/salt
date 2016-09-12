@@ -11,6 +11,7 @@ import glob
 import shutil
 import logging
 import os
+import sys
 
 # Import salt libs
 import salt.utils
@@ -129,6 +130,9 @@ def create(path,
     '''
     if venv_bin is None:
         venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
+
+    if not os.path.exists(venv_bin):
+        venv_bin = '/'.join([os.path.dirname(sys.executable), venv_bin])
 
     cmd = [venv_bin]
 
