@@ -179,7 +179,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.list_upgrades
     '''
     saltenv = kwargs.get('saltenv', 'base')
-    refresh=salt.utils.is_true(refresh)
+    refresh = salt.utils.is_true(refresh)
     _refresh_db_conditional(saltenv, force=refresh)
 
     ret = {}
@@ -548,7 +548,7 @@ def _get_repo_src_dest_details(saltenv):
             __opts__['winrepo_cachefile'],
             flags=re.IGNORECASE
             ) is None:
-            winrepo_file=os.path.join(
+            winrepo_file = os.path.join(
                 local_dest_path,
                 __opts__['winrepo_cachefile']
                 )
