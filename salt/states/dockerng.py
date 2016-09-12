@@ -495,7 +495,8 @@ def image_present(name,
                   force=False,
                   insecure_registry=False,
                   client_timeout=CLIENT_TIMEOUT,
-                  dockerfile=None):
+                  dockerfile=None,
+                  **kwargs):
     '''
     Ensure that an image is present. The image can either be pulled from a
     Docker registry, built from a Dockerfile, or loaded from a saved image.
