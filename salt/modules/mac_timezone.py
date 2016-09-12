@@ -363,18 +363,19 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    if salt.utils.which('timedatectl'):
-        ret = _timedatectl()
-        for line in (x.strip() for x in ret['stdout'].splitlines()):
-            if 'rtc in local tz' in line.lower():
-                try:
-                    if line.split(':')[-1].strip().lower() == 'yes':
-                        return 'localtime'
-                    else:
-                        return 'UTC'
-                except IndexError:
-                    pass
+    # Need to search for a way to figure it out ...
+    return False
 
-        msg = ('Failed to parse timedatectl output: {0}\n'
-               'Please file an issue with SaltStack').format(ret['stdout'])
-        raise CommandExecutionError(msg)
+
+def set_hwclock(clock):
+    '''
+    Sets the hardware clock to be either UTC or localtime
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_hwclock UTC
+    '''
+    # Need to search for a way to figure it out ...
+    return False
