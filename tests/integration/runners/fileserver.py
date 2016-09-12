@@ -24,18 +24,17 @@ class FileserverTest(integration.ShellCase):
         '''
         ret = self.run_run_plus(fun='fileserver.dir_list')
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('_modules' in ret['return'])
 
         # Backend submitted as a string
-        ret = self.run_run_plus(
-            fun='fileserver.dir_list',
-            backend='roots')
+        ret = self.run_run_plus(fun='fileserver.dir_list', backend='roots')
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('_modules' in ret['return'])
 
         # Backend submitted as a list
-        ret = self.run_run_plus(
-            fun='fileserver.dir_list',
-            backend=['roots'])
+        ret = self.run_run_plus(fun='fileserver.dir_list', backend=['roots'])
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('_modules' in ret['return'])
 
     def test_empty_dir_list(self):
         '''
@@ -43,18 +42,21 @@ class FileserverTest(integration.ShellCase):
         '''
         ret = self.run_run_plus(fun='fileserver.empty_dir_list')
         self.assertIsInstance(ret['return'], list)
+        self.assertEqual(ret['return'], [])
 
         # Backend submitted as a string
         ret = self.run_run_plus(
             fun='fileserver.empty_dir_list',
             backend='roots')
         self.assertIsInstance(ret['return'], list)
+        self.assertEqual(ret['return'], [])
 
         # Backend submitted as a list
         ret = self.run_run_plus(
             fun='fileserver.empty_dir_list',
             backend=['roots'])
         self.assertIsInstance(ret['return'], list)
+        self.assertEqual(ret['return'], [])
 
     def test_envs(self):
         '''
@@ -141,14 +143,17 @@ class FileserverTest(integration.ShellCase):
         '''
         ret = self.run_run_plus(fun='fileserver.file_list')
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('grail/scene33' in ret['return'])
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.file_list', backend='roots')
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('grail/scene33' in ret['return'])
 
         # Backend submitted as a list
         ret = self.run_run_plus(fun='fileserver.file_list', backend=['roots'])
         self.assertIsInstance(ret['return'], list)
+        self.assertTrue('grail/scene33' in ret['return'])
 
     def test_symlink_list(self):
         '''
@@ -156,14 +161,17 @@ class FileserverTest(integration.ShellCase):
         '''
         ret = self.run_run_plus(fun='fileserver.symlink_list')
         self.assertIsInstance(ret['return'], dict)
+        self.assertTrue('dest_sym' in ret['return'])
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun='fileserver.symlink_list', backend='roots')
         self.assertIsInstance(ret['return'], dict)
+        self.assertTrue('dest_sym' in ret['return'])
 
         # Backend submitted as a list
         ret = self.run_run_plus(fun='fileserver.symlink_list', backend=['roots'])
         self.assertIsInstance(ret['return'], dict)
+        self.assertTrue('dest_sym' in ret['return'])
 
     def test_update(self):
         '''
