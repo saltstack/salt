@@ -263,7 +263,7 @@ class LocalFSTest(TestCase):
 
         # Now test the return of the contains function when key='key'
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-                self.assertTrue(localfs.contains(bank='bank', key='key'))
+            self.assertTrue(localfs.contains(bank='bank', key='key'))
 
 
 if __name__ == '__main__':
