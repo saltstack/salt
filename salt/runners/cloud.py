@@ -18,12 +18,14 @@ import salt.cloud
 # Get logging started
 log = logging.getLogger(__name__)
 
+
 def _filter_kwargs(k):
-	clean_kwargs = dict((x, kwargs[x]) for x in k if not x.startswith('__'))
+    return dict((x, k[x]) for x in k if not x.startswith('__'))
+
 
 def _get_client():
     '''
-    Return a cloud client
+    Return cloud client
     '''
     client = salt.cloud.CloudClient(
             os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
@@ -109,7 +111,7 @@ def profile(prof=None, instances=None, **kwargs):
         return {'Error': 'One or more instances (comma-delimited) must be set'}
 
     client = _get_client()
-    info = client.profile(prof, instances, filter_kwargs(**kwargs))
+    info = client.profile(prof, instances, _filter_kwargs(**kwargs))
     return info
 
 
@@ -118,7 +120,7 @@ def map_run(path, **kwargs):
     Execute a salt cloud map file
     '''
     client = _get_client()
-    info = client.map_run(path, filter_kwargs(**kwargs))
+    info = client.map_run(path, _filter_kwargs(**kwargs))
     return info
 
 
