@@ -4613,7 +4613,7 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **default_serializer_opts[serializer_name])
+    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
 
     contents += '\n'
 
