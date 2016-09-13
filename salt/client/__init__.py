@@ -1135,7 +1135,7 @@ class LocalClient(object):
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         except Exception as exc:
             raise SaltClientError('Could not examine master job cache. '
-                                  'Error occured in {0} returner. '
+                                  'Error occurred in {0} returner. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'],
                                                                   exc))
         for minion in data:
