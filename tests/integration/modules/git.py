@@ -36,12 +36,15 @@ log = logging.getLogger(__name__)
 
 
 def _git_version():
-    git_version = subprocess.Popen(
-        ['git', '--version'],
-        shell=False,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
+    try:
+        git_version = subprocess.Popen(
+            ['git', '--version'],
+            shell=False,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()[0]
+    except OSError:
+        return False
     if not git_version:
         log.debug('Git not installed')
         return False
