@@ -1310,7 +1310,7 @@ class Pygit2(GitProvider):
                 )
             else:
                 log.error(
-                    'Error occured fetching {0} remote \'{1}\': {2}'.format(
+                    'Error occurred fetching {0} remote \'{1}\': {2}'.format(
                         self.role, self.id, exc
                     )
                 )
