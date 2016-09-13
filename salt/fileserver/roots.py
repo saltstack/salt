@@ -292,7 +292,8 @@ def _file_lists(load, form):
                     dir_rel_fn = dir_rel_fn.replace('\\', '/')
                 ret['dirs'].append(dir_rel_fn)
                 if len(dirs) == 0 and len(files) == 0:
-                    if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
+                    if dir_rel_fn not in ('.', '..') \
+                            and not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
                         ret['empty_dirs'].append(dir_rel_fn)
                 for fname in files:
                     is_link = os.path.islink(os.path.join(root, fname))
