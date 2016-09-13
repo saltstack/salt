@@ -2926,7 +2926,7 @@ class Matcher(object):
         return False
 
 
-class ProxyMinion(Minion):
+class ProxyMinion(MinionManager):
     '''
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
