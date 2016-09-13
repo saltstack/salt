@@ -323,10 +323,11 @@ class Fileserver(object):
         if not back:
             back = self.opts['fileserver_backend']
         else:
-            try:
-                back = back.split(',')
-            except AttributeError:
-                back = six.text_type(back).split(',')
+            if not isinstance(back, list):
+                try:
+                    back = back.split(',')
+                except AttributeError:
+                    back = six.text_type(back).split(',')
 
         ret = []
         if not isinstance(back, list):
