@@ -330,6 +330,11 @@ def _run(cmd,
 
     ret = {}
 
+    # If this is crossed-called from another execution modules, we could have allowed a
+    # non-string to slip past. String-ify it.
+    if isinstance(cmd, list):
+        cmd = [str(c) for c in cmd]
+
     # If the pub jid is here then this is a remote ex or salt call command and needs to be
     # checked if blacklisted
     if '__pub_jid' in kwargs:
