@@ -101,7 +101,7 @@ def _string_list(a_list):
     return [str(item) for item in a_list]
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Display modified ret data
     '''

@@ -673,6 +673,8 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
 
     Edit LXC configuration options
 
+    .. deprecated:: 2015.5.0
+
     path
         path to the container parent
         default: /var/lib/lxc (system default)
@@ -690,8 +692,11 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
             - lxc_conf_unset:
                 - lxc.utsname
     '''
+    # Until a reasonable alternative for this state function is created, we need
+    # to keep this function around and cannot officially remove it. Progress of
+    # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
     salt.utils.warn_until(
-        'Carbon',
+        'Oxygen',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '
         'a certain order (such as when configuring more than one network '

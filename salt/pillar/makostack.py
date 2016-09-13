@@ -11,8 +11,9 @@ It supports the following features:
 
 - multiple config files that are mako templates with support for ``pillar``,
   ``__grains__``, ``__salt__``, ``__opts__`` objects
-- a config file renders as an ordered list of files (paths of these files are
-  relative to the current config file)
+- a config file renders as an ordered list of files. Unless absolute, the paths
+  of these files are relative to the current config file - if absolute, they
+  will be treated literally.
 - this list of files are read in ordered as mako templates with support for
   ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
 - all these rendered files are then parsed as ``yaml``
@@ -109,8 +110,10 @@ The config files that are referenced in the above ``ext_pillar`` configuration
 are mako templates which must render as a simple ordered list of ``yaml``
 files that will then be merged to build pillar data.
 
-The path of these ``yaml`` files must be relative to the directory of the
-MakoStack config file.
+Unless an absolute path name is specified, the path of these ``yaml`` files is
+assumed to be relative to the directory containing the MakoStack config file.
+If a path begins with '/', however, it will be treated literally and can be
+anywhere on the filesystem.
 
 The following variables are available in mako templating of makostack
 configuration files:
@@ -444,6 +447,10 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                                                 minion_id=minion_id,
                                                 pillar=pillar, stack=stack)
     for path in _parse_top_cfg(tops):
+        dirs = [basedir]
+        if path.startswith('/'):
+            dirs += ['/']
+        lookup = TemplateLookup(directories=dirs)
         try:
             p = lookup.get_template(path).render(__opts__=__opts__,
                                                  __salt__=__salt__,

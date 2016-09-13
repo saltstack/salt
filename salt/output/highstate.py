@@ -16,8 +16,8 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has five output modes, ``full``, ``terse``,
-    ``mixed``, ``changes`` and ``filter``.
+    The highstate outputter has six output modes, ``full``, ``terse``,
+    ``mixed``, ``mixed_id``, ``changes`` and ``filter``.
 
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
@@ -25,6 +25,9 @@ state_output:
       only one line.
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
+    * If ``mixed_id`` is used, then the mixed form will be used, but the value for ``name``
+      will be drawn from the state ID. This is useful for cases where the name
+      value might be very long and hard to read.
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
     * If ``filter`` is used, then either or both of two different filters can be
@@ -117,7 +120,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
@@ -138,12 +141,15 @@ def output(data):
     if 'data' in data:
         data = data.pop('data')
 
-    for host, hostdata in six.iteritems(data):
-        if not isinstance(hostdata, dict):
-            # Highstate return data must be a dict, if this is not the case
-            # then this value is likely a retcode.
-            continue
-        return _format_host(host, hostdata)[0]
+    ret = [
+        _format_host(host, hostdata)[0]
+        for host, hostdata in six.iteritems(data)
+        # Highstate return data must be a dict, if this is not the case
+        # then this value is likely a retcode.
+        if isinstance(hostdata, dict)
+    ]
+    if ret:
+        return "\n".join(ret)
     log.error(
         'Data passed to highstate outputter is not a valid highstate return: %s',
         data
@@ -281,7 +287,10 @@ def _format_host(host, data):
                 msg = _format_terse(tcolor, comps, ret, colors, tabular)
                 hstrs.append(msg)
                 continue
-            elif __opts__.get('state_output', 'full').lower() == 'mixed':
+            elif __opts__.get('state_output', 'full').lower().startswith('mixed'):
+                if __opts__['state_output'] == 'mixed_id':
+                    # Swap in the ID for the name. Refs #35137
+                    comps[2] = comps[1]
                 # Print terse unless it failed
                 if ret['result'] is not False:
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
@@ -301,7 +310,7 @@ def _format_host(host, data):
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
             ]
-            if __opts__.get('state_output_profile', True):
+            if __opts__.get('state_output_profile', True) and 'start_time' in ret:
                 state_lines.extend([
                     u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
                     u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
@@ -483,12 +492,12 @@ def _nested_changes(changes):
     # anyway so have to restore it after the other outputter is done
     if __opts__['color']:
         __opts__['color'] = u'CYAN'
-    __opts__['nested_indent'] = 14
     ret = u'\n'
     ret += salt.output.out_format(
             changes,
             'nested',
-            __opts__)
+            __opts__,
+            nested_indent=14)
     __opts__ = opts
     return ret
 
@@ -538,7 +547,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u'{0}'
-        if __opts__.get('state_output_profile', True):
+        if __opts__.get('state_output_profile', True) and 'start_time' in ret:
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
@@ -550,7 +559,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w='\n'.join(ret['warnings'])
             )
         fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
-        if __opts__.get('state_output_profile', True):
+        if __opts__.get('state_output_profile', True) and 'start_time' in ret:
             fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
         fmt_string += u'{5}'
 
