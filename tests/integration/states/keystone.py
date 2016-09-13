@@ -243,3 +243,8 @@ class KeystoneStateTest(integration.ModuleCase,
                              roles={'testv3': ['user']},
                              profile='adminv3')
         self.assertTrue(ret['keystone_|-testv3_|-testv3_|-user_present']['result'])
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(KeystoneStateTest)
