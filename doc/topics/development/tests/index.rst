@@ -457,7 +457,7 @@ Testing Custom Modules
 ~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to test custom Salt states and modules using the full power of the Salt
-test framework. This enables teams that have invested heavily in customized module
+test framework. This enables teams that have invested heavily in customized modules
 for Salt to have access to a full testing and acceptance framework, including
 support for integration tests with a running Salt master and minion.
 
