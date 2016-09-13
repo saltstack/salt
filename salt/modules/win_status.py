@@ -345,16 +345,13 @@ def master(master=None, connected=True):
             master_ip = tmp_ip
 
     ips = _win_remotes_on(port)
+    master_connection_status = master_ip in ips
 
-    if connected:
-        if master_ip not in ips:
-            event = salt.utils.event.get_event(
-                'minion', opts=__opts__, listen=False
-            )
-            event.fire_event({'master': master}, '__master_disconnected')
-    else:
-        if master_ip in ips:
-            event = salt.utils.event.get_event(
-                'minion', opts=__opts__, listen=False
-            )
-            event.fire_event({'master': master}, '__master_connected')
+    if master_connection_status is not connected:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        if master_connection_status:
+            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+        else:
+            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+
+    return master_connection_status

@@ -38,30 +38,12 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 
 log = logging.getLogger(__name__)
-
-config = salt.config.minion_config(
-        os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
-)
-
-# Set HTTP_PROXY_URL for use in various internet facing actions...eg apt-key adv
-if config['proxy_host'] and config['proxy_port']:
-    if config['proxy_username'] and config['proxy_password']:
-        HTTP_PROXY_URL = 'http://{0}:{1}@{2}:{3}'.format(
-            config['proxy_username'],
-            config['proxy_password'],
-            config['proxy_host'],
-            config['proxy_port'])
-    else:
-        HTTP_PROXY_URL = 'http://{0}:{1}'.format(
-            config['proxy_host'],
-            config['proxy_port'])
-else:
-    HTTP_PROXY_URL = None
 
 # pylint: disable=import-error
 try:
@@ -439,6 +421,20 @@ def install(name=None,
             reinstall=False,
             **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any apt-get/dpkg commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package, add refresh=True to update the dpkg database.
 
     name
@@ -602,11 +598,14 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
+    use_scope = salt.utils.systemd.has_scope(__context__) \
+        and __salt__['config.get']('systemd.scope', True)
+    cmd_prefix = ['systemd-run', '--scope'] if use_scope else []
+
     old = list_pkgs()
     targets = []
     downgrade = []
     to_reinstall = {}
-    cmd_prefix = []
     if pkg_type == 'repository':
         pkg_params_items = six.iteritems(pkg_params)
         # Build command prefix
@@ -614,12 +613,15 @@ def install(name=None,
         if kwargs.get('force_yes', False):
             cmd_prefix.append('--force-yes')
         if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
-            cmd_prefix += ['-o', 'DPkg::Options::=--force-confnew']
+            cmd_prefix.extend(['-o', 'DPkg::Options::=--force-confnew'])
         else:
-            cmd_prefix += ['-o', 'DPkg::Options::=--force-confold']
+            cmd_prefix.extend(['-o', 'DPkg::Options::=--force-confold'])
         cmd_prefix += ['-o', 'DPkg::Options::=--force-confdef']
-        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
-            cmd_prefix.append('--no-install-recommends')
+        if 'install_recommends' in kwargs:
+            if not kwargs['install_recommends']:
+                cmd_prefix.append('--no-install-recommends')
+            else:
+                cmd_prefix.append('--install-recommends')
         if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
             cmd_prefix.append('--only-upgrade')
         if skip_verify:
@@ -797,7 +799,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
-    cmd = ['apt-get', '-q', '-y', action]
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['apt-get', '-q', '-y', action])
     cmd.extend(targets)
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
@@ -858,9 +864,13 @@ def autoremove(list_only=False, purge=False):
         salt '*' pkg.autoremove list_only=True
         salt '*' pkg.autoremove purge=True
     '''
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
     if list_only:
         ret = []
-        cmd = ['apt-get', '--assume-no']
+        cmd.extend(['apt-get', '--assume-no'])
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
@@ -878,7 +888,7 @@ def autoremove(list_only=False, purge=False):
         return ret
     else:
         old = list_pkgs()
-        cmd = ['apt-get', '--assume-yes']
+        cmd.extend(['apt-get', '--assume-yes'])
         if purge:
             cmd.append('--purge')
         cmd.append('autoremove')
@@ -890,6 +900,20 @@ def autoremove(list_only=False, purge=False):
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any apt-get/dpkg commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages using ``apt-get remove``.
 
     name
@@ -920,6 +944,20 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any apt-get/dpkg commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages via ``apt-get purge`` along with all configuration files.
 
     name
@@ -950,6 +988,20 @@ def purge(name=None, pkgs=None, **kwargs):
 
 def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any apt-get/dpkg commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Upgrades all packages via ``apt-get upgrade`` or ``apt-get dist-upgrade``
     if  ``dist_upgrade`` is ``True``.
 
@@ -996,12 +1048,16 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         force_conf = '--force-confnew'
     else:
         force_conf = '--force-confold'
-    if dist_upgrade:
-        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
-               '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
-    else:
-        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
-               '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
+
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['apt-get', '-q', '-y',
+                '-o', 'DPkg::Options::={0}'.format(force_conf),
+                '-o', 'DPkg::Options::=--force-confdef'])
+    cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
+
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False,
@@ -1962,8 +2018,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
-                if HTTP_PROXY_URL:
-                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(HTTP_PROXY_URL),
+                http_proxy_url = _get_http_proxy_url()
+                if http_proxy_url:
+                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
                            '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
                 else:
                     cmd = ['apt-key', 'adv', '--keyserver', keyserver,
@@ -2440,3 +2497,34 @@ def info_installed(*names):
         ret[pkg_name] = t_nfo
 
     return ret
+
+
+def _get_http_proxy_url():
+    '''
+    Returns the http_proxy_url if proxy_username, proxy_password, proxy_host, and proxy_port
+    config values are set.
+
+    Returns a string.
+    '''
+    http_proxy_url = ''
+    host = __salt__['config.option']('proxy_host')
+    port = __salt__['config.option']('proxy_port')
+    username = __salt__['config.option']('proxy_username')
+    password = __salt__['config.option']('proxy_password')
+
+    # Set http_proxy_url for use in various internet facing actions...eg apt-key adv
+    if host and port:
+        if username and password:
+            http_proxy_url = 'http://{0}:{1}@{2}:{3}'.format(
+                username,
+                password,
+                host,
+                port
+            )
+        else:
+            http_proxy_url = 'http://{0}:{1}'.format(
+                host,
+                port
+            )
+
+    return http_proxy_url

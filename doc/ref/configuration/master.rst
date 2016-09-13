@@ -238,7 +238,7 @@ The directory to store the pki authentication keys.
 
 Directory for custom modules. This directory can contain subdirectories for
 each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, etc. This path is appended to
+``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
 :conf_master:`root_dir`.
 
 .. code-block:: yaml
@@ -355,8 +355,8 @@ Set the default outputter used by the salt command.
 
 Default: None
 
-# Set the default output file used by the salt command. Default is to output
-# to the CLI and not to a file. Functions the same way as the "--out-file"
+Set the default output file used by the salt command. Default is to output
+to the CLI and not to a file. Functions the same way as the "--out-file"
 CLI option, only sets this to a single file for all salt commands.
 
 .. code-block:: yaml
@@ -2428,6 +2428,19 @@ pillar_roots_override_ext_pillar option and will be removed in future releases.
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. conf_master:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
 
 .. _git-pillar-config-opts:
 

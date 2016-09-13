@@ -83,10 +83,37 @@ class ParallelsTestCase(TestCase):
                                                     {a5b8999f-5d95-4aff-82de-e515b0101b66}
             {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
         ''')
-        guids = set(['a5b8999f-5d95-4aff-82de-e515b0101b66',
-                     'a7345be5-ab66-478c-946e-a6c2caf14909'])
+        guids = ['a5b8999f-5d95-4aff-82de-e515b0101b66',
+                     'a7345be5-ab66-478c-946e-a6c2caf14909']
 
         self.assertEqual(parallels._find_guids(guid_str), guids)
+
+    def test_prlsrvctl(self):
+        '''
+        Test parallels.prlsrvctl
+        '''
+        runas = 'macdev'
+
+        # Validate 'prlsrvctl info'
+        info_cmd = ['prlsrvctl', 'info']
+        info_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': info_fcn}):
+            parallels.prlsrvctl('info', runas=runas)
+            info_fcn.assert_called_once_with(info_cmd, runas=runas)
+
+        # Validate 'prlsrvctl usb list'
+        usb_cmd = ['prlsrvctl', 'usb', 'list']
+        usb_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': usb_fcn}):
+            parallels.prlsrvctl('usb', 'list', runas=runas)
+            usb_fcn.assert_called_once_with(usb_cmd, runas=runas)
+
+        # Validate 'prlsrvctl set "--mem-limit auto"'
+        set_cmd = ['prlsrvctl', 'set', '--mem-limit', 'auto']
+        set_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': set_fcn}):
+            parallels.prlsrvctl('set', '--mem-limit auto', runas=runas)
+            set_fcn.assert_called_once_with(set_cmd, runas=runas)
 
     def test_prlctl(self):
         '''
@@ -101,12 +128,19 @@ class ParallelsTestCase(TestCase):
             parallels.prlctl('user', 'list', runas=runas)
             user_fcn.assert_called_once_with(user_cmd, runas=runas)
 
-        # Validate 'prlctl exec macvm uname'
+        # Validate 'prlctl exec "macvm uname"'
         exec_cmd = ['prlctl', 'exec', 'macvm', 'uname']
         exec_fcn = MagicMock()
         with patch.dict(parallels.__salt__, {'cmd.run': exec_fcn}):
             parallels.prlctl('exec', 'macvm uname', runas=runas)
             exec_fcn.assert_called_once_with(exec_cmd, runas=runas)
+
+        # Validate 'prlctl capture "macvm --file macvm.display.png"'
+        cap_cmd = ['prlctl', 'capture', 'macvm', '--file', 'macvm.display.png']
+        cap_fcn = MagicMock()
+        with patch.dict(parallels.__salt__, {'cmd.run': cap_fcn}):
+            parallels.prlctl('capture', 'macvm --file macvm.display.png', runas=runas)
+            cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
 
     def test_list_vms(self):
         '''
@@ -125,8 +159,16 @@ class ParallelsTestCase(TestCase):
         with patch.object(parallels, 'prlctl', mock_name):
             parallels.list_vms(name='macvm', runas=runas)
             mock_name.assert_called_once_with('list',
-                                              ['--info', 'macvm'],
+                                              ['macvm'],
                                               runas=runas)
+
+        # Validate listing templates
+        mock_templ = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_templ):
+            parallels.list_vms(template=True, runas=runas)
+            mock_templ.assert_called_once_with('list',
+                                               ['--template'],
+                                               runas=runas)
 
         # Validate listing extra info
         mock_info = MagicMock()
@@ -143,6 +185,67 @@ class ParallelsTestCase(TestCase):
             mock_complex.assert_called_once_with('list',
                                                  ['-o', 'uuid,status', '--all'],
                                                  runas=runas)
+
+    def test_clone(self):
+        '''
+        Test parallels.clone
+        '''
+        name = 'macvm'
+        runas = 'macdev'
+
+        # Validate clone
+        mock_clone = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_clone):
+            parallels.clone(name, 'macvm_new', runas=runas)
+            mock_clone.assert_called_once_with('clone',
+                                               [name, '--name', 'macvm_new'],
+                                               runas=runas)
+
+        # Validate linked clone
+        mock_linked = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_linked):
+            parallels.clone(name, 'macvm_link', linked=True, runas=runas)
+            mock_linked.assert_called_once_with('clone',
+                                                [name, '--name', 'macvm_link', '--linked'],
+                                                runas=runas)
+
+        # Validate template clone
+        mock_template = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_template):
+            parallels.clone(name, 'macvm_templ', template=True, runas=runas)
+            mock_template.assert_called_once_with('clone',
+                                                  [name, '--name', 'macvm_templ', '--template'],
+                                                  runas=runas)
+
+    def test_delete(self):
+        '''
+        Test parallels.delete
+        '''
+        name = 'macvm'
+        runas = 'macdev'
+
+        # Validate delete
+        mock_delete = MagicMock()
+        with patch.object(parallels, 'prlctl', mock_delete):
+            parallels.delete(name, runas=runas)
+            mock_delete.assert_called_once_with('delete', name, runas=runas)
+
+    def test_exists(self):
+        '''
+        Test parallels.exists
+        '''
+        name = 'macvm'
+        runas = 'macdev'
+
+        # Validate exists
+        mock_list = MagicMock(return_value='Name: {0}\nState: running'.format(name))
+        with patch.object(parallels, 'list_vms', mock_list):
+            self.assertTrue(parallels.exists(name, runas=runas))
+
+        # Validate not exists
+        mock_list = MagicMock(return_value='Name: {0}\nState: running'.format(name))
+        with patch.object(parallels, 'list_vms', mock_list):
+            self.assertFalse(parallels.exists('winvm', runas=runas))
 
     def test_start(self):
         '''
@@ -307,7 +410,7 @@ class ParallelsTestCase(TestCase):
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_one_name = MagicMock(side_effect=[u'', u'ν_e'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_one_name):
-                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_id)
+                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_ids[1])
 
         # Validate multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
@@ -351,8 +454,14 @@ class ParallelsTestCase(TestCase):
         # Validate a numerical name
         mock_snap_numb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_numb):
-            self.assertEqual(parallels._validate_snap_name(name, 3.14159), snap_id)
+            self.assertEqual(parallels._validate_snap_name(name, '3.14159'), snap_id)
             mock_snap_numb.assert_called_once_with(name, u'3.14159', strict=True, runas=None)
+
+        # Validate not strict (think neutrino oscillation)
+        mock_snap_non_strict = MagicMock(return_value=snap_id)
+        with patch.object(parallels, 'snapshot_name_to_id', mock_snap_non_strict):
+            self.assertEqual(parallels._validate_snap_name(name, u'e_ν', strict=False), snap_id)
+            mock_snap_non_strict.assert_called_once_with(name, u'e_ν', strict=False, runas=None)
 
     def test_list_snapshots(self):
         '''
@@ -438,18 +547,44 @@ class ParallelsTestCase(TestCase):
         '''
         Test parallels.delete_snapshot
         '''
+        delete_message = ('Delete the snapshot...\n'
+                          'The snapshot has been successfully deleted.')
+
+        # Validate single ID
         name = 'macvm'
         snap_name = 'kaon'
         snap_id = 'c2eab062-a635-4ccd-b9ae-998370f898b5'
 
         mock_snap_name = MagicMock(return_value=snap_id)
         with patch.object(parallels, '_validate_snap_name', mock_snap_name):
-            mock_delete = MagicMock(return_value='')
+            mock_delete = MagicMock(return_value=delete_message)
             with patch.object(parallels, 'prlctl', mock_delete):
-                parallels.delete_snapshot(name, snap_name)
+                ret = parallels.delete_snapshot(name, snap_name)
+                self.assertEqual(ret, delete_message)
                 mock_delete.assert_called_once_with('snapshot-delete',
                                                     [name, '--id', snap_id],
                                                     runas=None)
+
+        # Validate multiple IDs
+        name = 'macvm'
+        snap_name = 'higgs doublet'
+        snap_ids = ['c2eab062-a635-4ccd-b9ae-998370f898b5',
+                    '8aca07c5-a0e1-4dcb-ba75-cb154d46d516']
+
+        mock_snap_ids = MagicMock(return_value=snap_ids)
+        with patch.object(parallels, '_validate_snap_name', mock_snap_ids):
+            mock_delete = MagicMock(return_value=delete_message)
+            with patch.object(parallels, 'prlctl', mock_delete):
+                ret = parallels.delete_snapshot(name, snap_name, all=True)
+                mock_ret = {snap_ids[0]: delete_message,
+                            snap_ids[1]: delete_message}
+                self.assertDictEqual(ret, mock_ret)
+                mock_delete.assert_any_call('snapshot-delete',
+                                            [name, '--id', snap_ids[0]],
+                                            runas=None)
+                mock_delete.assert_any_call('snapshot-delete',
+                                            [name, '--id', snap_ids[1]],
+                                            runas=None)
 
     def test_revert_snapshot(self):
         '''

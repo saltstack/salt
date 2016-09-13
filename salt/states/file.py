@@ -267,6 +267,7 @@ from datetime import datetime   # python3 problem in the making?
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
@@ -2379,13 +2380,19 @@ def recurse(name,
             This option is **not** supported on Windows.
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file. Supported templates are:
-        `jinja`, `mako` and `wempy`.
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
 
-    .. note::
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
-        The template option is required when recursively applying templates.
+        .. note::
+
+            The template option is required when recursively applying templates.
 
     context
         Overrides default context variables passed to the template.
@@ -2862,7 +2869,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     def get_file_time_from_strptime(f):
         try:
             ts = datetime.strptime(f, strptime_format)
-            ts_epoch = (ts - beginning_of_unix_time).total_seconds()
+            ts_epoch = salt.utils.total_seconds(ts - beginning_of_unix_time)
             return (ts, ts_epoch)
         except ValueError:
             # Files which don't match the pattern are not relevant files.
@@ -3402,9 +3409,15 @@ def blockreplace(
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        The named templating engine will be used to render the downloaded file.
+        Defaults to ``jinja``. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     context
         Overrides default context variables passed to the template.
@@ -3856,9 +3869,16 @@ def append(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
-    template : ``jinja``
-        The named templating engine will be used to render the appended-to
-        file. Defaults to jinja.
+    template
+        The named templating engine will be used to render the appended-to file.
+        Defaults to ``jinja``. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     sources
         A list of source files to append. If the files are hosted on an HTTP or
@@ -4992,8 +5012,7 @@ def serialize(name,
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
-                merged_data = existing_data.copy()
-                merged_data.update(dataset)
+                merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
                 if existing_data == merged_data:
                     ret['result'] = True
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)

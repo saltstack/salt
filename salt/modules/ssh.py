@@ -645,6 +645,15 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
+
+    # A 'valid key' to us pretty much means 'decodable as base64', which is
+    # the same filtering done when reading the authorized_keys file. Apply
+    # the same check to ensure we don't insert anything that will not
+    # subsequently be read)
+    key_is_valid = _fingerprint(key) is not None
+    if not key_is_valid:
+        return 'Invalid public key'
+
     status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)

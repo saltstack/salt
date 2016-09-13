@@ -133,8 +133,6 @@ def _find_pg_binary(util):
     if not util_bin:
         if pg_bin_dir:
             return os.path.join(pg_bin_dir, util)
-        else:
-            log.error('{0} was not found'.format(util))
     else:
         return util_bin
 

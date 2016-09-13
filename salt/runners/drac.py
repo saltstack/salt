@@ -5,11 +5,12 @@ Manage Dell DRAC from the Master
 The login credentials need to be configured in the Salt master
 configuration file.
 
-  .. code-block: yaml
+.. code-block: yaml
 
-      drac:
-        username: admin
-        password: secret
+    drac:
+      username: admin
+      password: secret
+
 '''
 
 # Import python libs
@@ -30,18 +31,28 @@ def __virtual__():
     if HAS_PARAMIKO:
         return True
 
-    return False
+    return False, 'The drac runner module cannot be loaded: paramiko package is not installed.'
 
 
 def __connect(hostname, timeout=20, username=None, password=None):
     '''
     Connect to the DRAC
     '''
+    drac_cred = __opts__.get('drac')
+    err_msg = 'No drac login credentials found. Please add the \'username\' and \'password\' ' \
+              'fields beneath a \'drac\' key in the master configuration file. Or you can ' \
+              'pass in a username and password as kwargs at the CLI.'
 
     if not username:
-        username = __opts__['drac'].get('username', None)
+        if drac_cred is None:
+            log.error(err_msg)
+            return False
+        username = drac_cred.get('username', None)
     if not password:
-        password = __opts__['drac'].get('password', None)
+        if drac_cred is None:
+            log.error(err_msg)
+            return False
+        password = drac_cred.get('password', None)
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

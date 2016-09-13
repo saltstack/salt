@@ -65,7 +65,7 @@ def __virtual__():
         return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and __grains__['osmajorrelease'] == 9:
+    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
@@ -288,6 +288,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
     jail = kwargs.get('jail')
     chroot = kwargs.get('chroot')
+    refresh = kwargs.get('refresh')
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
@@ -305,6 +306,8 @@ def latest_version(*names, **kwargs):
             cmd = _pkg(jail, chroot, root) + ['search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
+        if not salt.utils.is_true(refresh):
+            cmd.append('-U')
         cmd.append(name)
 
         pkgver = _get_version(

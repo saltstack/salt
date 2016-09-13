@@ -1425,7 +1425,7 @@ def list_nodes_min(kwargs=None, call=None):
     vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        ret[vm["name"]] = True
+        ret[vm['name']] = {'state': 'Running', 'id': vm['name']}
 
     return ret
 
@@ -2092,7 +2092,7 @@ def destroy(name, call=None):
             '-a or --action.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -2141,7 +2141,7 @@ def destroy(name, call=None):
                 )
                 return 'failed to destroy'
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -2150,7 +2150,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return True
 
@@ -2183,7 +2183,7 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -2485,7 +2485,7 @@ def create(vm_):
         )
 
     try:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -2555,14 +2555,14 @@ def create(vm_):
                 vm_['key_filename'] = key_filename
                 vm_['ssh_host'] = ip
 
-                out = salt.utils.cloud.bootstrap(vm_, __opts__)
+                out = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
 
     if deploy and out is not None:
         data['deploy_kwargs'] = out['deploy_kwargs']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),

@@ -22,6 +22,7 @@ The data structure needs to be:
 from __future__ import absolute_import, print_function
 import os
 import time
+import random
 import logging
 from datetime import datetime
 
@@ -113,6 +114,15 @@ class LocalClient(object):
     Salt Master and it must be done using the same user that the Salt Master is
     running as. (Unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution).
+
+    ..note::
+
+        The LocalClient uses a Tornado IOLoop, this can create issues when
+        using the LocalClient inside an existing IOLoop. If creating the
+        LocalClient in partnership with another IOLoop either create the
+        IOLoop before creating the LocalClient, or when creating the IOLoop
+        use ioloop.current() which will return the ioloop created by
+        LocalClient.
 
     .. code-block:: python
 
@@ -378,13 +388,15 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minion_ret = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minions = minion_ret.keys()
+        random.shuffle(minions)
         f_tgt = []
-        for minion, ret in six.iteritems(group):
+        for minion in minions:
+            if fun in minion_ret[minion]:
+                f_tgt.append(minion)
             if len(f_tgt) >= sub:
                 break
-            if fun in ret:
-                f_tgt.append(minion)
         func = self.cmd
         if cli:
             func = self.cmd_cli
@@ -986,7 +998,14 @@ class LocalClient(object):
                 # if there are no more events, lets stop waiting for the jinfo
                 if raw is None:
                     break
-
+                try:
+                    if raw['data']['retcode'] > 0:
+                        log.error('saltutil returning errors on minion {0}'.format(raw['data']['id']))
+                        minions.remove(raw['data']['id'])
+                        break
+                except KeyError as exc:
+                    # This is a safe pass. We're just using the try/except to avoid having to deep-check for keys
+                    log.debug('Passing on saltutil error. This may be an error in saltclient. {0}'.format(exc))
                 # Keep track of the jid events to unsubscribe from later
                 open_jids.add(jinfo['jid'])
 
@@ -1489,10 +1508,6 @@ class LocalClient(object):
                                                  master_uri=master_uri)
 
         try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(

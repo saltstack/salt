@@ -38,9 +38,10 @@ class GrainsModuleTestCase(TestCase):
 
     def test_filter_by(self):
         grainsmod.__grains__ = {
-          'os_family': 'MockedOS',
-          '1': '1',
-          '2': '2',
+            'os_family': 'MockedOS',
+            '1': '1',
+            '2': '2',
+            'roles': ['A', 'B'],
         }
 
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
@@ -141,6 +142,24 @@ class GrainsModuleTestCase(TestCase):
         # dict1 was altered, reestablish
         dict1 = {'A': 'B', 'MockedOS': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, default='Z')
+        self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
+
+        # Test when grain value is a list
+        dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1, grain='roles', default='C')
+        self.assertEqual(res, 'B')
+        # Test default when grain value is a list
+        dict1 = {'Z': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1, grain='roles', default='C')
+        self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
+
+        # Test with wildcard pattern in the lookup_dict keys
+        dict1 = {'*OS': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1)
+        self.assertEqual(res, 'B')
+        # Test with sequence pattern with roles
+        dict1 = {'Z': 'B', '[BC]': {'D': {'E': 'F', 'G': 'H'}}}
+        res = grainsmod.filter_by(dict1, grain='roles', default='Z')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
 
         # Base tests

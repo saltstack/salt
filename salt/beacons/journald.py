@@ -43,7 +43,7 @@ def _get_journal():
     return __context__['systemd.journald']
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

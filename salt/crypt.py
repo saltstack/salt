@@ -478,6 +478,9 @@ class AsyncAuth(object):
                 error = exc
                 break
             if creds == 'retry':
+                if self.opts.get('detect_mode') is True:
+                    error = SaltClientError('Detect mode is on')
+                    break
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
@@ -491,6 +494,8 @@ class AsyncAuth(object):
                 continue
             break
         if not isinstance(creds, dict) or 'aes' not in creds:
+            if self.opts.get('detect_mode') is True:
+                error = SaltClientError('-|RETRY|-')
             try:
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
@@ -499,10 +504,14 @@ class AsyncAuth(object):
                 error = SaltClientError('Attempt to authenticate with the salt master failed')
             self._authenticate_future.set_exception(error)
         else:
-            AsyncAuth.creds_map[self.__key(self.opts)] = creds
+            key = self.__key(self.opts)
+            AsyncAuth.creds_map[key] = creds
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
+            # Notify the bus about creds change
+            event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
+            event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -553,7 +562,10 @@ class AsyncAuth(object):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 raise tornado.gen.Return('retry')
-            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
+            if self.opts.get('detect_mode') is True:
+                raise tornado.gen.Return('retry')
+            else:
+                raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:

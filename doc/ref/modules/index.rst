@@ -209,6 +209,19 @@ default configuration file for the minion contains the information and format
 used to pass data to the modules. :mod:`salt.modules.test`,
 :file:`conf/minion`.
 
+Strings and Unicode
+===================
+
+An execution  module author should always assume that strings fed to the module
+have already decoded from strings into Unicode. In Python 2, these will
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
+from a state to other Salt sub-systems, should pass Unicode (or bytes if passing binary data). In the
+rare event that a state needs to write directly to disk, Unicode should be
+encoded to a string immediately before writing to disk. An author may use
+``__salt_system_encoding__`` to learn what the encoding type of the system is.
+For example, `'my_string'.encode(__salt_system_encoding__')`.
+
+
 Outputter Configuration
 =======================
 
@@ -358,7 +371,7 @@ in the minion config file:
       pkg: aptpkg
 
 The above example will force the minion to use the :py:mod:`systemd
-<salt.modules.systemd>` module to provide service mangement, and the
+<salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
 .. __: https://github.com/saltstack/salt/issues/new
@@ -476,6 +489,26 @@ logs. The following code snippet demonstrates writing log messages:
     log.warning('You Should Not Do That')
     log.error('It Is Busted')
 
+Aliasing Functions
+==================
+
+Sometimes one wishes to use a function name that would shadow a python built-in.
+A common example would be ``set()``. To support this, append an underscore to
+the function defintion, ``def set_():``, and use the ``__func_alias__`` feature
+to provide an alias to the function.
+
+``__func_alias__`` is a dictionary where each key is the name of a function in
+the module, and each value is a string representing the alias for that function.
+When calling an aliased function from a different execution module, state
+module, or from the cli, the alias name should be used.
+
+.. code-block:: python
+
+    __func_alias__ = {
+        'set_': 'set',
+        'list_': 'list',
+    }
+
 Private Functions
 =================
 
@@ -500,12 +533,6 @@ Objects NOT Loaded into the Salt Minion
         return baz
 
     cheese = {} # Not a callable Python object
-
-.. note::
-
-    Some callable names also end with an underscore ``_``, to avoid keyword clashes
-    with Python keywords.  When using execution modules, or state modules, with these
-    in them the trailing underscore should be omitted.
 
 Useful Decorators for Modules
 =============================

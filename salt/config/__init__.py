@@ -43,6 +43,8 @@ import salt.defaults.exitcodes
 
 try:
     import psutil
+    if not hasattr(psutil, 'virtual_memory'):
+        raise ImportError('Version of psutil too old.')
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -255,10 +257,10 @@ VALID_OPTS = {
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these modules
     'disable_modules': list,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these returners
     'disable_returners': list,
 
     # Tell the loader to only load modules in this list
@@ -513,6 +515,10 @@ VALID_OPTS = {
 
     # The number of hours to keep jobs around in the job cache on the master
     'keep_jobs': int,
+
+    # If the returner supports `clean_old_jobs`, then at cleanup time,
+    # archive the job data before deleting it.
+    'archive_jobs': bool,
 
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
@@ -965,7 +971,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
     },
-    'top_file_merging_strategy': 'merge',
+    'top_file_merging_strategy': 'default',
     'env_order': [],
     'default_top': 'base',
     'fileserver_limit_traversal': False,
@@ -1161,6 +1167,7 @@ DEFAULT_MASTER_OPTS = {
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
+    'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'key_cache': '',
@@ -1180,7 +1187,7 @@ DEFAULT_MASTER_OPTS = {
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
-    'top_file_merging_strategy': 'merge',
+    'top_file_merging_strategy': 'default',
     'env_order': [],
     'environment': None,
     'default_top': 'base',
@@ -1318,7 +1325,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_whitelist': [],
     'event_return_blacklist': [],
     'event_match_type': 'startswith',
-    'runner_returns': False,
+    'runner_returns': True,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -1365,6 +1372,7 @@ DEFAULT_MASTER_OPTS = {
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
+    'regen_thin': False,
     'ssh_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
@@ -1432,6 +1440,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
     'ssh_auth': '',
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'cloud'),
     'keysize': 4096,
     'os': '',
     'script': 'bootstrap-salt',
@@ -1906,6 +1915,7 @@ def syndic_config(master_config_path,
         'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
+        'log_level': master_opts['log_level'],
         'id': minion_opts['id'],
         'pki_dir': minion_opts['pki_dir'],
         'master': opts['syndic_master'],
@@ -1979,16 +1989,17 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     '''
     Read in the salt cloud config and return the dict
     '''
-    # Load the cloud configuration
-    overrides = load_config(
-        path,
-        env_var,
-        os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
-    )
     if path:
         config_dir = os.path.dirname(path)
     else:
         config_dir = salt.syspaths.CONFIG_DIR
+
+    # Load the cloud configuration
+    overrides = load_config(
+        path,
+        env_var,
+        os.path.join(config_dir, 'cloud')
+    )
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -2103,6 +2114,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
 
+    # cloud config has a seperate cachedir
+    del master_config['cachedir']
+
     # 2nd - salt-cloud configuration which was loaded before so we could
     # extract the master configuration file if needed.
 
@@ -2184,6 +2198,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # recurse opts for sdb configs
     apply_sdb(opts)
+
+    # prepend root_dir
+    prepend_root_dirs = ['cachedir']
+    prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options
     return opts

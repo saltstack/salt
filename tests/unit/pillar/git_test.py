@@ -51,6 +51,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         git_pillar.__opts__ = {
                 'cachedir': cachedir,
                 'pillar_roots': {},
+                'hash_type': 'sha256',
                 'file_roots': {},
                 'state_top': 'top.sls',
                 'extension_modules': '',
@@ -111,7 +112,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         ]
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
-                     'myminon', None)
+                     'myminion', None)
         self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
 
     def test_no_loop(self):
@@ -149,10 +150,11 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
             dict(git=self.conf_line),
             dict(git=conf_line2),
         ]
+        git_pillar._update(*conf_line2.split(None, 1))
 
         pil = Pillar(git_pillar.__opts__,
                      git_pillar.__grains__,
-                     'myminon', 'base')
+                     'myminion', 'base')
 
         orig_ext_pillar = pil.ext_pillars['git']
         orig_ext_pillar.count = 0
@@ -172,10 +174,13 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
             if key == 'git.ext_pillar':
                 return ext_pillar_count_calls
             return orig_getitem(self, key)
-        LazyLoader.__getitem__ = __getitem__
 
-        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
-        self.assertTrue(orig_ext_pillar.count < 7)
+        try:
+            LazyLoader.__getitem__ = __getitem__
+            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+            self.assertTrue(orig_ext_pillar.count < 7)
+        finally:
+            LazyLoader.__getitem__ = orig_getitem
 
 
 if __name__ == '__main__':

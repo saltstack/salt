@@ -27,7 +27,7 @@ __proxyenabled__ = ['fx2']
 
 try:
     run_all = __salt__['cmd.run_all']
-except NameError:
+except (NameError, KeyError):
     import salt.modules.cmdmod
     __salt__ = {
         'cmd.run_all': salt.modules.cmdmod._run_all_quiet

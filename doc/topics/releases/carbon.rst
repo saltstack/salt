@@ -292,6 +292,11 @@ General Deprecations
       # will result in refresh evaluating to True and saltenv likely not being a string at all
       fcn('add more salt', 'prod', False)
 
+- Deprecations in ``minion.py``:
+
+  - The ``salt.minion.parse_args_and_kwargs`` function has been removed. Please
+  use the ``salt.minion.load_args_and_kwargs`` function instead.
+
 Cloud Deprecations
 ------------------
 
@@ -327,8 +332,11 @@ Execution Module Deprecations
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
 
-- The ``contains_regex_multiline`` function was removed from the ``file`` execution module.
-  Use ``file.search`` instead.
+- File module deprecations:
+
+  - The ``contains_regex_multiline`` function was removed. Use ``file.search`` instead.
+  - Additional command line options for ``file.grep`` should be passed one at a time.
+    Please do not pass more than one in a single argument.
 
 - The ``lxc`` execution module has the following changes:
 
@@ -342,6 +350,10 @@ Execution Module Deprecations
   - The ``restart`` argument for ``lxc.start`` was removed. Use ``lxc.restart`` instead.
   - The old style of defining lxc containers has been removed. Please use keys under which
     LXC profiles should be configured such as ``lxc.container_profile.profile_name``.
+
+- The ``env`` and ``activate`` keyword arguments have been removed from the ``install``
+  function in the ``pip`` execution module. The use of ``bin_env`` replaces both of these
+  options.
 
 - ``reg`` execution module
 
@@ -371,8 +383,24 @@ Execution Module Deprecations
 - The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
   module. The ``hash_known_hosts`` option should be used instead.
 
+- The ``human_readable`` option was removed from the ``uptime`` function in the
+  ``status`` execution module. The function was also updated in 2015.8.9 to return
+  a more complete offering of uptime information, formatted as an easy-to-read
+  dictionary. This updated function replaces the need for the ``human_readable``
+  option.
+
+- The ``persist`` kwarg was removed from the ``win_useradd`` execution module. This
+  option is no longer supported for Windows. ``persist`` is only supported as part
+  of user management in UNIX/Linux.
+
 - The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
   instead.
+
+
+Outputter Module Deprecations
+-----------------------------
+
+- The ``compact`` outputter has been removed. Set ``state_verbose`` to ``False`` instead.
 
 
 Runner Module Deprecations
@@ -385,6 +413,9 @@ Runner Module Deprecations
 - The ``fileserver`` runner no longer accepts the ``outputter`` keyword argument. Users will
   need to specify an outputter using the ``--out`` option.
 
+- The ``jobs`` runner no longer accepts the ``ouputter`` keyword argument. Users will need to
+  specify an outputter using the ``--out`` option.
+
 - ``virt`` runner module:
 
   - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
@@ -395,6 +426,10 @@ Runner Module Deprecations
 
 State Module Deprecations
 -------------------------
+
+- The ``env`` and ``activate`` keyword arguments were removed from the ``installed``
+  function in the ``pip`` state module. The use of ``bin_env`` replaces both of these
+  options.
 
 - ``reg`` state module
 

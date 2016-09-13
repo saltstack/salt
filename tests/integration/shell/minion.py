@@ -283,7 +283,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_user',
-            configs={'minion': {'map': {'user': 'unknown'}}},
+            configs={'minion': {'map': {'user': 'some_unknown_user_xyz'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
@@ -299,7 +299,10 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout,
             stderr=integration.utils.decode_byte_list(stderr)
         )
-        # minion.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        minion.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -324,7 +327,10 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             stdout=stdout,
             stderr=integration.utils.decode_byte_list(stderr)
         )
-        # minion.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        minion.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''

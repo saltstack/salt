@@ -67,7 +67,7 @@ class UseraddModuleTestLinux(integration.ModuleCase):
 
         try:
             uinfo = self.run_function('user.info', [uname])
-            if grains['os_family'] in ('SUSE',):
+            if grains['os_family'] in ('Suse',):
                 self.assertIn('users', uinfo['groups'])
             else:
                 self.assertIn(uname, uinfo['groups'])

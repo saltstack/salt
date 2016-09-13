@@ -335,12 +335,12 @@ def pillars(opts, functions, context=None):
     '''
     Returns the pillars modules
     '''
-    ret = LazyLoader(
-        _module_dirs(opts, 'pillar'),
-        opts,
-        tag='pillar',
-        pack={'__salt__': functions, '__context__': context},
-    )
+    ret = LazyLoader(_module_dirs(opts, 'pillar'),
+                     opts,
+                     tag='pillar',
+                     pack={'__salt__': functions,
+                           '__context__': context,
+                           '__utils__': utils(opts)})
     ret.pack['__ext_pillar__'] = ret
     return FilterDictWrapper(ret, '.ext_pillar')
 
@@ -424,12 +424,11 @@ def fileserver(opts, backends):
     '''
     Returns the file server modules
     '''
-    return LazyLoader(
-        _module_dirs(opts, 'fileserver'),
-        opts,
-        tag='fileserver',
-        whitelist=backends,
-    )
+    return LazyLoader(_module_dirs(opts, 'fileserver'),
+                      opts,
+                      tag='fileserver',
+                      whitelist=backends,
+                      pack={'__utils__': utils(opts)})
 
 
 def roster(opts, whitelist=None):
@@ -499,6 +498,7 @@ def beacons(opts, functions, context=None):
         opts,
         tag='beacons',
         pack={'__context__': context, '__salt__': functions},
+        virtual_funcs=['__validate__'],
     )
 
 
@@ -894,7 +894,8 @@ def clouds(opts):
                      int_type='clouds'),
         opts,
         tag='clouds',
-        pack={'__active_provider_name__': None},
+        pack={'__utils__': salt.loader.utils(opts),
+              '__active_provider_name__': None},
     )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
@@ -927,6 +928,18 @@ def executors(opts, functions=None, context=None):
         opts,
         tag='executor',
         pack={'__salt__': functions, '__context__': context or {}},
+    )
+
+
+def cache(opts, serial):
+    '''
+    Returns the returner modules
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'cache', 'cache'),
+        opts,
+        tag='cache',
+        pack={'__opts__': opts, '__context__': {'serial': serial}},
     )
 
 
@@ -993,7 +1006,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     :param dict pack: A dictionary of function to be packed into modules as they are loaded
     :param list whitelist: A list of modules to whitelist
     :param bool virtual_enable: Whether or not to respect the __virtual__ function when loading modules.
-
+    :param str virtual_funcs: The name of additional functions in the module to call to verify its functionality.
+                                If not true, the module will not load.
     :returns: A LazyLoader object which functions as a dictionary. Keys are 'module.function' and values
     are function references themselves which are loaded on-demand.
     # TODO:
@@ -1013,7 +1027,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  virtual_enable=True,
                  static_modules=None,
-                 proxy=None
+                 proxy=None,
+                 virtual_funcs=None,
                  ):  # pylint: disable=W0231
         '''
         In pack, if any of the values are None they will be replaced with an
@@ -1049,6 +1064,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
         self.static_modules = static_modules if static_modules else []
+
+        if virtual_funcs is None:
+            virtual_funcs = []
+        self.virtual_funcs = virtual_funcs
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
@@ -1380,23 +1399,25 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if virtual modules are enabled, we need to look for the
         # __virtual__() function inside that module and run it.
         if self.virtual_enable:
-            (virtual_ret, module_name, virtual_err) = self.process_virtual(
-                mod,
-                module_name,
-            )
-            if virtual_err is not None:
-                log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
-                                                              module_name,
-                                                              virtual_err,
-                                                              ))
+            virtual_funcs_to_process = ['__virtual__'] + self.virtual_funcs
+            for virtual_func in virtual_funcs_to_process:
+                (virtual_ret, module_name, virtual_err) = self.process_virtual(
+                    mod,
+                    module_name,
+                )
+                if virtual_err is not None:
+                    log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
+                                                                  module_name,
+                                                                  virtual_err,
+                                                                  ))
 
-            # if process_virtual returned a non-True value then we are
-            # supposed to not process this module
-            if virtual_ret is not True:
-                # If a module has information about why it could not be loaded, record it
-                self.missing_modules[module_name] = virtual_err
-                self.missing_modules[name] = virtual_err
-                return False
+                # if process_virtual returned a non-True value then we are
+                # supposed to not process this module
+                if virtual_ret is not True and module_name not in self.missing_modules:
+                    # If a module has information about why it could not be loaded, record it
+                    self.missing_modules[module_name] = virtual_err
+                    self.missing_modules[name] = virtual_err
+                    return False
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
         # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
@@ -1528,7 +1549,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
-    def process_virtual(self, mod, module_name):
+    def process_virtual(self, mod, module_name, virtual_func='__virtual__'):
         '''
         Given a loaded module and its default name determine its virtual name
 
@@ -1559,7 +1580,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
                 try:
                     start = time.time()
-                    virtual = mod.__virtual__()
+                    virtual = getattr(mod, virtual_func)()
                     if isinstance(virtual, tuple):
                         error_reason = virtual[1]
                         virtual = virtual[0]

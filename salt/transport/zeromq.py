@@ -502,6 +502,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         if self._closing:
             return
+        log.info('MWorkerQueue under PID %s is closing', os.getpid())
         self._closing = True
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
@@ -515,6 +516,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.workers.close()
         if hasattr(self, 'stream'):
             self.stream.close()
+        if hasattr(self, '_socket') and self._socket.closed is False:
+            self._socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
@@ -642,7 +645,40 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
+        self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
+
+
+def _set_tcp_keepalive(zmq_socket, opts):
+    '''
+    Ensure that TCP keepalives are set as specified in "opts".
+
+    Warning: Failure to set TCP keepalives on the salt-master can result in
+    not detecting the loss of a minion when the connection is lost or when
+    it's host has been terminated without first closing the socket.
+    Salt's Presence System depends on this connection status to know if a minion
+    is "present".
+
+    Warning: Failure to set TCP keepalives on minions can result in frequent or
+    unexpected disconnects!
+    '''
+    if hasattr(zmq, 'TCP_KEEPALIVE') and opts:
+        if 'tcp_keepalive' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE, opts['tcp_keepalive']
+            )
+        if 'tcp_keepalive_idle' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, opts['tcp_keepalive_idle']
+            )
+        if 'tcp_keepalive_cnt' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, opts['tcp_keepalive_cnt']
+            )
+        if 'tcp_keepalive_intvl' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, opts['tcp_keepalive_intvl']
+            )
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
@@ -666,6 +702,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
+        _set_tcp_keepalive(pub_sock, self.opts)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
@@ -878,7 +915,7 @@ class AsyncReqMessageClient(object):
                 zmq.RECONNECT_IVL_MAX, 5000
             )
 
-        self._set_tcp_keepalive()
+        _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith('tcp://['):
             # Hint PF type if bracket enclosed IPv6 address
             if hasattr(zmq, 'IPV6'):
@@ -888,31 +925,6 @@ class AsyncReqMessageClient(object):
         self.socket.linger = self.linger
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
-
-    def _set_tcp_keepalive(self):
-        '''
-        Ensure that TCP keepalives are set for the ReqServer.
-
-        Warning: Failure to set TCP keepalives can result in frequent or unexpected
-        disconnects!
-        '''
-        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
-            if 'tcp_keepalive' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-                )
-            if 'tcp_keepalive_idle' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-                )
-            if 'tcp_keepalive_cnt' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-                )
-            if 'tcp_keepalive_intvl' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-                )
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):
@@ -993,6 +1005,9 @@ class AsyncReqMessageClient(object):
             future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message] = future
+
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)

@@ -525,7 +525,7 @@ def removegroup(name, group):
     return ret['retcode'] == 0
 
 
-def chhome(name, home, persist=False):
+def chhome(name, home, **kwargs):
     '''
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
@@ -535,9 +535,6 @@ def chhome(name, home, persist=False):
 
     :param str home:
         new location of the home directory
-
-    :param bool persist:
-        True to move the contents of the existing home directory to the new location
 
     :return:
         True if successful. False is unsuccessful.
@@ -549,6 +546,13 @@ def chhome(name, home, persist=False):
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    persist = kwargs.pop('persist', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+    if persist:
+        log.info('Ignoring unsupported \'persist\' argument to user.chhome')
+
     pre_info = info(name)
 
     if not pre_info:
@@ -559,11 +563,6 @@ def chhome(name, home, persist=False):
 
     if not update(name=name, home=home):
         return False
-
-    if persist and home is not None and pre_info['home'] is not None:
-        cmd = 'move /Y {0} {1}'.format(pre_info['home'], home)
-        if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
-            log.debug('Failed to move the contents of the Home Directory')
 
     post_info = info(name)
     if post_info['home'] != pre_info['home']:

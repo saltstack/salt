@@ -8,7 +8,12 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import libcloud.security
+
+try:
+    import libcloud.security
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Import Salt Libs
 from salt.cloud.clouds import dimensiondata
@@ -39,8 +44,9 @@ VM_NAME = 'winterfell'
 
 # Use certifi if installed
 try:
-    import certifi
-    libcloud.security.CA_CERTS_PATH.append(certifi.where())
+    if HAS_LIBCLOUD:
+        import certifi
+        libcloud.security.CA_CERTS_PATH.append(certifi.where())
 except ImportError:
     pass
 
@@ -122,6 +128,7 @@ class DimensionDataTestCase(ExtendedTestCase):
             call='function'
         )
 
+    @skipIf(HAS_LIBCLOUD is False, 'libcloud not found')
     def test_avail_sizes(self):
         '''
         Tests that avail_sizes returns an empty dictionary.

@@ -30,31 +30,13 @@ DEL_PKG = 'acme'
 
 
 @destructiveTest
+@skipIf(not salt.utils.is_darwin(), 'Test only applies to OS X')
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@skipIf(not salt.utils.which('brew'), 'This test requires the brew binary')
 class BrewModuleTest(integration.ModuleCase):
     '''
     Integration tests for the brew module
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        os_grain = self.run_function('grains.item', ['kernel'])
-        brew = salt.utils.which('brew')
-        # Must be running on a mac
-        if os_grain['kernel'] not in 'Darwin':
-            self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
-                    **os_grain
-                )
-            )
-        # Must have brew installed
-        if not brew:
-            self.skipTest(
-                'You must have brew installed to run these tests'
-            )
-
     def test_brew_install(self):
         '''
         Tests the installation of packages
@@ -96,8 +78,7 @@ class BrewModuleTest(integration.ModuleCase):
 
     def test_version(self):
         '''
-        Test pkg.version for mac. Installs
-        a package and then checks we can get
+        Test pkg.version for mac. Installs a package and then checks we can get
         a version for the installed package.
         '''
         try:
@@ -141,7 +122,7 @@ class BrewModuleTest(integration.ModuleCase):
             version = self.run_function('pkg.version', [ADD_PKG])
             try:
                 self.assertTrue(isinstance(uninstalled_latest, six.string_types))
-                self.assertEqual(installed_latest, '')
+                self.assertEqual(installed_latest, version)
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise

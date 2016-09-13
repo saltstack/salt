@@ -125,6 +125,13 @@ def _has_required_moto():
 context = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcTestCaseBase(TestCase):
     conn3 = None
 
@@ -253,13 +260,6 @@ class BotoVpcTestCaseMixin(object):
         return rtbl
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     '''
     TestCase for salt.modules.boto_vpc module
@@ -533,6 +533,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                               state=u'available',
                               tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
+                              region=u'us-east-1',
                               instance_tenancy=u'default')
 
         self.assertEqual(describe_vpc, {'vpc': vpc_properties})
@@ -1198,7 +1199,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         .format(required_boto_version))
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
         '''
         Tests creation of network acl with existing vpc
@@ -1210,7 +1210,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(
             self):
         '''
@@ -1223,7 +1222,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(
             self):
         '''
@@ -1236,7 +1234,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_an_error(self):
         '''
         Tests creation of network acl with a non-existent vpc
@@ -1260,7 +1257,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_creation_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
         '''
         Tests deletion of existing network acl successfully
@@ -1273,7 +1269,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_network_acl_the_delete_network_acl_method_returns_an_error(self):
         '''
         Tests deleting a non-existent network acl
@@ -1283,7 +1278,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue('error' in network_acl_deletion_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
         '''
         Tests existence of network acl
@@ -1296,7 +1290,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_does_not_exist_the_network_acl_exists_method_returns_false(self):
         '''
         Tests checking network acl does not exist
@@ -1416,7 +1409,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(network_acl_association_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_non_existent_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_an_error(
             self):
         '''
@@ -1508,7 +1500,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2
-    #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
             self):
         '''
@@ -1781,6 +1772,47 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         self.assertFalse(route_replacing_result)
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
+class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
+
+    @mock_ec2
+    def test_request_vpc_peering_connection(self):
+        '''
+        Run with 2 vpc ids and returns a message
+        '''
+        my_vpc = self._create_vpc()
+        other_vpc = self._create_vpc()
+        self.assertTrue('msg' in boto_vpc.request_vpc_peering_connection(
+            name='my_peering',
+            requester_vpc_id=my_vpc.id,
+            peer_vpc_id=other_vpc.id,
+            **conn_parameters))
+
+    @mock_ec2
+    def test_raises_error_if_both_vpc_name_and_vpc_id_are_specified(self):
+        '''
+        Must specify only one
+        '''
+        my_vpc = self._create_vpc()
+        other_vpc = self._create_vpc()
+        with self.assertRaises(SaltInvocationError):
+            boto_vpc.request_vpc_peering_connection(name='my_peering',
+                                                    requester_vpc_id=my_vpc.id,
+                                                    requester_vpc_name='foobar',
+                                                    peer_vpc_id=other_vpc.id,
+                                                    **conn_parameters)
+
+        boto_vpc.request_vpc_peering_connection(name='my_peering',
+                                                requester_vpc_name='my_peering',
+                                                peer_vpc_id=other_vpc.id,
+                                                **conn_parameters)
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error

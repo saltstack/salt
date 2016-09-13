@@ -56,7 +56,6 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
-from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
@@ -264,7 +263,8 @@ def master_config(opts, vm_):
     # Some default options are Null, let's set a reasonable default
     master.update(
         log_level='info',
-        log_level_logfile='info'
+        log_level_logfile='info',
+        hash_type='sha256'
     )
 
     # Get ANY defined master setting, merging data, in the following order
@@ -514,7 +514,7 @@ def bootstrap(vm_, opts):
         args={'kwargs': event_kwargs},
         sock_dir=opts.get(
             'sock_dir',
-            os.path.join(syspaths.SOCK_DIR, 'master')),
+            os.path.join(__opts__['sock_dir'], 'master')),
         transport=opts.get('transport', 'zeromq')
     )
 
@@ -654,7 +654,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         except socket.error:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sock.settimeout(30)
+            sock.settimeout(5)
             sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)
@@ -1158,7 +1158,7 @@ def deploy_windows(host,
             args={'name': name},
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 
@@ -1632,7 +1632,7 @@ def deploy_script(host,
                 },
                 sock_dir=opts.get(
                     'sock_dir',
-                    os.path.join(syspaths.SOCK_DIR, 'master')),
+                    os.path.join(__opts__['sock_dir'], 'master')),
                 transport=opts.get('transport', 'zeromq')
             )
             if file_map_fail or file_map_success:
@@ -1729,16 +1729,18 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     # Fire deploy action
     if sock_dir is None:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
             'parameter be passed in when calling the function.'
         )
-        sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
+        sock_dir = __opts__['sock_dir']
+
     event = salt.utils.event.get_event(
         'master',
         sock_dir,
         transport,
         listen=False)
+
     try:
         event.fire_event(msg, tag)
     except ValueError:
@@ -2497,7 +2499,7 @@ def init_cachedir(base=None):
     Initialize the cachedir needed for Salt Cloud to keep track of minions
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
     needed_dirs = (base,
                    os.path.join(base, 'requested'),
                    os.path.join(base, 'active'))
@@ -2528,7 +2530,7 @@ def request_minion_cachedir(
     will be set to None.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
 
     if not fingerprint and pubkey is not None:
         fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
@@ -2570,7 +2572,7 @@ def change_minion_cachedir(
         return False
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
@@ -2591,7 +2593,7 @@ def activate_minion_cachedir(minion_id, base=None):
     exists, and should be expected to exist from here on out.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
 
     fname = '{0}.p'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
@@ -2605,13 +2607,16 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     all cachedirs to find the minion's cache file.
     Needs `update_cachedir` set to True.
     '''
-    if opts.get('update_cachedir', False) is False:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if __opts__.get('update_cachedir', False) is False:
         return
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
 
-    driver = next(six.iterkeys(opts['providers'][provider]))
+    driver = next(six.iterkeys(__opts__['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
     for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2629,7 +2634,7 @@ def list_cache_nodes_full(opts, provider=None, base=None):
         return
 
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+        base = os.path.join(__opts__['cachedir'], 'active')
 
     minions = {}
     # First, get a list of all drivers in use
@@ -2660,7 +2665,7 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     if base is None:
-        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+        base = __opts__['cachedir']
 
     minions = list_cache_nodes_full(opts, base=base)
 
@@ -2734,7 +2739,7 @@ def update_bootstrap(config, url=None):
     # Compute the search path using the install time defined
     # syspaths.CONF_DIR
     deploy_d_from_syspaths = os.path.join(
-        syspaths.CONFIG_DIR,
+        config['config_dir'],
         'cloud.deploy.d'
     )
 
@@ -2837,13 +2842,16 @@ def cache_node(node, provider, opts):
 
     .. versionadded:: 2014.7.0
     '''
-    if 'update_cachedir' not in opts or not opts['update_cachedir']:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if 'update_cachedir' not in __opts__ or not __opts__['update_cachedir']:
         return
 
-    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
-    if not os.path.exists(base):
+    if not os.path.exists(os.path.join(__opts__['cachedir'], 'active')):
         init_cachedir()
 
+    base = os.path.join(__opts__['cachedir'], 'active')
     provider, driver = provider.split(':')
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -2882,7 +2890,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
                     args={'missing node': node},
                     sock_dir=opts.get(
                         'sock_dir',
-                        os.path.join(syspaths.SOCK_DIR, 'master')),
+                        os.path.join(__opts__['sock_dir'], 'master')),
                     transport=opts.get('transport', 'zeromq')
                 )
 
@@ -2918,7 +2926,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             args={'new_data': event_data},
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
         return
@@ -2945,7 +2953,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             },
             sock_dir=opts.get(
                 'sock_dir',
-                os.path.join(syspaths.SOCK_DIR, 'master')),
+                os.path.join(__opts__['sock_dir'], 'master')),
             transport=opts.get('transport', 'zeromq')
         )
 

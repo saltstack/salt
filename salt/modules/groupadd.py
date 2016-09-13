@@ -165,8 +165,8 @@ def adduser(name, username, root=None):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     '''
-    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == 5
-    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == 11
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
@@ -200,8 +200,8 @@ def deluser(name, username, root=None):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     '''
-    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == 5
-    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == 11
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
 
     grp_info = __salt__['group.info'](name)
     try:
@@ -244,8 +244,8 @@ def members(name, members_list, root=None):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     '''
-    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == 5
-    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == 11
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:

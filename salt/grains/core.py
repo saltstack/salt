@@ -1025,6 +1025,7 @@ _OS_FAMILY_MAP = {
     'Fedora': 'RedHat',
     'Chapeau': 'RedHat',
     'Korora': 'RedHat',
+    'FedBerry': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
@@ -1184,6 +1185,8 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['os'],
             ver=grains['osrelease'])
+
+        grains['init'] = 'Windows'
 
         return grains
     elif salt.utils.is_linux():
@@ -1455,6 +1458,7 @@ def os_data():
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
+        grains['init'] = 'launchd'
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
@@ -1519,7 +1523,6 @@ def os_data():
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
         grains['osmajorrelease'] = str(grains['osrelease_info'][0])  # This will be an integer in the two releases
-        salt.utils.warn_until('Nitrogen', 'The "osmajorrelease" will be a type of an integer.')
         os_name = grains['os' if grains.get('os') in (
             'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(

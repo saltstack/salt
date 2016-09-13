@@ -51,6 +51,12 @@ class KeyCLI(object):
     '''
     Manage key CLI operations
     '''
+    CLI_KEY_MAP = {'list': 'list_status',
+                   'delete': 'delete_key',
+                   'gen_signature': 'gen_keys_signature',
+                   'print': 'key_str',
+                   }
+
     def __init__(self, opts):
         self.opts = opts
         self.client = salt.wheel.WheelClient(opts)
@@ -58,6 +64,9 @@ class KeyCLI(object):
             self.key = Key
         else:
             self.key = RaetKey
+        # instantiate the key object for masterless mode
+        if not opts.get('eauth'):
+            self.key = self.key(opts)
         self.auth = None
 
     def _update_opts(self):
@@ -138,23 +147,37 @@ class KeyCLI(object):
 
         self.auth = low
 
-    def _run_cmd(self, cmd, args=None):
-        fun_name = 'key.{0}'.format(cmd)
-        fun = self.client.functions[fun_name]
+    def _get_args_kwargs(self, fun, args=None):
         if args is None:
             argspec = salt.utils.args.get_function_argspec(fun)
             args = []
             if argspec.args:
                 for arg in argspec.args:
-                    args.append(self.opts[arg])
+                    args.append(self.opts.get(arg))
         args, kwargs = salt.minion.load_args_and_kwargs(
             fun,
             args,
             self.opts,
         )
+        return args, kwargs
+
+    def _run_cmd(self, cmd, args=None):
+        if not self.opts.get('eauth'):
+            cmd = self.CLI_KEY_MAP.get(cmd, cmd)
+            fun = getattr(self.key, cmd)
+            args, kwargs = self._get_args_kwargs(fun, args)
+            ret = fun(*args, **kwargs)
+            if (isinstance(ret, dict) and 'local' in ret and
+                        cmd not in ('finger', 'finger_all')):
+                ret.pop('local', None)
+            return ret
+
+        fstr = 'key.{0}'.format(cmd)
+        fun = self.client.functions[fstr]
+        args, kwargs = self._get_args_kwargs(fun, args)
 
         low = {
-                'fun': fun_name,
+                'fun': fstr,
                 'arg': args,
                 'kwarg': kwargs,
                 }
@@ -210,37 +233,44 @@ class KeyCLI(object):
         cmd = self.opts['fun']
 
         veri = None
-        if cmd in ('accept', 'reject', 'delete'):
-            ret = self._run_cmd('list_match')
-            if not isinstance(ret, dict):
+        ret = None
+        try:
+            if cmd in ('accept', 'reject', 'delete'):
+                ret = self._run_cmd('name_match')
+                if not isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                    return ret
+                ret = self._filter_ret(cmd, ret)
+                if not ret:
+                    self._print_no_match(cmd, self.opts['match'])
+                    return
+                print('The following keys are going to be {0}ed:'.format(cmd))
                 salt.output.display_output(ret, 'key', opts=self.opts)
-                return ret
-            ret = self._filter_ret(cmd, ret)
-            if not ret:
-                self._print_no_match(cmd, self.opts['match'])
-                return
-            print('The following keys are going to be {0}ed:'.format(cmd))
-            salt.output.display_output(ret, 'key', opts=self.opts)
 
-            if not self.opts.get('yes', False):
-                try:
-                    if cmd.startswith('delete'):
-                        veri = input('Proceed? [N/y] ')
-                        if not veri:
-                            veri = 'n'
-                    else:
-                        veri = input('Proceed? [n/Y] ')
-                        if not veri:
-                            veri = 'y'
-                except KeyboardInterrupt:
-                    raise SystemExit("\nExiting on CTRL-c")
+                if not self.opts.get('yes', False):
+                    try:
+                        if cmd.startswith('delete'):
+                            veri = input('Proceed? [N/y] ')
+                            if not veri:
+                                veri = 'n'
+                        else:
+                            veri = input('Proceed? [n/Y] ')
+                            if not veri:
+                                veri = 'y'
+                    except KeyboardInterrupt:
+                        raise SystemExit("\nExiting on CTRL-c")
 
-        if veri is None or veri.lower().startswith('y'):
-            ret = self._run_cmd(cmd)
-            if isinstance(ret, dict):
-                salt.output.display_output(ret, 'key', opts=self.opts)
-            else:
-                salt.output.display_output({'return': ret}, 'key', opts=self.opts)
+            if veri is None or veri.lower().startswith('y'):
+                ret = self._run_cmd(cmd)
+                if isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                else:
+                    salt.output.display_output({'return': ret}, 'key', opts=self.opts)
+        except salt.exceptions.SaltException as exc:
+            ret = '{0}'.format(exc)
+            if not self.opts.get('quiet', False):
+                salt.output.display_output(ret, 'nested', self.opts)
+        return ret
 
 
 class MultiKeyCLI(KeyCLI):
@@ -376,6 +406,62 @@ class Key(object):
         return salt.crypt.gen_signature(privkey,
                                         pubkey,
                                         sig_path)
+
+    def gen_keys_signature(self, priv, pub, signature_path, auto_create=False, keysize=None):
+        '''
+        Generate master public-key-signature
+        '''
+        # check given pub-key
+        if pub:
+            if not os.path.isfile(pub):
+                return 'Public-key {0} does not exist'.format(pub)
+        # default to master.pub
+        else:
+            mpub = self.opts['pki_dir'] + '/' + 'master.pub'
+            if os.path.isfile(mpub):
+                pub = mpub
+
+        # check given priv-key
+        if priv:
+            if not os.path.isfile(priv):
+                return 'Private-key {0} does not exist'.format(priv)
+        # default to master_sign.pem
+        else:
+            mpriv = self.opts['pki_dir'] + '/' + 'master_sign.pem'
+            if os.path.isfile(mpriv):
+                priv = mpriv
+
+        if not priv:
+            if auto_create:
+                log.debug('Generating new signing key-pair {0}.* in {1}'
+                      ''.format(self.opts['master_sign_key_name'],
+                                self.opts['pki_dir']))
+                salt.crypt.gen_keys(self.opts['pki_dir'],
+                                    self.opts['master_sign_key_name'],
+                                    keysize or self.opts['keysize'],
+                                    self.opts.get('user'))
+
+                priv = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
+            else:
+                return 'No usable private-key found'
+
+        if not pub:
+            return 'No usable public-key found'
+
+        log.debug('Using public-key {0}'.format(pub))
+        log.debug('Using private-key {0}'.format(priv))
+
+        if signature_path:
+            if not os.path.isdir(signature_path):
+                log.debug('target directory {0} does not exist'
+                      ''.format(signature_path))
+        else:
+            signature_path = self.opts['pki_dir']
+
+        sign_path = signature_path + '/' + self.opts['master_pubkey_signature']
+
+        skey = get_key(self.opts)
+        return skey.gen_signature(priv, pub, sign_path)
 
     def check_minion_cache(self, preserve_minions=None):
         '''

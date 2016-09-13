@@ -17,6 +17,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+import salt.states.file
 
 
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
@@ -29,6 +30,7 @@ class SystemModuleTest(integration.ModuleCase):
     def __init__(self, arg):
         super(self.__class__, self).__init__(arg)
         self._orig_time = None
+        self._machine_info = True
 
     def setUp(self):
         super(SystemModuleTest, self).setUp()
@@ -39,11 +41,18 @@ class SystemModuleTest(integration.ModuleCase):
                     **os_grain
                 )
             )
+        if self.run_function('service.available', ['systemd-timesyncd']):
+            self.run_function('service.stop', ['systemd-timesyncd'])
 
     def tearDown(self):
         if self._orig_time is not None:
             self._restore_time()
         self._orig_time = None
+        if self._machine_info is not True:
+            self._restore_machine_info()
+        self._machine_info = True
+        if self.run_function('service.available', ['systemd-timesyncd']):
+            self.run_function('service.start', ['systemd-timesyncd'])
 
     def _save_time(self):
         self._orig_time = datetime.datetime.utcnow()
@@ -63,6 +72,20 @@ class SystemModuleTest(integration.ModuleCase):
         are close enough to the same time.
         '''
         return abs(t1 - t2) < datetime.timedelta(seconds=seconds_diff)
+
+    def _save_machine_info(self):
+        if os.path.isfile('/etc/machine-info'):
+            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                self._machine_info = mach_info.read()
+        else:
+            self._machine_info = False
+
+    def _restore_machine_info(self):
+        if self._machine_info is not False:
+            with salt.utils.fopen('/etc/machine-info', 'w') as mach_info:
+                mach_info.write(self._machine_info)
+        else:
+            self.run_function('file.remove', ['/etc/machine-info'])
 
     def test_get_system_date_time(self):
         '''
@@ -204,6 +227,39 @@ class SystemModuleTest(integration.ModuleCase):
 
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_get_computer_desc(self):
+        '''
+        Test getting the system hostname
+        '''
+        res = self.run_function('system.get_computer_desc')
+
+        hostname_cmd = salt.utils.which('hostnamectl')
+        if hostname_cmd:
+            desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
+            self.assertEqual(res, desc)
+        else:
+            if not os.path.isfile('/etc/machine-info'):
+                self.assertFalse(res)
+            else:
+                with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                    data = mach_info.read()
+                    self.assertIn(res, data.decode('string_escape'))
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_set_computer_desc(self):
+        '''
+        Test setting the system hostname
+        '''
+        self._save_machine_info()
+        desc = "test"
+        ret = self.run_function('system.set_computer_desc', [desc])
+        computer_desc = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertIn(desc, computer_desc)
 
 if __name__ == '__main__':
     from integration import run_tests

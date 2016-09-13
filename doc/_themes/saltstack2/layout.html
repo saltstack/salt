@@ -225,7 +225,7 @@
 
                             {% if on_saltstack %}
                             <div class="col-sm-6">
-                            <p><i>Generated on {{today}}.</i></p>
+                            <p><i>{{ today }}</i></p>
 
                                 {% if build_type == "latest" %}
                                 <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
@@ -245,6 +245,9 @@
                                 <br>
                                 <p><a href="http://saltstack.com">saltstack.com</a></p>
 
+                                <div class="footer">
+                                    <p>© {{ copyright }} SaltStack. All Rights Reserved, SaltStack Inc. | <a href="http://saltstack.com/privacy-policy" target="_blank">Privacy Policy</a></p>
+                                </div>
                             </div>
 
                             <div class="col-sm-6">

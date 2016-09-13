@@ -888,18 +888,39 @@ def path_join(*parts):
     # Normalize path converting any os.sep as needed
     parts = [os.path.normpath(p) for p in parts]
 
-    root = parts.pop(0)
+    try:
+        root = parts.pop(0)
+    except IndexError:
+        # No args passed to func
+        return ''
+
     if not parts:
-        return root
+        ret = root
+    else:
+        if is_windows():
+            if len(root) == 1:
+                root += ':'
+            root = root.rstrip(os.sep) + os.sep
 
-    if is_windows():
-        if len(root) == 1:
-            root += ':'
-        root = root.rstrip(os.sep) + os.sep
-
-    return os.path.normpath(os.path.join(
-        root, *[p.lstrip(os.sep) for p in parts]
-    ))
+        stripped = [p.lstrip(os.sep) for p in parts]
+        try:
+            ret = os.path.join(root, *stripped)
+        except UnicodeDecodeError:
+            # This is probably Python 2 and one of the parts contains unicode
+            # characters in a bytestring. First try to decode to the system
+            # encoding.
+            try:
+                enc = __salt_system_encoding__
+            except NameError:
+                enc = sys.stdin.encoding or sys.getdefaultencoding()
+            try:
+                ret = os.path.join(root.decode(enc),
+                                   *[x.decode(enc) for x in stripped])
+            except UnicodeDecodeError:
+                # Last resort, try UTF-8
+                ret = os.path.join(root.decode('UTF-8'),
+                                   *[x.decode('UTF-8') for x in stripped])
+    return os.path.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):
@@ -1056,10 +1077,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # We'll be showing errors to the users until Salt Nitrogen comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Carbon',
+        'Nitrogen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1096,7 +1117,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Carbon is out.{1}'.format(
+            'Nitrogen is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )

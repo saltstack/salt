@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import contextlib
 import logging
 import os
+import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPInputError
@@ -28,7 +29,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
-import salt.utils.s3
 import salt.ext.six as six
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
@@ -83,6 +83,7 @@ class Client(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.utils = salt.loader.utils(self.opts)
         self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
@@ -461,16 +462,23 @@ class Client(object):
         Get a single file from a URL.
         '''
         url_data = urlparse(url)
+        url_scheme = url_data.scheme
+        url_path = os.path.join(
+                url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_data.scheme in ('file', ''):
+        if url_scheme and url_scheme.lower() in string.ascii_lowercase:
+            url_path = ':'.join((url_scheme, url_path))
+            url_scheme = 'file'
+
+        if url_scheme in ('file', ''):
             # Local filesystem
-            if not os.path.isabs(url_data.path):
+            if not os.path.isabs(url_path):
                 raise CommandExecutionError(
-                    'Path \'{0}\' is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_path)
                 )
-            return url_data.path
+            return url_path
 
-        if url_data.scheme == 'salt':
+        if url_scheme == 'salt':
             return self.get_file(
                 url, dest, makedirs, saltenv, cachedir=cachedir)
         if dest:
@@ -496,17 +504,17 @@ class Client(object):
                         return self.opts['pillar']['s3'][key]
                     except (KeyError, TypeError):
                         return default
-                salt.utils.s3.query(method='GET',
-                                    bucket=url_data.netloc,
-                                    path=url_data.path[1:],
-                                    return_bin=False,
-                                    local_file=dest,
-                                    action=None,
-                                    key=s3_opt('key'),
-                                    keyid=s3_opt('keyid'),
-                                    service_url=s3_opt('service_url'),
-                                    verify_ssl=s3_opt('verify_ssl', True),
-                                    location=s3_opt('location'))
+                self.utils['s3.query'](method='GET',
+                                       bucket=url_data.netloc,
+                                       path=url_data.path[1:],
+                                       return_bin=False,
+                                       local_file=dest,
+                                       action=None,
+                                       key=s3_opt('key'),
+                                       keyid=s3_opt('keyid'),
+                                       service_url=s3_opt('service_url'),
+                                       verify_ssl=s3_opt('verify_ssl', True),
+                                       location=s3_opt('location'))
                 return dest
             except Exception as exc:
                 raise MinionError(

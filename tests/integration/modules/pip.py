@@ -93,13 +93,13 @@ class PipModuleTest(integration.ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
         req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
 
-        with salt.utils.fopen(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
-        with salt.utils.fopen(req1b_filename, 'wb') as f:
+        with salt.utils.fopen(req1b_filename, 'w') as f:
             f.write('flake8\n')
-        with salt.utils.fopen(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
-        with salt.utils.fopen(req2b_filename, 'wb') as f:
+        with salt.utils.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -131,13 +131,13 @@ class PipModuleTest(integration.ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
         req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
 
-        with salt.utils.fopen(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
-        with salt.utils.fopen(req1b_filename, 'wb') as f:
+        with salt.utils.fopen(req1b_filename, 'w') as f:
             f.write('flake8\n')
-        with salt.utils.fopen(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
-        with salt.utils.fopen(req2b_filename, 'wb') as f:
+        with salt.utils.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -166,9 +166,9 @@ class PipModuleTest(integration.ModuleCase):
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
-        with salt.utils.fopen(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('flake8\n')
-        with salt.utils.fopen(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('pep8\n')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -203,9 +203,9 @@ class PipModuleTest(integration.ModuleCase):
         req1_filepath = os.path.join(req_cwd, req1_filename)
         req2_filepath = os.path.join(req_cwd, req2_filename)
 
-        with salt.utils.fopen(req1_filepath, 'wb') as f:
+        with salt.utils.fopen(req1_filepath, 'w') as f:
             f.write('flake8\n')
-        with salt.utils.fopen(req2_filepath, 'wb') as f:
+        with salt.utils.fopen(req2_filepath, 'w') as f:
             f.write('pep8\n')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -235,9 +235,9 @@ class PipModuleTest(integration.ModuleCase):
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
-        with salt.utils.fopen(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -266,9 +266,9 @@ class PipModuleTest(integration.ModuleCase):
         req1_file = os.path.join(self.venv_dir, req1_filename)
         req2_file = os.path.join(self.venv_dir, req2_filename)
 
-        with salt.utils.fopen(req1_file, 'wb') as f:
+        with salt.utils.fopen(req1_file, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_file, 'wb') as f:
+        with salt.utils.fopen(req2_file, 'w') as f:
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -291,9 +291,9 @@ class PipModuleTest(integration.ModuleCase):
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
-        with salt.utils.fopen(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
