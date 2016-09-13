@@ -472,7 +472,7 @@ To test custom modules, place the tests in a directory anywhere on the filesyste
 
 To include custom tests in a full run of all of Salt's functionality, simply pass the 
 ``--customdir`` flag. For example, to include tests present in `/tmp/mytests`, pass
-``-customdir=/tmp/mytests``.
+``--customdir=/tmp/mytests``.
 
 To run *only* custom tests, pass both the ``--customdir=`` flag and the ``--custom`` flag.
 
