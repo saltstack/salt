@@ -465,7 +465,7 @@ To test custom modules, place the tests in a directory anywhere on the filesyste
 
 .. note::
     
-    All directories must be structered as Python packages. This means that each directory,
+    All directories must be structured as Python packages. This means that each directory,
     including the top-level directory for tests, must contain an `__init__.py` file. This
     file may be empty. Any directories which do not contain this file will not be searched
     for tests.
