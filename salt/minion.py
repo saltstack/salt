@@ -1848,6 +1848,7 @@ class Minion(MinionBase):
         '''
         Handle an event from the epull_sock (all local minion events)
         '''
+        log.debug('handle_event ----------------------- ')
         if not self.ready:
             raise tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
@@ -2944,7 +2945,8 @@ class ProxyMinion(MinionManager):
         '''
         log.debug("subclassed _post_master_init")
 
-        self.opts['master'] = master
+        if self.connected:
+            self.opts['master'] = master
 
         self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
@@ -3067,5 +3069,6 @@ class ProxyMinion(MinionManager):
             self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
-        self.functions['saltutil.sync_grains'](saltenv='base')
+        # self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']
+        self.ready = True
