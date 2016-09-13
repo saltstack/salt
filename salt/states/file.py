@@ -4531,6 +4531,11 @@ def serialize(name,
     '''
     name = os.path.expanduser(name)
 
+    default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
+                              'json.serialize': {'indent': 2,
+                                       'separators': (',', ': '),
+                                       'sort_keys': True}
+                              }
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -4608,8 +4613,7 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-
-    contents = __serializers__[serializer_name](dataset)
+    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
 
     contents += '\n'
 
