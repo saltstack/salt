@@ -132,6 +132,7 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config
+from salt.ext.six.moves import range
 
 # Attempt to import pyVim and pyVmomi libs
 try:
@@ -2193,8 +2194,12 @@ def create(vm_):
             num = int(vm_['snapshot']) - 1
             snapshot = object_ref.rootSnapshot[0]
             # Drill down to the correct snapshot number
-            for i in range(num):
-                snapshot = snapshot.childSnapshot[0]
+            for _ in range(num):
+                try:
+                    snapshot = snapshot.childSnapshot[0]
+                except IndexError:
+                    raise SaltCloudSystemExit('Specified snapshot'
+                                              ' does not exist.')
     else:
         clone_type = None
         object_ref = None
