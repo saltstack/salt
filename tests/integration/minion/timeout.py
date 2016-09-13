@@ -7,16 +7,21 @@ Tests for various minion timeouts
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import integration
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
+
+# Import Salt libs
+import integration
+import salt.utils
 
 
 class MinionTimeoutTestCase(integration.ShellCase):
     '''
     Test minion timing functions
     '''
+    @skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
     def test_long_running_job(self):
         '''
         Test that we will wait longer than the job timeout for a minion to
