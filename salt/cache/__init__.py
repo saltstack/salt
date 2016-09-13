@@ -188,7 +188,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'flush')
-        return self.modules[fun](bank)
+        return self.modules[fun](bank, key=key)
 
     def list(self, bank):
         '''
