@@ -112,7 +112,7 @@ def __virtual__():
     a given version.
     '''
     required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.5'
+    required_boto3_version = '1.4.0'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -211,7 +211,7 @@ def describe(DomainName,
         domain = conn.describe_elasticsearch_domain_config(DomainName=DomainName)
         if domain and 'DomainConfig' in domain:
             domain = domain['DomainConfig']
-            keys = ('ElasticsearchClusterConfig', 'EBSOptions', 'AccessPolicies',
+            keys = ('ElasticsearchVersion', 'ElasticsearchClusterConfig', 'EBSOptions', 'AccessPolicies',
                     'SnapshotOptions', 'AdvancedOptions')
             return {'domain': dict([(k, domain.get(k, {}).get('Options')) for k in keys if k in domain])}
         else:
@@ -222,7 +222,8 @@ def describe(DomainName,
 
 def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
            AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None):
+           region=None, key=None, keyid=None, profile=None,
+           ElasticsearchVersion=None):
     '''
     Given a valid config, create a domain.
 
@@ -249,7 +250,8 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                    'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
+                    'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions',
+                    'ElasticsearchVersion'):
             if locals()[k] is not None:
                 val = locals()[k]
                 if isinstance(val, six.string_types):
@@ -260,6 +262,8 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                 kwargs[k] = val
         if 'AccessPolicies' in kwargs:
             kwargs['AccessPolicies'] = json.dumps(kwargs['AccessPolicies'])
+        if 'ElasticsearchVersion' in kwargs:
+            kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and 'DomainStatus' in domain:
             return {'created': True}
@@ -295,7 +299,8 @@ def delete(DomainName, region=None, key=None, keyid=None, profile=None):
 
 def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
            AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None):
+           region=None, key=None, keyid=None, profile=None,
+           ElasticsearchVersion=None):
     '''
     Update the named domain to the configuration.
 
@@ -321,7 +326,8 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
 
     call_args = {}
     for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
+                'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions',
+                'ElasticsearchVersion'):
         if locals()[k] is not None:
             val = locals()[k]
             if isinstance(val, six.string_types):
@@ -332,6 +338,8 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             call_args[k] = val
     if 'AccessPolicies' in call_args:
         call_args['AccessPolicies'] = json.dumps(call_args['AccessPolicies'])
+    if 'ElasticsearchVersion' in call_args:
+        call_args['ElasticsearchVersion'] = str(call_args['ElasticsearchVersion'])
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         domain = conn.update_elasticsearch_domain_config(DomainName=DomainName, **call_args)

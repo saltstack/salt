@@ -41,6 +41,7 @@ config:
         boto_elasticsearch_domain.present:
             - DomainName: mydomain
             - profile='user-credentials'
+            - ElasticsearchVersion: "2.3"
             - ElasticsearchClusterConfig:
                 InstanceType": "t2.micro.elasticsearch"
                 InstanceCount: 1
@@ -108,7 +109,8 @@ def present(name, DomainName,
             SnapshotOptions=None,
             AdvancedOptions=None,
             Tags=None,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None,
+            ElasticsearchVersion="1.5"):
     '''
     Ensure domain exists.
 
@@ -188,6 +190,10 @@ def present(name, DomainName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    ElasticsearchVersion
+        String of format X.Y to specify version for the Elasticsearch domain eg.
+        "1.5" or "2.3".
     '''
     ret = {'name': DomainName,
            'result': True,
@@ -242,6 +248,7 @@ def present(name, DomainName,
                                                      AccessPolicies=AccessPolicies,
                                                      SnapshotOptions=SnapshotOptions,
                                                      AdvancedOptions=AdvancedOptions,
+                                                     ElasticsearchVersion=str(ElasticsearchVersion),
                                                region=region, key=key,
                                                keyid=keyid, profile=profile)
         if not r.get('created'):
@@ -275,7 +282,8 @@ def present(name, DomainName,
                'EBSOptions': EBSOptions,
                'AccessPolicies': AccessPolicies,
                'SnapshotOptions': SnapshotOptions,
-               'AdvancedOptions': AdvancedOptions}
+               'AdvancedOptions': AdvancedOptions,
+               'ElasticsearchVersion': str(ElasticsearchVersion)}
 
     for k, v in six.iteritems(es_opts):
         if not _compare_json(v, _describe[k]):
