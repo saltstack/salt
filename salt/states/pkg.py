@@ -103,9 +103,9 @@ if salt.utils.is_windows():
     # pylint: disable=W0611
     # pylint: disable=import-error,no-name-in-module
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    import time
     # pylint: disable=import-error
     # pylint: enable=W0611
-    import time
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_repo_src_dest_details
@@ -154,7 +154,7 @@ def __virtual__():
 def _refresh_tag_file(**kwargs):
     '''
     Internal use only in this module
-    
+
     :param str create:
         Create Tag to indicate a refresh is required. Called in mod_init()
     :param str refresh:
@@ -166,14 +166,14 @@ def _refresh_tag_file(**kwargs):
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
-    rtag=os.path.join(__opts__['cachedir'], 'pkg_refresh')
-    if salt.utils.is_true(kwargs.get('create',False)):
+    rtag = os.path.join(__opts__['cachedir'], 'pkg_refresh')
+    if salt.utils.is_true(kwargs.get('create', False)):
         if not os.path.exists(rtag):
             with salt.utils.fopen(rtag, 'w+'):
                 pass
         return True
 
-    refresh = kwargs.get('refresh',None)
+    refresh = kwargs.get('refresh', None)
     if refresh is not None:
         refresh = salt.utils.is_true(refresh)  # considers None False
 
