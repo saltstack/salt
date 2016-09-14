@@ -596,8 +596,8 @@ class PkgTest(integration.ModuleCase,
                 'Package {0} is already up-to-date'.format(target)
             )
 
-    @requires_system_grains
     @requires_salt_modules('pkg.group_install')
+    @requires_system_grains
     def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
         '''
         Tests that a CommandExecutionError is caught and the state returns False when
