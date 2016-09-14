@@ -2,12 +2,15 @@
 '''
 Loader mechanism for caching data, with data expirations, etc.
 
-.. versionadded:: carbon
+.. versionadded:: Carbon
 '''
+
+# Import Python libs
 from __future__ import absolute_import
-import os
-import salt.loader
 import time
+
+# Import Salt lobs
+import salt.loader
 from salt.payload import Serial
 
 
@@ -185,7 +188,7 @@ class Cache(object):
             in the cache backend (auth, permissions, etc).
         '''
         fun = '{0}.{1}'.format(self.driver, 'flush')
-        return self.modules[fun](bank)
+        return self.modules[fun](bank, key=key)
 
     def list(self, bank):
         '''
