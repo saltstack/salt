@@ -615,7 +615,7 @@ def get_content(service_instance, obj_type, property_list=None,
     # Create object spec to navigate content
     obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
         obj=obj_ref,
-        skip=True,
+        skip=True if not local_properties else False,
         selectSet=[traversal_spec] if not local_properties else None
     )
 
