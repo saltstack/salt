@@ -1805,3 +1805,177 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
         ret['comment'] = '{0}'.format(e.args)
 
     return ret
+
+
+def usage_plan_association_present(name, plan_name, apiStages, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is added to provided apiStages
+
+    name
+        name of the state
+    plan_name
+        name of the plan to use
+    apiStages
+        list of stages
+        apiId
+            apiId of the api to attach usage plan to
+        stage
+            stage name of the api to attach usage plan to
+
+    Example
+        UsagePlanAssociationPresent:
+          boto_apigateway.usage_plan_association_present:
+            - name: usage_plan_association
+            - plan_name: planB
+            - apiStages:
+              - apiId: 9kb0404ec0
+                stage: xxx
+              - apiId: l9v7o2aj90
+                stage: xxx
+            - profile: cfg-aws-profile
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist'.format(plan_name)
+            ret['result'] = False
+            return ret
+
+        if len(existing['plans']) != 1:
+            ret['comment'] = 'There are multiple usage plans with the same name - it is not supported'
+            ret['result'] = False
+            return ret
+
+        plan = existing['plans'][0]
+        plan_id = plan['id']
+        plan_stages = plan.get('apiStages', [])
+
+        stages_to_add = []
+        for api in apiStages:
+            if api not in plan_stages: 
+                stages_to_add.append(api)
+
+        if not stages_to_add:
+            ret['comment'] = 'Usage plan is already asssociated to all api stages'
+            return ret
+
+        result = __salt__['boto_apigateway.attach_usage_plan_to_apis'](plan_id, stages_to_add, **common_args)
+        if 'error' in result:
+            ret['comment'] = 'Failed to associate a usage plan {0} to the apis {1}, {2}'.format(plan_name, stages_to_add, result['error'])
+            ret['result'] = False
+            return ret
+
+        ret['comment'] = 'successfully associated usage plan to apis'
+        ret['changes']['old'] = plan_stages
+        ret['changes']['new'] = result.get('result', {}).get('apiStages', []) 
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
+def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is removed from provided apiStages
+    If a plan is associated to stages not listed in apiStages parameter, 
+    those associations remain intact
+
+    name
+        name of the state
+    plan_name
+        name of the plan to use
+    apiStages
+        list of stages
+        apiId
+            apiId of the api to detach usage plan from
+        stage
+            stage name of the api to detach usage plan from
+
+    Example
+        UsagePlanAssociationAbsent:
+          boto_apigateway.usage_plan_association_absent:
+            - name: usage_plan_association
+            - plan_name: planB
+            - apiStages:
+              - apiId: 9kb0404ec0
+                stage: xxx
+              - apiId: l9v7o2aj90
+                stage: xxx
+            - profile: cfg-aws-profile
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist'.format(plan_name)
+            ret['result'] = False
+            return ret
+
+        if len(existing['plans']) != 1:
+            ret['comment'] = 'There are multiple usage plans with the same name - it is not supported'
+            ret['result'] = False
+            return ret
+
+        plan = existing['plans'][0]
+        plan_id = plan['id']
+        plan_stages = plan.get('apiStages', [])
+
+        if not plan_stages:
+            ret['comment'] = 'Usage plan {0} has no associated stages already'.format(plan_name)
+            return ret
+
+        stages_to_remove = []
+        for api in apiStages:
+            if api in plan_stages:
+                stages_to_remove.append(api)
+
+        if not stages_to_remove:
+            ret['comment'] = 'Usage plan is already not asssociated to any  api stages'
+            return ret
+
+        result = __salt__['boto_apigateway.detach_usage_plan_from_apis'](plan_id, stages_to_remove, **common_args)
+        if 'error' in result:
+            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name, stages_to_add, result['error'])
+            ret['result'] = False
+            return ret
+
+        ret['comment'] = 'successfully disassociated usage plan from apis'
+        ret['changes']['old'] = plan_stages
+        ret['changes']['new'] = result.get('result', {}).get('apiStages', [])
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
