@@ -20,6 +20,7 @@ import integration
 import salt.utils
 
 
+@skip_if_binaries_missing('git')
 class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the git state
@@ -310,7 +311,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-    @skip_if_binaries_missing('git')
     def test_config_set_value_with_space_character(self):
         '''
         git.config
