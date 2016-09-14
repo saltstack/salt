@@ -183,7 +183,8 @@ def status(DomainName,
             domain = domain.get('DomainStatus', {})
             keys = ('Endpoint', 'Created', 'Deleted',
                     'DomainName', 'DomainId', 'EBSOptions', 'SnapshotOptions',
-                    'AccessPolicies', 'Processing', 'AdvancedOptions', 'ARN')
+                    'AccessPolicies', 'Processing', 'AdvancedOptions', 'ARN',
+                    'ElasticsearchVersion')
             return {'domain': dict([(k, domain.get(k)) for k in keys if k in domain])}
         else:
             return {'domain': None}
@@ -211,7 +212,7 @@ def describe(DomainName,
         domain = conn.describe_elasticsearch_domain_config(DomainName=DomainName)
         if domain and 'DomainConfig' in domain:
             domain = domain['DomainConfig']
-            keys = ('ElasticsearchVersion', 'ElasticsearchClusterConfig', 'EBSOptions', 'AccessPolicies',
+            keys = ('ElasticsearchClusterConfig', 'EBSOptions', 'AccessPolicies',
                     'SnapshotOptions', 'AdvancedOptions')
             return {'domain': dict([(k, domain.get(k, {}).get('Options')) for k in keys if k in domain])}
         else:

@@ -265,6 +265,9 @@ def present(name, DomainName,
     ret['comment'] = os.linesep.join([ret['comment'], 'Domain {0} is present.'.format(DomainName)])
     ret['changes'] = {}
     # domain exists, ensure config matches
+    _status = __salt__['boto_elasticsearch_domain.status'](DomainName=DomainName,
+                                  region=region, key=key, keyid=keyid,
+                                  profile=profile)['domain']
     _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
@@ -282,8 +285,7 @@ def present(name, DomainName,
                'EBSOptions': EBSOptions,
                'AccessPolicies': AccessPolicies,
                'SnapshotOptions': SnapshotOptions,
-               'AdvancedOptions': AdvancedOptions,
-               'ElasticsearchVersion': str(ElasticsearchVersion)}
+               'AdvancedOptions': AdvancedOptions}
 
     for k, v in six.iteritems(es_opts):
         if not _compare_json(v, _describe[k]):
@@ -291,6 +293,11 @@ def present(name, DomainName,
             comm_args[k] = v
             ret['changes'].setdefault('new', {})[k] = v
             ret['changes'].setdefault('old', {})[k] = _describe[k]
+    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):
+        need_update = True
+        comm_args['ElasticsearchVersion'] = str(ElasticsearchVersion)
+        ret['changes'].setdefault('new', {})['ElasticsearchVersion'] = str(ElasticsearchVersion)
+        ret['changes'].setdefault('old', {})['ElasticsearchVersion'] = _status.get('ElasticsearchVersion')
     if need_update:
         if __opts__['test']:
             msg = 'Domain {0} set to be modified.'.format(DomainName)
