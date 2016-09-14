@@ -259,10 +259,20 @@ class KeyCLI(object):
                                 veri = 'y'
                     except KeyboardInterrupt:
                         raise SystemExit("\nExiting on CTRL-c")
+                # accept/reject/delete the same keys we're printed to the user
+                self.opts['match_dict'] = ret
+                self.opts.pop('match', None)
+                list_ret = ret
 
             if veri is None or veri.lower().startswith('y'):
                 ret = self._run_cmd(cmd)
-                if isinstance(ret, dict):
+                if cmd in ('accept', 'reject', 'delete'):
+                    if cmd == 'delete':
+                        ret = list_ret
+                    for minions in ret.values():
+                        for minion in minions:
+                            print('Key for minion {0} {1}ed.'.format(minion, cmd))
+                elif isinstance(ret, dict):
                     salt.output.display_output(ret, 'key', opts=self.opts)
                 else:
                     salt.output.display_output({'return': ret}, 'key', opts=self.opts)
