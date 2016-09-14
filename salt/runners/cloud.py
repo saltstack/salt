@@ -19,9 +19,13 @@ import salt.cloud
 log = logging.getLogger(__name__)
 
 
+def _filter_kwargs(k):
+    return dict((x, k[x]) for x in k if not x.startswith('__'))
+
+
 def _get_client():
     '''
-    Return a cloud client
+    Return cloud client
     '''
     client = salt.cloud.CloudClient(
             os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
@@ -109,7 +113,7 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
-    info = client.profile(prof, instances, **kwargs)
+    info = client.profile(prof, instances, **_filter_kwargs(kwargs))
     return info
 
 
@@ -118,7 +122,7 @@ def map_run(path, **kwargs):
     Execute a salt cloud map file
     '''
     client = _get_client()
-    info = client.map_run(path, **kwargs)
+    info = client.map_run(path, **_filter_kwargs(kwargs))
     return info
 
 
@@ -147,7 +151,7 @@ def action(func=None,
         salt-run cloud.action start my-salt-vm
     '''
     client = _get_client()
-    info = client.action(func, cloudmap, instances, provider, instance, kwargs)
+    info = client.action(func, cloudmap, instances, provider, instance, **_filter_kwargs(kwargs))
     return info
 
 

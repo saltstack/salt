@@ -597,6 +597,7 @@ class PkgTest(integration.ModuleCase,
                 'Package {0} is already up-to-date'.format(target)
             )
 
+    @requires_salt_modules('pkg.group_install')
     @requires_system_grains
     def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
         '''
@@ -613,7 +614,7 @@ class PkgTest(integration.ModuleCase,
 
         # Run the pkg.group_installed state with a fake package group
         ret = self.run_state('pkg.group_installed', name='handle_missing_pkg_group',
-                             skip='foo-bar-baz')
+                             skip=['foo-bar-baz'])
         ret_comment = ret['pkg_|-handle_missing_pkg_group_|-handle_missing_pkg_group_|-group_installed']['comment']
 
         # Not all package managers support group_installed. Skip this test if not supported.
