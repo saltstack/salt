@@ -6,6 +6,8 @@
 # Import python libs
 from __future__ import absolute_import
 
+from distutils.version import LooseVersion
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -20,7 +22,9 @@ try:
     import jsonschema
     import jsonschema.exceptions
     HAS_JSONSCHEMA = True
+    JSONSCHEMA_VERSION = jsonschema.__version__
 except ImportError:
+    JSONSCHEMA_VERSION = ''
     HAS_JSONSCHEMA = False
 
 
@@ -746,6 +750,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    @skipIf(HAS_JSONSCHEMA and LooseVersion(jsonschema.__version__) <= LooseVersion('2.5.0'), 'Requires jsonschema 2.5.0 or greater')
     def test_ipv4_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv4Item(title='Item', description='Item description')
