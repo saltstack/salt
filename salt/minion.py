@@ -561,6 +561,7 @@ class MinionBase(object):
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
+                        self.opts['master'] = copy.copy(self.opts['local_masters'])
                         msg = ('No master could be reached or all masters '
                                'denied the minions connection attempt.')
                         log.error(msg)
