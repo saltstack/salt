@@ -56,6 +56,10 @@ def generate_min(extra_mods='', overwrite=False, so_mods='',
 
         salt-run thin.generate_min
     '''
+    conf_mods = __opts__.get('min_extra_mods')
+    if conf_mods:
+        extra_mods = ','.join([conf_mods, extra_mods])
+
     return salt.utils.thin.gen_min(__opts__['cachedir'],
                                    extra_mods,
                                    overwrite,
