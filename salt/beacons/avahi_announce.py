@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
- Beacon to announce via avahi (zeroconf)
+Beacon to announce via avahi (zeroconf)
+
+.. versionadded:: Carbon
+
+Dependencies
+============
+
+- python-avahi
+- dbus-python
 
 '''
 # Import Python libs
@@ -14,7 +22,12 @@ try:
     HAS_PYAVAHI = True
 except ImportError:
     HAS_PYAVAHI = False
-import dbus
+
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    HAS_DBUS = False
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +43,12 @@ GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
 
 def __virtual__():
     if HAS_PYAVAHI:
-        return __virtualname__
-    return False
+        if HAS_DBUS:
+            return __virtualname__
+        return False, 'The {0} beacon cannot be loaded. The ' \
+                      '\'python-dbus\' dependency is missing.'.format(__virtualname__)
+    return False, 'The {0} beacon cannot be loaded. The ' \
+                  '\'python-avahi\' dependency is missing.'.format(__virtualname__)
 
 
 def __validate__(config):

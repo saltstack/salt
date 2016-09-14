@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for the Keystone states
+Tests for the Openstack Cloud Provider
 '''
 
 # Import python libs
@@ -22,6 +22,8 @@ log = logging.getLogger(__name__)
 NO_KEYSTONE = False
 try:
     import keystoneclient  # pylint: disable=import-error,unused-import
+    from libcloud.common.openstack_identity import OpenStackIdentity_3_0_Connection
+    from libcloud.common.openstack_identity import OpenStackIdentityTokenScope
 except ImportError:
     NO_KEYSTONE = True
 
@@ -29,10 +31,10 @@ except ImportError:
 @skipIf(
     NO_KEYSTONE,
     'Please install keystoneclient and a keystone server before running'
-    'keystone integration tests.'
+    'openstack integration tests.'
 )
-class KeystoneStateTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+class OpenstackTest(integration.ModuleCase,
+                    integration.SaltReturnAssertsMixIn):
     '''
     Validate the keystone state
     '''
@@ -150,101 +152,17 @@ class KeystoneStateTest(integration.ModuleCase,
         self.assertTrue(ret['keystone_|-keystone_|-keystone_|-service_absent']['result'])
 
     @destructiveTest
-    def test_keystone_v2(self):
-        ret = self.run_state('keystone.service_present',
-                             name='nova',
-                             description='Nova Service',
-                             service_type='compute',
-                             profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-service_present']['result'])
-
-        ret = self.run_state('keystone.endpoint_present',
-                             name='nova',
-                             description='Nova Service',
-                             publicurl='http://localhost:8774/v2.1/%(tenant_id)s',
-                             internalurl='http://localhost:8774/v2.1/%(tenant_id)s',
-                             adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
-                             region='RegionOne',
-                             profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
-
-        ret = self.run_state('keystone.tenant_present',
-                             name='test',
-                             description='Test Tenant',
-                             profile='adminv2')
-        self.assertTrue(ret['keystone_|-test_|-test_|-tenant_present']['result'])
-
-        ret = self.run_state('keystone.role_present',
-                             name='user',
-                             profile='adminv2')
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
-
-        ret = self.run_state('keystone.user_present',
-                             name='test',
-                             email='test@example.com',
-                             tenant='test',
-                             password='testpass',
-                             roles={'test': ['user']},
-                             profile='adminv2')
-        self.assertTrue(ret['keystone_|-test_|-test_|-user_present']['result'])
-
-    @destructiveTest
-    def test_keystone_v3(self):
-        ret = self.run_state('keystone.service_present',
-                             name='glance',
-                             description='Image Service',
-                             service_type='image',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-service_present']['result'])
-
-        ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
-                             description='Glance Service',
-                             interface='public',
-                             url='http://localhost:9292',
-                             region='RegionOne',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
-
-        ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
-                             description='Glance Service',
-                             interface='internal',
-                             url='http://localhost:9292',
-                             region='RegionOne',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
-
-        ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
-                             description='Glance Service',
-                             interface='admin',
-                             url='http://localhost:9292',
-                             region='RegionOne',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
-
-        ret = self.run_state('keystone.project_present',
-                             name='testv3',
-                             description='Test v3 Tenant',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-project_present']['result'])
-
-        ret = self.run_state('keystone.role_present',
-                             name='user',
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
-
-        ret = self.run_state('keystone.user_present',
-                             name='testv3',
-                             email='testv3@example.com',
-                             project='testv3',
-                             password='testv3pass',
-                             roles={'testv3': ['user']},
-                             profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-user_present']['result'])
+    def test_libcloud_auth_v3(self):
+        driver = OpenStackIdentity_3_0_Connection(auth_url='http://localhost:5000',
+                                                  user_id='admin',
+                                                  key='adminpass',
+                                                  token_scope=OpenStackIdentityTokenScope.PROJECT,
+                                                  domain_name='Default',
+                                                  tenant_name='admin')
+        driver.authenticate()
+        self.assertTrue(driver.auth_token)
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(KeystoneStateTest)
+    run_tests(OpenstackTest)
