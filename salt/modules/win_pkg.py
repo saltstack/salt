@@ -71,8 +71,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
 
     *Keyword Arguments (kwargs)*
-    :param str saltenv: Salt environment. Default 'base'
-    :param bool refresh: Refresh package metadata. Default 'True'
+    :param str saltenv: Salt environment. Default ``base``
+    :param bool refresh: Refresh package metadata. Default ``True``
     '''
     if len(names) == 0:
         return ''
@@ -146,7 +146,7 @@ def upgrade_available(name, **kwargs):
 
     *Keyword Arguments (kwargs)*
     :param str saltenv: Salt environment
-    :param bool refresh: Refresh package metadata. Default 'True'
+    :param bool refresh: Refresh package metadata. Default ``True``
 
     CLI Example:
 
@@ -166,10 +166,10 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
-    :param bool refresh: Refresh package metadata. Default 'True'
+    :param bool refresh: Refresh package metadata. Default ``True``
 
     *Keyword Arguments (kwargs)*
-    :param str saltenv: Salt environment. Default 'base'
+    :param str saltenv: Salt environment. Default ``base``
 
     CLI Example:
 
@@ -252,7 +252,7 @@ def version(*names, **kwargs):
 
     *Keyword Arguments (kwargs)*
     :param str saltenv: The salt environment to use. Default ``base``.
-    :param bool refresh: Refresh package metadata. Default ``True``.
+    :param bool refresh: Refresh package metadata. Default ``False``.
 
     CLI Example:
     .. code-block:: bash
@@ -287,7 +287,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     *Keyword Arguments (kwargs)*
     :param str saltenv: The salt environment to use. Default ``base``.
-    :param bool refresh: Refresh package metadata. Default ``True``.
+    :param bool refresh: Refresh package metadata. Default ``False`.
 
         {'<package_name>': '<version>'}
 
@@ -1204,7 +1204,7 @@ def upgrade(**kwargs):
         salt '*' pkg.upgrade
     '''
     log.warning('pkg.upgrade not implemented on Windows yet')
-    refresh = salt.utils.is_true(kwargs.get('refresh', False))
+    refresh = salt.utils.is_true(kwargs.get('refresh', True))
     saltenv = kwargs.get('saltenv', 'base')
     # Uncomment the below once pkg.upgrade has been implemented
 
@@ -1238,8 +1238,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     .. versionadded:: 0.16.0
 
     *Keyword Arguments (kwargs)*
-    :param str saltenv: Salt environment. Default 'base'
-    :param bool refresh: Refresh package metadata. Default 'False'
+    :param str saltenv: Salt environment. Default ``base``
+    :param bool refresh: Refresh package metadata. Default ``False``
 
     :return: Returns a dict containing the changes.
     :rtype: dict
@@ -1455,8 +1455,8 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
         ``name`` parameter will be ignored if this option is passed.
 
     *Keyword Arguments (kwargs)*
-    :param str saltenv: Salt environment. Default 'base'
-    :param bool refresh: Refresh package metadata. Default 'False'
+    :param str saltenv: Salt environment. Default ``base``
+    :param bool refresh: Refresh package metadata. Default ``False``
 
     .. versionadded:: 0.16.0
 
@@ -1482,7 +1482,7 @@ def get_repo_data(saltenv='base'):
     Returns the existing package meteadata db.
     Will create it, if it does not exist, however will not refresh it.
 
-    :param str saltenv: Salt environment. Default 'base'
+    :param str saltenv: Salt environment. Default ``base``
 
     :return: Returns a dict containing contents of metadata db.
     :rtype: dict
@@ -1529,7 +1529,7 @@ def get_name_map(saltenv='base'):
     '''
     Return a reverse map of full pkg names to the names recognized by winrepo.
 
-    :param str saltenv: Salt environment. Default 'base'
+    :param str saltenv: Salt environment. Default ``base``
 
     :return: A dictionary of the name map from contents of metadata db.
     :rtype: dict
