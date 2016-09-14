@@ -132,6 +132,7 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config
+from salt.ext.six.moves import range
 
 # Attempt to import pyVim and pyVmomi libs
 try:
@@ -2187,6 +2188,18 @@ def create(vm_):
             raise SaltCloudSystemExit(
                 'The VM/template that you have specified under clonefrom does not exist.'
             )
+
+        snapshot = None
+        if clone_type == 'vm' and 'snapshot' in vm_:
+            num = int(vm_['snapshot']) - 1
+            snapshot = object_ref.rootSnapshot[0]
+            # Drill down to the correct snapshot number
+            for _ in range(num):
+                try:
+                    snapshot = snapshot.childSnapshot[0]
+                except IndexError:
+                    raise SaltCloudSystemExit('Specified snapshot'
+                                              ' does not exist.')
     else:
         clone_type = None
         object_ref = None
@@ -2325,12 +2338,20 @@ def create(vm_):
             config_spec.extraConfig.append(option)
 
     if 'clonefrom' in vm_:
-        # Create the clone specs
-        clone_spec = vim.vm.CloneSpec(
-            template=template,
-            location=reloc_spec,
-            config=config_spec
-        )
+        if not snapshot:
+            # Create the clone specs
+            clone_spec = vim.vm.CloneSpec(
+                template=template,
+                location=reloc_spec,
+                config=config_spec
+            )
+        else:
+            clone_spec = vim.vm.CloneSpec(
+                template=template,
+                location=reloc_spec,
+                config=config_spec,
+                snapshot=snapshot
+            )
 
         if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
             global_ip = vim.vm.customization.GlobalIPSettings()
