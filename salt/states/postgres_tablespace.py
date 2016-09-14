@@ -37,31 +37,41 @@ def present(name,
             db_user=None):
     '''
     Ensure that the named tablespace is present with the specified properties.
-    For more information about all of these options see man create_tablespace(1).
+    For more information about all of these options see man `create_tablespace`(7).
 
     name
         The name of the tablespace to create/manage.
+
     directory
-        The directory where the tablespace will be located, must already exist.
+        The directory where the tablespace will be located, must already exist
+
     options
         A dictionary of options to specify for the table.
         Currently, the only tablespace options supported are
         seq_page_cost - float; default=1.0
         random_page_cost - float; default=4.0
+
     owner
         The database user that will be the owner of the tablespace
         Defaults to the user executing the command (i.e. the `user` option)
-    db_user
-        database username if different from config or default
-    db_password
-        user password if any password for a specified user
-    db_host
-        Database host if different from config or default
-    db_port
-        Database port if different from config or default
+
     user
         System user all operations should be performed on behalf of
 
+    maintenance_db
+        Database to act on
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
     '''
     ret = {'name': name,
            'changes': {},
@@ -130,25 +140,33 @@ def present(name,
 def absent(name,
            user=None,
            maintenance_db=None,
+           db_user=None,
            db_password=None,
            db_host=None,
-           db_port=None,
-           db_user=None):
+           db_port=None):
     '''
     Ensure that the named database is absent.
 
     name
         The name of the database to remove
-    db_user
-        database username if different from config or defaul
-    db_password
-        user password if any password for a specified user
-    db_host
-        Database host if different from config or default
-    db_port
-        Database port if different from config or default
+
     user
         System user all operations should be performed on behalf of
+
+    maintenance_db
+        Database to act on
+
+    db_user
+        database username if different from config or defaul
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
     '''
     ret = {'name': name,
            'changes': {},

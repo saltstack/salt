@@ -351,3 +351,31 @@ def set_time_server(time_server='time.apple.com'):
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return time_server in get_time_server()
+
+
+def get_hwclock():
+    '''
+    Get current hardware clock setting (UTC or localtime)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_hwclock
+    '''
+    # Need to search for a way to figure it out ...
+    return False
+
+
+def set_hwclock(clock):
+    '''
+    Sets the hardware clock to be either UTC or localtime
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_hwclock UTC
+    '''
+    # Need to search for a way to figure it out ...
+    return False
