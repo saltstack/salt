@@ -1471,12 +1471,23 @@ class Pygit2(GitProvider):
             Helper function to log errors about missing auth parameters
             '''
             log.critical(
-                'Incomplete authentication information for {0} remote '
-                '\'{1}\'. Missing parameters: {2}'.format(
-                    self.role,
-                    self.id,
-                    ', '.join(missing)
-                )
+                'Incomplete authentication information for %s remote '
+                '\'%s\'. Missing parameters: %s',
+                self.role, self.id, ', '.join(missing)
+            )
+            failhard(self.role)
+
+        def _key_does_not_exist(key_type, path):
+            '''
+            Helper function to log errors about missing key file
+            '''
+            log.critical(
+                'SSH %s (%s) for %s remote \'%s\' could not be found, path '
+                'may be incorrect. Note that it may be necessary to clear '
+                'git_pillar locks to proceed once this is resolved and the '
+                'master has been started back up. A warning will be logged '
+                'if this is the case, with instructions.',
+                key_type, path, self.role, self.id
             )
             failhard(self.role)
 
@@ -1507,6 +1518,15 @@ class Pygit2(GitProvider):
             if all(bool(getattr(self, x, None)) for x in required_params):
                 keypair_params = [getattr(self, x, None) for x in
                                   ('user', 'pubkey', 'privkey', 'passphrase')]
+                # Check pubkey and privkey to make sure file exists
+                for idx, key_type in ((1, 'pubkey'), (2, 'privkey')):
+                    key_path = keypair_params[idx]
+                    if key_path is not None:
+                        try:
+                            if not os.path.isfile(key_path):
+                                _key_does_not_exist(key_type, key_path)
+                        except TypeError:
+                            _key_does_not_exist(key_type, key_path)
                 self.credentials = pygit2.Keypair(*keypair_params)
                 return True
             else:
