@@ -81,30 +81,36 @@ class FileserverTest(integration.ShellCase):
         and we may have more than just "roots" configured in the fileserver
         backends. This assert will need to be updated accordingly.
         '''
+        saltenvs = sorted(self.run_run_plus(fun='fileserver.envs')['return'])
+
         @contextlib.contextmanager
         def gen_cache():
             '''
             Create file_list cache so we have something to clear
             '''
-            self.run_run_plus(fun='fileserver.file_list')
+            for saltenv in saltenvs:
+                self.run_run_plus(fun='fileserver.file_list', saltenv=saltenv)
             yield
 
         # Test with no arguments
         with gen_cache():
             ret = self.run_run_plus(fun='fileserver.clear_file_list_cache')
-            self.assertEqual(ret['return'], {'roots': ['base']})
+            ret['return']['roots'].sort()
+            self.assertEqual(ret['return'], {'roots': saltenvs})
 
         # Test with backend passed as string
         with gen_cache():
             ret = self.run_run_plus(fun='fileserver.clear_file_list_cache',
                                     backend='roots')
-            self.assertEqual(ret['return'], {'roots': ['base']})
+            ret['return']['roots'].sort()
+            self.assertEqual(ret['return'], {'roots': saltenvs})
 
         # Test with backend passed as list
         with gen_cache():
             ret = self.run_run_plus(fun='fileserver.clear_file_list_cache',
                                     backend=['roots'])
-            self.assertEqual(ret['return'], {'roots': ['base']})
+            ret['return']['roots'].sort()
+            self.assertEqual(ret['return'], {'roots': saltenvs})
 
         # Test with backend passed as string, but with a nonsense backend
         with gen_cache():
