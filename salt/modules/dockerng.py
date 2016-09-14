@@ -798,8 +798,11 @@ def _get_client(timeout=None):
             except Exception as exc:
                 raise CommandExecutionError(
                     'Docker machine {0} failed: {1}'.format(docker_machine, exc))
-
-        __context__['docker.client'] = docker.Client(**client_kwargs)
+        try:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
+        except docker.errors.DockerException:
+            log.error('Could not initialize Docker client')
+            return False
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
@@ -953,6 +956,8 @@ def _client_wrapper(attr, *args, **kwargs):
     Common functionality for getting information from a container
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
+    if 'docker.client' not in __context__:
+        raise CommandExecutionError('Docker service not running or not installed?')
     func = getattr(__context__['docker.client'], attr)
     if func is None:
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
