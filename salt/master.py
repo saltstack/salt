@@ -468,13 +468,17 @@ class Master(SMaster):
             and not isinstance(x['git'], six.string_types)
         ]
         if non_legacy_git_pillars:
-            new_opts = copy.deepcopy(self.opts)
-            new_opts['ext_pillar'] = non_legacy_git_pillars
             try:
-                # Init any values needed by the git ext pillar
-                salt.utils.gitfs.GitPillar(new_opts)
-            except FileserverConfigError as exc:
-                critical_errors.append(exc.strerror)
+                new_opts = copy.deepcopy(self.opts)
+                from salt.pillar.git_pillar \
+                    import PER_REMOTE_OVERRIDES as overrides
+                for repo in non_legacy_git_pillars:
+                    new_opts['ext_pillar'] = [repo]
+                    try:
+                        git_pillar = salt.utils.gitfs.GitPillar(new_opts)
+                        git_pillar.init_remotes(repo['git'], overrides)
+                    except FileserverConfigError as exc:
+                        critical_errors.append(exc.strerror)
             finally:
                 del new_opts
 
