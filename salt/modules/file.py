@@ -2083,6 +2083,8 @@ def blockreplace(path,
         Append a newline to the content block. For more information see:
         https://github.com/saltstack/salt/issues/33686
 
+        .. versionadded:: 2016.3.4
+
     CLI Example:
 
     .. code-block:: bash
