@@ -55,6 +55,15 @@ It's also possible to specify key, keyid and region via a profile:
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
       region: us-east-1
 
+Additionally you can define cross account sqs:
+
+.. code-block:: yaml
+
+    engines:
+      - sqs_events:
+          queue: prod
+          owner_acct_id: 111111111111
+
 '''
 
 # Import python libs
@@ -114,7 +123,7 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     return conn
 
 
-def start(queue, profile=None, tag='salt/engine/sqs'):
+def start(queue, profile=None, tag='salt/engine/sqs', owner_acct_id=None):
     '''
     Listen to events and write them to a log file
     '''
@@ -133,15 +142,14 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
             __salt__['event.send'](tag, msg)
 
     sqs = _get_sqs_conn(profile)
-    q = sqs.get_queue(queue)
-
+    q = None
     while True:
         if not q:
-            log.warning('failure connecting to queue: {0}, '
-                        'waiting 10 seconds.'.format(queue))
-            time.sleep(10)
-            q = sqs.get_queue(queue)
+            q = sqs.get_queue(queue, owner_acct_id=owner_acct_id)
             if not q:
+                log.warning('failure connecting to queue: {0}, '
+                            'waiting 10 seconds.'.format(':'.join(filter(None, (str(owner_acct_id), queue)))))
+                time.sleep(10)
                 continue
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
