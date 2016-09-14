@@ -913,6 +913,10 @@ VALID_OPTS = {
 
     # Minion data cache driver (one of satl.cache.* modules)
     'cache': str,
+
+    # Thin and minimal Salt extra modules
+    'thin_extra_mods': str,
+    'min_extra_mods': str,
 }
 
 # default configurations
@@ -1422,6 +1426,8 @@ DEFAULT_MASTER_OPTS = {
     'python2_bin': 'python2',
     'python3_bin': 'python3',
     'cache': 'localfs',
+    'thin_extra_mods': '',
+    'min_extra_mods': '',
 }
 
 
