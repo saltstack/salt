@@ -613,7 +613,7 @@ class PkgTest(integration.ModuleCase,
 
         # Run the pkg.group_installed state with a fake package group
         ret = self.run_state('pkg.group_installed', name='handle_missing_pkg_group',
-                             skip='foo-bar-baz')
+                             skip=['foo-bar-baz'])
         ret_comment = ret['pkg_|-handle_missing_pkg_group_|-handle_missing_pkg_group_|-group_installed']['comment']
 
         # Not all package managers support group_installed. Skip this test if not supported.
