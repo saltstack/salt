@@ -2024,6 +2024,7 @@ def blockreplace(path,
         backup='.bak',
         dry_run=False,
         show_changes=True,
+        append_newline=False,
         ):
     '''
     .. versionadded:: 2014.1.0
@@ -2077,6 +2078,12 @@ def blockreplace(path,
     show_changes
         Output a unified diff of the old file and the new file. If ``False``,
         return a boolean if any changes were made.
+
+    append_newline:
+        Append a newline to the content block. For more information see:
+        https://github.com/saltstack/salt/issues/33686
+
+        .. versionadded:: 2016.3.4
 
     CLI Example:
 
@@ -2167,7 +2174,10 @@ def blockreplace(path,
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
             new_file.insert(0, marker_end + '\n')
-            new_file.insert(0, content)
+            if append_newline is True:
+                new_file.insert(0, content + '\n')
+            else:
+                new_file.insert(0, content)
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
@@ -2177,7 +2187,10 @@ def blockreplace(path,
                     new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
-            new_file.append(content)
+            if append_newline is True:
+                new_file.append(content + '\n')
+            else:
+                new_file.append(content)
             new_file.append(marker_end + '\n')
             done = True
         else:
