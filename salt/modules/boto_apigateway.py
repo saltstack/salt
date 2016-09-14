@@ -1413,27 +1413,22 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-def _format_throttle(rate=None, burst=None):
-    throttle = {}
-    if rate:
-        throttle['rateLimit'] = float(rate)
-    if burst:
-        throttle['burstLimit'] = int(burst)
-    return throttle
- 
-def _format_quotas(quota=None, offset=None, period=None):
-    quotas = {}
-    if quota:
-        quotas['limit'] = int(quota)
-    if offset:
-        quotas['offset'] = int(offset)
-    if period:
-        if period not in ['DAY', 'WEEK', 'MONTH']:
-            raise Exception('unsupported usage plan period, must be DAY, WEEK or MONTH')
-        quotas['period'] = period
-    return quotas 
+def _validate_throttle(throttle):
+    if throttle:
+        if not isinstance(throttle, dict):
+            raise TypeError('throttle must be a dictionary, provided value: {0}'.format(throttle))
 
-def create_usage_plan(name, description=None, rate=None, burst=None, quota=None, offset=None, period=None, region=None, key=None, keyid=None, profile=None):
+def _validate_quota(quota):
+    if quota:
+        if not isinstance(quota, dict):
+            raise TypeError('quota must be a dictionary, provided value: {0}'.format(quota))
+        periods = ['DAY', 'WEEK', 'MONTH']
+        if 'period' not in quota or quota['period'] not in periods:
+            raise ValueError('quota must have a valid period specified, valid values are {0}'.format(','.join(periods)))
+        if 'limit' not in quota:
+            raise ValueError('quota limit must have a valid value')
+
+def create_usage_plan(name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
     Creates a new usage plan with throttling and quotas optionally applied
         rate: floating point number, number of reqeusts per second in steady state
@@ -1441,44 +1436,51 @@ def create_usage_plan(name, description=None, rate=None, burst=None, quota=None,
         quota: integer number, maximum number of requests per day
         offset: integer number, number of requests subtracted from quota on the initial time period
     '''
-    values = dict(name=name)
-    if description:
-        values['description'] = description
-
-    throttle = _format_throttle(rate, burst)
-    if throttle:
-        values['throttle'] = throttle
-
     try:
-        quotas = _format_quotas(quota, offset, period) 
-        if quotas:
-            values['quota'] = quotas
-    except Exception as e:
-        return {'error': '{0}'.format(e)}
+        _validate_throttle(throttle)
+        _validate_quota(quota)
+        
+        values = dict(name=name)
+        if description:
+            values['description'] = description
+        if throttle:
+            values['throttle'] = throttle
+        if quota:
+            values['quota'] = quota
 
-    try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         res = conn.create_usage_plan(**values)
         return {'created': True, 'result': res}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except (TypeError, ValueError) as e:
+        return {'error': '{0}'.format(e)}
 
-def update_usage_plan(plan_id, rate=None, burst=None, quota=None, offset=None, period=None, region=None, key=None, keyid=None, profile=None):
+def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     try:
+        _validate_throttle(throttle)
+        _validate_quota(quota)
+
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-        patchOperations=[]
-       
-        if rate is None and burst is None:
-            patchOperations.append({'op': 'remove', 'path': '/throttle'})
-        if quota is None and offset is None and period is None:
-            patchOperations.append({'op': 'remove', 'path': '/quota'})
  
-        # if rate:
-        #    patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(rate)})
-        # patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota)})
-        # patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(period)})
+        patchOperations =[]
+       
+        if throttle is None:
+            patchOperations.append({'op': 'remove', 'path': '/throttle'})
+        else:
+            if 'rateLimit' in throttle:
+                patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(throttle['rateLimit'])})
+            if 'burstLimit' in throttle:
+                patchOperations.append({'op': 'replace', 'path': '/throttle/burstLimit', 'value': str(throttle['burstLimit'])})
 
+        if quota is None:
+            patchOperations.append({'op': 'remove', 'path': '/quota'})
+        else:
+            patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(quota['period'])})
+            patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota['limit'])})
+            if 'offset' in quota:
+                patchOperations.append({'op': 'replace', 'path': '/quota/offset', 'value': str(quota['offset'])})
+ 
         if patchOperations:
             res = conn.update_usage_plan(usagePlanId=plan_id,
                                          patchOperations=patchOperations)
