@@ -1388,3 +1388,153 @@ def create_api_integration_response(restApiId, resourcePath, httpMethod, statusC
         return {'created': False, 'error': 'no such resource'}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def _filter_plans(attr, name, plans):
+    '''
+    Return list of usage plan items matching the given attribute value.
+    '''
+    return [plan for plan in plans if plan[attr] == name]
+
+def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of existing usage plans, optionally filtered to match a given plan name
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        plans = _multi_call(conn.get_usage_plans, 'items')
+        if name:
+            plans = _filter_plans('name', name, plans)
+        if plan_id:
+            plans = _filter_plans('id', plan_id, plans)
+
+        return {'plans': [_convert_datetime_str(plan) for plan in plans]}
+
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def _format_throttle(rate=None, burst=None):
+    throttle = {}
+    if rate:
+        throttle['rateLimit'] = float(rate)
+    if burst:
+        throttle['burstLimit'] = int(burst)
+    return throttle
+ 
+def _format_quotas(quota=None, offset=None, period=None):
+    quotas = {}
+    if quota:
+        quotas['limit'] = int(quota)
+    if offset:
+        quotas['offset'] = int(offset)
+    if period:
+        if period not in ['DAY', 'WEEK', 'MONTH']:
+            raise Exception('unsupported usage plan period, must be DAY, WEEK or MONTH')
+        quotas['period'] = period
+    return quotas 
+
+def create_usage_plan(name, description=None, rate=None, burst=None, quota=None, offset=None, period=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a new usage plan with throttling and quotas optionally applied
+        rate: floating point number, number of reqeusts per second in steady state
+        burst: integer number, maximum rate limit
+        quota: integer number, maximum number of requests per day
+        offset: integer number, number of requests subtracted from quota on the initial time period
+    '''
+    values = dict(name=name)
+    if description:
+        values['description'] = description
+
+    throttle = _format_throttle(rate, burst)
+    if throttle:
+        values['throttle'] = throttle
+
+    try:
+        quotas = _format_quotas(quota, offset, period) 
+        if quotas:
+            values['quota'] = quotas
+    except Exception as e:
+        return {'error': '{0}'.format(e)}
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        res = conn.create_usage_plan(**values)
+        return {'created': True, 'result': res}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def update_usage_plan(plan_id, rate=None, burst=None, quota=None, offset=None, period=None, region=None, key=None, keyid=None, profile=None):
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+        patchOperations=[]
+       
+        if rate is None and burst is None:
+            patchOperations.append({'op': 'remove', 'path': '/throttle'})
+        if quota is None and offset is None and period is None:
+            patchOperations.append({'op': 'remove', 'path': '/quota'})
+ 
+        # if rate:
+        #    patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(rate)})
+        # patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota)})
+        # patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(period)})
+
+        if patchOperations:
+            res = conn.update_usage_plan(usagePlanId=plan_id,
+                                         patchOperations=patchOperations)
+            return {'updated': True, 'result': res}
+
+        return {'updated': False}
+
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes usage plan identified by plan_id
+    '''
+    try:
+        existing = describe_usage_plans(plan_id=plan_id, region=region, key=key, keyid=keyid, profile=profile)
+        # don't attempt to delete the usage plan if it does not exist
+        if 'plans' in existing and existing['plans']:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            res = conn.delete_usage_plan(usagePlanId=plan_id)
+        return {'deleted': True, 'usagePlanId': plan_id}        
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def attach_usage_plan_to_api_stage(plan_id, api_id, stage_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Attaches the usage plan identified by plan_id to a stage stage_name in the REST API identified by api_id
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)  
+        val = "{0}:{1}".format(api_id, stage_name)
+        res = conn.update_usage_plan(usagePlanId=plan_id,
+                                     patchOperations=[{
+                                                        'op': 'add',
+                                                        'path': '/apiStages',
+                                                        'value': val 
+                                                      }])
+        return {'success': True, 'result': res}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def detach_usage_plan_from_api_stage(plan_id, api_id, stage_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Removes the usage plan identified by plan_id from a stage stage_name in the REST API identified by api_id
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        val = "{0}:{1}".format(api_id, stage_name)
+        res = conn.update_usage_plan(usagePlanId=plan_id,
+                                     patchOperations=[{
+                                                        'op': 'remove',
+                                                        'path': '/apiStages',
+                                                        'value': val
+                                                      }])
+        return {'success': True, 'result': res}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
