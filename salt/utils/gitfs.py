@@ -86,7 +86,7 @@ except Exception as err:  # cffi VerificationError also may happen
                           # but cffi might be absent as well!
                           # Therefore just a generic Exception class.
     if not isinstance(err, ImportError):
-        log.error('Import pygit2 failed: {0}'.format(err))
+        log.error('Import pygit2 failed: %s', err)
 
 try:
     import dulwich.errors
@@ -317,8 +317,8 @@ class GitProvider(object):
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
-            'Root path \'{0}\' not present in {1} remote \'{2}\', '
-            'skipping.'.format(self.root, self.role, self.id)
+            'Root path \'%s\' not present in %s remote \'%s\', '
+            'skipping.', self.root, self.role, self.id
         )
         return None
 
@@ -470,7 +470,7 @@ class GitProvider(object):
                     self._get_lock_file(lock_type),
                     exc
                 )
-                log.error(msg)
+                log.error(msg, exc_info_on_loglevel=logging.DEBUG)
                 raise GitLockError(exc.errno, msg)
         msg = 'Set {0} lock for {1} remote \'{2}\''.format(
             lock_type,
@@ -1005,7 +1005,8 @@ class Pygit2(GitProvider):
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
-                        '\'%s\'', local_ref, self.role, self.id
+                        '\'%s\'', local_ref, self.role, self.id,
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     return None
 
@@ -1083,7 +1084,8 @@ class Pygit2(GitProvider):
                             log.error(
                                 'Unable to resolve %s from %s remote \'%s\' '
                                 'to either an annotated or non-annotated tag',
-                                tag_ref, self.role, self.id
+                                tag_ref, self.role, self.id,
+                                exc_info_on_loglevel=logging.DEBUG
                             )
                             return None
 
@@ -1301,18 +1303,20 @@ class Pygit2(GitProvider):
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
                     'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
-                    'SSH authentication.'.format(self.role, self.id)
+                    'SSH authentication.'.format(self.role, self.id),
+                    exc_info_on_loglevel=logging.DEBUG
                 )
             elif 'authentication required but no callback set' in exc_str:
                 log.error(
-                    '{0} remote \'{1}\' requires authentication, but no '
-                    'authentication configured'.format(self.role, self.id)
+                    '%s remote \'%s\' requires authentication, but no '
+                    'authentication configured', self.role, self.id,
+                    exc_info_on_loglevel=logging.DEBUG
                 )
             else:
                 log.error(
-                    'Error occurred fetching {0} remote \'{1}\': {2}'.format(
-                        self.role, self.id, exc
-                    )
+                    'Error occurred fetching %s remote \'%s\': %s',
+                    self.role, self.id, exc,
+                    exc_info_on_loglevel=logging.DEBUG
                 )
             return False
         try:
@@ -1659,19 +1663,18 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             refs_post = client.fetch(path, self.repo)
         except dulwich.errors.NotGitRepository:
             log.error(
-                'Dulwich does not recognize {0} as a valid remote '
+                'Dulwich does not recognize %s as a valid remote '
                 'remote URL. Perhaps it is missing \'.git\' at the '
-                'end.'.format(self.id)
+                'end.', self.id, exc_info_on_loglevel=logging.DEBUG
             )
             return False
         except KeyError:
             log.error(
-                'Local repository cachedir \'{0}\' (corresponding '
-                'remote: \'{1}\') has been corrupted. Salt will now '
+                'Local repository cachedir \'%s\' (corresponding '
+                'remote: \'%s\') has been corrupted. Salt will now '
                 'attempt to remove the local checkout to allow it to '
                 'be re-initialized in the next fileserver cache '
-                'update.'
-                .format(self.cachedir, self.id)
+                'update.', self.cachedir, self.id
             )
             try:
                 salt.utils.rm_rf(self.cachedir)
@@ -2506,7 +2509,8 @@ class GitBase(object):
                         exc.errno,
                         repo.role,
                         repo.id,
-                        exc
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     break
         else:
