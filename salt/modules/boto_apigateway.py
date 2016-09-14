@@ -1414,11 +1414,17 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
         return {'error': salt.utils.boto3.get_error(e)}
 
 def _validate_throttle(throttle):
+    '''
+    Verifies that throttling parameters are valid
+    '''
     if throttle:
         if not isinstance(throttle, dict):
             raise TypeError('throttle must be a dictionary, provided value: {0}'.format(throttle))
 
 def _validate_quota(quota):
+    '''
+    Verifies that quota parameters are valid
+    '''
     if quota:
         if not isinstance(quota, dict):
             raise TypeError('quota must be a dictionary, provided value: {0}'.format(quota))
@@ -1431,10 +1437,18 @@ def _validate_quota(quota):
 def create_usage_plan(name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
     Creates a new usage plan with throttling and quotas optionally applied
-        rate: floating point number, number of reqeusts per second in steady state
-        burst: integer number, maximum rate limit
-        quota: integer number, maximum number of requests per day
-        offset: integer number, number of requests subtracted from quota on the initial time period
+    throttle
+        rateLimit
+            requests per second at steady rate, float
+        burstLimit
+            maximum number of requests per second, integer
+    quota
+        limit
+            number of allowed requests per specified quota period [required if quota parameter is present]
+        offset
+            number of requests to be subtracted from limit at the beginning of the period [optional]
+        period
+            quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
     '''
     try:
         _validate_throttle(throttle)
@@ -1457,6 +1471,21 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
         return {'error': '{0}'.format(e)}
 
 def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Updates an existing usage plan with throttling and quotas 
+    throttle
+        rateLimit
+            requests per second at steady rate, float
+        burstLimit
+            maximum number of requests per second, integer
+    quota
+        limit
+            number of allowed requests per specified quota period [required if quota parameter is present]
+        offset
+            number of requests to be subtracted from limit at the beginning of the period [optional]
+        period
+            quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
+    '''
     try:
         _validate_throttle(throttle)
         _validate_quota(quota)
@@ -1505,38 +1534,38 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-def attach_usage_plan_to_api_stage(plan_id, api_id, stage_name, region=None, key=None, keyid=None, profile=None):
+def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None, profile=None):
     '''
-    Attaches the usage plan identified by plan_id to a stage stage_name in the REST API identified by api_id
+    Updates the usage plan identified by plan_id by adding or removing it to each of the stages, specified by apis parameter.
+    apis 
+        a list of dictionaries, containing apiId and stage
+    op 
+        'add' or 'remove'
     '''
     try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)  
-        val = "{0}:{1}".format(api_id, stage_name)
-        res = conn.update_usage_plan(usagePlanId=plan_id,
-                                     patchOperations=[{
-                                                        'op': 'add',
-                                                        'path': '/apiStages',
-                                                        'value': val 
-                                                      }])
-        return {'success': True, 'result': res}
-    except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        patchOperations = []
+        for api in apis:
+            patchOperations.append({
+                                    'op': op,
+                                    'path': '/apiStages',
+                                    'value': '{0}:{1}'.format(api['apiId'], api['stage'])
+                                   })
 
-def detach_usage_plan_from_api_stage(plan_id, api_id, stage_name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Removes the usage plan identified by plan_id from a stage stage_name in the REST API identified by api_id
-    '''
-    try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        val = "{0}:{1}".format(api_id, stage_name)
         res = conn.update_usage_plan(usagePlanId=plan_id,
-                                     patchOperations=[{
-                                                        'op': 'remove',
-                                                        'path': '/apiStages',
-                                                        'value': val
-                                                      }])
+                                     patchOperations=patchOperations)
         return {'success': True, 'result': res}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
+    '''
+    Attaches given usage plan to each of the apis provided in a list of apiId and stage values
+    '''
+    return _update_usage_plan_apis(plan_id, apis, 'add', region=region, key=key, keyid=keyid, profile=profile)
 
+def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
+    '''
+    Detaches given usage plan from each of the apis provided in a list of apiId and stage value
+    '''
+    return _update_usage_plan_apis(plan_id, apis, 'remove', region=region, key=key, keyid=keyid, profile=profile)
