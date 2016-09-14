@@ -126,7 +126,7 @@ class LocalClient(object):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None, skip_perm_errors=False,
-                 io_loop=None):
+                 io_loop=None, keep_loop=False):
         '''
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
@@ -155,7 +155,8 @@ class LocalClient(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False,
-                io_loop=io_loop)
+                io_loop=io_loop,
+                keep_loop=keep_loop)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
