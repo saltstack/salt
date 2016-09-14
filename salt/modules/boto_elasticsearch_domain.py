@@ -300,8 +300,7 @@ def delete(DomainName, region=None, key=None, keyid=None, profile=None):
 
 def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
            AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None,
-           ElasticsearchVersion=None):
+           region=None, key=None, keyid=None, profile=None):
     '''
     Update the named domain to the configuration.
 
@@ -327,8 +326,7 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
 
     call_args = {}
     for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions',
-                'ElasticsearchVersion'):
+                'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
         if locals()[k] is not None:
             val = locals()[k]
             if isinstance(val, six.string_types):
@@ -339,8 +337,6 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             call_args[k] = val
     if 'AccessPolicies' in call_args:
         call_args['AccessPolicies'] = json.dumps(call_args['AccessPolicies'])
-    if 'ElasticsearchVersion' in call_args:
-        call_args['ElasticsearchVersion'] = str(call_args['ElasticsearchVersion'])
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         domain = conn.update_elasticsearch_domain_config(DomainName=DomainName, **call_args)
