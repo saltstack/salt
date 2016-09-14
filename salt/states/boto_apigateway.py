@@ -1618,6 +1618,46 @@ class _Swagger(object):
 
 
 def usage_plan_present(name, plan_name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the spcifieda usage plan with the corresponding metrics is deployed
+
+    name
+        name of the state
+    plan_name
+        [Required] name of the usage plan
+    throttle
+        [Optional] throttling parameters expressed as a dictionary. 
+        If provided, at least one of the throttling paramters must be present
+        rateLimit
+            rate per second at which capacity bucket is populated
+        burstLimit
+            maximum rate allowed
+    quota
+        [Optional] quota on the number of api calls permitted by the plan.
+        If provided, limit and period must be present
+        limit
+            [Required] number of calls permitted per quota period    
+        offset
+            [Optional] number of calls to be subtracted from the limit at the beginning of the period
+        period
+            [Required] period to which quota applies. Must be DAY, WEEK or MONTH
+
+    Example:
+        UsagePlanPresent:
+            boto_apigateway.usage_plan_present:
+                - name: my_usage_plan
+                - plan_name: my_usage_plan
+                - throttle:
+                    rateLimit: 70
+                    burstLimit: 100
+                - quota:
+                    limit: 1000
+                    offset: 0
+                    period: DAY
+                - profile: cfg-aws-profile
+    '''
+    func_params = locals()
+
     ret = {'name': name,
            'result': True,
            'comment': '',
@@ -1645,11 +1685,8 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
 
             result = __salt__['boto_apigateway.create_usage_plan'](name=plan_name, 
                                                                    description=description, 
-                                                                   rate=rate, 
-                                                                   burst=burst, 
+                                                                   throttle=throttle,
                                                                    quota=quota, 
-                                                                   offset=offset, 
-                                                                   period=period, 
                                                                    **common_args)
             if 'error' in result:
                 ret['result'] = False
@@ -1665,10 +1702,10 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
             needs_updating = False
 
             modifiable_params = (('throttle', ('rateLimit', 'burstLimit')), ('quota', ('limit', 'offset', 'period')))
-            param_values = dict(rateLimit=rate, burstLimit=burst, limit=quota, offset=offset, period=period)
             for p, fields in modifiable_params:
                 for f in fields:
-                    if plan.get(p, {}).get(f, None) != param_values[f]:
+                    actual_param = {} if func_params.get(p) is None else func_params.get(p)
+                    if plan.get(p, {}).get(f, None) != actual_param.get(f, None):
                         needs_updating = True
                         break;
 
@@ -1683,11 +1720,8 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
                 return ret
 
             result = __salt__['boto_apigateway.update_usage_plan'](plan['id'], 
-                                                                   rate=rate, 
-                                                                   burst=burst, 
+                                                                   throttle=throttle, 
                                                                    quota=quota, 
-                                                                   offset=offset, 
-                                                                   period=period, 
                                                                    **common_args)
             if 'error' in result:
                 ret['result'] = False
@@ -1712,6 +1746,21 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
     return ret
 
 def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is no longer present
+
+    name
+        name of the state
+    plan_name
+        name of the plan to remove
+
+    Example
+        usage plan absent:
+            boto_apigateway.usage_plan_absent:
+                - name: my_usage_plan_state
+                - plan_name: my_usage_plan
+                - profile: cfg-aws-profile
+    '''
     ret = {'name': name,
            'result': True,
            'comment': '',
