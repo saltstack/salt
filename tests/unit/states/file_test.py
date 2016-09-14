@@ -978,6 +978,7 @@ class FileTestCase(TestCase):
     # 'comment' function tests: 1
 
     @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
@@ -1033,6 +1034,7 @@ class FileTestCase(TestCase):
     # 'uncomment' function tests: 1
 
     @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file

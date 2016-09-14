@@ -53,14 +53,15 @@ def __has_required_azure():
     '''
     Returns True/False if the required version of the Azure SDK is installed.
     '''
-    if hasattr(azure, '__version__'):
-        version = LooseVersion(azure.__version__)
-    else:
-        version = LooseVersion(azure.common.__version__)
-    if HAS_AZURE is True and REQUIRED_AZURE <= version:
-        return True
-    else:
-        return False
+    if HAS_AZURE:
+        if hasattr(azure, '__version__'):
+            version = LooseVersion(azure.__version__)
+        else:
+            version = LooseVersion(azure.common.__version__)
+
+        if REQUIRED_AZURE <= version:
+            return True
+    return False
 
 
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
