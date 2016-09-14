@@ -1615,3 +1615,144 @@ class _Swagger(object):
                     ret = self._deploy_method(ret, path, method, method_data, api_key_required,
                                               lambda_integration_role, lambda_region, authorization_type)
         return ret
+
+
+def usage_plan_present(name, plan_name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            # plan does not exist, we need to create it
+            if __opts__['test']:
+                ret['comment'] = 'a new usage plan {0} would be created'.format(plan_name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['boto_apigateway.create_usage_plan'](name=plan_name, 
+                                                                   description=description, 
+                                                                   rate=rate, 
+                                                                   burst=burst, 
+                                                                   quota=quota, 
+                                                                   offset=offset, 
+                                                                   period=period, 
+                                                                   **common_args)
+            if 'error' in result:
+                ret['result'] = False
+                ret['comment'] = 'Failed to create a usage plan {0}, {1}'.format(plan_name, result['error'])
+                return ret
+
+            ret['changes']['old'] = {'plan': None}
+            ret['comment'] = 'A new usage plan {0} has been created'.format(plan_name)
+ 
+        else:
+            # need an existing plan modified to match given value
+            plan = existing['plans'][0]
+            needs_updating = False
+
+            modifiable_params = (('throttle', ('rateLimit', 'burstLimit')), ('quota', ('limit', 'offset', 'period')))
+            param_values = dict(rateLimit=rate, burstLimit=burst, limit=quota, offset=offset, period=period)
+            for p, fields in modifiable_params:
+                for f in fields:
+                    if plan.get(p, {}).get(f, None) != param_values[f]:
+                        needs_updating = True
+                        break;
+
+            if not needs_updating:
+                ret['comment'] = 'usage plan {0} is already in a correct state'.format(plan_name)
+                ret['result'] = True
+                return ret
+
+            if __opts__['test']:
+                ret['comment'] = 'a new usage plan {0} would be updated'.format(plan_name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['boto_apigateway.update_usage_plan'](plan['id'], 
+                                                                   rate=rate, 
+                                                                   burst=burst, 
+                                                                   quota=quota, 
+                                                                   offset=offset, 
+                                                                   period=period, 
+                                                                   **common_args)
+            if 'error' in result:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update a usage plan {0}, {1}'.format(plan_name, result['error'])
+                return ret
+
+            ret['changes']['old'] = {'plan': plan}
+            ret['comment'] = 'usage plan {0} has been updated'.format(plan_name)
+
+        newstate = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans after updates'
+            return ret
+
+        ret['changes']['new'] = {'plan': newstate['plans'][0]}
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
+def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist already'.format(plan_name)
+            return ret
+ 
+        if __opts__['test']:
+             ret['comment'] = 'Usage plan {0} exists and would be deleted'.format(plan_name)
+             ret['result'] = None
+             return ret
+
+        plan_id = existing['plans'][0]['id']
+        result =  __salt__['boto_apigateway.delete_usage_plan'](plan_id, **common_args)
+
+        if 'error' in result:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete usage plan {0}, {1}'.format(plan_name, result) 
+            return ret
+
+        ret['comment'] = 'Usage plan {0} has been deleted'.format(plan_name)
+        ret['changes']['old'] = {'plan': existing['plans'][0]}
+        ret['changes']['new'] = {'plan': None}
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
