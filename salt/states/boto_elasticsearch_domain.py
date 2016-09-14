@@ -268,6 +268,10 @@ def present(name, DomainName,
     _status = __salt__['boto_elasticsearch_domain.status'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
+    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):
+        ret['result'] = False
+        ret['comment'] = 'Failed to update domain: version cannot be modified from {0} to {1}.'.format(_status.get('ElasticsearchVersion'), str(ElasticsearchVersion))
+        return ret
     _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
@@ -293,11 +297,6 @@ def present(name, DomainName,
             comm_args[k] = v
             ret['changes'].setdefault('new', {})[k] = v
             ret['changes'].setdefault('old', {})[k] = _describe[k]
-    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):
-        need_update = True
-        comm_args['ElasticsearchVersion'] = str(ElasticsearchVersion)
-        ret['changes'].setdefault('new', {})['ElasticsearchVersion'] = str(ElasticsearchVersion)
-        ret['changes'].setdefault('old', {})['ElasticsearchVersion'] = _status.get('ElasticsearchVersion')
     if need_update:
         if __opts__['test']:
             msg = 'Domain {0} set to be modified.'.format(DomainName)
