@@ -98,6 +98,7 @@ try:
     import boto3
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -113,6 +114,7 @@ def __virtual__():
     '''
     required_boto_version = '2.8.0'
     required_boto3_version = '1.2.1'
+    required_botocore_version = '1.4.49'
     # the boto_apigateway execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -125,6 +127,9 @@ def __virtual__():
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
         return (False, 'The boto_apigateway module could not be loaded: '
                 'boto3 version {0} or later must be installed.'.format(required_boto3_version))
+    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
+        return (False, 'The boto_apigateway module could not be loaded: '
+                'botocore version {0} or later must be installed.'.format(required_botocore_version))
     else:
         return True
 
