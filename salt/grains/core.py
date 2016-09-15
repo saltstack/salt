@@ -33,6 +33,8 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
+if salt.utils.is_windows():
+    import salt.utils.win_osinfo
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -839,7 +841,7 @@ def _windows_platform_data():
         wmi_c = wmi.WMI()
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
         systeminfo = wmi_c.Win32_ComputerSystem()[0]
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+        # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
         osinfo = wmi_c.Win32_OperatingSystem()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
         biosinfo = wmi_c.Win32_BIOS()[0]
@@ -860,10 +862,18 @@ def _windows_platform_data():
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
-        (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()
+        osrelease = platform.release()
+        if salt.utils.win_osinfo.get_os_version_info()['ProductType'] > 1:
+            server = {'Vista': '2008',
+                      '7': '2008R2',
+                      '8': '2012',
+                      '8.1': '2012R2',
+                      '10': '2016'}
+            osrelease = server[osrelease]
 
         grains = {
+            'osversion': osinfo.Version,
+            'osrelease': osrelease,
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
             'productname': systeminfo.Model,
@@ -871,7 +881,7 @@ def _windows_platform_data():
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
             'serialnumber': biosinfo.SerialNumber,
-            'osfullname': osfullname,
+            'osfullname': osinfo.Caption,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
             'motherboard': {
@@ -1066,14 +1076,11 @@ def os_data():
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
     elif salt.utils.is_windows():
-        with salt.utils.winapi.Com():
-            wmi_c = wmi.WMI()
-            grains['osrelease'] = grains['kernelrelease']
-            grains['osversion'] = grains['kernelrelease'] = wmi_c.Win32_OperatingSystem()[0].Version
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
         grains.update(_windows_platform_data())
+        grains['kernelrelease'] = grains['osversion']
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
