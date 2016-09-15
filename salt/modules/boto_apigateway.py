@@ -1392,7 +1392,7 @@ def create_api_integration_response(restApiId, resourcePath, httpMethod, statusC
 
 def _filter_plans(attr, name, plans):
     '''
-    Return list of usage plan items matching the given attribute value.
+    Helper to return list of usage plan items matching the given attribute value.
     '''
     return [plan for plan in plans if plan[attr] == name]
 
@@ -1400,6 +1400,19 @@ def _filter_plans(attr, name, plans):
 def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Returns a list of existing usage plans, optionally filtered to match a given plan name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.describe_usage_plans
+
+        salt myminion boto_apigateway.describe_usage_plans name='usage plan name'
+
+        salt myminion boto_apigateway.describe_usage_plans plan_id='usage plan id'
+
+    .. versionadded:: Carbon
+
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1417,7 +1430,7 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
 
 def _validate_throttle(throttle):
     '''
-    Verifies that throttling parameters are valid
+    Helper to verify that throttling parameters are valid
     '''
     if throttle:
         if not isinstance(throttle, dict):
@@ -1426,7 +1439,7 @@ def _validate_throttle(throttle):
 
 def _validate_quota(quota):
     '''
-    Verifies that quota parameters are valid
+    Helper to verify that quota parameters are valid
     '''
     if quota:
         if not isinstance(quota, dict):
@@ -1441,18 +1454,39 @@ def _validate_quota(quota):
 def create_usage_plan(name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
     Creates a new usage plan with throttling and quotas optionally applied
+
+    name
+        Name of the usage plan
+
     throttle
+        A dictionary consisting of the following keys:
+
         rateLimit
             requests per second at steady rate, float
+
         burstLimit
             maximum number of requests per second, integer
+
     quota
+        A dictionary consisting of the following keys:
+
         limit
             number of allowed requests per specified quota period [required if quota parameter is present]
+
         offset
             number of requests to be subtracted from limit at the beginning of the period [optional]
+
         period
             quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_usage_plan name='usage plan name' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
+
+    .. versionadded:: Carbon
+
     '''
     try:
         _validate_throttle(throttle)
@@ -1478,18 +1512,39 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
 def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
     Updates an existing usage plan with throttling and quotas
+
+    plan_id
+        Id of the created usage plan
+
     throttle
+        A dictionary consisting of the following keys:
+
         rateLimit
             requests per second at steady rate, float
+
         burstLimit
             maximum number of requests per second, integer
+
     quota
+        A dictionary consisting of the following keys:
+
         limit
             number of allowed requests per specified quota period [required if quota parameter is present]
+
         offset
             number of requests to be subtracted from limit at the beginning of the period [optional]
+
         period
             quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.update_usage_plan plan_id='usage plan id' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
+
+    .. versionadded:: Carbon
+
     '''
     try:
         _validate_throttle(throttle)
@@ -1529,6 +1584,15 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
 def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes usage plan identified by plan_id
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_usage_plan plan_id='usage plan id'
+
+    .. versionadded:: Carbon
+
     '''
     try:
         existing = describe_usage_plans(plan_id=plan_id, region=region, key=key, keyid=keyid, profile=profile)
@@ -1543,9 +1607,17 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
 
 def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None, profile=None):
     '''
-    Updates the usage plan identified by plan_id by adding or removing it to each of the stages, specified by apis parameter.
+    Helper function that updates the usage plan identified by plan_id by adding or removing it to each of the stages, specified by apis parameter.
+
     apis
-        a list of dictionaries, containing apiId and stage
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
     op
         'add' or 'remove'
     '''
@@ -1569,6 +1641,24 @@ def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None
 def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
     '''
     Attaches given usage plan to each of the apis provided in a list of apiId and stage values
+
+    apis
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.attach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
+
+    .. versionadded:: Carbon
+
     '''
     return _update_usage_plan_apis(plan_id, apis, 'add', region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1576,5 +1666,23 @@ def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, 
 def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
     '''
     Detaches given usage plan from each of the apis provided in a list of apiId and stage value
+
+    apis
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.detach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
+
+    .. versionadded:: Carbon
+
     '''
     return _update_usage_plan_apis(plan_id, apis, 'remove', region=region, key=key, keyid=keyid, profile=profile)
