@@ -63,7 +63,7 @@ try:
     import libcloud
     from libcloud.dns.providers import get_driver
     #pylint: enable=unused-import
-    if _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+    if hasattr(libcloud, '__version__') and _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
         raise ImportError()
     logging.getLogger('libcloud').setLevel(logging.CRITICAL)
     HAS_LIBCLOUD = True
