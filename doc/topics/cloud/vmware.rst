@@ -612,6 +612,7 @@ Example of a complete profile:
           Hard disk 0:
             controller: 'SCSI controller 0'
             size: 20
+            mode: 'independent_nonpersistent'
         cd:
           CD/DVD drive 0:
             controller: 'IDE 0'
@@ -628,3 +629,30 @@ Example of a complete profile:
     be available. In such cases, the closest match to another ``image`` should
     be used. In the example above, a Debian 8 VM is created using the image
     ``debian7_64Guest`` which is for a Debian 7 guest.
+
+
+Specifying disk backing mode
+============================
+
+.. versionadded:: Carbon
+
+Disk backing mode can now be specified when cloning a VM. This option
+can be set in the cloud profile as shown in example below:
+
+.. code-block:: yaml
+
+    my-vm:
+      provider: esx01
+      datastore: esx01-datastore
+      resourcepool: Resources
+      folder: vm
+
+
+      devices:
+        disk:
+          Hard disk 1:
+            mode: 'independent_nonpersistent'
+
+          Hard disk 2:
+            size: 15
+            mode: 'independent_nonpersistent'
