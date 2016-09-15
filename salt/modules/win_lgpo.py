@@ -216,6 +216,162 @@ class _policy_info(object):
         in the GUI
     '''
     def __init__(self):
+        self.audit_lookup = {
+            0: 'No auditing',
+            1: 'Success',
+            2: 'Failure',
+            3: 'Success, Failure',
+            'Not Defined': 'Not Defined',
+            None: 'Not Defined',
+        }
+        self.sc_removal_lookup = {
+            0: 'No Action',
+            1: 'Lock Workstation',
+            2: 'Force Logoff',
+            3: 'Disconnect if a Remote Desktop Services session',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.uac_admin_prompt_lookup = {
+            0: 'Elevate without prompting',
+            1: 'Prompt for credentials on the secure desktop',
+            2: 'Prompt for consent on the secure desktop',
+            3: 'Prompt for credentials',
+            4: 'Prompt for consent',
+            5: 'Prompt for consent for non-Windows binaries',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.uac_user_prompt_lookup = {
+            0: 'Automatically deny elevation requests',
+            1: 'Prompt for credentials on the secure desktop',
+            3: 'Prompt for credentials',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero = {
+            0: 'Disabled',
+            1: 'Enabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.enabled_one_disabled_zero,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.enabled_one_disabled_zero,
+                'value_lookup': True,
+            },
+        }
+        self.s4u2self_options = {
+            0: 'Default',
+            1: 'Enabled',
+            2: 'Disabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.audit_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.audit_lookup,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.audit_lookup,
+                'value_lookup': True,
+            },
+        }
+        self.enabled_one_disabled_zero_strings = {
+            '0': 'Disabled',
+            '1': 'Enabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero_strings_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.enabled_one_disabled_zero_strings,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.enabled_one_disabled_zero_strings,
+                'value_lookup': True,
+            },
+        }
+        self.security_options_gpedit_path = [
+                'Computer Configuration',
+                'Windows Settings',
+                'Security Settings',
+                'Local Policies',
+                'Security Options'
+        ]
+        self.password_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Account Policies',
+            'Password Policy'
+        ]
+        self.audit_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'Audit Policy'
+        ]
+        self.account_lockout_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Account Policies',
+            'Account Lockout Policy'
+        ]
+        self.user_rights_assignment_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'User Rights Assignment'
+        ]
+        self.block_ms_accounts = {
+            0: 'This policy is disabled',
+            1: 'Users can\'t add Microsoft accounts',
+            3: 'Users can\'t add or log on with Microsoft accounts',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.ldap_server_signing_requirements = {
+            1: 'None',
+            2: 'Require signing',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.smb_server_name_hardening_levels = {
+            0: 'Off',
+            1: 'Accept if provided by client',
+            2: 'Require from client',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.locked_session_user_info = {
+            1: 'User display name, domain and user names',
+            2: 'User display name only',
+            3: 'Do not display user information',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.force_guest = {
+            0: 'Classic - local users authenticate as themselves',
+            1: 'Guest only - local users authenticate as Guest',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
         self.policies = {
             'Machine': {
                 'lgpo_section': 'Computer Configuration',
@@ -328,32 +484,142 @@ class _policy_info(object):
                             'Put': '_powershell_script_order_reverse_conversion',
                         },
                     },
+                    'LSAAnonymousNameLookup': {
+                        'Policy': 'Network access: Allow anonymous SID/Name translation',
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Secedit': {
+                            'Option': 'LSAAnonymousNameLookup',
+                            'Section': 'System Access',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'RestrictAnonymousSam': {
+                        'Policy': 'Network access: Do not allow anonymous enumeration of SAM accounts',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictAnonymousSam',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
                     'RestrictAnonymous': {
-                        'Policy': 'Network Access: Do not allow anonymous enumeration of SAM accounts and shares',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
-                        'Settings': [0, 1],
+                        'Policy': 'Network access: Do not allow anonymous enumeration of SAM accounts and shares',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'RestrictAnonymous',
                             'Type': 'REG_DWORD'
                         },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'DisableDomainCreds': {
+                        'Policy': 'Network access: Do not allow storage of passwords and credentials for network authentication',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'DisableDomainCreds',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EveryoneIncludesAnonymous': {
+                        'Policy': 'Network access: Let Everyone permissions apply to anonymous users',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'everyoneincludesanonymous',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NullSessionPipes': {
+                        'Policy': 'Network access: Named Pipes that can be accessed anonymously',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'NullSessionPipes',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RemoteRegistryExactPaths': {
+                        'Policy': 'Network access: Remotely accessible registry paths',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\SecurePipeServers\\winreg\\AllowedExactPaths',
+                            'Value': 'Machine',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RemoteRegistryPaths': {
+                        'Policy': 'Network access: Remotely accessible registry paths and sub-paths',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\SecurePipeServers\\winreg\\AllowedPaths',
+                            'Value': 'Machine',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RestrictNullSessAccess': {
+                        'Policy': 'Network access: Restrict anonymous access to Named Pipes and Shares',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'RestrictNullSessAccess',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NullSessionShares': {
+                        'Policy': 'Network access: Shares that can be accessed anonymously',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'NullSessionShares',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'ForceGuest': {
+                        'Policy': 'Network access: Sharing and security model for local accounts',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.force_guest.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'ForceGuest',
+                            'Type': 'REG_DWORD'
+                        },
                         'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.force_guest,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
                         },
                     },
                     'PasswordHistory': {
                         'Policy': 'Enforce password history',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 24}
@@ -365,11 +631,7 @@ class _policy_info(object):
                     },
                     'MaxPasswordAge': {
                         'Policy': 'Maximum password age',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 86313600}
@@ -385,11 +647,7 @@ class _policy_info(object):
                     },
                     'MinPasswordAge': {
                         'Policy': 'Minimum password age',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 86313600}
@@ -405,11 +663,7 @@ class _policy_info(object):
                     },
                     'MinPasswordLen': {
                         'Policy': 'Minimum password length',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 14}
@@ -421,99 +675,83 @@ class _policy_info(object):
                     },
                     'PasswordComplexity': {
                         'Policy': 'Passwords must meet complexity requirements',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
-                        'Settings': [0, 1],
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
                             'Option': 'PasswordComplexity',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'ClearTextPasswords': {
                         'Policy': 'Store passwords using reversible encryption',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
-                        'Settings': [0, 1],
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
                             'Option': 'ClearTextPassword',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'AdminAccountStatus': {
                         'Policy': 'Accounts: Administrator account status',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableAdminAccount',
                             'Section': 'System Access',
                         },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NoConnectedUser': {
+                        'Policy': 'Accounts: Block Microsoft accounts',
+                        'Settings': self.block_ms_accounts.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'NoConnectedUser',
+                            'Type': 'REG_DWORD',
+                        },
                         'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.block_ms_accounts,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.block_ms_accounts,
+                                'value_lookup': True,
+                            },
                         },
                     },
                     'GuestAccountStatus': {
                         'Policy': 'Accounts: Guest account status',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableGuestAccount',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'LimitBlankPasswordUse': {
                         'Policy': 'Accounts: Limit local account use of blank passwords to console logon only',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
-                        'Settings': [0, 1],
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'limitblankpassworduse',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'RenameAdministratorAccount': {
                         'Policy': 'Accounts: Rename administrator account',
                         'Settings': None,
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'NewAdministratorName',
                             'Section': 'System Access',
@@ -526,11 +764,7 @@ class _policy_info(object):
                     'RenameGuestAccount': {
                         'Policy': 'Accounts: Rename guest account',
                         'Settings': None,
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'NewGuestName',
                             'Section': 'System Access',
@@ -542,50 +776,476 @@ class _policy_info(object):
                     },
                     'AuditBaseObjects': {
                         'Policy': 'Audit: Audit the access of global system objects',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'AuditBaseObjects',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform
                     },
-                    'DoNotDisplayLastUserName': {
+                    'SceNoApplyLegacyAuditPolicy': {
+                        'Policy': 'Audit: Force audit policy subcategoy settings (Windows Vista or later) to override audit policy category settings',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'AuditBaseObjects',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform
+                    },
+                    'DontDisplayLastUserName': {
                         'Policy': 'Interactive logon: Do not display last user name',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
                             'Value': 'DontDisplayLastUserName',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'CachedLogonsCount': {
+                        'Policy': 'Interactive logon: Number of previous logons to cache (in case domain controller is not available)',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 50}
                         },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'CachedLogonsCount',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'ForceUnlockLogon': {
+                        'Policy': 'Interactive logon: Require Domain Controller authentication to unlock workstation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'ForceUnlockLogon',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ScRemoveOption': {
+                        'Policy': 'Interactive logon: Smart card removal behavior',
+                        'Settings': self.sc_removal_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'ScRemoveOption',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.sc_removal_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.sc_removal_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'DisableCAD': {
+                        'Policy': 'Interactive logon: Do not require CTRL+ALT+DEL',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'DisableCAD',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'FilterAdministratorToken': {
+                        'Policy': 'User Account Control: Admin Approval Mode for the built-in Administrator account',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'FilterAdministratorToken',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableUIADesktopToggle': {
+                        'Policy': 'User Account Control: Allow UIAccess applications to prompt for elevation without using the secure desktop',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'EnableUIADesktopToggle',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ConsentPromptBehaviorAdmin': {
+                        'Policy': 'User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode',
+                        'Settings': self.uac_admin_prompt_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'ConsentPromptBehaviorAdmin',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.uac_admin_prompt_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.uac_admin_prompt_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'ConsentPromptBehaviorUser': {
+                        'Policy': 'User Account Control: Behavior of the elevation prompt for standard users',
+                        'Settings': self.uac_user_prompt_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'ConsentPromptBehaviorUser',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.uac_user_prompt_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.uac_user_prompt_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'EnableInstallerDetection': {
+                        'Policy': 'User Account Control: Detect application installations and prompt for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'EnableInstallerDetection',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ValidateAdminCodeSignatures': {
+                        'Policy': 'User Account Control: Only elevate executables that are signed and validated',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'ValidateAdminCodeSignatures',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableSecureUIAPaths': {
+                        'Policy': 'User Account Control: Only elevate UIAccess applicaitons that are installed in secure locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'EnableSecureUIAPaths',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableLUA': {
+                        'Policy': 'User Account Control: Run all administrators in Admin Approval Mode',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'EnableLUA',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PromptOnSecureDesktop': {
+                        'Policy': 'User Account Control: Switch to the secure desktop when prompting for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'PromptOnSecureDesktop',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableVirtualization': {
+                        'Policy': 'User Account Control: Virtualize file and registry write failures to per-user locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'EnableVirtualization',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PasswordExpiryWarning': {
+                        'Policy': 'Interactive logon: Prompt user to change password before expiration',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Value': 'PasswordExpiryWarning',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'MaxDevicePasswordFailedAttempts': {
+                        'Policy': 'Interactive logon: Machine account lockout threshold',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'MaxDevicePasswordFailedAttempts',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'InactivityTimeoutSecs': {
+                        'Policy': 'Interactive logon: Machine inactivity limit',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 599940}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'InactivityTimeoutSecs',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'legalnoticetext': {
+                        'Policy': 'Interactive logon: Message text for users attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticetext',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'legalnoticecaption': {
+                        'Policy': 'Interactive logon: Message title for users attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticecaption',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'DontDisplayLockedUserId': {
+                        'Policy': 'Interactive logon: Display user information when the session is locked',
+                        'Settings': self.locked_session_user_info.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'DontDisplayLockedUserId',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
+                    'ScForceOption': {
+                        'Policy': 'Interactive logon: Require smart card',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Value': 'ScForceOption',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign communications (if server agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnablePlainTextPassword': {
+                        'Policy': 'Microsoft network client: Send unencrypted password to third-party SMB servers',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters',
+                            'Value': 'EnablePlainTextPassword',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'AutoDisconnect': {
+                        'Policy': 'Microsoft network server: Amount of idle time required before suspending session',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 99999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'AutoDisconnect',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'EnableS4U2SelfForClaims': {
+                        'Policy': 'Microsoft network server: Attempt S4U2Self to obtain claim information',
+                        'Settings': self.s4u2self_options.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'EnableS4U2SelfForClaims',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'Server_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Server_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign communications (if client agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableForcedLogoff': {
+                        'Policy': 'Microsoft network server: Disconnect clients when logon hours expire',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'EnableForcedLogoff',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'SmbServerNameHardeningLevel': {
+                        'Policy': 'Microsoft network server: Server SPN target name validation level',
+                        'Settings': self.smb_server_name_hardening_levels.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\LanmanServer\\Parameters',
+                            'Value': 'SmbServerNameHardeningLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': True,
+                            },
+                        }
                     },
                     'FullPrivilegeAuditing': {
                         'Policy': 'Audit: Audit the use of Backup and Restore privilege',
                         'Settings': [chr(0), chr(1)],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'System\\CurrentControlSet\\Control\\Lsa',
@@ -599,50 +1259,32 @@ class _policy_info(object):
                     },
                     'CrashOnAuditFail': {
                         'Policy': 'Audit: Shut down system immediately if unable to log security audits',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'CrashOnAuditFail',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
                         'Policy': 'Devices: Allow undock without having to log on',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
                             'Value': 'UndockWithoutLogon',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'AllocateDASD': {
                         'Policy': 'Devices: Allowed to format and eject removable media',
                         'Settings': ["", "0", "1", "2"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
@@ -656,53 +1298,33 @@ class _policy_info(object):
                     },
                     'AllocateCDRoms': {
                         'Policy': 'Devices: Restrict CD-ROM access to locally logged-on user only',
-                        'Settings': ["0", "1"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
                             'Value': 'AllocateCDRoms',
                             'Type': 'REG_SZ',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                            'PutArgs': {'return_string': True}
-                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'AllocateFloppies': {
                         'Policy': 'Devices: Restrict floppy access to locally logged-on user only',
-                        'Settings': ["0", "1"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
                             'Value': 'AllocateFloppies',
                             'Type': 'REG_SZ',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                            'PutArgs': {'return_string': True}
-                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     # see KB298503 why we aren't just doing this one via the registry
                     'DriverSigningPolicy': {
                         'Policy': 'Devices: Unsigned driver installation behavior',
                         'Settings': ['3,0', '3,' + chr(1), '3,' + chr(2)],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'MACHINE\\Software\\Microsoft\\Driver Signing\\Policy',
                             'Section': 'Registry Values',
@@ -712,13 +1334,130 @@ class _policy_info(object):
                             'Put': '_driver_signing_reg_reverse_conversion',
                         },
                     },
+                    'SubmitControl': {
+                        'Policy': 'Domain controller: Allow server operators to schedule tasks',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'SubmitControl',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'LDAPServerIntegrity': {
+                        'Policy': 'Domain controller: LDAP server signing requirements',
+                        'Settings': self.ldap_server_signing_requirements.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\NTDS\\Parameters',
+                            'Value': 'LDAPServerIntegrity',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ldap_server_signing_requirements,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ldap_server_signing_requirements,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
+                    'RefusePasswordChange': {
+                        'Policy': 'Domain controller: Refuse machine account password changes',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'RefusePasswordChange',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'RequireSignOrSeal': {
+                        'Policy': 'Domain member: Digitally encrypt or sign secure channel data (always)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'RequireSignOrSeal',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'SealSecureChannel': {
+                        'Policy': 'Domain member: Digitally encrypt secure channel data (when possible)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'SealSecureChannel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'SignSecureChannel': {
+                        'Policy': 'Domain member: Digitally sign secure channel data (when possible)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'SignSecureChannel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'DisablePasswordChange': {
+                        'Policy': 'Domain member: Disable machine account password changes',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'DisablePasswordChange',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'MaximumPasswordAge': {
+                        'Policy': 'Domain member: Maximum machine account password age',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'MaximumPasswordAge',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'RequireStrongKey': {
+                        'Policy': 'Domain member: Require strong (Windows 2000 or later) session key',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'RequireStrongKey',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
                     'LockoutDuration': {
                         'Policy': 'Account lockout duration',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 6000000}
@@ -734,11 +1473,7 @@ class _policy_info(object):
                     },
                     'LockoutThreshold': {
                         'Policy': 'Account lockout threshold',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 1000}
@@ -750,11 +1485,7 @@ class _policy_info(object):
                     },
                     'LockoutWindow': {
                         'Policy': 'Reset account lockout counter after',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 6000000}
@@ -770,164 +1501,97 @@ class _policy_info(object):
                     },
                     'AuditAccountLogon': {
                         'Policy': 'Audit account logon events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditAccountLogon',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditAccountManage': {
                         'Policy': 'Audit account management',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditAccountManage',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditDSAccess': {
                         'Policy': 'Audit directory service access',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditDSAccess',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditLogonEvents': {
                         'Policy': 'Audit logon events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditLogonEvents',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditObjectAccess': {
                         'Policy': 'Audit object access',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditObjectAccess',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditPolicyChange': {
                         'Policy': 'Audit policy change',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditPolicyChange',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditPrivilegeUse': {
                         'Policy': 'Audit privilege use',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditPrivilegeUse',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditProcessTracking': {
                         'Policy': 'Audit process tracking',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditProcessTracking',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditSystemEvents': {
                         'Policy': 'Audit system events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditSystemEvents',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'SeTrustedCredManAccessPrivilege': {
                         'Policy': 'Access Credential Manager as a trusted caller',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTrustedCredManAccessPrivilege'
@@ -939,11 +1603,7 @@ class _policy_info(object):
                     },
                     'SeNetworkLogonRight': {
                         'Policy': 'Access this computer from the network',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeNetworkLogonRight'
@@ -955,11 +1615,7 @@ class _policy_info(object):
                     },
                     'SeTcbPrivilege': {
                         'Policy': 'Act as part of the operating system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTcbPrivilege'
@@ -971,11 +1627,7 @@ class _policy_info(object):
                     },
                     'SeMachineAccountPrivilege': {
                         'Policy': 'Add workstations to domain',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeMachineAccountPrivilege'
@@ -987,11 +1639,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseQuotaPrivilege': {
                         'Policy': 'Adjust memory quotas for a process',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseQuotaPrivilege'
@@ -1002,12 +1650,8 @@ class _policy_info(object):
                         },
                     },
                     'SeInteractiveLogonRight': {
-                        'Policy': 'Allow logon locally',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Allow log on locally',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeInteractiveLogonRight'
@@ -1018,12 +1662,8 @@ class _policy_info(object):
                         },
                     },
                     'SeRemoteInteractiveLogonRight': {
-                        'Policy': 'Allow logon through Remote Desktop Services',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Allow log on through Remote Desktop Services',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteInteractiveLogonRight'
@@ -1035,11 +1675,7 @@ class _policy_info(object):
                     },
                     'SeBackupPrivilege': {
                         'Policy': 'Backup files and directories',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBackupPrivilege'
@@ -1051,11 +1687,7 @@ class _policy_info(object):
                     },
                     'SeChangeNotifyPrivilege': {
                         'Policy': 'Bypass traverse checking',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeChangeNotifyPrivilege'
@@ -1067,11 +1699,7 @@ class _policy_info(object):
                     },
                     'SeSystemtimePrivilege': {
                         'Policy': 'Change the system time',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemtimePrivilege'
@@ -1083,11 +1711,7 @@ class _policy_info(object):
                     },
                     'SeTimeZonePrivilege': {
                         'Policy': 'Change the time zone',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTimeZonePrivilege'
@@ -1099,11 +1723,7 @@ class _policy_info(object):
                     },
                     'SeCreatePagefilePrivilege': {
                         'Policy': 'Create a pagefile',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePagefilePrivilege'
@@ -1115,11 +1735,7 @@ class _policy_info(object):
                     },
                     'SeCreateTokenPrivilege': {
                         'Policy': 'Create a token object',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateTokenPrivilege'
@@ -1131,11 +1747,7 @@ class _policy_info(object):
                     },
                     'SeCreateGlobalPrivilege': {
                         'Policy': 'Create global objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateGlobalPrivilege'
@@ -1147,11 +1759,7 @@ class _policy_info(object):
                     },
                     'SeCreatePermanentPrivilege': {
                         'Policy': 'Create permanent shared objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePermanentPrivilege'
@@ -1163,11 +1771,7 @@ class _policy_info(object):
                     },
                     'SeCreateSymbolicLinkPrivilege': {
                         'Policy': 'Create symbolic links',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateSymbolicLinkPrivilege'
@@ -1179,11 +1783,7 @@ class _policy_info(object):
                     },
                     'SeDebugPrivilege': {
                         'Policy': 'Debug programs',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDebugPrivilege'
@@ -1195,11 +1795,7 @@ class _policy_info(object):
                     },
                     'SeDenyNetworkLogonRight': {
                         'Policy': 'Deny access to this computer from the network',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyNetworkLogonRight'
@@ -1211,11 +1807,7 @@ class _policy_info(object):
                     },
                     'SeDenyBatchLogonRight': {
                         'Policy': 'Deny log on as a batch job',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyBatchLogonRight'
@@ -1227,11 +1819,7 @@ class _policy_info(object):
                     },
                     'SeDenyServiceLogonRight': {
                         'Policy': 'Deny log on as a service',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyServiceLogonRight'
@@ -1243,11 +1831,7 @@ class _policy_info(object):
                     },
                     'SeDenyInteractiveLogonRight': {
                         'Policy': 'Deny log on locally',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyInteractiveLogonRight'
@@ -1259,11 +1843,7 @@ class _policy_info(object):
                     },
                     'SeDenyRemoteInteractiveLogonRight': {
                         'Policy': 'Deny log on through Remote Desktop Services',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyRemoteInteractiveLogonRight'
@@ -1275,11 +1855,7 @@ class _policy_info(object):
                     },
                     'SeEnableDelegationPrivilege': {
                         'Policy': 'Enable computer and user accounts to be trusted for delegation',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeEnableDelegationPrivilege'
@@ -1291,11 +1867,7 @@ class _policy_info(object):
                     },
                     'SeRemoteShutdownPrivilege': {
                         'Policy': 'Force shutdown from a remote system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteShutdownPrivilege'
@@ -1307,11 +1879,7 @@ class _policy_info(object):
                     },
                     'SeAuditPrivilege': {
                         'Policy': 'Generate security audits',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAuditPrivilege'
@@ -1323,11 +1891,7 @@ class _policy_info(object):
                     },
                     'SeImpersonatePrivilege': {
                         'Policy': 'Impersonate a client after authentication',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeImpersonatePrivilege'
@@ -1339,11 +1903,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseWorkingSetPrivilege': {
                         'Policy': 'Increase a process working set',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseWorkingSetPrivilege'
@@ -1355,11 +1915,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseBasePriorityPrivilege': {
                         'Policy': 'Increase scheduling priority',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseBasePriorityPrivilege'
@@ -1371,11 +1927,7 @@ class _policy_info(object):
                     },
                     'SeLoadDriverPrivilege': {
                         'Policy': 'Load and unload device drivers',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLoadDriverPrivilege'
@@ -1387,11 +1939,7 @@ class _policy_info(object):
                     },
                     'SeLockMemoryPrivilege': {
                         'Policy': 'Lock pages in memory',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLockMemoryPrivilege'
@@ -1403,11 +1951,7 @@ class _policy_info(object):
                     },
                     'SeBatchLogonRight': {
                         'Policy': 'Log on as a batch job',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBatchLogonRight'
@@ -1419,11 +1963,7 @@ class _policy_info(object):
                     },
                     'SeServiceLogonRight': {
                         'Policy': 'Log on as a service',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeServiceLogonRight'
@@ -1435,11 +1975,7 @@ class _policy_info(object):
                     },
                     'SeSecurityPrivilege': {
                         'Policy': 'Manage auditing and security log',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSecurityPrivilege'
@@ -1451,11 +1987,7 @@ class _policy_info(object):
                     },
                     'SeRelabelPrivilege': {
                         'Policy': 'Modify an object label',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRelabelPrivilege'
@@ -1467,11 +1999,7 @@ class _policy_info(object):
                     },
                     'SeSystemEnvironmentPrivilege': {
                         'Policy': 'Modify firmware environment values',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemEnvironmentPrivilege'
@@ -1483,11 +2011,7 @@ class _policy_info(object):
                     },
                     'SeManageVolumePrivilege': {
                         'Policy': 'Perform volume maintenance tasks',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeManageVolumePrivilege'
@@ -1499,11 +2023,7 @@ class _policy_info(object):
                     },
                     'SeProfileSingleProcessPrivilege': {
                         'Policy': 'Profile single process',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeProfileSingleProcessPrivilege'
@@ -1515,11 +2035,7 @@ class _policy_info(object):
                     },
                     'SeSystemProfilePrivilege': {
                         'Policy': 'Profile system performance',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemProfilePrivilege'
@@ -1531,11 +2047,7 @@ class _policy_info(object):
                     },
                     'SeUndockPrivilege': {
                         'Policy': 'Remove computer from docking station',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeUndockPrivilege'
@@ -1547,11 +2059,7 @@ class _policy_info(object):
                     },
                     'SeAssignPrimaryTokenPrivilege': {
                         'Policy': 'Replace a process level token',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAssignPrimaryTokenPrivilege'
@@ -1563,11 +2071,7 @@ class _policy_info(object):
                     },
                     'SeRestorePrivilege': {
                         'Policy': 'Restore files and directories',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRestorePrivilege'
@@ -1579,11 +2083,7 @@ class _policy_info(object):
                     },
                     'SeShutdownPrivilege': {
                         'Policy': 'Shut down the system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeShutdownPrivilege'
@@ -1595,11 +2095,7 @@ class _policy_info(object):
                     },
                     'SeSyncAgentPrivilege': {
                         'Policy': 'Synchronize directory service data',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSyncAgentPrivilege'
@@ -1611,11 +2107,7 @@ class _policy_info(object):
                     },
                     'SeTakeOwnershipPrivilege': {
                         'Policy': 'Take ownership of files and other objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTakeOwnershipPrivilege'
@@ -1624,6 +2116,30 @@ class _policy_info(object):
                             'Get': '_sidConversion',
                             'Put': '_usernamesToSidObjects',
                         },
+                    },
+                    'RecoveryConsoleSecurityLevel': {
+                        'Policy': 'Recovery console: Allow automatic adminstrative logon',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Setup\\RecoveryConsole',
+                            'Value': 'SecurityLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'RecoveryConsoleSetCommand': {
+                        'Policy': 'Recovery console: Allow floppy copy and access to all drives and all folders',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Setup\\RecoveryConsole',
+                            'Value': 'SetCommand',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                 }
             },
@@ -1655,83 +2171,6 @@ class _policy_info(object):
             return True
         else:
             return False
-
-    @classmethod
-    def _enable_one_disable_zero_conversion(cls, val, **kwargs):
-        '''
-        converts a reg dword 1/0 value to the strings enable/disable
-        '''
-        if val is not None:
-            if val == 1 or val == "1":
-                return 'Enabled'
-            elif val == 0 or val == "0":
-                return 'Disabled'
-            elif val == '(value not set)':
-                return 'Not Defined'
-            else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _enable_one_disable_zero_reverse_conversion(cls, val, **kwargs):
-        '''
-        converts Enable/Disable to 1/0
-        '''
-        return_string = False
-        if 'return_string' in kwargs:
-            return_string = True
-        if val is not None:
-            if val.upper() == 'ENABLED':
-                if return_string:
-                    return '1'
-                else:
-                    return 1
-            elif val.upper() == 'DISABLED':
-                if return_string:
-                    return '0'
-                else:
-                    return 0
-            else:
-                return None
-        else:
-            return None
-
-    @classmethod
-    def _event_audit_conversion(cls, val, **kwargs):
-        '''
-        converts an audit setting # (0, 1, 2, 3) to the string text
-        '''
-        if val is not None:
-            if val == 0 or val == "0":
-                return 'No auditing'
-            elif val == 1 or val == "1":
-                return 'Success'
-            elif val == 2 or val == "2":
-                return 'Failure'
-            elif val == 3 or val == "3":
-                return 'Succes, Failure'
-            else:
-                return 'Invalid Auditing Value'
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _event_audit_reverse_conversion(cls, val, **kwargs):
-        '''
-        converts audit strings to numerical values
-        '''
-        if val is not None:
-            if val.upper() == 'NO AUDITING':
-                return 0
-            elif val.upper() == 'SUCCESS':
-                return 1
-            elif val.upper() == 'FAILURE':
-                return 2
-            elif val.upper() == 'SUCCESS, FAILURE':
-                return 3
-        else:
-            return 'Not Defined'
 
     @classmethod
     def _seconds_to_days(cls, val, **kwargs):
@@ -1862,6 +2301,11 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
+        if isinstance(string_types, val):
+            if val.lower() == 'not defined':
+                return True
+            else:
+                return False
         if 'min' in kwargs:
             minimum = kwargs['min']
         if 'max' in kwargs:
@@ -1984,6 +2428,31 @@ class _policy_info(object):
             return None
         else:
             return 'Invalid Value'
+
+    @classmethod
+    def _dict_lookup(cls, item, **kwargs):
+        '''
+        Retrieves the key or value from a dict based on the item
+        kwarg lookup dict to search for item
+        kwarg value_lookup bool to determine if item should be compared to keys or values
+        '''
+        log.debug('item == {0}'.format(item))
+        value_lookup = False
+        if 'value_lookup' in kwargs:
+            value_lookup = kwargs['value_lookup']
+        else:
+            value_lookup = False
+        if 'lookup' in kwargs:
+            for k, v in kwargs['lookup'].iteritems():
+                if value_lookup:
+                    if str(v).lower() == str(item).lower():
+                        log.debug('returning key {0}'.format(k))
+                        return k
+                else:
+                    if str(k).lower() == str(item).lower():
+                        log.debug('returning value {0}'.format(v))
+                        return v
+        return 'Invalid Value'
 
 
 def __virtual__():
@@ -2187,6 +2656,9 @@ def _transformValue(value, policy, transform_type):
         else:
             return value
     else:
+        if 'Registry' in policy:
+            if value == '(value not set)':
+                return 'Not Defined'
         return value
 
 
@@ -4352,12 +4824,19 @@ def set_(computer_policy=None, user_policy=None,
                 if _regedits:
                     for regedit in _regedits.keys():
                         log.debug('{0} is a Registry policy'.format(regedit))
-                        _ret = __salt__['reg.set_value'](
-                                _regedits[regedit]['policy']['Registry']['Hive'],
-                                _regedits[regedit]['policy']['Registry']['Path'],
-                                _regedits[regedit]['policy']['Registry']['Value'],
-                                _regedits[regedit]['value'],
-                                _regedits[regedit]['policy']['Registry']['Type'])
+                        # if the value setting is None or "(value not set)", we will delete the value from the registry
+                        if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
+                            _ret = __salt__['reg.set_value'](
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'],
+                                    _regedits[regedit]['value'],
+                                    _regedits[regedit]['policy']['Registry']['Type'])
+                        else:
+                            _ret = __salt__['reg.delete_value'](
+                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:
                             msg = ('Error while attempting to set policy {0} via the registry.'
                                    '  Some changes may not be applied as expected')
