@@ -1821,9 +1821,9 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
     return ret
 
 
-def usage_plan_association_present(name, plan_name, apiStages, region=None, key=None, keyid=None, profile=None):
+def usage_plan_association_present(name, plan_name, api_stages, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensures usage plan identified by name is added to provided apiStages
+    Ensures usage plan identified by name is added to provided api_stages
 
     name
         name of the state
@@ -1831,7 +1831,7 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
     plan_name
         name of the plan to use
 
-    apiStages
+    api_stages
         list of dictionaries, where each dictionary consists of the following keys:
 
         apiId
@@ -1844,7 +1844,7 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
         UsagePlanAssociationPresent:
           boto_apigateway.usage_plan_association_present:
             - plan_name: my_plan
-            - apiStages:
+            - api_stages:
               - apiId: 9kb0404ec0
                 stage: my_stage
               - apiId: l9v7o2aj90
@@ -1886,7 +1886,7 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
         plan_stages = plan.get('apiStages', [])
 
         stages_to_add = []
-        for api in apiStages:
+        for api in api_stages:
             if api not in plan_stages:
                 stages_to_add.append(api)
 
@@ -1911,10 +1911,10 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
     return ret
 
 
-def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=None, keyid=None, profile=None):
+def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensures usage plan identified by name is removed from provided apiStages
-    If a plan is associated to stages not listed in apiStages parameter,
+    Ensures usage plan identified by name is removed from provided api_stages
+    If a plan is associated to stages not listed in api_stages parameter,
     those associations remain intact
 
     name
@@ -1923,7 +1923,7 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
     plan_name
         name of the plan to use
 
-    apiStages
+    api_stages
         list of dictionaries, where each dictionary consists of the following keys:
 
         apiId
@@ -1936,7 +1936,7 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
         UsagePlanAssociationAbsent:
           boto_apigateway.usage_plan_association_absent:
             - plan_name: my_plan
-            - apiStages:
+            - api_stages:
               - apiId: 9kb0404ec0
                 stage: my_stage
               - apiId: l9v7o2aj90
@@ -1982,7 +1982,7 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
             return ret
 
         stages_to_remove = []
-        for api in apiStages:
+        for api in api_stages:
             if api in plan_stages:
                 stages_to_remove.append(api)
 
