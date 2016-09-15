@@ -86,6 +86,7 @@ class TestBlockdevModule(TestCase):
         with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
             self.assertEqual(blockdev.fstype(device), fs_type)
 
+    @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):
         '''
         unit tests for blockdev.resize2fs
