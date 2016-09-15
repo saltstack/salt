@@ -477,7 +477,6 @@ def create(vm_):
     log.debug('Found public IP address to use for ssh minion bootstrapping: {0}'.format(vm_['ssh_host']))
 
     vm_['key_filename'] = key_filename
-    vm_['ssh_host'] = ip_address
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data)
 
