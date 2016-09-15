@@ -321,6 +321,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             if using LVM: vgname
         lvname
             if using LVM: lvname
+        thinpool:
+            if using LVM: thinpool
         ip
             ip for the primary nic
         mac
@@ -403,6 +405,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     password_encrypted = _cloud_get('password_encrypted', False)
     fstype = _cloud_get('fstype', None)
     lvname = _cloud_get('lvname', None)
+    thinpool = _cloud_get('thinpool', None)
     pub_key = _cloud_get('pub_key', None)
     priv_key = _cloud_get('priv_key', None)
     size = _cloud_get('size', '20G')
@@ -516,6 +519,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['vgname'] = vgname
     lxc_init_interface['size'] = size
     lxc_init_interface['lvname'] = lvname
+    lxc_init_interface['thinpool'] = thinpool
     lxc_init_interface['force_install'] = force_install
     lxc_init_interface['unconditional_install'] = (
         unconditional_install
@@ -1837,6 +1841,10 @@ def create(name,
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
 
+    thinpool
+        Name of a pool volume that will be used for thin-provisioning this
+        container. Only applicable if ``backing=lvm``.
+
     nic_opts
         give extra opts overriding network profile values
 
@@ -1893,6 +1901,7 @@ def create(name,
     if vgname and not backing:
         backing = 'lvm'
     lvname = select('lvname')
+    thinpool = select('thinpool')
     fstype = select('fstype')
     size = select('size', '1G')
     zfsroot = select('zfsroot')
@@ -1901,7 +1910,7 @@ def create(name,
         size = None
     # some backends won't support some parameters
     if backing in ('aufs', 'dir', 'overlayfs', 'btrfs'):
-        lvname = vgname = None
+        lvname = vgname = thinpool = None
 
     if image:
         img_tar = __salt__['cp.cache_file'](image)
@@ -1930,6 +1939,8 @@ def create(name,
                 cmd += ' --lvname {0}'.format(lvname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
+            if thinpool:
+                cmd += ' --thinpool {0}'.format(thinpool)
         if backing not in ('dir', 'overlayfs'):
             if fstype:
                 cmd += ' --fstype {0}'.format(fstype)
