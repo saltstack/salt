@@ -1480,7 +1480,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
     log.debug('Called state to accept VPC peering connection')
     pending = __salt__['boto_vpc.is_peering_connection_pending'](
         conn_id=conn_id,
-        name=conn_name,
+        conn_name=conn_name,
         region=region,
         key=key,
         keyid=keyid,
