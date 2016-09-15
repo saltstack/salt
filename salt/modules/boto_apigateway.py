@@ -1396,6 +1396,7 @@ def _filter_plans(attr, name, plans):
     '''
     return [plan for plan in plans if plan[attr] == name]
 
+
 def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Returns a list of existing usage plans, optionally filtered to match a given plan name
@@ -1413,6 +1414,7 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def _validate_throttle(throttle):
     '''
     Verifies that throttling parameters are valid
@@ -1420,6 +1422,7 @@ def _validate_throttle(throttle):
     if throttle:
         if not isinstance(throttle, dict):
             raise TypeError('throttle must be a dictionary, provided value: {0}'.format(throttle))
+
 
 def _validate_quota(quota):
     '''
@@ -1433,6 +1436,7 @@ def _validate_quota(quota):
             raise ValueError('quota must have a valid period specified, valid values are {0}'.format(','.join(periods)))
         if 'limit' not in quota:
             raise ValueError('quota limit must have a valid value')
+
 
 def create_usage_plan(name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1453,7 +1457,7 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
     try:
         _validate_throttle(throttle)
         _validate_quota(quota)
-        
+
         values = dict(name=name)
         if description:
             values['description'] = description
@@ -1470,9 +1474,10 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
     except (TypeError, ValueError) as e:
         return {'error': '{0}'.format(e)}
 
+
 def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Updates an existing usage plan with throttling and quotas 
+    Updates an existing usage plan with throttling and quotas
     throttle
         rateLimit
             requests per second at steady rate, float
@@ -1491,9 +1496,9 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
         _validate_quota(quota)
 
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
- 
-        patchOperations =[]
-       
+
+        patchOperations = []
+
         if throttle is None:
             patchOperations.append({'op': 'remove', 'path': '/throttle'})
         else:
@@ -1509,7 +1514,7 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
             patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota['limit'])})
             if 'offset' in quota:
                 patchOperations.append({'op': 'replace', 'path': '/quota/offset', 'value': str(quota['offset'])})
- 
+
         if patchOperations:
             res = conn.update_usage_plan(usagePlanId=plan_id,
                                          patchOperations=patchOperations)
@@ -1519,6 +1524,7 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1530,16 +1536,17 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
         if 'plans' in existing and existing['plans']:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             res = conn.delete_usage_plan(usagePlanId=plan_id)
-        return {'deleted': True, 'usagePlanId': plan_id}        
+        return {'deleted': True, 'usagePlanId': plan_id}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None, profile=None):
     '''
     Updates the usage plan identified by plan_id by adding or removing it to each of the stages, specified by apis parameter.
-    apis 
+    apis
         a list of dictionaries, containing apiId and stage
-    op 
+    op
         'add' or 'remove'
     '''
     try:
@@ -1558,11 +1565,13 @@ def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
     '''
     Attaches given usage plan to each of the apis provided in a list of apiId and stage values
     '''
     return _update_usage_plan_apis(plan_id, apis, 'add', region=region, key=key, keyid=keyid, profile=profile)
+
 
 def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
     '''

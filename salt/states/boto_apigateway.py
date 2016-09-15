@@ -1626,7 +1626,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
     plan_name
         [Required] name of the usage plan
     throttle
-        [Optional] throttling parameters expressed as a dictionary. 
+        [Optional] throttling parameters expressed as a dictionary.
         If provided, at least one of the throttling paramters must be present
         rateLimit
             rate per second at which capacity bucket is populated
@@ -1636,7 +1636,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
         [Optional] quota on the number of api calls permitted by the plan.
         If provided, limit and period must be present
         limit
-            [Required] number of calls permitted per quota period    
+            [Required] number of calls permitted per quota period
         offset
             [Optional] number of calls to be subtracted from the limit at the beginning of the period
         period
@@ -1683,10 +1683,10 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
                 ret['result'] = None
                 return ret
 
-            result = __salt__['boto_apigateway.create_usage_plan'](name=plan_name, 
-                                                                   description=description, 
+            result = __salt__['boto_apigateway.create_usage_plan'](name=plan_name,
+                                                                   description=description,
                                                                    throttle=throttle,
-                                                                   quota=quota, 
+                                                                   quota=quota,
                                                                    **common_args)
             if 'error' in result:
                 ret['result'] = False
@@ -1695,7 +1695,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
 
             ret['changes']['old'] = {'plan': None}
             ret['comment'] = 'A new usage plan {0} has been created'.format(plan_name)
- 
+
         else:
             # need an existing plan modified to match given value
             plan = existing['plans'][0]
@@ -1707,7 +1707,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
                     actual_param = {} if func_params.get(p) is None else func_params.get(p)
                     if plan.get(p, {}).get(f, None) != actual_param.get(f, None):
                         needs_updating = True
-                        break;
+                        break
 
             if not needs_updating:
                 ret['comment'] = 'usage plan {0} is already in a correct state'.format(plan_name)
@@ -1719,9 +1719,9 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
                 ret['result'] = None
                 return ret
 
-            result = __salt__['boto_apigateway.update_usage_plan'](plan['id'], 
-                                                                   throttle=throttle, 
-                                                                   quota=quota, 
+            result = __salt__['boto_apigateway.update_usage_plan'](plan['id'],
+                                                                   throttle=throttle,
+                                                                   quota=quota,
                                                                    **common_args)
             if 'error' in result:
                 ret['result'] = False
@@ -1744,6 +1744,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
         ret['comment'] = '{0}'.format(e.args)
 
     return ret
+
 
 def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1782,18 +1783,18 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
         if not existing['plans']:
             ret['comment'] = 'Usage plan {0} does not exist already'.format(plan_name)
             return ret
- 
+
         if __opts__['test']:
-             ret['comment'] = 'Usage plan {0} exists and would be deleted'.format(plan_name)
-             ret['result'] = None
-             return ret
+            ret['comment'] = 'Usage plan {0} exists and would be deleted'.format(plan_name)
+            ret['result'] = None
+            return ret
 
         plan_id = existing['plans'][0]['id']
-        result =  __salt__['boto_apigateway.delete_usage_plan'](plan_id, **common_args)
+        result = __salt__['boto_apigateway.delete_usage_plan'](plan_id, **common_args)
 
         if 'error' in result:
             ret['result'] = False
-            ret['comment'] = 'Failed to delete usage plan {0}, {1}'.format(plan_name, result) 
+            ret['comment'] = 'Failed to delete usage plan {0}, {1}'.format(plan_name, result)
             return ret
 
         ret['comment'] = 'Usage plan {0} has been deleted'.format(plan_name)
@@ -1867,7 +1868,7 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
 
         stages_to_add = []
         for api in apiStages:
-            if api not in plan_stages: 
+            if api not in plan_stages:
                 stages_to_add.append(api)
 
         if not stages_to_add:
@@ -1882,7 +1883,7 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
 
         ret['comment'] = 'successfully associated usage plan to apis'
         ret['changes']['old'] = plan_stages
-        ret['changes']['new'] = result.get('result', {}).get('apiStages', []) 
+        ret['changes']['new'] = result.get('result', {}).get('apiStages', [])
 
     except (ValueError, IOError) as e:
         ret['result'] = False
@@ -1890,10 +1891,11 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
 
     return ret
 
+
 def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=None, keyid=None, profile=None):
     '''
     Ensures usage plan identified by name is removed from provided apiStages
-    If a plan is associated to stages not listed in apiStages parameter, 
+    If a plan is associated to stages not listed in apiStages parameter,
     those associations remain intact
 
     name
@@ -1965,7 +1967,7 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
 
         result = __salt__['boto_apigateway.detach_usage_plan_from_apis'](plan_id, stages_to_remove, **common_args)
         if 'error' in result:
-            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name, stages_to_add, result['error'])
+            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name, stages_to_remove, result['error'])
             ret['result'] = False
             return ret
 
@@ -1978,4 +1980,3 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
         ret['comment'] = '{0}'.format(e.args)
 
     return ret
-
