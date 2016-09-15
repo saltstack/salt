@@ -594,6 +594,9 @@ class LocalClient(object):
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
                         ret[mid] = data.get('ret', {})
+
+            for failed in list(set(pub_data['minions']) ^ set(ret.keys())):
+                ret[failed] = False
             return ret
         finally:
             if not was_listening:
