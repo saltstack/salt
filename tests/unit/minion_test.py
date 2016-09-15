@@ -18,6 +18,7 @@ from salt import minion
 from salt.utils import event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
+import tornado
 
 ensure_in_syspath('../')
 
@@ -71,7 +72,7 @@ class MinionTestCase(TestCase):
                      'jid': 123}
         mock_jid_queue = [123]
         try:
-            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue))
+            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
             ret = minion._handle_decoded_payload(mock_data)
             self.assertEqual(minion.jid_queue, mock_jid_queue)
             self.assertIsNone(ret)
@@ -94,7 +95,7 @@ class MinionTestCase(TestCase):
                      'jid': mock_jid}
         mock_jid_queue = [123, 456]
         try:
-            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue))
+            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
 
             # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
             # This can help debug any test failures if the _handle_decoded_payload call fails.
@@ -124,7 +125,7 @@ class MinionTestCase(TestCase):
                      'jid': 789}
         mock_jid_queue = [123, 456]
         try:
-            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue))
+            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
 
             # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
             # This can help debug any test failures if the _handle_decoded_payload call fails.
