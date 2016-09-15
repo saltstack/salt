@@ -634,7 +634,7 @@ Example of a complete profile:
 Specifying disk backing mode
 ============================
 
-.. versionadded:: Carbon
+.. versionadded:: Nitrogen
 
 Disk backing mode can now be specified when cloning a VM. This option
 can be set in the cloud profile as shown in example below:
