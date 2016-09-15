@@ -951,7 +951,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         
     cmd.extend(['apt-get', '-q', '-y',
                 '-o', 'DPkg::Options::={0}'.format(force_conf),
-                '-o', 'DPkg::Options::=--force-confdef']
+                '-o', 'DPkg::Options::=--force-confdef'])
 
     if kwargs.get('force_yes', False):
         cmd.append('--force-yes')
