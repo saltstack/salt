@@ -362,14 +362,16 @@ class _LegacyGitPillar(object):
 
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
-
         try:
-            self.repo = git.Repo.init(rp_)
-        except (git.exc.NoSuchPathError,
-                git.exc.InvalidGitRepositoryError) as exc:
-            log.error('GitPython exception caught while '
-                      'initializing the repo: {0}. Maybe '
-                      'git is not available.'.format(exc))
+            try:
+                self.repo = git.Repo.init(rp_)
+            except (git.exc.NoSuchPathError,
+                    git.exc.InvalidGitRepositoryError) as exc:
+                log.error('GitPython exception caught while '
+                          'initializing the repo: {0}. Maybe '
+                          'git is not available.'.format(exc))
+        except Exception as exc:
+            log.exception('Undefined exception in git pillar')
 
         # Git directory we are working on
         # Should be the same as self.repo.working_dir
