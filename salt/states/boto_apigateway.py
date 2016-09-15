@@ -1623,29 +1623,36 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
 
     name
         name of the state
+
     plan_name
         [Required] name of the usage plan
+
     throttle
         [Optional] throttling parameters expressed as a dictionary.
-        If provided, at least one of the throttling paramters must be present
+        If provided, at least one of the throttling parameters must be present
+
         rateLimit
             rate per second at which capacity bucket is populated
+
         burstLimit
             maximum rate allowed
+
     quota
         [Optional] quota on the number of api calls permitted by the plan.
         If provided, limit and period must be present
+
         limit
             [Required] number of calls permitted per quota period
+
         offset
             [Optional] number of calls to be subtracted from the limit at the beginning of the period
+
         period
             [Required] period to which quota applies. Must be DAY, WEEK or MONTH
 
-    Example:
+    .. code-block:: yaml
         UsagePlanPresent:
             boto_apigateway.usage_plan_present:
-                - name: my_usage_plan
                 - plan_name: my_usage_plan
                 - throttle:
                     rateLimit: 70
@@ -1654,7 +1661,10 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
                     limit: 1000
                     offset: 0
                     period: DAY
-                - profile: cfg-aws-profile
+                - profile: my_profile
+
+    .. versionadded:: Carbon
+
     '''
     func_params = locals()
 
@@ -1752,15 +1762,18 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
 
     name
         name of the state
+
     plan_name
         name of the plan to remove
 
-    Example
+    .. code-block:: yaml
         usage plan absent:
             boto_apigateway.usage_plan_absent:
-                - name: my_usage_plan_state
                 - plan_name: my_usage_plan
-                - profile: cfg-aws-profile
+                - profile: my_profile
+
+    .. versionadded:: Carbon
+
     '''
     ret = {'name': name,
            'result': True,
@@ -1814,26 +1827,32 @@ def usage_plan_association_present(name, plan_name, apiStages, region=None, key=
 
     name
         name of the state
+
     plan_name
         name of the plan to use
+
     apiStages
-        list of stages
+        list of dictionaries, where each dictionary consists of the following keys:
+
         apiId
             apiId of the api to attach usage plan to
+
         stage
             stage name of the api to attach usage plan to
 
-    Example
+    .. code-block:: yaml
         UsagePlanAssociationPresent:
           boto_apigateway.usage_plan_association_present:
-            - name: usage_plan_association
-            - plan_name: planB
+            - plan_name: my_plan
             - apiStages:
               - apiId: 9kb0404ec0
-                stage: xxx
+                stage: my_stage
               - apiId: l9v7o2aj90
-                stage: xxx
-            - profile: cfg-aws-profile
+                stage: my_stage
+            - profile: my_profile
+
+    .. versionadded:: Carbon
+
     '''
     ret = {'name': name,
            'result': True,
@@ -1900,26 +1919,32 @@ def usage_plan_association_absent(name, plan_name, apiStages, region=None, key=N
 
     name
         name of the state
+
     plan_name
         name of the plan to use
+
     apiStages
-        list of stages
+        list of dictionaries, where each dictionary consists of the following keys:
+
         apiId
             apiId of the api to detach usage plan from
+
         stage
             stage name of the api to detach usage plan from
 
-    Example
+    .. code-block:: yaml
         UsagePlanAssociationAbsent:
           boto_apigateway.usage_plan_association_absent:
-            - name: usage_plan_association
-            - plan_name: planB
+            - plan_name: my_plan
             - apiStages:
               - apiId: 9kb0404ec0
-                stage: xxx
+                stage: my_stage
               - apiId: l9v7o2aj90
-                stage: xxx
-            - profile: cfg-aws-profile
+                stage: my_stage
+            - profile: my_profile
+
+    .. versionadded:: Carbon
+
     '''
     ret = {'name': name,
            'result': True,
