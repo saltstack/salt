@@ -8,7 +8,6 @@ import shutil
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -282,7 +281,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('sub_minion', data)
         self.assertIn('minion', data.replace('sub_minion', 'stub'))
 
-    @skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
@@ -295,7 +293,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
-    @skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
     def test_static(self):
         '''
         test salt static call
