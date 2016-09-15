@@ -6,14 +6,17 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
+import salt.utils
 
 
+@skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
 class BatchTest(integration.ShellCase):
     '''
     Integration tests for the salt.cli.batch module

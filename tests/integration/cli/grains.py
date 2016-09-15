@@ -21,6 +21,7 @@ import integration
 import salt.utils
 
 # Import Salt Testing Libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -30,7 +31,7 @@ class GrainsTargetingTest(integration.ShellCase):
     '''
     Integration tests for targeting with grains.
     '''
-
+    @skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
     def test_grains_targeting_os_running(self):
         '''
         Tests running "salt -G 'os:<system-os>' test.ping and minions both return True
@@ -45,6 +46,7 @@ class GrainsTargetingTest(integration.ShellCase):
         ret = self.run_salt('-G \'os:{0}\' test.ping'.format(os_grain))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
+    @skipIf(salt.utils.is_darwin(), 'skip until test runner stabilizes on MacOS')
     def test_grains_targeting_minion_id_running(self):
         '''
         Tests return of each running test minion targeting with minion id grain
