@@ -16,6 +16,7 @@ from datetime import date
 # Import salt libs
 import salt.utils.extend
 from salt.utils import fopen
+import integration
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -36,7 +37,7 @@ class ExtendTestCase(TestCase):
 
     @patch('sys.exit', MagicMock)
     def test_run(self):
-        out = salt.utils.extend.run('test', 'test', 'this description', '.', False)
+        out = salt.utils.extend.run('test', 'test', 'this description', integration.CODE_DIR, False)
         self.out = out
         year = date.today().strftime('%Y')
         self.assertTrue(os.path.exists(out))
