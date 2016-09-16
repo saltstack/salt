@@ -878,7 +878,7 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create mykey /root/
+        salt myminion boto_ec2.create_key mykey /root/
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
