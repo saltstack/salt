@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch
 ensure_in_syspath('../../')
@@ -15,8 +15,6 @@ ensure_in_syspath('../../')
 # Import Salt libs
 from salt.modules import disk
 import salt.utils
-
-#usage_size = {'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000}
 
 STUB_DISK_USAGE = {
                    '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
@@ -153,6 +151,17 @@ class DiskTestCase(TestCase):
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
         with patch.dict(disk.__salt__, {'cmd.run': mock}):
             self.assertEqual(disk.fstype(device), fs_type)
+    
+    @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
+    def test_resize2fs(self):
+        '''
+        unit tests for disk.resize2fs
+        '''
+        device = '/dev/sdX1'
+        mock = MagicMock()
+        with patch.dict(disk.__salt__, {'cmd.run_all': mock}):
+            disk.resize2fs(device)
+            mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
 
 
 if __name__ == '__main__':

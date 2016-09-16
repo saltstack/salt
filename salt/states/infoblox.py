@@ -138,9 +138,9 @@ def present(name,
                                                  value,
                                                  record_type,
                                                  dns_view,
-                                                 infoblox_server=None,
-                                                 infoblox_user=None,
-                                                 infoblox_password=None,
+                                                 infoblox_server=infoblox_server,
+                                                 infoblox_user=infoblox_user,
+                                                 infoblox_password=infoblox_password,
                                                  infoblox_api_version='v1.4.2',
                                                  sslVerify=sslVerify)
         if retval:

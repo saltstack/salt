@@ -1264,7 +1264,7 @@ class PostgresTestCase(TestCase):
                    password='testpassword'
                 )
 
-                query = 'GRANT ALL ON TABLE public.awl TO baruwa WITH GRANT OPTION'
+                query = 'GRANT ALL ON TABLE public."awl" TO "baruwa" WITH GRANT OPTION'
 
                 postgres._run_psql.assert_called_once_with(
                     ['/usr/bin/pgsql', '--no-align', '--no-readline',
@@ -1291,7 +1291,7 @@ class PostgresTestCase(TestCase):
                    password='testpassword'
                 )
 
-                query = 'GRANT ALL ON TABLE public.awl TO baruwa'
+                query = 'GRANT ALL ON TABLE public."awl" TO "baruwa"'
 
                 postgres._run_psql.assert_called_once_with(
                     ['/usr/bin/pgsql', '--no-align', '--no-readline',
@@ -1322,7 +1322,7 @@ class PostgresTestCase(TestCase):
                    password='testpassword'
                 )
 
-                query = 'GRANT admins TO baruwa WITH ADMIN OPTION'
+                query = 'GRANT admins TO "baruwa" WITH ADMIN OPTION'
 
                 postgres._run_psql.assert_called_once_with(
                     ['/usr/bin/pgsql', '--no-align', '--no-readline',
@@ -1348,7 +1348,7 @@ class PostgresTestCase(TestCase):
                    password='testpassword'
                 )
 
-                query = 'GRANT admins TO baruwa'
+                query = 'GRANT admins TO "baruwa"'
 
                 postgres._run_psql.assert_called_once_with(
                     ['/usr/bin/pgsql', '--no-align', '--no-readline',
