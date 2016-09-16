@@ -1150,6 +1150,8 @@ class RemoteClient(Client):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
                     data = data['data']
+                if six.PY3 and isinstance(data, str):
+                    data = data.encode()
                 fn_.write(data)
             except (TypeError, KeyError) as exc:
                 try:
