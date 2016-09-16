@@ -51,13 +51,13 @@ def present(name,
         The name of the extension to manage
 
     if_not_exists
-        Add a if_not_exists switch to the ddl statement
+        Add an `IF NOT EXISTS` parameter to the DDL statement
 
     schema
         Schema to install the extension into
 
     ext_version
-        version to install
+        Version to install
 
     from_version
         Old extension version if already installed
@@ -69,10 +69,10 @@ def present(name,
         Database to act on
 
     db_user
-        database username if different from config or default
+        Database username if different from config or default
 
     db_password
-        user password if any password for a specified user
+        User password if any password for a specified user
 
     db_host
         Database host if different from config or default
@@ -87,10 +87,10 @@ def present(name,
     db_args = {
         'maintenance_db': maintenance_db,
         'runas': user,
-        'host': db_host,
         'user': db_user,
-        'port': db_port,
         'password': db_password,
+        'host': db_host,
+        'port': db_port,
     }
     # check if extension exists
     mode = 'create'
@@ -134,11 +134,11 @@ def present(name,
         else:
             suffix = 'ed'
         ret['comment'] = 'The extension {0} has been {1}{2}'.format(name, mode, suffix)
+        ret['changes'][name] = '{0}{1}'.format(mode.capitalize(), suffix)
     elif cret is not None:
         ret['comment'] = 'Failed to {1} extension {0}'.format(name, mode)
         ret['result'] = False
-    else:
-        ret['result'] = True
+
     return ret
 
 
