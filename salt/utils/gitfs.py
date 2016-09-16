@@ -979,6 +979,9 @@ class GitPython(GitProvider):
                     path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = file_blob
+                    if isinstance(blob, git.Tree):
+                        # Path is a directory, not a file.
+                        blob = None
                     break
             except KeyError:
                 # File not found or repo_path points to a directory
@@ -1523,6 +1526,9 @@ class Pygit2(GitProvider):
                     path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = self.repo[entry.oid]
+                    if isinstance(blob, pygit2.Tree):
+                        # Path is a directory, not a file.
+                        blob = None
                     break
             except KeyError:
                 blob = None
@@ -1898,6 +1904,9 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     path = salt.utils.path_join(os.path.dirname(path), link_tgt)
                 else:
                     blob = self.repo.get_object(oid)
+                    if isinstance(blob, dulwich.objects.Tree):
+                        # Path is a directory, not a file.
+                        blob = None
                     break
             except KeyError:
                 blob = None
