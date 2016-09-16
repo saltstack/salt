@@ -62,7 +62,8 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
            'comment': '',
            'result': None}
 
-    exists = __salt__['file.grep'](htpasswd_file, name)['retcode'] == 0
+    exists = __salt__['file.grep'](
+        htpasswd_file, '^{0}:'.format(name))['retcode'] == 0
 
     # If user exists, but we're supposed to update the password, find out if
     # it's changed, but not if we're forced to update the file regardless.
