@@ -948,7 +948,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     if salt.utils.systemd.has_scope(__context__) \
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
-        
+
     cmd.extend(['apt-get', '-q', '-y',
                 '-o', 'DPkg::Options::={0}'.format(force_conf),
                 '-o', 'DPkg::Options::=--force-confdef'])
