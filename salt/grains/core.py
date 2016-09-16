@@ -873,7 +873,7 @@ def _windows_platform_data():
             osrelease = server[osrelease]
 
         if info['ServicePackMajor'] > 0:
-            service_pack = ''.join(['SP', info['ServicePackMajor']])
+            service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
             osrelease = ' '.join([osrelease, service_pack])
 
         grains = {
