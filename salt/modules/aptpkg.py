@@ -371,9 +371,9 @@ def refresh_db():
             # Strip filesize from end of line
             ident = re.sub(r' \[.+B\]$', '', ident)
             ret[ident] = True
-        elif cols[0] == 'Ign':
+        elif 'Ign' in cols[0]:
             ret[ident] = False
-        elif cols[0] == 'Hit':
+        elif 'Hit' in cols[0]:
             ret[ident] = None
     return ret
 
