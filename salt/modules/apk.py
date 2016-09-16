@@ -37,9 +37,6 @@ def __virtual__():
         return __virtualname__
     return (False, "Module apk only works on Alpine Linux based systems")
 
-# Unavailable functions
-#def version(*names, **kwargs):
-#    return 'Not available'
 #def autoremove(list_only=False, purge=False):
 #    return 'Not available'
 #def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
@@ -68,6 +65,21 @@ def __virtual__():
 #    return 'Not available'
 #def info_installed(*names):
 #    return 'Not available'
+
+def version(*names, **kwargs):
+    '''
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
+    '''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def refresh_db():
