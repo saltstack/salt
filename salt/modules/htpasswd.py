@@ -113,7 +113,7 @@ def useradd(pwfile, user, password, opts='', runas=None):
     return __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
 
 
-def userdel(pwfile, user, runas=None):
+def userdel(pwfile, user, runas=None, all_results=False):
     '''
     Delete a user from the specified htpasswd file.
 
@@ -126,6 +126,9 @@ def userdel(pwfile, user, runas=None):
     runas
         The system user to run htpasswd command with
 
+    all_results
+        Return stdout, stderr, and retcode, not just stdout
+
     CLI Examples:
 
     .. code-block:: bash
@@ -136,8 +139,13 @@ def userdel(pwfile, user, runas=None):
         return 'Error: The specified htpasswd file does not exist'
 
     cmd = ['htpasswd', '-D', pwfile, user]
-    out = __salt__['cmd.run'](cmd, runas=runas,
-                              python_shell=False).splitlines()
+
+    if all_results:
+        out = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    else:
+        out = __salt__['cmd.run'](cmd, runas=runas,
+                                  python_shell=False).splitlines()
+
     return out
 
 
