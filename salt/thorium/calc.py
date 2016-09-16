@@ -45,7 +45,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.calc:
+          calc.calc:
             - name: myregentry
             - num: 5
             - oper: mean
@@ -118,7 +118,7 @@ def add(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.add:
+          calc.add:
             - name: myregentry
             - num: 5
     '''
@@ -134,7 +134,7 @@ def mul(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.mul:
+          calc.mul:
             - name: myregentry
             - num: 5
     '''
@@ -150,7 +150,7 @@ def mean(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.mean:
+          calc.mean:
             - name: myregentry
             - num: 5
     '''
@@ -166,7 +166,7 @@ def median(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.median:
+          calc.median:
             - name: myregentry
             - num: 5
     '''
@@ -182,7 +182,7 @@ def median_low(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.median_low:
+          calc.median_low:
             - name: myregentry
             - num: 5
     '''
@@ -198,7 +198,7 @@ def median_high(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.median_high:
+          calc.median_high:
             - name: myregentry
             - num: 5
     '''
@@ -215,7 +215,7 @@ def median_grouped(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.median_grouped:
+          calc.median_grouped:
             - name: myregentry
             - num: 5
     '''
@@ -231,7 +231,7 @@ def mode(name, num, minimum=0, maximum=0, ref=None):
     .. code-block:: yaml
 
         foo:
-          reg.mode:
+          calc.mode:
             - name: myregentry
             - num: 5
     '''
