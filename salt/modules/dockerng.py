@@ -262,7 +262,6 @@ import pipes
 import re
 import shutil
 import string
-import sys
 import time
 import uuid
 import base64
@@ -271,10 +270,10 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from salt.utils.decorators \
-    import identical_signature_wrapper as _mimic_signature
 import salt.utils
+import salt.utils.decorators
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -282,10 +281,6 @@ import salt.fileclient
 
 from salt.state import HighState
 import salt.client.ssh.state
-
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 # pylint: disable=import-error
 try:
@@ -296,8 +291,7 @@ except ImportError:
     HAS_DOCKER_PY = False
 
 try:
-    PY_VERSION = sys.version_info[0]
-    if PY_VERSION == 2:
+    if six.PY2:
         import backports.lzma as lzma
     else:
         import lzma
@@ -627,7 +621,7 @@ class _api_version(object):
                     .format(self.api_version, current_api_version)
                 )
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return _mimic_signature(func, wrapper)
+        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
 
 
 class _client_version(object):
@@ -656,7 +650,7 @@ class _client_version(object):
                         ' `docker.version` = "{0}"'.format(minion_conf))
                 raise CommandExecutionError(error_message)
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return _mimic_signature(func, wrapper)
+        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
 
 
 def _docker_client(wrapped):
