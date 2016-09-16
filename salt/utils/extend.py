@@ -12,25 +12,26 @@ This tool is accessed using `salt-extend`
 
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 from __future__ import print_function
 
 from datetime import date
+import logging
 import tempfile
 import os
 import sys
 import shutil
 from jinja2 import Template
 
-# zip compat for PY2/3
+# Import Salt libs
 from salt.serializers.yaml import deserialize
 from salt.ext.six.moves import zip
-from salt.utils import fopen
 from salt.utils.odict import OrderedDict
-
+import salt.utils
 import salt.version
 
-import logging
 log = logging.getLogger(__name__)
 
 try:
@@ -55,7 +56,7 @@ def _get_template(path, option_key):
     :returns: Details about the template
     :rtype: ``tuple``
     '''
-    with fopen(path, "r") as template_f:
+    with salt.utils.fopen(path, "r") as template_f:
         template = deserialize(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
@@ -137,10 +138,10 @@ def _mergetreejinja(src, dst, context):
             if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
                 log.info("Copying file {0} to {1}".format(s, d))
-                with fopen(s, 'r') as source_file:
+                with salt.utils.fopen(s, 'r') as source_file:
                     src_contents = source_file.read()
                     dest_contents = Template(src_contents).render(context)
-                with fopen(d, 'w') as dest_file:
+                with salt.utils.fopen(d, 'w') as dest_file:
                     dest_file.write(dest_contents)
 
 
@@ -300,7 +301,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         _mergetree(temp_dir, salt_dir)
         path = salt_dir
 
-    print('New module stored in {0}'.format(path))
+    log.info('New module stored in {0}'.format(path))
     return path
 
 if __name__ == '__main__':
