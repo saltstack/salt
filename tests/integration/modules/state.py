@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import textwrap
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -1139,6 +1140,38 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn(bar_state, state_run)
         self.assertEqual(state_run[bar_state]['comment'],
                          'Command "echo bar" run')
+
+    def test_show_template(self):
+        '''
+        Test the show_template function
+        '''
+        fd_, sls_file = tempfile.mkstemp()
+
+        # Release the handle so it can be removed in Windows
+        try:
+            os.close(fd_)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise exc
+
+        # Create the content of the yaml/jinja file to test
+        with salt.utils.fopen(sls_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                bikini-bottom:
+                  {% for first_name, last_name in [('spongebob', 'squarepants'), ('patrick', 'star')] %}
+                  '{{ first_name }}':
+                    full_name: '{{ first_name }} {{ last_name }}'
+                  {% endfor %}
+                '''))
+
+        # Parse the file
+        ret = self.run_function('state.show_template', [sls_file])
+
+        self.assertIn('spongebob', ret[0]['bikini-bottom'])
+        self.assertIn('patrick', ret[0]['bikini-bottom'])
+        self.assertEqual(
+            ret[0]['bikini-bottom']['patrick']['full_name'], 'patrick star')
+
 
 if __name__ == '__main__':
     from integration import run_tests

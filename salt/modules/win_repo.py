@@ -215,3 +215,30 @@ def show_sls(name, saltenv='base'):
         config['Error'] = '{0}'.format(exc)
 
     return config
+
+
+def show_template(sls_file, **kwargs):
+    '''
+    .. versionadded:: Carbon
+
+    Render yaml/jinja2 template file as a dictionary. This returns the data
+    structure that salt will use when processing the sls file. Useful to verify
+    correct syntax.
+
+    .. note::
+        This function does not ask a master for an SLS file to render but
+        instead directly processes the file at the provided path on the minion.
+
+    Args:
+        sls_file (str): The path to the file to process.
+
+    Returns:
+        dict: A dictionary containing the rendered data or any errors
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_template '<Path to template on the minion>'
+    '''
+    return __salt__['state.show_template'](sls_file, **kwargs)
