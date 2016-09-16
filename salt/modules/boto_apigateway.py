@@ -1602,6 +1602,9 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     try:
         existing = describe_usage_plans(plan_id=plan_id, region=region, key=key, keyid=keyid, profile=profile)
         # don't attempt to delete the usage plan if it does not exist
+        if 'error' in existing:
+            return {'error': existing['error']}
+
         if 'plans' in existing and existing['plans']:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             res = conn.delete_usage_plan(usagePlanId=plan_id)
