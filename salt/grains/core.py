@@ -863,13 +863,18 @@ def _windows_platform_data():
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         osrelease = platform.release()
-        if salt.utils.win_osinfo.get_os_version_info()['ProductType'] > 1:
-            server = {'Vista': '2008',
-                      '7': '2008R2',
-                      '8': '2012',
-                      '8.1': '2012R2',
-                      '10': '2016'}
+        info = salt.utils.win_osinfo.get_os_version_info()
+        if info['ProductType'] > 1:
+            server = {'Vista': 'Server 2008',
+                      '7': 'Server 2008 R2',
+                      '8': 'Server 2012',
+                      '8.1': 'Server 2012 R2',
+                      '10': 'Server 2016'}
             osrelease = server[osrelease]
+
+        if info['ServicePackMajor'] > 0:
+            service_pack = ''.join('SP', info['ServicePackMajor'])
+            osrelease = ' '.join([osrelease, service_pack])
 
         grains = {
             'osversion': osinfo.Version,
