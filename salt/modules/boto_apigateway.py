@@ -1437,7 +1437,7 @@ def _validate_throttle(throttle):
     '''
     Helper to verify that throttling parameters are valid
     '''
-    if throttle:
+    if throttle is not None:
         if not isinstance(throttle, dict):
             raise TypeError('throttle must be a dictionary, provided value: {0}'.format(throttle))
 
@@ -1446,7 +1446,7 @@ def _validate_quota(quota):
     '''
     Helper to verify that quota parameters are valid
     '''
-    if quota:
+    if quota is not None:
         if not isinstance(quota, dict):
             raise TypeError('quota must be a dictionary, provided value: {0}'.format(quota))
         periods = ['DAY', 'WEEK', 'MONTH']
