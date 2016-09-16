@@ -117,6 +117,14 @@ class MySQLExtPillar(SqlBaseExtPillar):
             This function normalizes the config block into a set of queries we
             can use.  The return is a list of consistently laid out dicts.
         '''
+        
+        '''
+            If we have an encryption key in master config, read it and replace in our query string for each ext_pillar
+        '''
+        for ext_pillar_item in kwargs.keys():
+            if 'encryption_key' in kwargs[ext_pillar_item]:
+                kwargs[ext_pillar_item]['query'] = kwargs[ext_pillar_item]['query'].replace('REPLACEWITHREALKEYVALUE', kwargs[ext_pillar_item]['encryption_key'])
+                
         return super(MySQLExtPillar, self).extract_queries(args, kwargs)
 
 
