@@ -151,7 +151,7 @@ class DiskTestCase(TestCase):
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
         with patch.dict(disk.__salt__, {'cmd.run': mock}):
             self.assertEqual(disk.fstype(device), fs_type)
-    
+
     @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):
         '''
