@@ -406,7 +406,7 @@ class InstallCompiledPyYaml(Command):
             )
         else:
             call_arguments.append(
-                'http://repo.saltstack.com/windows/dependencies/32/PyYAML-3.11.win-amd64-py2.7.exe'
+                'http://repo.saltstack.com/windows/dependencies/32/PyYAML-3.11.win32-py2.7.exe'
             )
         with indent_log():
             call_subprocess(call_arguments)
