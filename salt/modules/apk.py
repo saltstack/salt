@@ -66,6 +66,7 @@ def __virtual__():
 #def info_installed(*names):
 #    return 'Not available'
 
+
 def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
