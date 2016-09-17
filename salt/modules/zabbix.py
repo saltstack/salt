@@ -1486,11 +1486,11 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         if conn_args:
             method = 'template.get'
             params = {"output": "extend", "filter": {}}
-            if 'name':
+            if name:
                 params['filter'].setdefault('name', name)
-            if 'host':
+            if host:
                 params['filter'].setdefault('host', host)
-            if 'templateids':
+            if templateids:
                 params.setdefault('templateids', templateids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
