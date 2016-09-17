@@ -1168,7 +1168,6 @@ class TestDaemon(object):
                         shutil.copytree(os.path.join(ext_dir, dir), os.path.join(new_extension_modules_path, dir))
                 opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
-
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
             optname = '{0}.file'.format(name)

@@ -125,12 +125,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         unless requested
         '''
         if self.options.custom:
-           if not self.options.customdir:
-                   raise Exception('Since the `custom` flag has been set, please pass `customdir` as well')
-           if not os.path.exists(self.options.customdir):
-                   raise OSError('Could not find custom test directory: {0}'.format(self.options.customdir))
-           TEST_SUITES['custom'] = {'display_name': 'Custom',
-                   'path': self.options.customdir}
+            if not self.options.customdir:
+                raise Exception('Since the `custom` flag has been set, please pass `customdir` as well')
+            if not os.path.exists(self.options.customdir):
+                raise OSError('Could not find custom test directory: {0}'.format(self.options.customdir))
+            TEST_SUITES['custom'] = {'display_name': 'Custom',
+                'path': self.options.customdir}
         suites = set(TEST_SUITES.keys())
         if not include_unit:
             suites -= set(['unit'])
