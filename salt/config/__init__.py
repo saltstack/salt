@@ -3281,7 +3281,7 @@ def api_config(path):
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt's master opts
-    opts =  client_config(path, defaults=DEFAULT_MASTER_OPTS)
+    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
     # Let's override them with salt-api's required defaults
     api_opts = {
         'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
