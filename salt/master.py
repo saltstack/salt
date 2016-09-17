@@ -1980,6 +1980,14 @@ class ClearFuncs(object):
             )
             return ''
 
+        # Retrieve the minions list
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+        minions = self.ckminions.check_minions(
+            clear_load['tgt'],
+            clear_load.get('tgt_type', 'glob'),
+            delimiter
+        )
+
         # Check for external auth calls
         if extra.get('token', False):
             # A token was passed, check it
@@ -2041,7 +2049,8 @@ class ClearFuncs(object):
                 clear_load['fun'],
                 clear_load['arg'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
+                clear_load.get('tgt_type', 'glob'),
+                minions=minions)
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
@@ -2138,7 +2147,8 @@ class ClearFuncs(object):
                 clear_load['fun'],
                 clear_load['arg'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
+                clear_load.get('tgt_type', 'glob'),
+                minions=minions
                 )
             if not good:
                 # Accept find_job so the CLI will function cleanly
@@ -2170,7 +2180,8 @@ class ClearFuncs(object):
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
-                                clear_load.get('tgt_type', 'glob'))
+                                clear_load.get('tgt_type', 'glob'),
+                                minions=minions)
                     if not good:
                         # Accept find_job so the CLI will function cleanly
                         if clear_load['fun'] != 'saltutil.find_job':
@@ -2215,7 +2226,8 @@ class ClearFuncs(object):
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],
-                        clear_load.get('tgt_type', 'glob'))
+                        clear_load.get('tgt_type', 'glob'),
+                        minions=minions)
                     if not good:
                         # Accept find_job so the CLI will function cleanly
                         if clear_load['fun'] != 'saltutil.find_job':
@@ -2235,14 +2247,7 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
-        # FIXME Needs additional refactoring
-        # Retrieve the minions list
-        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
-            clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'),
-            delimiter
-        )
+
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):
