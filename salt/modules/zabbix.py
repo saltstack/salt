@@ -1452,3 +1452,50 @@ def hostinterface_update(interfaceid, **connection_args):
             raise KeyError
     except KeyError:
         return ret
+
+
+def template_get(name=None, host=None, templateids=None, **connection_args):
+    '''
+    Retrieve templates according to the given parameters.
+
+    Args:
+        host: technical name of the template
+        name: visible name of the template
+        hostids: ids of the templates
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
+
+    Returns:
+        Array with convenient template details, False if no template found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.template_get name='Template OS Linux'
+        salt '*' zabbix.template_get templateids="['10050', '10001']"
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'template.get'
+            params = {"output": "extend", "filter": {}}
+            if name:
+                params['filter'].setdefault('name', name)
+            if host:
+                params['filter'].setdefault('host', host)
+            if templateids:
+                params.setdefault('templateids', templateids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return False
