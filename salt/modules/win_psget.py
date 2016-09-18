@@ -8,15 +8,17 @@ Module for managing PowerShell through PowerShellGet (PSGet)
 
 Support for PowerShell
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import copy
 import logging
 import json
+import distutils.version
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -32,8 +34,13 @@ def __virtual__():
     if not salt.utils.is_windows():
         return (False, 'Module PSGet: Module only works on Windows systems ')
 
-    if psversion() < 5:
-        return (False, 'Module PSGet: Module only works with PowerShell 5 or later.')
+    powershell_info = __salt__['cmd.shell_info']('powershell')
+    if (
+           (powershell_info['installed'] == True) and
+           ('version_major' in powershell_info) and
+           (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
+       ):
+        return (False, 'Module PSGet: Module only works with PowerShell 5 or newer.')
 
     return __virtualname__
 
@@ -44,19 +51,34 @@ def _pshell(cmd, cwd=None):
     in json format and load that into python
     '''
     if 'convertto-json' not in cmd.lower():
-        cmd = ' '.join([cmd, '| ConvertTo-Json'])
-    log.debug('PSGET: {0}'.format(cmd))
-    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+        cmd = ' '.join([cmd, '| ConvertTo-Json -Depth 2147483647'])
+    log.debug('DSC: {0}'.format(cmd))
+    results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
+
+    if 'pid' in results:
+        del results['pid']
+
+    if 'retcode' not in results or results['retcode'] != 0:
+        error='Issue executing powershell {0}'.format(cmd)
+        # run_all logs an error to log.error, fail hard back to the user
+        raise CommandExecutionError(error,info=results)
+
     try:
-        ret = json.loads(ret, strict=False)
+        ret = json.loads(results['stdout'], strict=False)
     except ValueError:
-        log.debug('Json not returned')
+        raise CommandExecutionError('No JSON results from powershell',info=results)
+
     return ret
+
 
 
 def psversion():
     '''
     Returns the Powershell version
+
+    This has been deprecated and has been replaced by ``cmd.shell_info`` Note
+    the minimum version return is 5 as ``dsc`` is not available for version
+    less than 5.  This function will be removed in 'Nitrogen' release.
 
     CLI Example:
 
@@ -64,9 +86,17 @@ def psversion():
 
         salt 'win01' dsc.psversion
     '''
-    cmd = '$PSVersionTable.PSVersion.Major'
-    ret = _pshell(cmd)
-    return ret
+    salt.utils.warn_until('Nitrogen',
+        'The \'psversion\' has been deprecated and has been '
+        'replaced by \'cmd.shell_info\'.'
+    )
+    powershell_info = __salt__['cmd.shell_info']('powershell')
+    if powershell_info['installed'] == True and 'version_major' in powershell_info:
+        try:
+            return int(powershell_info['version_major'])
+        except ValueError:
+            pass
+    return 0
 
 
 def bootstrap():
