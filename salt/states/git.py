@@ -724,30 +724,29 @@ def latest(name,
                 )
                 local_changes = False
 
-            if local_changes:
-                if revs_match:
-                    if force_reset:
-                        msg = (
-                            '{0} is up-to-date, but with local changes. Since '
-                            '\'force_reset\' is enabled, these local changes '
-                            'would be reset.'.format(target)
-                        )
-                        if __opts__['test']:
-                            ret['changes']['forced update'] = True
-                            if comments:
-                                msg += _format_comments(comments)
-                            return _neutral_test(ret, msg)
-                        log.debug(msg.replace('would', 'will'))
-                    else:
-                        log.debug(
-                            '%s has local changes, but is up-to-date. Since '
-                            '\'force_reset\' is disabled, no changes will be '
-                            'made.', target
-                        )
-                        return _uptodate(ret,
-                                         target,
-                                         _format_comments(comments),
-                                         local_changes)
+            if local_changes and revs_match:
+                if force_reset:
+                    msg = (
+                        '{0} is up-to-date, but with local changes. Since '
+                        '\'force_reset\' is enabled, these local changes '
+                        'would be reset.'.format(target)
+                    )
+                    if __opts__['test']:
+                        ret['changes']['forced update'] = True
+                        if comments:
+                            msg += _format_comments(comments)
+                        return _neutral_test(ret, msg)
+                    log.debug(msg.replace('would', 'will'))
+                else:
+                    log.debug(
+                        '%s up-to-date, but with local changes. Since '
+                        '\'force_reset\' is disabled, no changes will be '
+                        'made.', target
+                    )
+                    return _uptodate(ret,
+                                     target,
+                                     _format_comments(comments),
+                                     local_changes)
 
             if remote_rev_type == 'sha1' \
                     and base_rev is not None \
