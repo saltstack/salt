@@ -103,6 +103,9 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
+          
+- The ``junos`` state module is now available. It has all the functions 
+  that are present in the ``junos`` execution module.
 
 Config Changes
 ==============
@@ -178,6 +181,18 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
+  
+Junos Module Changes
+===================
+
+- The following new functionalities were added to the junos module
+
+  - facts - Displays the facts gathered during the connection.
+  - shutdown - Shut down or reboot a device running Junos OS.
+  - install_config - Modify the configuration of a Junos device.
+  - install_os - Install Junos OS software package.
+  - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
+  - file_copy - Copy file from proxy to the Junos device.
 
 Returner Changes
 ================
@@ -209,6 +224,8 @@ Functionality Changes
   now lists all groups for the specified user, including groups beginning with
   an underscore. In previous releases, groups beginning with an underscore were
   excluded from the list of groups.
+- The ``junos.call_rpc`` function in the ``junos`` execution module can now be used
+  to call any valid rpc. Earlier it used to call only "get_software_information".
 - A new option for minions called ``master_tries`` has been added. This
   specifies the number of times a minion should attempt to contact a master to
   attempt a connection.  This allows better handling of occasional master
