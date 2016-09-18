@@ -199,6 +199,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
 def _get_region(region=None, profile=None):
     if profile and 'region' in profile:
         return profile['region']
+    if not region and __salt__['config.option'](profile):
+        _profile = __salt__['config.option'](profile)
+        region = _profile.get('region', None)
     if not region and __salt__['config.option']('sns.region'):
         region = __salt__['config.option']('sns.region')
     if not region:
