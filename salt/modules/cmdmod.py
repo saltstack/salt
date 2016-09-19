@@ -2648,7 +2648,7 @@ def shell_info(shell):
     :return: Properies of the shell specifically its and other information if
     available.
     :rtype: dict
-       
+
     .. code-block:: cfg
         {'version': '<version string>',
          'version_major': '<version string',
