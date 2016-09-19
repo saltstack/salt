@@ -99,7 +99,7 @@ class NonBlockingPopen(subprocess.Popen):
     def poll(self, flag=os.WNOHANG):
         if self.returncode is None:
             notintr = False
-            while notintr:
+            while not notintr:
                 try: 
                     pid, sts = os.waitpid(self.pid, flag)
                     notintr = True
