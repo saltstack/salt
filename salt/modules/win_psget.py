@@ -59,9 +59,8 @@ def _pshell(cmd, cwd=None):
         del results['pid']
 
     if 'retcode' not in results or results['retcode'] != 0:
-        error='Issue executing powershell {0}'.format(cmd)
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(error, info=results)
+        raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
@@ -69,7 +68,6 @@ def _pshell(cmd, cwd=None):
         raise CommandExecutionError('No JSON results from powershell', info=results)
 
     return ret
-
 
 
 def psversion():
