@@ -558,10 +558,10 @@ def clean_old_jobs():
     if __opts__.get('keep_jobs', False) and int(__opts__.get('keep_jobs', 0)) > 0:
         try:
             with _get_serv() as cur:
-                sql = 'select now() - %s as stamp;'
-                cur.execute(sql, (__opts__['keep_jobs'],))
+                sql = 'select date_sub(now(), interval {0} hour) as stamp;'.format(__opts__['keep_jobs'])
+                cur.execute(sql)
                 rows = cur.fetchall()
-                stamp = int(rows[0][0]) * 60 * 60
+                stamp = rows[0][0]
 
             if __opts__.get('archive_jobs', False):
                 _archive_jobs(stamp)
