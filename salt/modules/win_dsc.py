@@ -39,8 +39,8 @@ def __virtual__():
            (powershell_info['installed'] == True) and
            ('version_major' in powershell_info) and
            (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
-       ):
-       return (False, 'Module DSC: Module only works with PowerShell 5 or newer.')
+        ):
+        return (False, 'Module DSC: Module only works with PowerShell 5 or newer.')
 
     return __virtualname__
 
@@ -59,14 +59,13 @@ def _pshell(cmd, cwd=None):
         del results['pid']
 
     if 'retcode' not in results or results['retcode'] != 0:
-        error='Issue executing powershell {0}'.format(cmd)
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(error,info=results)
+        raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
     except ValueError:
-        raise CommandExecutionError('No JSON results from powershell',info=results)
+        raise CommandExecutionError('No JSON results from powershell', info=results)
 
     return ret
 
