@@ -697,13 +697,10 @@ can be set in the cloud profile as shown in example below:
       datastore: esx01-datastore
       resourcepool: Resources
       folder: vm
-
-
       devices:
         disk:
           Hard disk 1:
             mode: 'independent_nonpersistent'
-
           Hard disk 2:
             size: 15
             mode: 'independent_nonpersistent'
