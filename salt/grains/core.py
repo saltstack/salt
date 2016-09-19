@@ -823,6 +823,10 @@ def _windows_platform_data():
     Use the platform module for as much as we can.
     '''
     # Provides:
+    #    kernelrelease
+    #    osversion
+    #    osrelease
+    #    osservicepack
     #    osmanufacturer
     #    manufacturer
     #    productname
@@ -833,6 +837,7 @@ def _windows_platform_data():
     #    windowsdomain
     #    motherboard.productname
     #    motherboard.serialnumber
+    #    virtual
 
     if not HAS_WMI:
         return {}
@@ -840,76 +845,80 @@ def _windows_platform_data():
     with salt.utils.winapi.Com():
         wmi_c = wmi.WMI()
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
-        systeminfo = wmi_c.Win32_ComputerSystem()[0]
+        system_info = wmi_c.Win32_ComputerSystem()[0]
         # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
-        osinfo = wmi_c.Win32_OperatingSystem()[0]
+        os_info = wmi_c.Win32_OperatingSystem()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
-        biosinfo = wmi_c.Win32_BIOS()[0]
+        bios_info = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
-        timeinfo = wmi_c.Win32_TimeZone()[0]
+        time_info = wmi_c.Win32_TimeZone()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboard = {}
-        motherboard['product'] = None
-        motherboard['serial'] = None
+        motherboard = {'product': None,
+                       'serial': None}
         try:
-            motherboardinfo = wmi_c.Win32_BaseBoard()[0]
-            motherboard['product'] = motherboardinfo.Product
-            motherboard['serial'] = motherboardinfo.SerialNumber
+            motherboard_info = wmi_c.Win32_BaseBoard()[0]
+            motherboard['product'] = motherboard_info.Product
+            motherboard['serial'] = motherboard_info.SerialNumber
         except IndexError:
-            log.debug('Motherboard info not available on this sytem')
+            log.debug('Motherboard info not available on this system')
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
         # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
-        osrelease = platform.release()
+        os_release = platform.release()
         info = salt.utils.win_osinfo.get_os_version_info()
         if info['ProductType'] > 1:
-            server = {'Vista': 'Server 2008',
-                      '7': 'Server 2008 R2',
-                      '8': 'Server 2012',
-                      '8.1': 'Server 2012 R2',
-                      '10': 'Server 2016'}
-            osrelease = server[osrelease]
+            server = {'Vista': '2008Server',
+                      '7': '2008ServerR2',
+                      '8': '2012Server',
+                      '8.1': '2012ServerR2',
+                      '10': '2016Server'}
+            os_release = server.get(os_release,
+                                   'Grain not found. Update lookup table in the '
+                                   '`_window_platform_data` function in '
+                                   '`grains\\core.py`')
 
+        service_pack = None
         if info['ServicePackMajor'] > 0:
             service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
-            osrelease = ' '.join([osrelease, service_pack])
 
         grains = {
-            'osversion': osinfo.Version,
-            'osrelease': osrelease,
-            'osmanufacturer': osinfo.Manufacturer,
-            'manufacturer': systeminfo.Manufacturer,
-            'productname': systeminfo.Model,
+            'kernelrelease': os_info.Version,
+            'osversion': os_info.Version,
+            'osrelease': os_release,
+            'osservicepack': service_pack,
+            'osmanufacturer': os_info.Manufacturer,
+            'manufacturer': system_info.Manufacturer,
+            'productname': system_info.Model,
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
-            'biosversion': biosinfo.Name.strip(),
-            'serialnumber': biosinfo.SerialNumber,
-            'osfullname': osinfo.Caption,
-            'timezone': timeinfo.Description,
-            'windowsdomain': systeminfo.Domain,
+            'biosversion': bios_info.Name.strip(),
+            'serialnumber': bios_info.SerialNumber,
+            'osfullname': os_info.Caption,
+            'timezone': time_info.Description,
+            'windowsdomain': system_info.Domain,
             'motherboard': {
                 'productname': motherboard['product'],
-                'serialnumber': motherboard['serial']
+                'serialnumber': motherboard['serial'],
             }
         }
 
         # test for virtualized environments
         # I only had VMware available so the rest are unvalidated
-        if 'VRTUAL' in biosinfo.Version:  # (not a typo)
+        if 'VRTUAL' in bios_info.Version:  # (not a typo)
             grains['virtual'] = 'HyperV'
-        elif 'A M I' in biosinfo.Version:
+        elif 'A M I' in bios_info.Version:
             grains['virtual'] = 'VirtualPC'
-        elif 'VMware' in systeminfo.Model:
+        elif 'VMware' in system_info.Model:
             grains['virtual'] = 'VMware'
-        elif 'VirtualBox' in systeminfo.Model:
+        elif 'VirtualBox' in system_info.Model:
             grains['virtual'] = 'VirtualBox'
-        elif 'Xen' in biosinfo.Version:
+        elif 'Xen' in bios_info.Version:
             grains['virtual'] = 'Xen'
-            if 'HVM domU' in systeminfo.Model:
+            if 'HVM domU' in system_info.Model:
                 grains['virtual_subtype'] = 'HVM domU'
-        elif 'OpenStack' in systeminfo.Model:
+        elif 'OpenStack' in system_info.Model:
             grains['virtual'] = 'OpenStack'
 
     return grains
@@ -1062,6 +1071,7 @@ def os_data():
         'gpus': [],
         }
 
+    # Python 2.7.8 Returns
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64',
     #  'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
@@ -1085,7 +1095,6 @@ def os_data():
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
         grains.update(_windows_platform_data())
-        grains['kernelrelease'] = grains['osversion']
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
