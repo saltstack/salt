@@ -147,7 +147,7 @@ def verify(pwfile, user, password, opts='', runas=None):
     password matches.
 
     pwfile
-        Path to htpasswd file
+        Fully qualified path to htpasswd file
 
     user
         User name
