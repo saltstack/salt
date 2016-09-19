@@ -1584,6 +1584,8 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except (TypeError, ValueError) as e:
+        return {'error': '{0}'.format(e)}
 
 
 def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
