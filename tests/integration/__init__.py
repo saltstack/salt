@@ -543,7 +543,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
             pass
 
         terminate_process_pid(terminal.pid)
-        terminal.communicate()
+#        terminal.communicate()
 
     def terminate(self):
         '''
@@ -554,7 +554,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         self._connectable.clear()
         time.sleep(0.0125)
         terminate_process_pid(self._process.pid)
-        self._process.join()
+#        self._process.join()
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
