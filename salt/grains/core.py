@@ -884,9 +884,9 @@ def _windows_platform_data():
                           '8.1': '2012ServerR2',
                           '10': '2016Server'}
                 os_release = server.get(os_release,
-                                       'Grain not found. Update lookup table in '
-                                       'the `_window_platform_data` function in '
-                                       '`grains\\core.py`')
+                                        'Grain not found. Update lookup table '
+                                        'in the `_windows_platform_data` '
+                                        'function in `grains\\core.py`')
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
