@@ -1987,7 +1987,7 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
                 stages_to_remove.append(api)
 
         if not stages_to_remove:
-            ret['comment'] = 'Usage plan is already not asssociated to any  api stages'
+            ret['comment'] = 'Usage plan is already not asssociated to any api stages'
             return ret
 
         result = __salt__['boto_apigateway.detach_usage_plan_from_apis'](plan_id, stages_to_remove, **common_args)
