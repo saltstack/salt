@@ -863,21 +863,25 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
-        # the name of the OS comes with a bunch of other data about the install
-        # location. For example:
-        # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
         os_release = platform.release()
         info = salt.utils.win_osinfo.get_os_version_info()
-        if info['ProductType'] > 1:
-            server = {'Vista': '2008Server',
-                      '7': '2008ServerR2',
-                      '8': '2012Server',
-                      '8.1': '2012ServerR2',
-                      '10': '2016Server'}
-            os_release = server.get(os_release,
-                                   'Grain not found. Update lookup table in the '
-                                   '`_window_platform_data` function in '
-                                   '`grains\\core.py`')
+
+        # Starting with Python 2.7.12 and 3.5.2 python started reporting the
+        # Server version the OS as the Desktop version, so we need to look
+        # those up
+        ver = pythonversion()
+        if salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]) \
+                or salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]):
+            if info['ProductType'] > 1:
+                server = {'Vista': '2008Server',
+                          '7': '2008ServerR2',
+                          '8': '2012Server',
+                          '8.1': '2012ServerR2',
+                          '10': '2016Server'}
+                os_release = server.get(os_release,
+                                       'Grain not found. Update lookup table in '
+                                       'the `_window_platform_data` function in '
+                                       '`grains\\core.py`')
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
