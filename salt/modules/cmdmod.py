@@ -2635,7 +2635,7 @@ def shells():
     return ret
 
 
-def shell_info(name):
+def shell_info(shell):
     '''
     Provides information about a shell or languages often use #!
     The values returned are dependant on the shell or languages all return the
@@ -2643,7 +2643,7 @@ def shell_info(name):
     ``version_major_minor`` e.g. 5.0 or 6-3.
     The shell must be within the exeuctable search path.
 
-    :param str name: Name of the shell.
+    :param str shell: Name of the shell.
     Support are bash, cmd, perl, php, powershell, python, ruby and zsh
     :return: Properies of the shell specifically its and other information if
     available.
@@ -2685,7 +2685,7 @@ def shell_info(name):
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {}
     ret['installed'] = None
-    if salt.utils.is_windows() and name == 'powershell':
+    if salt.utils.is_windows() and shell == 'powershell':
         pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
@@ -2718,12 +2718,12 @@ def shell_info(name):
                         # keys are lower case as python is case sensitive the registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
     else:
-        if name not in regex_shells:
+        if shell not in regex_shells:
             return {
-                'error': 'Salt does not know how to get the version number for {0}'.format(name),
+                'error': 'Salt does not know how to get the version number for {0}'.format(shell),
                 'installed': None
             }
-        shell_data = regex_shells[name]
+        shell_data = regex_shells[shell]
         pattern = shell_data.pop(0)
         # We need to make sure HOME set, so shells work correctly
         # salt-call will general have home set, the salt-minion service may not
@@ -2765,7 +2765,7 @@ def shell_info(name):
             ret['version'] = pattern_result.group(1)
 
     if 'version' not in ret:
-        ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(name)
+        ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(shell)
         ret['version'] = None
         ret['stdout'] = proc.stdout  # include stdout so they can see the issue
         log.error(ret['error'])
