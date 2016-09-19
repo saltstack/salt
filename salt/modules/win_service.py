@@ -165,7 +165,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = ['net', 'start', name]
+    cmd = ['net', 'start', '/y', name]
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
@@ -183,7 +183,7 @@ def stop(name):
     # up if the service takes too long to stop with a misleading
     # "service could not be stopped" message and RC 0.
 
-    cmd = ['net', 'stop', name]
+    cmd = ['net', 'stop', '/y', name]
     res = __salt__['cmd.run'](cmd, python_shell=False)
     if 'service was stopped' in res:
         return True
