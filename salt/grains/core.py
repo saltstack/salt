@@ -866,15 +866,17 @@ def _windows_platform_data():
         os_release = platform.release()
         info = salt.utils.win_osinfo.get_os_version_info()
 
-        # Starting with Python 2.7.12 and 3.5.2 python started reporting the
-        # Server version the OS as the Desktop version, so we need to look
-        # those up
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # Check for Python >=2.7.12 or >=3.5.2
         ver = pythonversion()['pythonversion']
         if ((six.PY2 and
                 salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
             or
             (six.PY3 and
                 salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
+            # (Product Type 1 is Desktop, Everything else is Server)
             if info['ProductType'] > 1:
                 server = {'Vista': '2008Server',
                           '7': '2008ServerR2',
