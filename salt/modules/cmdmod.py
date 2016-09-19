@@ -2669,7 +2669,7 @@ def shell_info(name):
         'zsh': ['^zsh ([\\d.]+)', 'zsh', '--version'],
         'tcsh': ['^tcsh ([\\d.]+)', 'tcsh', '--version'],
         'cmd': ['Version ([\\d.]+)', 'cmd.exe', '/C', 'ver'],
-        'powershell': ['PSVersion\s+([\\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'powershell': ['PSVersion\\s+([\\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
         'perl': ['^([\\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
         'python': ['^Python ([\\d.]+)', 'python', '-V'],
         'ruby': ['^ruby ([\\d.]+)', 'ruby', '-v'],
@@ -2679,7 +2679,7 @@ def shell_info(name):
     ret = {}
     ret['installed'] = None
     if salt.utils.is_windows() and name == 'powershell':
-        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\Microsoft\PowerShell')
+        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
         if len(pw_keys) == 0:
             return {
@@ -2688,9 +2688,9 @@ def shell_info(name):
                 'version': None
             }
         for reg_ver in pw_keys:
-            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\Microsoft\PowerShell\{0}'.format(reg_ver), 'Install')
+            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver), 'Install')
             if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
-                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\Microsoft\PowerShell\{0}\PowerShellEngine'.format(reg_ver))
+                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
                 ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
                 ret['installed'] = True
                 ret['path'] = which('powershell.exe')
@@ -2698,12 +2698,12 @@ def shell_info(name):
                     if attribute['vname'].lower() == '(default)':
                         continue
                     elif attribute['vname'].lower() == 'powershellversion':
-                        ret['psversion']=attribute['vdata']
-                        ret['version']=attribute['vdata']
+                        ret['psversion'] = attribute['vdata']
+                        ret['version'] = attribute['vdata']
                     elif attribute['vname'].lower() == 'runtimeversion':
-                        ret['crlversion']=attribute['vdata']
+                        ret['crlversion'] = attribute['vdata']
                         if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
-                            ret['crlversion']=ret['crlversion'][1::]
+                            ret['crlversion'] = ret['crlversion'][1::]
                     elif attribute['vname'].lower() == 'pscompatibleversion':
                         # reg attribute does not end in s, the powershell attibute does
                         ret['pscompatibleversions'] = attribute['vdata']
@@ -2763,10 +2763,10 @@ def shell_info(name):
         ret['stdout'] = proc.stdout  # include stdout so they can see the issue
         log.error(ret['error'])
     else:
-        major_result=re.match('(\d+)', ret['version'])
+        major_result = re.match('(\\d+)', ret['version'])
         if major_result:
             ret['version_major'] = major_result.group(1)
-            major_minor_result = re.match('(\d+[-.]\d+)', ret['version'])
+            major_minor_result = re.match('(\\d+[-.]\\d+)', ret['version'])
             if major_minor_result:
                 ret['version_major_minor'] = major_minor_result.group(1)
 
