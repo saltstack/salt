@@ -869,9 +869,12 @@ def _windows_platform_data():
         # Starting with Python 2.7.12 and 3.5.2 python started reporting the
         # Server version the OS as the Desktop version, so we need to look
         # those up
-        ver = pythonversion()
-        if salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]) \
-                or salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]):
+        ver = pythonversion()['pythonversion']
+        if ((six.PY2 and
+                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
+            or
+            (six.PY3 and
+                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
             if info['ProductType'] > 1:
                 server = {'Vista': '2008Server',
                           '7': '2008ServerR2',
