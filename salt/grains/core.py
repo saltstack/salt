@@ -845,21 +845,21 @@ def _windows_platform_data():
     with salt.utils.winapi.Com():
         wmi_c = wmi.WMI()
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
-        system_info = wmi_c.Win32_ComputerSystem()[0]
+        systeminfo = wmi_c.Win32_ComputerSystem()[0]
         # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
-        os_info = wmi_c.Win32_OperatingSystem()[0]
+        osinfo = wmi_c.Win32_OperatingSystem()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
-        bios_info = wmi_c.Win32_BIOS()[0]
+        biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
-        time_info = wmi_c.Win32_TimeZone()[0]
+        timeinfo = wmi_c.Win32_TimeZone()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {'product': None,
                        'serial': None}
         try:
-            motherboard_info = wmi_c.Win32_BaseBoard()[0]
-            motherboard['product'] = motherboard_info.Product
-            motherboard['serial'] = motherboard_info.SerialNumber
+            motherboardinfo = wmi_c.Win32_BaseBoard()[0]
+            motherboard['product'] = motherboardinfo.Product
+            motherboard['serial'] = motherboardinfo.SerialNumber
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
@@ -893,20 +893,20 @@ def _windows_platform_data():
             service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
 
         grains = {
-            'kernelrelease': os_info.Version,
-            'osversion': os_info.Version,
+            'kernelrelease': osinfo.Version,
+            'osversion': osinfo.Version,
             'osrelease': os_release,
             'osservicepack': service_pack,
-            'osmanufacturer': os_info.Manufacturer,
-            'manufacturer': system_info.Manufacturer,
-            'productname': system_info.Model,
+            'osmanufacturer': osinfo.Manufacturer,
+            'manufacturer': systeminfo.Manufacturer,
+            'productname': systeminfo.Model,
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
-            'biosversion': bios_info.Name.strip(),
-            'serialnumber': bios_info.SerialNumber,
-            'osfullname': os_info.Caption,
-            'timezone': time_info.Description,
-            'windowsdomain': system_info.Domain,
+            'biosversion': biosinfo.Name.strip(),
+            'serialnumber': biosinfo.SerialNumber,
+            'osfullname': osinfo.Caption,
+            'timezone': timeinfo.Description,
+            'windowsdomain': systeminfo.Domain,
             'motherboard': {
                 'productname': motherboard['product'],
                 'serialnumber': motherboard['serial'],
@@ -915,19 +915,19 @@ def _windows_platform_data():
 
         # test for virtualized environments
         # I only had VMware available so the rest are unvalidated
-        if 'VRTUAL' in bios_info.Version:  # (not a typo)
+        if 'VRTUAL' in biosinfo.Version:  # (not a typo)
             grains['virtual'] = 'HyperV'
-        elif 'A M I' in bios_info.Version:
+        elif 'A M I' in biosinfo.Version:
             grains['virtual'] = 'VirtualPC'
-        elif 'VMware' in system_info.Model:
+        elif 'VMware' in systeminfo.Model:
             grains['virtual'] = 'VMware'
-        elif 'VirtualBox' in system_info.Model:
+        elif 'VirtualBox' in systeminfo.Model:
             grains['virtual'] = 'VirtualBox'
-        elif 'Xen' in bios_info.Version:
+        elif 'Xen' in biosinfo.Version:
             grains['virtual'] = 'Xen'
-            if 'HVM domU' in system_info.Model:
+            if 'HVM domU' in systeminfo.Model:
                 grains['virtual_subtype'] = 'HVM domU'
-        elif 'OpenStack' in system_info.Model:
+        elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
 
     return grains
