@@ -1639,13 +1639,16 @@ def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None
                                     'path': '/apiStages',
                                     'value': '{0}:{1}'.format(api['apiId'], api['stage'])
                                    })
-
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        res = conn.update_usage_plan(usagePlanId=plan_id,
-                                     patchOperations=patchOperations)
+        res = None
+        if patchOperations:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            res = conn.update_usage_plan(usagePlanId=plan_id,
+                                         patchOperations=patchOperations)
         return {'success': True, 'result': res}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+    except Exception as e:
+        return {'error': e}
 
 
 def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
