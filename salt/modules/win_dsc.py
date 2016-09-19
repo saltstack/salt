@@ -36,7 +36,7 @@ def __virtual__():
 
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if (
-           (powershell_info['installed'] == True) and
+           powershell_info['installed'] and
            ('version_major' in powershell_info) and
            (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
         ):
@@ -122,7 +122,7 @@ def psversion():
         'replaced by \'cmd.shell_info\'.'
     )
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed'] == True and 'version_major' in powershell_info:
+    if powershell_info['installed'] and 'version_major' in powershell_info:
         try:
             return int(powershell_info['version_major'])
         except ValueError:
