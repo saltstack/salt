@@ -1080,7 +1080,6 @@ def os_data():
         'gpus': [],
         }
 
-    # Python 2.7.8 Returns
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64',
     #  'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
