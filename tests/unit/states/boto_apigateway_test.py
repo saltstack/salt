@@ -29,6 +29,7 @@ from unit.modules.boto_apigateway_test import BotoApiGatewayTestCaseMixin
 # Import 3rd-party libs
 try:
     import boto3
+    import botocore
     from botocore.exceptions import ClientError
     HAS_BOTO = True
 except ImportError:
@@ -49,6 +50,7 @@ boto_apigateway.__opts__ = {}
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
+required_botocore_version = '1.4.49'
 
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -327,6 +329,18 @@ def _has_required_boto():
     if not HAS_BOTO:
         return False
     elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+        return False
+    else:
+        return True
+
+
+def _has_required_botocore():
+    '''
+    Returns True/False boolean depending on if botocore supports usage plan
+    '''
+    if not HAS_BOTO:
+        return False
+    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
         return False
     else:
         return True
@@ -987,10 +1001,14 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
         self.assertIs(result.get('result'), True)
         self.assertIsNot(result.get('abort'), True)
 
+
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
+@skipIf(_has_required_botocore() is False,
+        'The botocore module must be greater than'
+        ' or equal to version {0}'.format(required_botocore_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
@@ -1017,7 +1035,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
     @patch.dict(boto_apigateway.__opts__, {'test': True})
     def test_usage_plan_present_if_there_is_no_such_plan_and_test_option_is_set(self, *args):
         '''
-        TestCse for salt.modules.boto_apigateway state.module, checking that if __opts__['test'] is set 
+        TestCse for salt.modules.boto_apigateway state.module, checking that if __opts__['test'] is set
         and usage plan does not exist, correct diagnostic will be returned
         '''
         result = {}
@@ -1038,7 +1056,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         result = {}
 
         result = boto_apigateway.usage_plan_present('name', 'plan_name', **conn_parameters)
- 
+
         self.assertIn('result', result)
         self.assertEqual(result['result'], False)
         self.assertIn('comment', result)
@@ -1129,8 +1147,8 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['changes']['old'], {'plan': None})
         self.assertEqual(result['changes']['new'], {'plan': {'id': 'id'}})
 
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': [{'id': 'id'}]}, 
-                                                                                                          {'plans': [{'id': 'id', 
+    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=[{'plans': [{'id': 'id'}]},
+                                                                                                          {'plans': [{'id': 'id',
                                                                                                                       'throttle': {'rateLimit': throttle_rateLimit}}]}])})
     @patch.dict(boto_apigateway.__opts__, {'test': False})
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.update_usage_plan': MagicMock(return_value={'updated': True})})
@@ -1210,7 +1228,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['changes'], {})
 
     @patch.dict(boto_apigateway.__opts__, {'test': True})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id':'id'}]})})
+    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
     def test_usage_plan_absent_if_plan_is_present_but_test_option_is_set(self, *args):
         '''
         Tests behavior for the case when usage plan needs to be deleted by tests option is set
@@ -1227,7 +1245,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['changes'], {})
 
     @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id':'id'}]})})
+    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.delete_usage_plan': MagicMock(return_value={'error': 'error'})})
     def test_usage_plan_absent_if_plan_is_present_but_delete_fails(self, *args):
         '''
@@ -1245,7 +1263,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['changes'], {})
 
     @patch.dict(boto_apigateway.__opts__, {'test': False})
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id':'id'}]})})
+    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id'}]})})
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.delete_usage_plan': MagicMock(return_value={'deleted': True})})
     def test_usage_plan_absent_if_plan_has_been_deleted(self, *args):
         '''
@@ -1275,7 +1293,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertEqual(result['result'], False)
         self.assertIn('comment', result)
         self.assertEqual(result['comment'], "('error',)")
- 
+
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(side_effect=IOError('error'))})
     def test_usage_plan_absent_if_IOError_is_raised(self, *args):
         '''
@@ -1290,10 +1308,14 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
         self.assertIn('comment', result)
         self.assertEqual(result['comment'], "('error',)")
 
+
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
+@skipIf(_has_required_botocore() is False,
+        'The botocore module must be greater than'
+        ' or equal to version {0}'.format(required_botocore_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
@@ -1332,7 +1354,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
         self.assertIn('changes', result)
         self.assertEqual(result['changes'], {})
 
-    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'}, 
+    @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1'},
                                                                                                                      {'id': 'id2'}]})})
     def test_usage_plan_association_present_if_multiple_plans_with_the_same_name_exist(self, *args):
         '''
@@ -1350,7 +1372,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
         self.assertEqual(result['changes'], {})
 
     @patch.dict(boto_apigateway.__salt__, {'boto_apigateway.describe_usage_plans': MagicMock(return_value={'plans': [{'id': 'id1',
-                                                                                                                      'apiStages': 
+                                                                                                                      'apiStages':
                                                                                                                         [association_stage_1]}]})})
     def test_usage_plan_association_present_if_association_already_exists(self, *args):
         '''
@@ -1586,4 +1608,3 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
         self.assertEqual(result['comment'], "('error',)")
         self.assertIn('changes', result)
         self.assertEqual(result['changes'], {})
- 
