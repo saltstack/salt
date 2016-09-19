@@ -183,6 +183,10 @@ class SaltEvent(object):
                                operation for obtaining events. Eg use of
                                set_event_handler() API. Otherwise, operation
                                will be synchronous.
+        :param Bool keep_loop: Pass a boolean to determine if we want to keep
+                               the io loop or destroy it when the event handle
+                               is destroyed. This is useful when using event
+                               loops from within third party async code
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.keep_loop = keep_loop
