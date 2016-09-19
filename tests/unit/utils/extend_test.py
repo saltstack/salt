@@ -13,17 +13,17 @@ import os
 import shutil
 from datetime import date
 
-# Import salt libs
-import salt.utils.extend
-from salt.utils import fopen
-import integration
-
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch
 
 ensure_in_syspath('../../')
+
+# Import salt libs
+import salt.utils.extend
+import integration
+import salt.utils
 
 
 class ExtendTestCase(TestCase):
@@ -44,7 +44,7 @@ class ExtendTestCase(TestCase):
         self.assertFalse(os.path.exists(os.path.join(out, 'template.yml')))
         self.assertTrue(os.path.exists(os.path.join(out, 'directory')))
         self.assertTrue(os.path.exists(os.path.join(out, 'directory', 'test.py')))
-        with fopen(os.path.join(out, 'directory', 'test.py'), 'r') as test_f:
+        with salt.utils.fopen(os.path.join(out, 'directory', 'test.py'), 'r') as test_f:
             self.assertEqual(test_f.read(), year)
 
 if __name__ == '__main__':

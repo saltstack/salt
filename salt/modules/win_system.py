@@ -31,6 +31,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.locales
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -354,7 +355,7 @@ def set_computer_name(name):
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
-    if name and not isinstance(name, str):
+    if name and six.PY2:
         name = name.decode('utf-8')
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
