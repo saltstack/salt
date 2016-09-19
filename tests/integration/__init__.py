@@ -1641,6 +1641,9 @@ class SaltMinionEventAssertsMixIn(object):
         cls.fetch_proc.start()
         return object.__new__(cls)
 
+    def __exit__(self, *args, **kwargs):
+        self.fetch_proc.join()
+
     @staticmethod
     def _fetch(q):
         '''
@@ -1651,7 +1654,6 @@ class SaltMinionEventAssertsMixIn(object):
             while not q.empty():
                 queue_item = q.get()
                 queue_item.task_done()
-            self.fetch_proc.join()
 
         atexit.register(_clean_queue)
         a_config = AdaptedConfigurationTestCaseMixIn()
