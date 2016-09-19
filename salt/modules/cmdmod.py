@@ -2663,11 +2663,11 @@ def shell_info(name):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     regex_shells = {
-        'bash': ['version ([-\w.]+)','bash', '--version'],
-        'bash-test-error': ['versioZ ([-\w.]+)','bash', '--version'], # used to test a error result
-        'bash-test-env': ['(HOME=.*)','bash', '-c', 'declare'], # used to test a error result
-        'zsh': ['^zsh ([\d.]+)','zsh', '--version'],
-        'tcsh': ['^tcsh ([\d.]+)','tcsh', '--version'],
+        'bash': ['version ([-\w.]+)', 'bash', '--version'],
+        'bash-test-error': ['versioZ ([-\w.]+)', 'bash', '--version'], # used to test a error result
+        'bash-test-env': ['(HOME=.*)', 'bash', '-c', 'declare'], # used to test a error result
+        'zsh': ['^zsh ([\d.]+)', 'zsh', '--version'],
+        'tcsh': ['^tcsh ([\d.]+)', 'tcsh', '--version'],
         'cmd': ['Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
         'powershell': ['PSVersion\s+([\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
         'perl': ['^([\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
@@ -2675,55 +2675,57 @@ def shell_info(name):
         'ruby': ['^ruby ([\d.]+)', 'ruby', '-v'],
         'php': ['^PHP ([\d.]+)', 'php', '-v']
     }
+    # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {}
+    ret['installed'] = None
     if salt.utils.is_windows() and name == 'powershell':
-       pw_keys=__salt__['reg.list_keys']('HKEY_LOCAL_MACHINE','Software\Microsoft\PowerShell')
-       pw_keys.sort(key=int)
-       if len(pw_keys) == 0:
-           return {
+        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\Microsoft\PowerShell')
+        pw_keys.sort(key=int)
+        if len(pw_keys) == 0:
+            return {
                 'error': 'Unable to locate \'powershell\' Reason: Cannot be found in registry.',
                 'installed': False,
                 'version': None
-           }
-       for reg_ver in pw_keys:
-          install_data=__salt__['reg.read_value']('HKEY_LOCAL_MACHINE','Software\Microsoft\PowerShell\{0}'.format(reg_ver),'Install')
-          if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
-             details=__salt__['reg.list_values']('HKEY_LOCAL_MACHINE','Software\Microsoft\PowerShell\{0}\PowerShellEngine'.format(reg_ver))
-             ret={} # reset data, want the newest version details only as powershell is backwards compatible
-             ret['installed'] = True
-             ret['path'] = which('powershell.exe')
-             for attribute in details:
-                 if attribute['vname'].lower() == '(default)':
-                     continue
-                 elif attribute['vname'].lower() == 'powershellversion':
-                     ret['psversion']=attribute['vdata']
-                     ret['version']=attribute['vdata']
-                 elif attribute['vname'].lower() == 'runtimeversion':
-                     ret['crlversion']=attribute['vdata']
-                     if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
-                         ret['crlversion']=ret['crlversion'][1::]
-                 elif attribute['vname'].lower() == 'pscompatibleversion':
-                     # reg attribute does not end in s, the powershell attibute does
-                     ret['pscompatibleversions']=attribute['vdata']
-                 else:
-                     # keys are lower case as python is case sensitive the registry is not
-                     ret[attribute['vname'].lower()]=attribute['vdata']
+            }
+        for reg_ver in pw_keys:
+            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\Microsoft\PowerShell\{0}'.format(reg_ver),'Install')
+            if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
+                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE','Software\Microsoft\PowerShell\{0}\PowerShellEngine'.format(reg_ver))
+                ret = {} # reset data, want the newest version details only as powershell is backwards compatible
+                ret['installed'] = True
+                ret['path'] = which('powershell.exe')
+                for attribute in details:
+                    if attribute['vname'].lower() == '(default)':
+                        continue
+                    elif attribute['vname'].lower() == 'powershellversion':
+                        ret['psversion']=attribute['vdata']
+                        ret['version']=attribute['vdata']
+                    elif attribute['vname'].lower() == 'runtimeversion':
+                        ret['crlversion']=attribute['vdata']
+                        if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
+                            ret['crlversion']=ret['crlversion'][1::]
+                    elif attribute['vname'].lower() == 'pscompatibleversion':
+                        # reg attribute does not end in s, the powershell attibute does
+                        ret['pscompatibleversions'] = attribute['vdata']
+                    else:
+                        # keys are lower case as python is case sensitive the registry is not
+                        ret[attribute['vname'].lower()] = attribute['vdata']
     else:
         if name not in regex_shells:
-           return {
-               'error': 'Salt does not know how to get the version number for {0}'.format(name),
-               'installed': None
-           }
+            return {
+                'error': 'Salt does not know how to get the version number for {0}'.format(name),
+                'installed': None
+            }
         shell_data = regex_shells[name]
         pattern = shell_data.pop(0)
         # We need to make sure HOME set, so shells work correctly
         # salt-call will general have home set, the salt-minion service may not
         # We need to assume ports of unix shells to windows will look after themselves
         # in setting HOME as they do it in many different ways
-        newenv=os.environ
+        newenv = os.environ
         if ('HOME' not in newenv) and (not salt.utils.is_windows()):
-          newenv['HOME'] = os.path.expanduser('~')
-          log.error('HOME environment set to {0}'.format(newenv['HOME']))
+            newenv['HOME'] = os.path.expanduser('~')
+            log.error('HOME environment set to {0}'.format(newenv['HOME']))
         try:
             proc = salt.utils.timed_subprocess.TimedProc(
                 shell_data,
@@ -2750,22 +2752,22 @@ def shell_info(name):
         ret['stdout'] = proc.stdout
         ret['installed'] = True
         ret['path'] = which(shell_data[0])
-        pattern_result=re.search( pattern, proc.stdout, flags=re.IGNORECASE)
+        pattern_result = re.search( pattern, proc.stdout, flags=re.IGNORECASE)
         # only set version if we find it, so code later on can deal with it
         if pattern_result:
-           ret['version']=pattern_result.group(1)
+            ret['version'] = pattern_result.group(1)
 
     if 'version' not in ret:
         ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(name)
         ret['version'] = None
         log.error(ret['error'])
     else:
-       major_result=re.match('(\d+)',ret['version'])
-       if major_result:
-           ret['version_major']=major_result.group(1)
-           major_minor_result=re.match('(\d+[-.]\d+)',ret['version'])
-           if major_minor_result:
-               ret['version_major_minor']=major_minor_result.group(1)
+        major_result=re.match('(\d+)',ret['version'])
+        if major_result:
+            ret['version_major'] = major_result.group(1)
+            major_minor_result = re.match('(\d+[-.]\d+)',ret['version'])
+            if major_minor_result:
+                ret['version_major_minor'] = major_minor_result.group(1)
 
     return ret
 

@@ -36,7 +36,7 @@ def __virtual__():
 
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if (
-           (powershell_info['installed'] == True) and
+           powershell_info['installed'] and
            ('version_major' in powershell_info) and
            (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
        ):
@@ -61,12 +61,12 @@ def _pshell(cmd, cwd=None):
     if 'retcode' not in results or results['retcode'] != 0:
         error='Issue executing powershell {0}'.format(cmd)
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(error,info=results)
+        raise CommandExecutionError(error, info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
     except ValueError:
-        raise CommandExecutionError('No JSON results from powershell',info=results)
+        raise CommandExecutionError('No JSON results from powershell', info=results)
 
     return ret
 
@@ -91,7 +91,7 @@ def psversion():
         'replaced by \'cmd.shell_info\'.'
     )
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed'] == True and 'version_major' in powershell_info:
+    if powershell_info['installed'] and 'version_major' in powershell_info:
         try:
             return int(powershell_info['version_major'])
         except ValueError:
