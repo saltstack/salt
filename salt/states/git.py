@@ -1142,6 +1142,20 @@ def latest(name,
                 else:
                     branch_opts = None
 
+                if branch_opts is not None and local_branch is None:
+                    return _fail(
+                        ret,
+                        'Cannot set/unset upstream tracking branch, local '
+                        'HEAD refers to nonexistent branch. This may have '
+                        'been caused by cloning a remote repository for which '
+                        'the default branch was renamed or deleted. If you '
+                        'are unable to fix the remote repository, you can '
+                        'work around this by setting the \'branch\' argument '
+                        '(which will ensure that the named branch is created '
+                        'if it does not already exist).',
+                        comments
+                    )
+
                 if not has_remote_rev:
                     try:
                         fetch_changes = __salt__['git.fetch'](
@@ -1560,6 +1574,21 @@ def latest(name,
 
                     local_rev, local_branch = \
                         _get_local_rev_and_branch(target, user, password)
+
+                    if local_branch is None \
+                            and remote_rev is not None \
+                            and 'HEAD' not in all_remote_refs:
+                        return _fail(
+                            ret,
+                            'Remote HEAD refers to a ref that does not exist. '
+                            'This can happen when the default branch on the '
+                            'remote repository is renamed or deleted. If you '
+                            'are unable to fix the remote repository, you can '
+                            'work around this by setting the \'branch\' argument '
+                            '(which will ensure that the named branch is created '
+                            'if it does not already exist).',
+                            comments
+                        )
 
                     if not _revs_equal(local_rev, remote_rev, remote_rev_type):
                         __salt__['git.reset'](
