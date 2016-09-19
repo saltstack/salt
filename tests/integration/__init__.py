@@ -1651,6 +1651,7 @@ class SaltMinionEventAssertsMixIn(object):
             while not q.empty():
                 queue_item = q.get()
                 queue_item.task_done()
+            self.fetch_proc.join()
 
         atexit.register(_clean_queue)
         a_config = AdaptedConfigurationTestCaseMixIn()
