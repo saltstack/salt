@@ -2638,20 +2638,27 @@ def shells():
 def shell_info(name):
     '''
     Provides information about a shell or languages often use #!
-    The values returned are dependant on the shell or languages all return
-    the ``version`` ``version_major`` and ``version_major_minor`` e.g. 5.0 or 6-3.
+    The values returned are dependant on the shell or languages all return the
+    ``installed``, ``path``, ``version``, ``version_major`` and
+    ``version_major_minor`` e.g. 5.0 or 6-3.
     The shell must be within the exeuctable search path.
 
     :param str name: Name of the shell.
     Support are bash, cmd, perl, php, powershell, python, ruby and zsh
-    :return: Properies of the shell specifically its version and stdout
-    and other information if available.
+    :return: Properies of the shell specifically its and other information if
+    available.
     :rtype: dict
+       
     .. code-block:: cfg
-        {'version': '<version string>
-         'version_major': '<version string'
-         'version_minor': '<version string>'
+        {'version': '<version string>',
+         'version_major': '<version string',
+         'version_minor': '<version string>',
+         'path': '<full path to binary>',
+         'installed': <True, False or None>,
          '<attribute>': '<attribute value>'}
+
+    ``installed`` is always returned, if None or False also returns error and
+     may also return stdout for diagnostics.
 
     .. versionadded:: 2016.9.0
 
@@ -2725,7 +2732,7 @@ def shell_info(name):
         newenv = os.environ
         if ('HOME' not in newenv) and (not salt.utils.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
-            log.error('HOME environment set to {0}'.format(newenv['HOME']))
+            log.debug('HOME environment set to {0}'.format(newenv['HOME']))
         try:
             proc = salt.utils.timed_subprocess.TimedProc(
                 shell_data,
