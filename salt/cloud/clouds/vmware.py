@@ -272,6 +272,15 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
     return disk_spec
 
 
+def _edit_existing_hard_disk_mode_helper(disk, mode):
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    disk.backing.diskMode = mode
+    disk_spec.device = disk
+
+    return disk_spec
+
+
 def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False):
     random_key = randint(-2099, -2000)
 
@@ -612,15 +621,30 @@ def _manage_devices(devices, vm=None, container_ref=None):
             if isinstance(device, vim.vm.device.VirtualDisk):
                 # this is a hard disk
                 if 'disk' in list(devices.keys()):
-                    # there is atleast one disk specified to be created/configured
+                    # there is at least one disk specified to be created/configured
                     unit_number += 1
                     existing_disks_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['disk'].keys()):
-                        size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                        size_kb = int(size_gb * 1024.0 * 1024.0)
-                        if device.capacityInKB < size_kb:
-                            # expand the disk
-                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        disk_spec = None
+                        if 'size' in devices['disk'][device.deviceInfo.label]:
+                            disk_spec = _get_size_spec(device, devices)
+
+                        if 'mode' in devices['disk'][device.deviceInfo.label]:
+                            if devices['disk'][device.deviceInfo.label]['mode'] \
+                                in [
+                                    'independent_persistent',
+                                    'persistent',
+                                    'independent_nonpersistent',
+                                    'nonpersistent',
+                                    'undoable',
+                                    'append'
+                            ]:
+                                disk_spec = _get_mode_spec(device, devices, disk_spec)
+                            else:
+                                raise SaltCloudSystemExit('Invalid disk'
+                                                          ' backing mode'
+                                                          ' specified!')
+                        if disk_spec:
                             device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
@@ -775,6 +799,31 @@ def _manage_devices(devices, vm=None, container_ref=None):
     }
 
     return ret
+
+
+def _get_mode_spec(device, devices, disk_spec):
+    if device.backing.diskMode != \
+            devices['disk'][device.deviceInfo.label]['mode']:
+        if not disk_spec:
+            disk_spec = \
+                _edit_existing_hard_disk_mode_helper(
+                    device,
+                    devices['disk'][device.deviceInfo.label]['mode']
+                )
+        else:
+            disk_spec.device.backing.diskMode = \
+                devices['disk'][device.deviceInfo.label]['mode']
+    return disk_spec
+
+
+def _get_size_spec(device, devices):
+    size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+    size_kb = int(size_gb * 1024.0 * 1024.0)
+    disk_spec = None
+    if device.capacityInKB < size_kb:
+        # expand the disk
+        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+    return disk_spec
 
 
 def _wait_for_vmware_tools(vm_ref, max_wait):
