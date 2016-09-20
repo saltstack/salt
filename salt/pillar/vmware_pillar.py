@@ -72,13 +72,15 @@ Optionally, the following keyword arguments can be passed to the ext_pillar for 
 
         To explicitly specify deeper attributes without attempting to recurse an attribute, convert the list
         item to a dict with the item of the dict being the child attributes to return.  Follow this pattern
-        to return attributes as deep within the object as necessasry.
+        to return attributes as deep within the object as necessary.
 
         .. note::
             Be careful when specifying custom attributes!  Many attributes have objects as attributes which
             have the parent object as an attribute and which will cause the pillar to fail due to the attempt
             to convert all sub-objects recursively (i.e. infinite attribute loops).  Specifying only the
             sub-attributes you would like returned will keep the infinite recursion from occurring.
+
+            A maximum recursion exception will occur in this case and the pillar will not return as desired.
 
         .. code-block:: yaml
 
