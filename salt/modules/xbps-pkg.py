@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Package support for XBPS packaging system (VoidLinux distribution)
+Package support for XBPS package manager (used by VoidLinux)
 
-XXX what about the initial acceptance of repo's fingerprint when adding a new repo ?
-
-XXX can be used as a provider if module virtual's name not defined to 'pkg' ?
-XXX please fix "versionadded" in this file on once merged into SaltStack.
+.. versionadded:: Carbon
 '''
 
+# TODO: what about the initial acceptance of repo's fingerprint when adding a
+# new repo?
 
 # Import python libs
 from __future__ import absolute_import
@@ -25,6 +24,15 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
+
+
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is Void and xbps-install found
+    '''
+    if __grains__['os'] in ('Void') and _check_xbps():
+        return __virtualname__
+    return False
 
 
 @decorators.memoize
@@ -67,22 +75,11 @@ def _rehash():
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
-def __virtual__():
-    '''
-    Set the virtual pkg module if the os is Void and xbps-install found
-    '''
-    if __grains__['os'] in ('Void') and _check_xbps():
-        return __virtualname__
-    return False
-
-
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
-
-    .. versionadded:: XXX 201X.XX
 
     CLI Example:
 
@@ -172,8 +169,6 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -247,8 +242,6 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -261,8 +254,6 @@ def upgrade_available(name):
 def refresh_db():
     '''
     Update list of available packages from installed repos
-
-    .. versionadded:: XXX 201X.XX
 
     CLI Example:
 
@@ -288,8 +279,6 @@ def version(*names, **kwargs):
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -313,8 +302,6 @@ def upgrade(refresh=True):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -322,22 +309,27 @@ def upgrade(refresh=True):
         salt '*' pkg.upgrade
     '''
 
-    # XXX if xbps has to be upgraded, 2 times is required to fully upgrade system:
-    #     one for xbps, a subsequent one for all other packages.
-    #     Not handled in this code.
+    # XXX if xbps has to be upgraded, 2 times is required to fully upgrade
+    # system: one for xbps, a subsequent one for all other packages. Not
+    # handled in this code.
 
     old = list_pkgs()
 
-    arg = ""
-    if refresh:
-        arg = "S"
-
-    cmd = ' '.join(['xbps-install', ''.join(['-', arg, 'yu'])])
-
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['xbps-install', '-{0}yu'.format('S' if refresh else '')]
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
+
+    return ret
 
 
 def install(name=None, refresh=False, fromrepo=None,
@@ -382,8 +374,6 @@ def install(name=None, refresh=False, fromrepo=None,
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
-
-    .. versionadded:: XXX 201X.XX
 
     CLI Example:
 
@@ -446,8 +436,6 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
 
     Returns a list containing the removed packages.
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -489,8 +477,6 @@ def list_repos():
     '''
     List all repos known by XBPS
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Example:
 
     .. code-block:: bash
@@ -518,8 +504,6 @@ def list_repos():
 def get_repo(repo, **kwargs):
     '''
     Display information about the repo.
-
-    .. versionadded:: XXX 201X.XX
 
     CLI Examples:
 
@@ -589,8 +573,6 @@ def add_repo(repo, conffile='/usr/share/xbps.d/15-saltstack.conf'):
         path to xbps conf file to add this repo
         default: /usr/share/xbps.d/15-saltstack.conf
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Examples:
 
     .. code-block:: bash
@@ -615,8 +597,6 @@ def del_repo(repo):
     repo
         url of repo to remove (persistent).
 
-    .. versionadded:: XXX 201X.XX
-
     CLI Examples:
 
     .. code-block:: bash
@@ -630,6 +610,3 @@ def del_repo(repo):
         return False
     else:
         return True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -421,11 +421,6 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     pkgin = _check_pkgin()
     if not pkgin:
         # There is not easy way to upgrade packages with old package system
@@ -434,23 +429,18 @@ def upgrade():
     old = list_pkgs()
 
     cmd = [pkgin, '-y', 'fug']
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
 
-    for field in ret.keys():
-        if not ret[field] or ret[field] == '':
-            del ret[field]
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 

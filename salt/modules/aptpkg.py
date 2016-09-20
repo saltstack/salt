@@ -1034,11 +1034,6 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
         refresh_db(cache_valid_time)
@@ -1058,19 +1053,19 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
                 '-o', 'DPkg::Options::=--force-confdef'])
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True,
-                                   env=DPKG_ENV_VARS.copy())
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False,
+                                     env=DPKG_ENV_VARS.copy())
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 

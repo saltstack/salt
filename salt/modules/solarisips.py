@@ -197,11 +197,6 @@ def upgrade(refresh=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     if salt.utils.is_true(refresh):
         refresh_db()
 
@@ -212,22 +207,17 @@ def upgrade(refresh=False, **kwargs):
     # Install or upgrade the package
     # If package is already installed
     cmd = ['pkg', 'update', '-v', '--accept']
-    out = __salt__['cmd.run_all'](cmd,
-                                  output_loglevel='trace',
-                                  python_shell=False)
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if result['retcode'] != 0:
         raise CommandExecutionError(
-            'Error occurred updating package(s)',
-            info={
-                'changes': ret,
-                'retcode': ips_pkg_return_values[out['retcode']],
-                'errors': [out['stderr']]
-            }
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
         )
 
     return ret

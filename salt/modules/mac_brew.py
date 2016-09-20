@@ -75,24 +75,20 @@ def _homebrew_bin():
     return ret
 
 
-def _call_brew(cmd, redirect_stderr=False):
+def _call_brew(cmd, failhard=True):
     '''
     Calls the brew command with the user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
     runas = user if user != __opts__['user'] else None
-    ret = __salt__['cmd.run_all'](cmd,
-                                  runas=runas,
-                                  output_loglevel='trace',
-                                  python_shell=False,
-                                  redirect_stderr=redirect_stderr)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(
-            'stdout: {stdout}\n'
-            'stderr: {stderr}\n'
-            'retcode: {retcode}\n'.format(**ret)
-        )
-    return ret
+    result = __salt__['cmd.run_all'](cmd,
+                                     runas=runas,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    if failhard and result['retcode'] != 0:
+        raise CommandExecutionError('Brew command failed',
+                                    info={'result': result})
+    return result
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -471,17 +467,16 @@ def upgrade(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    cmd = 'brew upgrade'
-    call = _call_brew(cmd, redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = _call_brew('brew upgrade', failhard=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
