@@ -109,7 +109,7 @@ a change is detected.
     ``salt myminion pkg.install python-inotify``.
 
 First, on the Salt minion, add the following beacon configuration to
-``/ect/salt/minion``:
+``/etc/salt/minion``:
 
 .. code-block:: yaml
 

@@ -406,7 +406,13 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    if not status(name):
+    # net stop issues a stop command and waits briefly (~30s), but will give
+    # up if the service takes too long to stop with a misleading
+    # "service could not be stopped" message and RC 0.
+
+    cmd = ['net', 'stop', '/y', name]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
+    if 'service was stopped' in res:
         return True
 
     try:
