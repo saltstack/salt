@@ -584,7 +584,7 @@ Example of a minimal profile:
 Cloning from a Snapshot
 =======================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.3.4
 
 Cloning a template works similar to cloning a VM except for the fact that
 a snapshot number must be provided.
