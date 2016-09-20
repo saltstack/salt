@@ -449,7 +449,7 @@ class Schedule(object):
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
-                        yaml.dump({'schedule': self.opts['schedule']})
+                        yaml.dump({'schedule': self.option('schedule')})
                     )
                 )
         except (IOError, OSError):
@@ -462,9 +462,9 @@ class Schedule(object):
         '''
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
-            if name in self.opts['schedule']:
-                del self.opts['schedule'][name]
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            if name in schedule:
+                del schedule[name]
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
@@ -491,10 +491,10 @@ class Schedule(object):
         '''
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
-            for job in list(self.opts['schedule'].keys()):
+            schedule = self.option('schedule')
+            for job in list(schedule.keys()):
                 if job.startswith(name):
-                    del self.opts['schedule'][job]
-            schedule = self.opts['schedule']
+                    del schedule[job]
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
@@ -539,17 +539,18 @@ class Schedule(object):
 
         new_job = next(six.iterkeys(data))
 
-        if new_job in self.opts['schedule']:
+        schedule = self.option('schedule')
+        if new_job in schedule:
             log.info('Updating job settings for scheduled '
                      'job: {0}'.format(new_job))
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
 
-        self.opts['schedule'].update(data)
+        schedule.update(data)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_add_complete')
 
         if persist:
@@ -563,8 +564,8 @@ class Schedule(object):
             self.opts['pillar']['schedule'][name]['enabled'] = True
             schedule = self.opts['pillar']['schedule']
         else:
-            self.opts['schedule'][name]['enabled'] = True
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            schedule[name]['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -584,8 +585,8 @@ class Schedule(object):
             self.opts['pillar']['schedule'][name]['enabled'] = False
             schedule = self.opts['pillar']['schedule']
         else:
-            self.opts['schedule'][name]['enabled'] = False
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            schedule[name]['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -606,9 +607,9 @@ class Schedule(object):
                 self.delete_job(name, persist, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
-            if name in self.opts['schedule']:
+            if name in self.option('schedule'):
                 self.delete_job(name, persist, where=where)
-            self.opts['schedule'][name] = schedule
+            self.option('schedule')[name] = schedule
 
         if persist:
             self.persist()
@@ -617,7 +618,7 @@ class Schedule(object):
         '''
         Run a schedule job now
         '''
-        schedule = self.opts['schedule']
+        schedule = self.option('schedule')
         if 'schedule' in self.opts['pillar']:
             schedule.update(self.opts['pillar']['schedule'])
         data = schedule[name]
@@ -664,22 +665,24 @@ class Schedule(object):
         '''
         Enable the scheduler.
         '''
-        self.opts['schedule']['enabled'] = True
+        schedule = self.option('schedule')
+        schedule['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
     def disable_schedule(self):
         '''
         Disable the scheduler.
         '''
-        self.opts['schedule']['enabled'] = False
+        schedule = self.option('schedule')
+        schedule['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
@@ -702,9 +705,9 @@ class Schedule(object):
             if 'schedule' in self.opts['pillar']:
                 schedule.update(self.opts['pillar']['schedule'])
         elif where == 'opts':
-            schedule.update(self.opts['schedule'])
+            schedule.update(self.option('schedule'))
         else:
-            schedule.update(self.opts['schedule'])
+            schedule.update(self.option('schedule'))
             if 'schedule' in self.opts['pillar']:
                 schedule.update(self.opts['pillar']['schedule'])
 
