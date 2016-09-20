@@ -184,10 +184,16 @@ except ImportError:
             kill_children(children)
 
             if children:
-                psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
+                try:
+                    psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
+                except psutil.AccessDenied:
+                    kill_children(children, terminate=True)
 
             if children:
-                psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
+                try:
+                    psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
+                except psutils.AccessDenied:
+                    kill_children(children, kill=True)
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
