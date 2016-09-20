@@ -11,7 +11,6 @@ group, mode, and data
 from __future__ import absolute_import, print_function
 
 # Import python libs
-import contextlib  # For < 2.7 compat
 import datetime
 import difflib
 import errno
@@ -4050,10 +4049,9 @@ def check_file_meta(
                     if bdiff:
                         changes['diff'] = bdiff
                     else:
-                        with contextlib.nested(
-                                salt.utils.fopen(sfn, 'r'),
-                                salt.utils.fopen(name, 'r')) as (src, name_):
+                        with salt.utils.fopen(sfn, 'r') as src:
                             slines = src.readlines()
+                        with salt.utils.fopen(name, 'r') as name_:
                             nlines = name_.readlines()
                         changes['diff'] = \
                             ''.join(difflib.unified_diff(nlines, slines))
@@ -4064,12 +4062,11 @@ def check_file_meta(
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(tmp, 'wb') as tmp_:
-            tmp_.write(str(contents))
+            tmp_.write(salt.utils.to_bytes(str(contents)))
         # Compare the static contents with the named file
-        with contextlib.nested(
-                salt.utils.fopen(tmp, 'r'),
-                salt.utils.fopen(name, 'r')) as (src, name_):
+        with salt.utils.fopen(tmp, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(name, 'r') as name_:
             nlines = name_.readlines()
         __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
@@ -4121,10 +4118,9 @@ def get_diff(
 
     sfn = __salt__['cp.cache_file'](masterfile, saltenv)
     if sfn:
-        with contextlib.nested(salt.utils.fopen(sfn, 'r'),
-                               salt.utils.fopen(minionfile, 'r')) \
-                as (src, name_):
+        with salt.utils.fopen(sfn, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(minionfile, 'r') as name_:
             nlines = name_.readlines()
         if ''.join(nlines) != ''.join(slines):
             bdiff = _binary_replace(minionfile, sfn)
@@ -4310,10 +4306,9 @@ def manage_file(name,
                 if bdiff:
                     ret['changes']['diff'] = bdiff
                 else:
-                    with contextlib.nested(
-                            salt.utils.fopen(sfn, 'r'),
-                            salt.utils.fopen(real_name, 'r')) as (src, name_):
+                    with salt.utils.fopen(sfn, 'r') as src:
                         slines = src.readlines()
+                    with salt.utils.fopen(real_name, 'r') as name_:
                         nlines = name_.readlines()
 
                     sndiff = ''.join(difflib.unified_diff(nlines, slines))
@@ -4340,10 +4335,9 @@ def manage_file(name,
                 tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
-            with contextlib.nested(
-                    salt.utils.fopen(tmp, 'r'),
-                    salt.utils.fopen(real_name, 'r')) as (src, name_):
+            with salt.utils.fopen(tmp, 'r') as src:
                 slines = src.readlines()
+            with salt.utils.fopen(real_name, 'r') as name_:
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
 
