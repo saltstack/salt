@@ -1615,3 +1615,393 @@ class _Swagger(object):
                     ret = self._deploy_method(ret, path, method, method_data, api_key_required,
                                               lambda_integration_role, lambda_region, authorization_type)
         return ret
+
+
+def usage_plan_present(name, plan_name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the spcifieda usage plan with the corresponding metrics is deployed
+
+    name
+        name of the state
+
+    plan_name
+        [Required] name of the usage plan
+
+    throttle
+        [Optional] throttling parameters expressed as a dictionary.
+        If provided, at least one of the throttling parameters must be present
+
+        rateLimit
+            rate per second at which capacity bucket is populated
+
+        burstLimit
+            maximum rate allowed
+
+    quota
+        [Optional] quota on the number of api calls permitted by the plan.
+        If provided, limit and period must be present
+
+        limit
+            [Required] number of calls permitted per quota period
+
+        offset
+            [Optional] number of calls to be subtracted from the limit at the beginning of the period
+
+        period
+            [Required] period to which quota applies. Must be DAY, WEEK or MONTH
+
+    .. code-block:: yaml
+        UsagePlanPresent:
+            boto_apigateway.usage_plan_present:
+                - plan_name: my_usage_plan
+                - throttle:
+                    rateLimit: 70
+                    burstLimit: 100
+                - quota:
+                    limit: 1000
+                    offset: 0
+                    period: DAY
+                - profile: my_profile
+
+    .. versionadded:: Carbon
+
+    '''
+    func_params = locals()
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            # plan does not exist, we need to create it
+            if __opts__['test']:
+                ret['comment'] = 'a new usage plan {0} would be created'.format(plan_name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['boto_apigateway.create_usage_plan'](name=plan_name,
+                                                                   description=description,
+                                                                   throttle=throttle,
+                                                                   quota=quota,
+                                                                   **common_args)
+            if 'error' in result:
+                ret['result'] = False
+                ret['comment'] = 'Failed to create a usage plan {0}, {1}'.format(plan_name, result['error'])
+                return ret
+
+            ret['changes']['old'] = {'plan': None}
+            ret['comment'] = 'A new usage plan {0} has been created'.format(plan_name)
+
+        else:
+            # need an existing plan modified to match given value
+            plan = existing['plans'][0]
+            needs_updating = False
+
+            modifiable_params = (('throttle', ('rateLimit', 'burstLimit')), ('quota', ('limit', 'offset', 'period')))
+            for p, fields in modifiable_params:
+                for f in fields:
+                    actual_param = {} if func_params.get(p) is None else func_params.get(p)
+                    if plan.get(p, {}).get(f, None) != actual_param.get(f, None):
+                        needs_updating = True
+                        break
+
+            if not needs_updating:
+                ret['comment'] = 'usage plan {0} is already in a correct state'.format(plan_name)
+                ret['result'] = True
+                return ret
+
+            if __opts__['test']:
+                ret['comment'] = 'a new usage plan {0} would be updated'.format(plan_name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['boto_apigateway.update_usage_plan'](plan['id'],
+                                                                   throttle=throttle,
+                                                                   quota=quota,
+                                                                   **common_args)
+            if 'error' in result:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update a usage plan {0}, {1}'.format(plan_name, result['error'])
+                return ret
+
+            ret['changes']['old'] = {'plan': plan}
+            ret['comment'] = 'usage plan {0} has been updated'.format(plan_name)
+
+        newstate = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans after updates'
+            return ret
+
+        ret['changes']['new'] = {'plan': newstate['plans'][0]}
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
+
+def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is no longer present
+
+    name
+        name of the state
+
+    plan_name
+        name of the plan to remove
+
+    .. code-block:: yaml
+        usage plan absent:
+            boto_apigateway.usage_plan_absent:
+                - plan_name: my_usage_plan
+                - profile: my_profile
+
+    .. versionadded:: Carbon
+
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist already'.format(plan_name)
+            return ret
+
+        if __opts__['test']:
+            ret['comment'] = 'Usage plan {0} exists and would be deleted'.format(plan_name)
+            ret['result'] = None
+            return ret
+
+        plan_id = existing['plans'][0]['id']
+        result = __salt__['boto_apigateway.delete_usage_plan'](plan_id, **common_args)
+
+        if 'error' in result:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete usage plan {0}, {1}'.format(plan_name, result)
+            return ret
+
+        ret['comment'] = 'Usage plan {0} has been deleted'.format(plan_name)
+        ret['changes']['old'] = {'plan': existing['plans'][0]}
+        ret['changes']['new'] = {'plan': None}
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
+
+def usage_plan_association_present(name, plan_name, api_stages, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is added to provided api_stages
+
+    name
+        name of the state
+
+    plan_name
+        name of the plan to use
+
+    api_stages
+        list of dictionaries, where each dictionary consists of the following keys:
+
+        apiId
+            apiId of the api to attach usage plan to
+
+        stage
+            stage name of the api to attach usage plan to
+
+    .. code-block:: yaml
+        UsagePlanAssociationPresent:
+          boto_apigateway.usage_plan_association_present:
+            - plan_name: my_plan
+            - api_stages:
+              - apiId: 9kb0404ec0
+                stage: my_stage
+              - apiId: l9v7o2aj90
+                stage: my_stage
+            - profile: my_profile
+
+    .. versionadded:: Carbon
+
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist'.format(plan_name)
+            ret['result'] = False
+            return ret
+
+        if len(existing['plans']) != 1:
+            ret['comment'] = 'There are multiple usage plans with the same name - it is not supported'
+            ret['result'] = False
+            return ret
+
+        plan = existing['plans'][0]
+        plan_id = plan['id']
+        plan_stages = plan.get('apiStages', [])
+
+        stages_to_add = []
+        for api in api_stages:
+            if api not in plan_stages:
+                stages_to_add.append(api)
+
+        if not stages_to_add:
+            ret['comment'] = 'Usage plan is already asssociated to all api stages'
+            return ret
+
+        result = __salt__['boto_apigateway.attach_usage_plan_to_apis'](plan_id, stages_to_add, **common_args)
+        if 'error' in result:
+            ret['comment'] = 'Failed to associate a usage plan {0} to the apis {1}, {2}'.format(plan_name, stages_to_add, result['error'])
+            ret['result'] = False
+            return ret
+
+        ret['comment'] = 'successfully associated usage plan to apis'
+        ret['changes']['old'] = plan_stages
+        ret['changes']['new'] = result.get('result', {}).get('apiStages', [])
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
+
+
+def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensures usage plan identified by name is removed from provided api_stages
+    If a plan is associated to stages not listed in api_stages parameter,
+    those associations remain intact
+
+    name
+        name of the state
+
+    plan_name
+        name of the plan to use
+
+    api_stages
+        list of dictionaries, where each dictionary consists of the following keys:
+
+        apiId
+            apiId of the api to detach usage plan from
+
+        stage
+            stage name of the api to detach usage plan from
+
+    .. code-block:: yaml
+        UsagePlanAssociationAbsent:
+          boto_apigateway.usage_plan_association_absent:
+            - plan_name: my_plan
+            - api_stages:
+              - apiId: 9kb0404ec0
+                stage: my_stage
+              - apiId: l9v7o2aj90
+                stage: my_stage
+            - profile: my_profile
+
+    .. versionadded:: Carbon
+
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
+        existing = __salt__['boto_apigateway.describe_usage_plans'](name=plan_name, **common_args)
+        if 'error' in existing:
+            ret['result'] = False
+            ret['comment'] = 'Failed to describe existing usage plans'
+            return ret
+
+        if not existing['plans']:
+            ret['comment'] = 'Usage plan {0} does not exist'.format(plan_name)
+            ret['result'] = False
+            return ret
+
+        if len(existing['plans']) != 1:
+            ret['comment'] = 'There are multiple usage plans with the same name - it is not supported'
+            ret['result'] = False
+            return ret
+
+        plan = existing['plans'][0]
+        plan_id = plan['id']
+        plan_stages = plan.get('apiStages', [])
+
+        if not plan_stages:
+            ret['comment'] = 'Usage plan {0} has no associated stages already'.format(plan_name)
+            return ret
+
+        stages_to_remove = []
+        for api in api_stages:
+            if api in plan_stages:
+                stages_to_remove.append(api)
+
+        if not stages_to_remove:
+            ret['comment'] = 'Usage plan is already not asssociated to any api stages'
+            return ret
+
+        result = __salt__['boto_apigateway.detach_usage_plan_from_apis'](plan_id, stages_to_remove, **common_args)
+        if 'error' in result:
+            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name, stages_to_remove, result['error'])
+            ret['result'] = False
+            return ret
+
+        ret['comment'] = 'successfully disassociated usage plan from apis'
+        ret['changes']['old'] = plan_stages
+        ret['changes']['new'] = result.get('result', {}).get('apiStages', [])
+
+    except (ValueError, IOError) as e:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(e.args)
+
+    return ret
