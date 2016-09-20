@@ -12,7 +12,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 .. code-block:: yaml
 
     my-ec2-config:
-      # EC2 API credentials: Access Key ID and Secret Access Key (required).
+      # EC2 API credentials: Access Key ID and Secret Access Key.
       # Alternatively, to use IAM Instance Role credentials available via
       # EC2 metadata set both id and key to 'use-instance-role-credentials'
       id: GKTADJGHEIQSXMKKRBJ08H
