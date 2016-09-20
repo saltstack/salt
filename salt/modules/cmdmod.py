@@ -2670,17 +2670,17 @@ def shell_info(shell):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     regex_shells = {
-        'bash': ['version ([-\\w.]+)', 'bash', '--version'],
-        'bash-test-error': ['versioZ ([-\\w.]+)', 'bash', '--version'],  # used to test a error result
-        'bash-test-env': ['(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
-        'zsh': ['^zsh ([\\d.]+)', 'zsh', '--version'],
-        'tcsh': ['^tcsh ([\\d.]+)', 'tcsh', '--version'],
-        'cmd': ['Version ([\\d.]+)', 'cmd.exe', '/C', 'ver'],
-        'powershell': ['PSVersion\\s+([\\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
-        'perl': ['^([\\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
-        'python': ['^Python ([\\d.]+)', 'python', '-V'],
-        'ruby': ['^ruby ([\\d.]+)', 'ruby', '-v'],
-        'php': ['^PHP ([\\d.]+)', 'php', '-v']
+        'bash': [r'version ([-\w.]+)', 'bash', '--version'],
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'zsh': [r'^zsh ([\d.]+)', 'zsh', '--version'],
+        'tcsh': [r'^tcsh ([\d.]+)', 'tcsh', '--version'],
+        'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
+        'powershell': [r'PSVersion\s+([\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'perl': [r'^([\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
+        'python': [r'^Python ([\d.]+)', 'python', '-V'],
+        'ruby': [r'^ruby ([\d.]+)', 'ruby', '-v'],
+        'php': [r'^PHP ([\d.]+)', 'php', '-v']
     }
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {}
