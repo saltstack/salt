@@ -192,7 +192,7 @@ except ImportError:
             if children:
                 try:
                     psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
-                except psutils.AccessDenied:
+                except psutil.AccessDenied:
                     kill_children(children, kill=True)
 
 SYS_TMP_DIR = os.path.realpath(
