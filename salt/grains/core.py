@@ -1258,7 +1258,12 @@ def os_data():
                             grains[
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
-            if 'lsb_distrib_id' not in grains:
+            if grains.get('lsb_distrib_description', '').lower().startswith('antergos'):
+                # Antergos incorrectly configures their /etc/lsb-release,
+                # setting the DISTRIB_ID to "Arch". This causes the "os" grain
+                # to be incorrectly set to "Arch".
+                grains['osfullname'] = 'Antergos Linux'
+            elif 'lsb_distrib_id' not in grains:
                 if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
                     os_release = _parse_os_release()
                     if 'NAME' in os_release:
