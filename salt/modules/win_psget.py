@@ -45,13 +45,13 @@ def __virtual__():
     return __virtualname__
 
 
-def _pshell(cmd, cwd=None):
+def _pshell(cmd, cwd=None, json_depth=2):
     '''
     Execute the desired powershell command and ensure that it returns data
     in json format and load that into python
     '''
     if 'convertto-json' not in cmd.lower():
-        cmd = ' '.join([cmd, '| ConvertTo-Json -Depth 2147483647'])
+        cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
     log.debug('DSC: {0}'.format(cmd))
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
 
