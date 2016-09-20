@@ -29,6 +29,7 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
+from ctypes.util import find_library
 # pylint: enable=E0611
 
 try:
@@ -434,6 +435,9 @@ class DownloadWindowsDlls(Command):
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
             for fname in ('libeay32', 'ssleay32', 'libsodium', 'msvcr120'):
+                # See if the library is already on the system
+                if find_library(fname):
+                    continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
                 fdest = dest.format(fname=fname)
                 if not os.path.exists(fdest):
