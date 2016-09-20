@@ -1128,11 +1128,6 @@ def upgrade(*names, **kwargs):
 
             salt '*' pkg.upgrade <package name> dryrun=True
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     jail = kwargs.pop('jail', None)
     chroot = kwargs.pop('chroot', None)
     root = kwargs.pop('root', None)
@@ -1158,20 +1153,19 @@ def upgrade(*names, **kwargs):
     cmd.extend(names)
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
