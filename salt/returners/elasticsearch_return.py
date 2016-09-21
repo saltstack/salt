@@ -130,7 +130,7 @@ def returner(ret):
         def dst(self, dt):
             return timedelta(0)
 
-    if type({}) == type(ret['return']):
+    if isinstance(ret['return'], dict):
         sk = ""
         for k in ret['return'].keys():
             sk = k.replace('.', '_')
