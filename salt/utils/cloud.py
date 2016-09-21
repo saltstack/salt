@@ -1800,11 +1800,6 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use scp or sftp to copy a file to a server
     '''
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
-
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
     ssh_args = [
@@ -1816,81 +1811,94 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         '-oControlPath=none'
     ]
 
-    if local_file is not None:
-        tmppath = local_file
-        if os.path.isdir(local_file):
-            ssh_args.append('-r')
+    tmpfh, tmppath = tempfile.mkstemp()
 
-    if 'key_filename' in kwargs:
-        # There should never be both a password and an ssh key passed in, so
-        ssh_args.extend([
-            # tell SSH to skip password authentication
-            '-oPasswordAuthentication=no',
-            '-oChallengeResponseAuthentication=no',
-            # Make sure public key authentication is enabled
-            '-oPubkeyAuthentication=yes',
-            # do only use the provided identity file
-            '-oIdentitiesOnly=yes',
-            # No Keyboard interaction!
-            '-oKbdInteractiveAuthentication=no',
-            # Also, specify the location of the key file
-            '-i {0}'.format(kwargs['key_filename'])
-        ])
+    try:
+        if local_file is not None:
+            file_to_upload = local_file
+            if os.path.isdir(local_file):
+                ssh_args.append('-r')
+        elif contents is not None:
+            file_to_upload = tmppath
+            with salt.utils.fopen(tmppath, 'w') as tmpfile:
+                tmpfile.write(contents)
+        else:
+            raise SaltCloudException('Must provide either contents or local_file')
 
-    if 'port' in kwargs:
-        ssh_args.append('-oPort={0}'.format(kwargs['port']))
+        if 'key_filename' in kwargs:
+            # There should never be both a password and an ssh key passed in, so
+            ssh_args.extend([
+                # tell SSH to skip password authentication
+                '-oPasswordAuthentication=no',
+                '-oChallengeResponseAuthentication=no',
+                # Make sure public key authentication is enabled
+                '-oPubkeyAuthentication=yes',
+                # do only use the provided identity file
+                '-oIdentitiesOnly=yes',
+                # No Keyboard interaction!
+                '-oKbdInteractiveAuthentication=no',
+                # Also, specify the location of the key file
+                '-i {0}'.format(kwargs['key_filename'])
+            ])
 
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
+        if 'port' in kwargs:
+            ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-        ssh_args.append(
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port
+        if 'ssh_gateway' in kwargs:
+            ssh_gateway = kwargs['ssh_gateway']
+            ssh_gateway_port = 22
+            ssh_gateway_key = ''
+            ssh_gateway_user = 'root'
+            if ':' in ssh_gateway:
+                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+            if 'ssh_gateway_port' in kwargs:
+                ssh_gateway_port = kwargs['ssh_gateway_port']
+            if 'ssh_gateway_key' in kwargs:
+                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+            if 'ssh_gateway_user' in kwargs:
+                ssh_gateway_user = kwargs['ssh_gateway_user']
+
+            ssh_args.append(
+                # Setup ProxyCommand
+                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                    # Don't add new hosts to the host key database
+                    '-oStrictHostKeyChecking=no',
+                    # Set hosts key database path to /dev/null, i.e., non-existing
+                    '-oUserKnownHostsFile=/dev/null',
+                    # Don't re-use the SSH connection. Less failures.
+                    '-oControlPath=none',
+                    ssh_gateway_key,
+                    ssh_gateway_user,
+                    ssh_gateway,
+                    ssh_gateway_port
+                )
+            )
+
+        try:
+            if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+                ipaddr = '[{0}]'.format(kwargs['hostname'])
+            else:
+                ipaddr = kwargs['hostname']
+        except socket.error:
+            ipaddr = kwargs['hostname']
+
+        cmd = (
+            'scp {0} {1} {2[username]}@{4}:{3} || '
+            'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
+            'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+                ' '.join(ssh_args), file_to_upload, kwargs, dest_path, ipaddr
             )
         )
 
-    try:
-        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-            ipaddr = '[{0}]'.format(kwargs['hostname'])
-        else:
-            ipaddr = kwargs['hostname']
-    except socket.error:
-        ipaddr = kwargs['hostname']
+        log.debug('SCP command: \'{0}\''.format(cmd))
+        retcode = _exec_ssh_cmd(cmd,
+                                error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                                password_retries=3,
+                                **kwargs)
+    finally:
+        # Clean up after ourselves
+        os.remove(tmppath)
 
-    cmd = (
-        'scp {0} {1} {2[username]}@{4}:{3} || '
-        'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
-        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-            ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
-        )
-    )
-
-    log.debug('SCP command: \'{0}\''.format(cmd))
-    retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
-                            password_retries=3,
-                            **kwargs)
     return retcode
 
 
@@ -1913,91 +1921,99 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if kwargs is None:
         kwargs = {}
 
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
-
-    if local_file is not None:
-        tmppath = local_file
-        if os.path.isdir(local_file):
-            put_args = ['-r']
-
-    log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
-
-    ssh_args = [
-        # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, i.e., non-existing
-        '-oUserKnownHostsFile=/dev/null',
-        # Don't re-use the SSH connection. Less failures.
-        '-oControlPath=none'
-    ]
-    if 'key_filename' in kwargs:
-        # There should never be both a password and an ssh key passed in, so
-        ssh_args.extend([
-            # tell SSH to skip password authentication
-            '-oPasswordAuthentication=no',
-            '-oChallengeResponseAuthentication=no',
-            # Make sure public key authentication is enabled
-            '-oPubkeyAuthentication=yes',
-            # do only use the provided identity file
-            '-oIdentitiesOnly=yes',
-            # No Keyboard interaction!
-            '-oKbdInteractiveAuthentication=no',
-            # Also, specify the location of the key file
-            '-oIdentityFile={0}'.format(kwargs['key_filename'])
-        ])
-
-    if 'port' in kwargs:
-        ssh_args.append('-oPort={0}'.format(kwargs['port']))
-
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
-
-        ssh_args.append(
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port
-            )
-        )
+    tmpfh, tmppath = tempfile.mkstemp()
 
     try:
-        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        if local_file is not None:
+            file_to_upload = local_file
+            if os.path.isdir(local_file):
+                put_args = ['-r']
+        elif contents is not None:
+            file_to_upload = tmppath
+            with salt.utils.fopen(tmppath, 'w') as tmpfile:
+                tmpfile.write(contents)
         else:
-            ipaddr = kwargs['hostname']
-    except socket.error:
-        ipaddr = kwargs['hostname']
+            raise SaltCloudException('Must provide either contents or local_file')
 
-    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
-        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
-    )
-    log.debug('SFTP command: \'{0}\''.format(cmd))
-    retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
-                            password_retries=3,
-                            **kwargs)
+        log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
+
+        ssh_args = [
+            # Don't add new hosts to the host key database
+            '-oStrictHostKeyChecking=no',
+            # Set hosts key database path to /dev/null, i.e., non-existing
+            '-oUserKnownHostsFile=/dev/null',
+            # Don't re-use the SSH connection. Less failures.
+            '-oControlPath=none'
+        ]
+        if 'key_filename' in kwargs:
+            # There should never be both a password and an ssh key passed in, so
+            ssh_args.extend([
+                # tell SSH to skip password authentication
+                '-oPasswordAuthentication=no',
+                '-oChallengeResponseAuthentication=no',
+                # Make sure public key authentication is enabled
+                '-oPubkeyAuthentication=yes',
+                # do only use the provided identity file
+                '-oIdentitiesOnly=yes',
+                # No Keyboard interaction!
+                '-oKbdInteractiveAuthentication=no',
+                # Also, specify the location of the key file
+                '-oIdentityFile={0}'.format(kwargs['key_filename'])
+            ])
+
+        if 'port' in kwargs:
+            ssh_args.append('-oPort={0}'.format(kwargs['port']))
+
+        if 'ssh_gateway' in kwargs:
+            ssh_gateway = kwargs['ssh_gateway']
+            ssh_gateway_port = 22
+            ssh_gateway_key = ''
+            ssh_gateway_user = 'root'
+            if ':' in ssh_gateway:
+                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+            if 'ssh_gateway_port' in kwargs:
+                ssh_gateway_port = kwargs['ssh_gateway_port']
+            if 'ssh_gateway_key' in kwargs:
+                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+            if 'ssh_gateway_user' in kwargs:
+                ssh_gateway_user = kwargs['ssh_gateway_user']
+
+            ssh_args.append(
+                # Setup ProxyCommand
+                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                    # Don't add new hosts to the host key database
+                    '-oStrictHostKeyChecking=no',
+                    # Set hosts key database path to /dev/null, i.e., non-existing
+                    '-oUserKnownHostsFile=/dev/null',
+                    # Don't re-use the SSH connection. Less failures.
+                    '-oControlPath=none',
+                    ssh_gateway_key,
+                    ssh_gateway_user,
+                    ssh_gateway,
+                    ssh_gateway_port
+                )
+            )
+
+        try:
+            if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+                ipaddr = '[{0}]'.format(kwargs['hostname'])
+            else:
+                ipaddr = kwargs['hostname']
+        except socket.error:
+            ipaddr = kwargs['hostname']
+
+        cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
+            ' '.join(put_args), file_to_upload, dest_path, ' '.join(ssh_args), kwargs, ipaddr
+        )
+        log.debug('SFTP command: \'{0}\''.format(cmd))
+        retcode = _exec_ssh_cmd(cmd,
+                                error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                                password_retries=3,
+                                **kwargs)
+    finally:
+        # Clean up after ourselves
+        os.remove(tmppath)
+
     return retcode
 
 
