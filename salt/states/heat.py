@@ -117,7 +117,7 @@ def _parse_template(tmpl_str):
     if not ('HeatTemplateFormatVersion' in tpl
             or 'heat_template_version' in tpl
             or 'AWSTemplateFormatVersion' in tpl):
-        raise ValueError(("Template format version not found."))
+        raise ValueError(('Template format version not found.'))
     return tpl
 
 
@@ -226,10 +226,10 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                         ret['comment'] = 'Error parsing template {0}'.format(ex)
             else:
                 ret['result'] = False
-                ret['comment'] = "Can't open template: {0} {1}".format(template, comment_)
+                ret['comment'] = 'Can not open template: {0} {1}'.format(template, comment_)
         else:
             ret['result'] = False
-            ret['comment'] = "Can't open template"
+            ret['comment'] = 'Can not open template'
         if ret['result'] is True:
             template_stack = __salt__['heat.template_stack'](name=name, profile=profile)
             if not template_stack['result']:
@@ -253,7 +253,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                     return ret
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'Template ha same checksum: {0} {1}'\
+                    ret['comment'] = 'Templates have same checksum: {0} {1}'\
                         .format(checksum_template, checksum_stack)
         if ret['result'] is False:
             return ret
