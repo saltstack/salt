@@ -5,6 +5,7 @@ Utility functions for salt.cloud
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import sys
 import stat
@@ -1800,10 +1801,19 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use scp or sftp to copy a file to a server
     '''
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
+    if contents is None:
+        file_to_upload = None
+    else:
+        try:
+            tmpfh, file_to_upload = tempfile.mkstemp()
+            with salt.utils.fopen(file_to_upload, 'w') as fp_:
+                fp_.write(contents)
+        finally:
+            try:
+                os.close(tmpfh)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise exc
 
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
@@ -1817,7 +1827,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     ]
 
     if local_file is not None:
-        tmppath = local_file
+        file_to_upload = local_file
         if os.path.isdir(local_file):
             ssh_args.append('-r')
 
@@ -1878,11 +1888,16 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     except socket.error:
         ipaddr = kwargs['hostname']
 
+    if file_to_upload is None:
+        log.warning(
+            'No source file to upload. Please make sure that either file '
+            'contents or the path to a local file are provided.'
+        )
     cmd = (
         'scp {0} {1} {2[username]}@{4}:{3} || '
         'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
         'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-            ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
+            ' '.join(ssh_args), file_to_upload, kwargs, dest_path, ipaddr
         )
     )
 
@@ -1913,13 +1928,22 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if kwargs is None:
         kwargs = {}
 
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
+    if contents is None:
+        file_to_upload = None
+    else:
+        try:
+            tmpfh, file_to_upload = tempfile.mkstemp()
+            with salt.utils.fopen(file_to_upload, 'w') as fp_:
+                fp_.write(contents)
+        finally:
+            try:
+                os.close(tmpfh)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise exc
 
     if local_file is not None:
-        tmppath = local_file
+        file_to_upload = local_file
         if os.path.isdir(local_file):
             put_args = ['-r']
 
@@ -1990,8 +2014,13 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     except socket.error:
         ipaddr = kwargs['hostname']
 
+    if file_to_upload is None:
+        log.warning(
+            'No source file to upload. Please make sure that either file '
+            'contents or the path to a local file are provided.'
+        )
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
-        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
+        ' '.join(put_args), file_to_upload, dest_path, ' '.join(ssh_args), kwargs, ipaddr
     )
     log.debug('SFTP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
