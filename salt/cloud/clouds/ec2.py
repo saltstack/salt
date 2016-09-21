@@ -3865,6 +3865,14 @@ def register_image(kwargs=None, call=None):
     return r_data
 
 
+def volume_create(**kwargs):
+    '''
+    Wrapper around create_volume.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return create_volume(kwargs, 'function')
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
@@ -4081,6 +4089,14 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
                      opts=__opts__,
                      sigver='4')
     return data
+
+
+def volume_list(**kwargs):
+    '''
+    Wrapper around describe_volumes.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return describe_volumes(kwargs, 'function')
 
 
 def describe_volumes(kwargs=None, call=None):
