@@ -1048,14 +1048,20 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         force_conf = '--force-confnew'
     else:
         force_conf = '--force-confold'
-
     cmd = []
     if salt.utils.systemd.has_scope(__context__) \
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
+
     cmd.extend(['apt-get', '-q', '-y',
                 '-o', 'DPkg::Options::={0}'.format(force_conf),
                 '-o', 'DPkg::Options::=--force-confdef'])
+
+    if kwargs.get('force_yes', False):
+        cmd.append('--force-yes')
+    if kwargs.get('skip_verify', False):
+        cmd.append('--allow-unauthenticated')
+
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
     call = __salt__['cmd.run_all'](cmd,

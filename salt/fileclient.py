@@ -709,12 +709,17 @@ class Client(object):
         elif not os.path.isabs(cachedir):
             cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
+        if url_data.query is not None:
+            file_name = '-'.join([url_data.path, url_data.query])
+        else:
+            file_name = url_data.path
+
         return salt.utils.path_join(
             cachedir,
             'extrn_files',
             saltenv,
             netloc,
-            url_data.path
+            file_name
         )
 
 
