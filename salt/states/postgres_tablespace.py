@@ -15,7 +15,15 @@ A module used to create and manage PostgreSQL tablespaces.
 .. versionadded:: 2015.8.0
 
 '''
+
+# Import python libs
 from __future__ import absolute_import
+
+# Import salt libs
+from salt.utils import dictupdate
+
+# Import 3rd-party libs
+from salt.ext.six import iteritems
 
 
 def __virtual__():
@@ -46,13 +54,21 @@ def present(name,
         The directory where the tablespace will be located, must already exist
 
     options
-        A dictionary of options to specify for the table.
-        Currently, the only tablespace options supported are
-        seq_page_cost - float; default=1.0
-        random_page_cost - float; default=4.0
+        A dictionary of options to specify for the tablespace.
+        Currently, the only tablespace options supported are ``seq_page_cost``
+        and ``random_page_cost``. Default values are shown in the example below:
+
+        .. code-block:: yaml
+
+            my_space:
+              postgres_tablespace.present:
+                - directory: /srv/my_tablespace
+                - options:
+                    seq_page_cost: 1.0
+                    random_page_cost: 4.0
 
     owner
-        The database user that will be the owner of the tablespace
+        The database user that will be the owner of the tablespace.
         Defaults to the user executing the command (i.e. the `user` option)
 
     user
@@ -62,10 +78,10 @@ def present(name,
         Database to act on
 
     db_user
-        database username if different from config or default
+        Database username if different from config or default
 
     db_password
-        user password if any password for a specified user
+        User password if any password for a specified user
 
     db_host
         Database host if different from config or default
@@ -113,6 +129,7 @@ def present(name,
         if (__salt__['postgres.tablespace_alter'](name, new_owner=owner)
             and not __opts__['test']):
             ret['comment'] = 'Tablespace {0} owner changed'.format(name)
+            ret['changes'][name] = {'owner': owner}
             ret['result'] = True
 
     if options:
@@ -121,17 +138,18 @@ def present(name,
         # that we should be able to string check:
         # {seq_page_cost=1.1,random_page_cost=3.9}
         # TODO remove options that exist if possible
-        for k, v in options:
+        for k, v in iteritems(options):
+            # if 'seq_page_cost=1.1' not in '{seq_page_cost=1.1,...}'
             if '{0}={1}'.format(k, v) not in tblspaces[name]['Opts']:
-                # if 'seq_page_cost=1.1' not in '{seq_page_cost=1.1,...}'
                 if __opts__['test']:
                     ret['result'] = None
                     ret['comment'] = """Tablespace {0} options to be
                         altered""".format(name)
                     break  # we know it's going to be altered, no reason to cont
                 if __salt__['postgres.tablespace_alter'](name,
-                                                         set_options={k: v}):
+                                                         set_option={k: v}):
                     ret['comment'] = 'Tablespace {0} opts changed'.format(name)
+                    dictupdate.update(ret['changes'], {name: {'options': {k: v}}})
                     ret['result'] = True
 
     return ret
@@ -145,10 +163,10 @@ def absent(name,
            db_host=None,
            db_port=None):
     '''
-    Ensure that the named database is absent.
+    Ensure that the named tablespace is absent.
 
     name
-        The name of the database to remove
+        The name of the tablespace to remove
 
     user
         System user all operations should be performed on behalf of
@@ -157,10 +175,10 @@ def absent(name,
         Database to act on
 
     db_user
-        database username if different from config or defaul
+        Database username if different from config or defaul
 
     db_password
-        user password if any password for a specified user
+        User password if any password for a specified user
 
     db_host
         Database host if different from config or default
