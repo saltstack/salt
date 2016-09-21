@@ -2639,7 +2639,7 @@ The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 4 values:
 
 * ``none``:
-  it will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
+  It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
 
 * ``recurse``:
 
