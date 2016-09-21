@@ -2875,7 +2875,7 @@ def privileges_grant(name,
                 object_name, name)
         elif (object_type in ('table', 'sequence') and
                 object_name.upper() == 'ALL'):
-            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO ' + \
+            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO ' \
                     '"{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), prepend, name)
         else:
