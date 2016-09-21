@@ -287,7 +287,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             controller as well as the hard disk at the same time.
         datastore
             The name of a valid datastore should you wish the new disk to be in
-            a datastore other than the default for the VM
+            a datastore other than the default for the VM.
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
