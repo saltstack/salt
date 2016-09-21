@@ -297,7 +297,6 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     disk_spec.device.deviceInfo.label = disk_label
     disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
 
-
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
     disk_spec.device.backing.diskMode = 'persistent'
