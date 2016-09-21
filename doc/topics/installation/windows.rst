@@ -45,6 +45,11 @@ The ``salt-minion`` service will appear in the Windows Service Manager and can
 be started and stopped there or with the command line program ``sc`` like any
 other Windows service.
 
+.. code-block:: bat
+
+    sc start salt-minion
+    net start salt-minion
+
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
@@ -168,7 +173,8 @@ customize or fix bugs. It will also allow you to build your own installation.
 
 There are several scripts to automate creating a Windows installer as well as
 setting up an environment that facilitates developing and troubleshooting Salt
-code. They are located in the ``pkg\windows`` directory in the Salt repo.
+code. They are located in the ``pkg\windows`` directory in the Salt repo
+`(here) <https://github.com/saltstack/salt/tree/develop/pkg/windows>`_.
 
 Scripts:
 --------
@@ -204,7 +210,7 @@ Create a Build Environment
 
 Create a ``Salt-Dev`` directory on the root of ``C:``. This will be our working
 directory. Navigate to ``Salt-Dev`` and clone the
-`Salt <https://github.com/saltstack/salt/>`_ repo from github.
+`Salt <https://github.com/saltstack/salt/>`_ repo from GitHub.
 
 Open a command line and type:
 
@@ -252,6 +258,10 @@ develop and build Salt.
 
 3. Salt in Editable Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Editable mode allows you to more easily modify and test the source code. For
+more information see the `Pip documentation
+<https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs>`_.
 
 Navigate to the root of the ``salt`` directory and install Salt in editable mode
 with ``pip``
@@ -331,7 +341,7 @@ with the build version (2016.3) script.
 Creating a Windows Installer: Alternate Method (Easier)
 =======================================================
 
-Clone the `Salt <https://github.com/saltstack/salt/>`_ repo from github into the
+Clone the `Salt <https://github.com/saltstack/salt/>`_ repo from GitHub into the
 directory of your choice. We're going to use ``Salt-Dev``.
 
 .. code-block:: bat
