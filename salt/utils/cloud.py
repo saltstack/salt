@@ -1800,11 +1800,6 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use scp or sftp to copy a file to a server
     '''
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
-
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
     ssh_args = [
@@ -1816,10 +1811,18 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         '-oControlPath=none'
     ]
 
+    tmpfh, tmppath = tempfile.mkstemp()
+
     if local_file is not None:
-        tmppath = local_file
+        file_to_upload = local_file
         if os.path.isdir(local_file):
             ssh_args.append('-r')
+    elif contents is not None:
+        file_to_upload = tmppath
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
+    else:
+        raise SaltCloudException('Must provide either contents or local_file')
 
     if 'key_filename' in kwargs:
         # There should never be both a password and an ssh key passed in, so
@@ -1882,7 +1885,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         'scp {0} {1} {2[username]}@{4}:{3} || '
         'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
         'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-            ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
+            ' '.join(ssh_args), file_to_upload, kwargs, dest_path, ipaddr
         )
     )
 
@@ -1891,6 +1894,10 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
                             error_msg='Failed to upload file \'{0}\': {1}\n{2}',
                             password_retries=3,
                             **kwargs)
+
+    # Clean up after ourselves
+    os.remove(tmppath)
+
     return retcode
 
 
@@ -1913,15 +1920,18 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if kwargs is None:
         kwargs = {}
 
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
+    tmpfh, tmppath = tempfile.mkstemp()
 
     if local_file is not None:
-        tmppath = local_file
+        file_to_upload = local_file
         if os.path.isdir(local_file):
             put_args = ['-r']
+    elif contents is not None:
+        file_to_upload = tmppath
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
+    else:
+        raise SaltCloudException('Must provide either contents or local_file')
 
     log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
 
@@ -1991,13 +2001,17 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ipaddr = kwargs['hostname']
 
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
-        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
+        ' '.join(put_args), file_to_upload, dest_path, ' '.join(ssh_args), kwargs, ipaddr
     )
     log.debug('SFTP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file \'{0}\': {1}\n{2}',
                             password_retries=3,
                             **kwargs)
+
+    # Clean up after ourselves
+    os.remove(tmppath)
+
     return retcode
 
 
