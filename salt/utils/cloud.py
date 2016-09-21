@@ -1805,12 +1805,11 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         file_to_upload = None
     else:
         try:
-            tmpfh, file_to_upload = tempfile.mkstemp()
-            with salt.utils.fopen(file_to_upload, 'w') as fp_:
-                fp_.write(contents)
+            tmpfd, file_to_upload = tempfile.mkstemp()
+            os.write(tmpfd, contents)
         finally:
             try:
-                os.close(tmpfh)
+                os.close(tmpfd)
             except OSError as exc:
                 if exc.errno != errno.EBADF:
                     raise exc
@@ -1932,12 +1931,11 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         file_to_upload = None
     else:
         try:
-            tmpfh, file_to_upload = tempfile.mkstemp()
-            with salt.utils.fopen(file_to_upload, 'w') as fp_:
-                fp_.write(contents)
+            tmpfd, file_to_upload = tempfile.mkstemp()
+            os.write(tmpfd, contents)
         finally:
             try:
-                os.close(tmpfh)
+                os.close(tmpfd)
             except OSError as exc:
                 if exc.errno != errno.EBADF:
                     raise exc
