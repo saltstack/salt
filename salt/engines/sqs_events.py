@@ -77,7 +77,6 @@ Additionally you can define cross account sqs:
 from __future__ import absolute_import
 import logging
 import time
-import json
 
 # Import salt libs
 import salt.utils.event
