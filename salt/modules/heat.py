@@ -134,9 +134,9 @@ def _auth(profile=None, api_version=1, **connection_args):
     '''
 
     if profile:
-        prefix = profile + ":keystone."
+        prefix = profile + ':keystone.'
     else:
-        prefix = "keystone."
+        prefix = 'keystone.'
 
     def get(key, default=None):
         '''
@@ -218,7 +218,7 @@ def _parse_template(tmpl_str):
     if not ('HeatTemplateFormatVersion' in tpl
             or 'heat_template_version' in tpl
             or 'AWSTemplateFormatVersion' in tpl):
-        raise ValueError(("Template format version not found."))
+        raise ValueError(('Template format version not found.'))
     return tpl
 
 
@@ -259,7 +259,7 @@ def _get_stack_events(h_client, stack_id, event_args):
         raise exc.CommandError(str(ex))
     else:
         for event in events:
-            event.stack_name = stack_id.split("/")[0]
+            event.stack_name = stack_id.split('/')[0]
         return events
 
 
@@ -274,7 +274,7 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5, marker=No
         stop_check = lambda a: a.endswith('_COMPLETE') or a.endswith('_FAILED')
 
     no_event_polls = 0
-    msg_template = ("\n Stack %(name)s %(status)s \n")
+    msg_template = ('\n Stack %(name)s %(status)s \n')
     while True:
         events = _get_stack_events(h_client, stack_id=stack_name,
                                    event_args={'sort_dir': 'asc', 'marker': marker})
@@ -423,7 +423,7 @@ def delete_stack(name=None, poll=0, profile=None):
         ret['result'] = False
         ret['comment'] = 'No stack {0}'.format(name)
     except exc.HTTPForbidden as forbidden:
-        log.error(str(forbidden))
+        log.exception(str(forbidden))
         ret['result'] = False
         ret['comment'] = str(forbidden)
     if ret['result'] is False:
@@ -436,7 +436,7 @@ def delete_stack(name=None, poll=0, profile=None):
             ret['comment'] = 'Deleted stack {0}.'.format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
-            log.error("Delete failed {0}".format(ex))
+            log.exception('Delete failed {0}'.format(ex))
             ret['result'] = False
             ret['comment'] = '{0}'.format(ex)
             return ret
@@ -542,10 +542,10 @@ def create_stack(name=None, template_file=None, enviroment=None,
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = "Can't open template: {0} {1}".format(template_file, comment_)
+            ret['comment'] = 'Can not open template: {0} {1}'.format(template_file, comment_)
     else:
         ret['result'] = False
-        ret['comment'] = "Can't open template"
+        ret['comment'] = 'Can not open template'
     if ret['result'] is False:
         return ret
 
@@ -554,7 +554,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.error("Template not valid {0}".format(ex))
+        log.exception('Template not valid {0}'.format(ex))
         ret['result'] = False
         ret['comment'] = 'Template not valid {0}'.format(ex)
         return ret
@@ -602,7 +602,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = "Can't open enviroment: {0}, {1}".format(enviroment, comment_)
+            ret['comment'] = 'Can not open enviroment: {0}, {1}'.format(enviroment, comment_)
     if ret['result'] is False:
         return ret
 
@@ -619,7 +619,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
     try:
         h_client.stacks.create(**fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.error("Create failed {0}".format(ex))
+        log.exception('Create failed {0}'.format(ex))
         ret['result'] = False
         ret['comment'] = '{0}'.format(ex)
         return ret
@@ -730,10 +730,10 @@ def update_stack(name=None, template_file=None, enviroment=None,
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = "Can't open template: {0} {1}".format(template_file, comment_)
+            ret['comment'] = 'Can not open template: {0} {1}'.format(template_file, comment_)
     else:
         ret['result'] = False
-        ret['comment'] = "Can't open template"
+        ret['comment'] = 'Can not open template'
     if ret['result'] is False:
         return ret
 
@@ -742,7 +742,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.error("Template not valid {0}".format(ex))
+        log.exception('Template not valid {0}'.format(ex))
         ret['result'] = False
         ret['comment'] = 'Template not valid {0}'.format(ex)
         return ret
@@ -790,7 +790,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = "Can't open enviroment: {0}, {1}".format(enviroment, comment_)
+            ret['comment'] = 'Can not open enviroment: {0}, {1}'.format(enviroment, comment_)
     if ret['result'] is False:
         return ret
 
@@ -805,7 +805,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
     try:
         h_client.stacks.update(name, **fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.error("Update failed {0}".format(ex))
+        log.exception('Update failed {0}'.format(ex))
         ret['result'] = False
         ret['comment'] = 'Update failed {0}'.format(ex)
         return ret
