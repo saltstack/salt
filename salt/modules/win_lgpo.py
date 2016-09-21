@@ -4567,7 +4567,7 @@ def get_policy_info(policy_name,
 
     .. code-block:: bash
 
-        salt '*' lgpo.get_policy_info 'Max password age' machine
+        salt '*' lgpo.get_policy_info 'Maximum password age' machine
     '''
     # return the possible policy names and element names
     ret = {'policy_name': policy_name,
