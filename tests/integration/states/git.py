@@ -175,16 +175,21 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Make sure that we now have uncommitted changes
             self.assertTrue(self.run_function('git.diff', [name, 'HEAD']))
 
-            # Re-run state with force_reset=False, this should fail
+            # Re-run state with force_reset=False
             ret = self.run_state(
                 'git.latest',
                 name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 target=name,
                 force_reset=False
             )
-            self.assertSaltFalseReturn(ret)
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(
+                ret[next(iter(ret))]['comment'],
+                ('Repository {0} is up-to-date, but with local changes. Set '
+                 '\'force_reset\' to True to purge local changes.'.format(name))
+            )
 
-            # Now run the state with force_reset=True, this should succeed
+            # Now run the state with force_reset=True
             ret = self.run_state(
                 'git.latest',
                 name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
