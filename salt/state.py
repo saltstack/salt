@@ -1832,6 +1832,8 @@ class State(object):
         Check if the low data chunk should send a failhard signal
         '''
         tag = _gen_tag(low)
+        if self.opts['test']:
+            return False
         if (low.get('failhard', False) or self.opts['failhard']
                 and tag in running):
             if running[tag]['result'] is None:
