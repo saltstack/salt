@@ -36,9 +36,13 @@ def __virtual__():
     salt-minion running as SYSTEM.
     '''
     if not salt.utils.is_windows():
-        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows')
-    elif __grains__['osrelease'] in ('XP', '2003Server'):
-        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows Vista or later')
+        return (False, 'Cannot load module chocolatey: Chocolatey requires '
+                       'Windows')
+
+    if __grains__['osrelease'] in ('XP', '2003Server'):
+        return (False, 'Cannot load module chocolatey: Chocolatey requires '
+                       'Windows Vista or later')
+
     return 'chocolatey'
 
 
@@ -391,7 +395,7 @@ def install(name,
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] not in [0, 1605, 1614, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -702,6 +706,54 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     return result['stdout']
 
 
+def upgrade(name, source=None, pre_versions=False):
+    '''
+    .. version-added:: 2016.3.4
+
+    Instructs Chocolatey to upgrade packages on the system. (update is being
+    deprecated)
+
+    Args:
+
+        name (str):
+            The name of the package to update, or "all" to update everything
+            installed on the system.
+
+        source (str):
+            Chocolatey repository (directory, share or remote URL feed) the
+            package comes from. Defaults to the official Chocolatey feed.
+
+        pre_versions (bool):
+            Include pre-release packages in comparison. Defaults to False.
+
+    Returns:
+        str: Results of the Chocolatey command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" chocolatey.upgrade all
+        salt "*" chocolatey.upgrade <package name> pre_versions=True
+    '''
+    # chocolatey helpfully only supports a single package argument
+    choc_path = _find_chocolatey(__context__, __salt__)
+    cmd = [choc_path, 'upgrade', name]
+    if source:
+        cmd.extend(['-source', source])
+    if salt.utils.is_true(pre_versions):
+        cmd.append('-prerelease')
+    cmd.extend(_yes(__context__))
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if result['retcode'] != 0:
+        err = 'Running chocolatey failed: {0}'.format(result['stderr'])
+        log.error(err)
+        raise CommandExecutionError(err)
+
+    return result['stdout']
+
+
 def update(name, source=None, pre_versions=False):
     '''
     Instructs Chocolatey to update packages on the system.
@@ -797,7 +849,8 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     for line in res:
         if 'packages found' not in line and 'packages installed' not in line:
             for name, ver in ver_re.findall(line):
-                ret[name] = ver
+                if name not in ['Did', 'Features?', 'Chocolatey']:
+                    ret[name] = ver
 
     return ret
 
