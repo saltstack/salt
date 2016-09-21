@@ -139,6 +139,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           Hard disk 3:
             size: 5
             controller: SCSI controller 3
+            datastore: smalldiskdatastore
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
@@ -284,6 +285,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
             controller as well as the hard disk at the same time.
+        datastore
+            The name of a valid datastore should you wish the new disk to be in
+            a datastore other than the default for the VM
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
