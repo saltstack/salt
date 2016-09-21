@@ -1005,7 +1005,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     Upgrades all packages via ``apt-get upgrade`` or ``apt-get dist-upgrade``
     if  ``dist_upgrade`` is ``True``.
 
-    Returns a dict containing the changes::
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}

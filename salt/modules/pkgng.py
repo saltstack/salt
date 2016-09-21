@@ -1065,6 +1065,14 @@ def upgrade(*names, **kwargs):
     Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
     omitted, the operation is executed on all packages.
 
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
     CLI Example:
 
     .. code-block:: bash

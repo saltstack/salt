@@ -395,10 +395,13 @@ def upgrade(refresh=True):  # pylint: disable=W0613
     refresh
         Update ports with ``port selfupdate``
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 

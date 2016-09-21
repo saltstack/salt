@@ -446,10 +446,13 @@ def upgrade(refresh=True):
     refresh
         Fetch the newest version of Homebrew and all formulae from GitHub before installing.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 

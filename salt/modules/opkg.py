@@ -366,10 +366,13 @@ def upgrade(refresh=True):
     '''
     Upgrades all packages via ``opkg upgrade``
 
-    Returns a dict containing the changes.
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
+
 
     CLI Example:
 

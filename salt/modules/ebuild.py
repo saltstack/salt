@@ -827,10 +827,13 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
 
         .. versionadded: 2015.8.0
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 

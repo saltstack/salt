@@ -1102,10 +1102,13 @@ def upgrade(refresh=True, skip_verify=False):
         If set to False it depends on zypper if a refresh is
         executed.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 

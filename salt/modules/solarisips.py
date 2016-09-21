@@ -187,9 +187,16 @@ def upgrade(refresh=False, **kwargs):
     In non-global zones upgrade is limited by dependency constrains linked to
     the version of pkg://solaris/entire.
 
-    Returns also the raw output of the ``pkg update`` command (because if
-    update creates a new boot environment, no immediate changes are visible in
-    ``pkg list``).
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+    When there is a failure, an explanation is also included in the error
+    message, based on the return code of the ``pkg update`` command.
+
 
     CLI Example:
 
@@ -217,7 +224,9 @@ def upgrade(refresh=False, **kwargs):
     if result['retcode'] != 0:
         raise CommandExecutionError(
             'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            info={'changes': ret,
+                  'retcode': ips_pkg_return_values[result['retcode']],
+                  'result': result}
         )
 
     return ret
