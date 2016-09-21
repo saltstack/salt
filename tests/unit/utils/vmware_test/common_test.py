@@ -464,7 +464,7 @@ class GetContentTestCase(TestCase):
                         local_properties=True)
         self.assertEqual(self.traversal_spec_mock.call_count, 0)
         self.obj_spec_mock.assert_called_once_with(
-            obj=container_ref_mock, skip=True, selectSet=None)
+            obj=container_ref_mock, skip=False, selectSet=None)
 
 
 if __name__ == '__main__':
