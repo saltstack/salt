@@ -16,6 +16,7 @@ import os
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
+from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
 
@@ -49,6 +50,10 @@ def _run_all(cmd):
     '''
     if not isinstance(cmd, list):
         cmd = salt.utils.shlex_split(cmd, posix=False)
+
+    for idx, item in enumerate(cmd):
+        if not isinstance(cmd[idx], six.string_types):
+            cmd[idx] = str(cmd[idx])
 
     cmd = ' '.join(cmd)
 
