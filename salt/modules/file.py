@@ -4063,8 +4063,8 @@ def check_file_meta(
         tmp = salt.utils.mkstemp(text=True)
         if salt.utils.is_windows():
             contents = os.linesep.join(contents.splitlines())
-        with salt.utils.fopen(tmp, 'wb') as tmp_:
-            tmp_.write(salt.utils.to_bytes(str(contents)))
+        with salt.utils.fopen(tmp, 'w') as tmp_:
+            tmp_.write(str(contents))
         # Compare the static contents with the named file
         with salt.utils.fopen(tmp, 'r') as src:
             slines = src.readlines()
