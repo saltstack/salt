@@ -20,6 +20,7 @@ import time
 import traceback
 import fnmatch
 import base64
+import re
 
 # Import salt libs
 import salt.utils
@@ -2631,6 +2632,151 @@ def shells():
                     ret.append(line)
         except OSError:
             log.error("File '{0}' was not found".format(shells_fn))
+    return ret
+
+
+def shell_info(shell):
+    '''
+    Provides information about a shell or languages often use #!
+    The values returned are dependant on the shell or languages all return the
+    ``installed``, ``path``, ``version``, ``version_major`` and
+    ``version_major_minor`` e.g. 5.0 or 6-3.
+    The shell must be within the exeuctable search path.
+
+    :param str shell: Name of the shell.
+    Support are bash, cmd, perl, php, powershell, python, ruby and zsh
+    :return: Properies of the shell specifically its and other information if
+    available.
+    :rtype: dict
+
+    .. code-block:: cfg
+        {'version': '<version string>',
+         'version_major': '<version string',
+         'version_minor': '<version string>',
+         'path': '<full path to binary>',
+         'installed': <True, False or None>,
+         '<attribute>': '<attribute value>'}
+
+    ``installed`` is always returned, if None or False also returns error and
+     may also return stdout for diagnostics.
+
+    .. versionadded:: 2016.9.0
+
+    CLI Example::
+    .. code-block:: bash
+        salt '*' cmd.shell bash
+        salt '*' cmd.shell powershell
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    '''
+    regex_shells = {
+        'bash': [r'version ([-\w.]+)', 'bash', '--version'],
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'zsh': [r'^zsh ([\d.]+)', 'zsh', '--version'],
+        'tcsh': [r'^tcsh ([\d.]+)', 'tcsh', '--version'],
+        'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
+        'powershell': [r'PSVersion\s+([\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'perl': [r'^([\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
+        'python': [r'^Python ([\d.]+)', 'python', '-V'],
+        'ruby': [r'^ruby ([\d.]+)', 'ruby', '-v'],
+        'php': [r'^PHP ([\d.]+)', 'php', '-v']
+    }
+    # Ensure ret['installed'] always as a value of True, False or None (not sure)
+    ret = {}
+    ret['installed'] = None
+    if salt.utils.is_windows() and shell == 'powershell':
+        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
+        pw_keys.sort(key=int)
+        if len(pw_keys) == 0:
+            return {
+                'error': 'Unable to locate \'powershell\' Reason: Cannot be found in registry.',
+                'installed': False,
+                'version': None
+            }
+        for reg_ver in pw_keys:
+            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver), 'Install')
+            if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
+                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
+                ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
+                ret['installed'] = True
+                ret['path'] = which('powershell.exe')
+                for attribute in details:
+                    if attribute['vname'].lower() == '(default)':
+                        continue
+                    elif attribute['vname'].lower() == 'powershellversion':
+                        ret['psversion'] = attribute['vdata']
+                        ret['version'] = attribute['vdata']
+                    elif attribute['vname'].lower() == 'runtimeversion':
+                        ret['crlversion'] = attribute['vdata']
+                        if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
+                            ret['crlversion'] = ret['crlversion'][1::]
+                    elif attribute['vname'].lower() == 'pscompatibleversion':
+                        # reg attribute does not end in s, the powershell attibute does
+                        ret['pscompatibleversions'] = attribute['vdata']
+                    else:
+                        # keys are lower case as python is case sensitive the registry is not
+                        ret[attribute['vname'].lower()] = attribute['vdata']
+    else:
+        if shell not in regex_shells:
+            return {
+                'error': 'Salt does not know how to get the version number for {0}'.format(shell),
+                'installed': None
+            }
+        shell_data = regex_shells[shell]
+        pattern = shell_data.pop(0)
+        # We need to make sure HOME set, so shells work correctly
+        # salt-call will general have home set, the salt-minion service may not
+        # We need to assume ports of unix shells to windows will look after themselves
+        # in setting HOME as they do it in many different ways
+        newenv = os.environ
+        if ('HOME' not in newenv) and (not salt.utils.is_windows()):
+            newenv['HOME'] = os.path.expanduser('~')
+            log.debug('HOME environment set to {0}'.format(newenv['HOME']))
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(
+                shell_data,
+                stdin=None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                env=newenv
+                )
+        except (OSError, IOError) as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: {1}'.format(' '.join(shell_data), exc),
+                'installed': False,
+                'version': None
+            }
+        try:
+            proc.run()
+        except TimedProcTimeoutError as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: Timed out.'.format(' '.join(shell_data)),
+                'installed': False,
+                'version': None
+            }
+
+        ret['installed'] = True
+        ret['path'] = which(shell_data[0])
+        pattern_result = re.search(pattern, proc.stdout, flags=re.IGNORECASE)
+        # only set version if we find it, so code later on can deal with it
+        if pattern_result:
+            ret['version'] = pattern_result.group(1)
+
+    if 'version' not in ret:
+        ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(shell)
+        ret['version'] = None
+        ret['stdout'] = proc.stdout  # include stdout so they can see the issue
+        log.error(ret['error'])
+    else:
+        major_result = re.match('(\\d+)', ret['version'])
+        if major_result:
+            ret['version_major'] = major_result.group(1)
+            major_minor_result = re.match('(\\d+[-.]\\d+)', ret['version'])
+            if major_minor_result:
+                ret['version_major_minor'] = major_minor_result.group(1)
+
     return ret
 
 
