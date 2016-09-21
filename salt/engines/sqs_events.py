@@ -126,7 +126,7 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
 def _process_queue(q, q_name, fire_master, tag='salt/engine/sqs', owner_acct_id=None):
     if not q:
         log.warning('failure connecting to queue: {0}, '
-                    'waiting 10 seconds.'.format(':'.join(filter(None, (str(owner_acct_id), q_name)))))
+                    'waiting 10 seconds.'.format(':'.join([_f for _f in (str(owner_acct_id), q_name) if _f])))
         time.sleep(10)
     else:
         msgs = q.get_messages(wait_time_seconds=20)
