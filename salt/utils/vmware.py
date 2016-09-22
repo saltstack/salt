@@ -267,6 +267,25 @@ def _get_service_instance(host, username, password, protocol,
     return service_instance
 
 
+def get_datastore_ref(si, datastore_name):
+    '''
+    Get a reference to a VMware datastore for the purposes of adding/removing disks
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    datastore_name
+        Name of the datastore
+
+    '''
+    inventory = get_inventory(si)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.Datastore], True)
+    for item in container.view:
+        if item.name == datastore_name:
+            return item
+    return None
+
+
 def get_service_instance(host, username=None, password=None, protocol=None,
                          port=None, mechanism='userpass', principal=None,
                          domain=None):
