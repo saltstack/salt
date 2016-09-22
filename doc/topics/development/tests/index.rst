@@ -424,7 +424,7 @@ Several Salt-specific helpers are available. A full list is available by inspect
 functions exported in `salttesting.helpers`.
 
 `@expensiveTest` -- Designates a test which typically requires a relatively costly
-external resources, like a cloud virtual machine. This decorator is not normally
+external resource, like a cloud virtual machine. This decorator is not normally
 used by developers outside of the Salt core team.
 
 `@destructiveTest` -- Marks a test as potentially destructive. It will not be run
@@ -444,11 +444,11 @@ the test will be skipped if the binaries are not all present on the system.
 
 `@skip_if_not_root` -- If the test is not executed as root, it will be skipped.
 
-`@with_system_user` -- Creates an optionally destroy a system user within a test case.
+`@with_system_user` -- Creates and optionally destroys a system user within a test case.
 See implementation details in `salttesting.helpers` for details.
 
-`@with_system_group` -- Creates an optionally destroy a system group within a test case.
+`@with_system_group` -- Creates and optionally destroys a system group within a test case.
 See implementation details in `salttesting.helpers` for details.
 
-`@with_system_user_and_group` -- Creates an optionally destroy a system user and group
+`@with_system_user_and_group` -- Creates and optionally destroys a system user and group
 within a test case.  See implementation details in `salttesting.helpers` for details.
