@@ -260,6 +260,80 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for path in (mirror_dir, admin_dir, clone_dir):
                 shutil.rmtree(path, ignore_errors=True)
 
+    def _changed_local_branch_helper(self, rev, hint):
+        '''
+        We're testing two almost identical cases, the only thing that differs
+        is the rev used for the git.latest state.
+        '''
+        name = os.path.join(integration.TMP, 'salt_repo')
+        cwd = os.getcwd()
+        try:
+            # Clone repo
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev=rev,
+                target=name
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Check out a new branch in the clone and make a commit, to ensure
+            # that when we re-run the state, it is not a fast-forward change
+            os.chdir(name)
+            with salt.utils.fopen(os.devnull, 'w') as devnull:
+                subprocess.check_call(['git', 'checkout', '-b', 'new_branch'],
+                                      stdout=devnull, stderr=devnull)
+                with salt.utils.fopen('foo', 'w'):
+                    pass
+                subprocess.check_call(['git', 'add', '.'],
+                                      stdout=devnull, stderr=devnull)
+                subprocess.check_call(['git', 'commit', '-m', 'add file'],
+                                      stdout=devnull, stderr=devnull)
+            os.chdir(cwd)
+
+            # Re-run the state, this should fail with a specific hint in the
+            # comment field.
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev=rev,
+                target=name
+            )
+            self.assertSaltFalseReturn(ret)
+
+            comment = ret[next(iter(ret))]['comment']
+            self.assertTrue(hint in comment)
+        finally:
+            # Make sure that we change back to the original cwd even if there
+            # was a traceback in the test.
+            os.chdir(cwd)
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_latest_changed_local_branch_rev_head(self):
+        '''
+        Test for presence of hint in failure message when the local branch has
+        been changed and a the rev is set to HEAD
+
+        This test will fail if the default branch for the salt-test-repo is
+        ever changed.
+        '''
+        self._changed_local_branch_helper(
+            'HEAD',
+            'The default remote branch (develop) differs from the local '
+            'branch (new_branch)'
+        )
+
+    def test_latest_changed_local_branch_rev_develop(self):
+        '''
+        Test for presence of hint in failure message when the local branch has
+        been changed and a non-HEAD rev is specified
+        '''
+        self._changed_local_branch_helper(
+            'develop',
+            'The desired rev (develop) differs from the name of the local '
+            'branch (new_branch)'
+        )
+
     def test_present(self):
         '''
         git.present

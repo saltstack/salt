@@ -182,14 +182,39 @@ def _failed_submodule_update(ret, exc, comments=None):
     return _fail(ret, msg, comments)
 
 
-def _not_fast_forward(ret, pre, post, branch, local_branch,
-                      local_changes, comments):
+def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
+                      default_branch, local_changes, comments):
+    branch_msg = ''
+    if branch is None:
+        if rev != 'HEAD':
+            if local_branch != rev:
+                branch_msg = (
+                    ' The desired rev ({0}) differs from the name of the '
+                    'local branch ({1}), if the desired rev is a branch name '
+                    'then a forced update could possibly be avoided by '
+                    'setting the \'branch\' argument to \'{0}\' instead.'
+                    .format(rev, local_branch)
+                )
+        else:
+            if default_branch is not None and local_branch != default_branch:
+                branch_msg = (
+                    ' The default remote branch ({0}) differs from the '
+                    'local branch ({1}). This could be caused by changing the '
+                    'default remote branch, or if the local branch was '
+                    'manually changed. Rather than forcing an update, it '
+                    'may be advisable to set the \'branch\' argument to '
+                    '\'{0}\' instead. To ensure that this state follows the '
+                    '\'{0}\' branch instead of the remote HEAD, set the '
+                    '\'rev\' argument to \'{0}\'.'
+                    .format(default_branch, local_branch)
+                )
+
     pre = _short_sha(pre)
     post = _short_sha(post)
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.'.format(
+        'True to force this update{3}.{4}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -199,7 +224,8 @@ def _not_fast_forward(ret, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
-            ' and discard these changes' if local_changes else ''
+            ' and discard these changes' if local_changes else '',
+            branch_msg,
         ),
         comments
     )
@@ -630,14 +656,27 @@ def latest(name,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
 
+    if 'HEAD' in all_remote_refs:
+        head_rev = all_remote_refs['HEAD']
+        for refname, refsha in six.iteritems(all_remote_refs):
+            if refname.startswith('refs/heads/'):
+                if refsha == head_rev:
+                    default_branch = refname.partition('refs/heads/')[-1]
+                    break
+        else:
+            default_branch = None
+    else:
+        head_ref = None
+        default_branch = None
+
     desired_upstream = False
     if bare:
         remote_rev = None
         remote_rev_type = None
     else:
         if rev == 'HEAD':
-            if 'HEAD' in all_remote_refs:
-                remote_rev = all_remote_refs['HEAD']
+            if head_rev is not None:
+                remote_rev = head_rev
                 # Just go with whatever the upstream currently is
                 desired_upstream = None
                 remote_rev_type = 'sha1'
@@ -951,10 +990,12 @@ def latest(name,
                 if not force_reset:
                     return _not_fast_forward(
                         ret,
+                        rev,
                         base_rev,
                         remote_rev,
                         branch,
                         local_branch,
+                        default_branch,
                         local_changes,
                         comments)
                 merge_action = 'hard-reset'
@@ -1262,10 +1303,12 @@ def latest(name,
                     if fast_forward is False and not force_reset:
                         return _not_fast_forward(
                             ret,
+                            rev,
                             base_rev,
                             remote_rev,
                             branch,
                             local_branch,
+                            default_branch,
                             local_changes,
                             comments)
 

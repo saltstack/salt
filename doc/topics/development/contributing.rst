@@ -110,26 +110,54 @@ Fork a Repo Guide_>`_ and is well worth reading.
     If you get stuck, there are many introductory Git resources on
     http://help.github.com.
 
-#.  Push your locally-committed changes to your GitHub fork,
+#.  Push your locally-committed changes to your GitHub fork.
+
+    .. code-block:: bash
+
+        git push -u origin fix-broken-thing
+
+    or
+
+    .. code-block:: bash
+
+        git push -u origin add-cool-feature
 
     .. note::
 
         You may want to rebase before pushing to work out any potential
-        conflicts.
+        conflicts:
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        git fetch upstream
-        git rebase upstream/2015.5 fix-broken-thing
-        git push --set-upstream origin fix-broken-thing
+            git fetch upstream
+            git rebase upstream/2015.5 fix-broken-thing
+            git push -u origin fix-broken-thing
 
-    or,
+        or
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        git fetch upstream
-        git rebase upstream/develop add-cool-feature
-        git push --set-upstream origin add-cool-feature
+            git fetch upstream
+            git rebase upstream/develop add-cool-feature
+            git push -u origin add-cool-feature
+
+        If you do rebase, and the push is rejected with a
+        ``(non-fast-forward)`` comment, then run ``git status``. You will
+        likely see a message about the branches diverging:
+
+        .. code-block:: text
+
+            On branch fix-broken-thing
+            Your branch and 'origin/fix-broken-thing' have diverged,
+            and have 1 and 2 different commits each, respectively.
+              (use "git pull" to merge the remote branch into yours)
+            nothing to commit, working tree clean
+
+        Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
+        ``--force`` to the end of the ``git push`` command to get the changes
+        pushed to your fork. Pulling or merging, while they will resolve the
+        non-fast-forward issue, will likely add extra commits to the pull
+        request which were not part of your changes.
 
 #.  Find the branch on your GitHub salt fork.
 
