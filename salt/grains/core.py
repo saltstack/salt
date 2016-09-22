@@ -608,7 +608,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             if 'Manufacturer: Bochs' in output:
                 grains['virtual'] = 'kvm'
-            if 'BHYVE  BVXSDT' in output:
+            if 'BHYVE' in output:
                 grains['virtual'] = 'bhyve'
             # Product Name: (oVirt) www.ovirt.org
             # Red Hat Community virtualization Project based on kvm
