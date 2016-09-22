@@ -403,11 +403,11 @@ class GetContentTestCase(TestCase):
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=True,
+            name='traverseEntities', path='view', skip=False,
             type=vim.view.ContainerView)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.container_view_mock,
-            skip=False,
+            skip=True,
             selectSet=[self.traversal_spec_ret_mock])
         # check destroy is called
         self.assertEqual(self.destroy_mock.call_count, 1)
@@ -423,7 +423,7 @@ class GetContentTestCase(TestCase):
                     traversal_spec=traversal_spec_obj_mock)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.root_folder_mock,
-            skip=False,
+            skip=True,
             selectSet=[traversal_spec_obj_mock])
         # Check local traversal methods are not called
         self.assertEqual(self.create_container_view_mock.call_count, 0)
@@ -441,12 +441,12 @@ class GetContentTestCase(TestCase):
                             self.si_mock,
                             self.obj_type_mock)
         self.traversal_spec_mock.assert_called_once_with(
-            name='traverseEntities', path='view', skip=True,
+            name='traverseEntities', path='view', skip=False,
             type=vim.view.ContainerView)
         self.property_spec_mock.assert_called_once_with(
             type=self.obj_type_mock, all=True, pathSet=None)
         self.obj_spec_mock.assert_called_once_with(
-            obj=self.container_view_mock, skip=False,
+            obj=self.container_view_mock, skip=True,
             selectSet=[self.traversal_spec_ret_mock])
         self.retrieve_contents_mock.assert_called_once_with(
             [self.filter_spec_ret_mock])

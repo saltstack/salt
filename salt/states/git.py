@@ -140,8 +140,11 @@ def _strip_exc(exc):
     return re.sub(r'^Command [\'"].+[\'"] failed: ', '', exc.strerror)
 
 
-def _uptodate(ret, target, comments=None):
+def _uptodate(ret, target, comments=None, local_changes=False):
     ret['comment'] = 'Repository {0} is up-to-date'.format(target)
+    if local_changes:
+        ret['comment'] += ', but with local changes. Set \'force_reset\' to ' \
+                          'True to purge local changes.'
     if comments:
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
@@ -789,6 +792,30 @@ def latest(name,
                 )
                 local_changes = False
 
+            if local_changes and revs_match:
+                if force_reset:
+                    msg = (
+                        '{0} is up-to-date, but with local changes. Since '
+                        '\'force_reset\' is enabled, these local changes '
+                        'would be reset.'.format(target)
+                    )
+                    if __opts__['test']:
+                        ret['changes']['forced update'] = True
+                        if comments:
+                            msg += _format_comments(comments)
+                        return _neutral_test(ret, msg)
+                    log.debug(msg.replace('would', 'will'))
+                else:
+                    log.debug(
+                        '%s up-to-date, but with local changes. Since '
+                        '\'force_reset\' is disabled, no changes will be '
+                        'made.', target
+                    )
+                    return _uptodate(ret,
+                                     target,
+                                     _format_comments(comments),
+                                     local_changes)
+
             if remote_rev_type == 'sha1' \
                     and base_rev is not None \
                     and base_rev.startswith(remote_rev):
@@ -882,7 +909,7 @@ def latest(name,
                             has_remote_rev = True
 
             # If fast_forward is not boolean, then we don't know if this will
-            # be a fast forward or not, because a fetch is requirde.
+            # be a fast forward or not, because a fetch is required.
             fast_forward = None if not local_changes else False
 
             if has_remote_rev:
