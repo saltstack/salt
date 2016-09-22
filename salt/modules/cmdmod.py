@@ -2004,6 +2004,13 @@ def script(source,
         # Backwards compatibility
         saltenv = __env__
 
+    if salt.utils.is_windows() and runas and cwd is None:
+        cwd = os.path.join(__opts__['cachedir'], 'wintmp')
+        if not os.path.isdir(cwd):
+            ret = __salt__['win_dacl.add_ace'](
+                cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
+                'FOLDER&SUBFOLDERS&FILES')
+
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
