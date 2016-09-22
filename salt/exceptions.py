@@ -386,6 +386,13 @@ class VMwareSaltError(CommandExecutionError):
     '''
 
 
+class VMwareRuntimeError(VMwareSaltError):
+    '''
+    Used when a runtime error is encountered when communicating with the
+    vCenter
+    '''
+
+
 class VMwareConnectionError(VMwareSaltError):
     '''
     Used when the client fails to connect to a either a VMware vCenter server or
