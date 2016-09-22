@@ -15,10 +15,11 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
 
 # Import Salt libraries
+import salt.exceptions as excs
 import salt.utils.vmware
 # Import Third Party Libs
 try:
-    from pyVmomi import vim
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -467,8 +468,41 @@ class GetContentTestCase(TestCase):
             obj=container_ref_mock, skip=False, selectSet=None)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetRootFolderTestCase(TestCase):
+    '''Tests for salt.utils.get_root_folder'''
+
+    def setUp(self):
+        self.mock_root_folder = MagicMock()
+        self.mock_content = MagicMock(rootFolder=self.mock_root_folder)
+        self.mock_si = MagicMock(
+            RetrieveContent=MagicMock(return_value=self.mock_content))
+
+    def test_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_return(self):
+        ret = salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(ret, self.mock_root_folder)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(WaitForTaskTestCase, needs_daemon=False)
     run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
     run_tests(GetContentTestCase, needs_daemon=False)
+    run_tests(GetRootFolderTestCase, needs_daemon=False)
