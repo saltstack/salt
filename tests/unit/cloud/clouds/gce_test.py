@@ -8,6 +8,8 @@
 
 # Import Python libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
+import mock
 
 try:
     import libcloud.security
@@ -94,7 +96,8 @@ class GCETestCase(TestCase):
         with patch('salt.config.check_driver_dependencies', return_value=True) as p:
             get_deps = gce.get_dependencies()
             self.assertEqual(get_deps, True)
-            p.assert_called_once()
+            if LooseVersion(mock.__version__) >= LooseVersion('2.0.0'):
+                p.assert_called_once()
 
     def test_provider_matches(self):
         """

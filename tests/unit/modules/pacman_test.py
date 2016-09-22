@@ -40,16 +40,17 @@ class PacmanTestCase(TestCase):
         cmdmock = MagicMock(return_value='A 1.0\nB 2.0')
         sortmock = MagicMock()
         stringifymock = MagicMock()
+        mock_ret = {'A': ['1.0'], 'B': ['2.0']}
         with patch.dict(pacman.__salt__, {
                 'cmd.run': cmdmock,
                 'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
                 'pkg_resource.sort_pkglist': sortmock,
                 'pkg_resource.stringify': stringifymock
                 }):
-            self.assertDictEqual(pacman.list_pkgs(), {'A': ['1.0'], 'B': ['2.0']})
+            self.assertDictEqual(pacman.list_pkgs(), mock_ret)
 
-        sortmock.assert_called_once()
-        stringifymock.assert_called_once()
+        sortmock.assert_called_with(mock_ret)
+        stringifymock.assert_called_with(mock_ret)
 
     def test_list_pkgs_as_list(self):
         '''
@@ -58,15 +59,16 @@ class PacmanTestCase(TestCase):
         cmdmock = MagicMock(return_value='A 1.0\nB 2.0')
         sortmock = MagicMock()
         stringifymock = MagicMock()
+        mock_ret = {'A': ['1.0'], 'B': ['2.0']}
         with patch.dict(pacman.__salt__, {
                 'cmd.run': cmdmock,
                 'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
                 'pkg_resource.sort_pkglist': sortmock,
                 'pkg_resource.stringify': stringifymock
                 }):
-            self.assertDictEqual(pacman.list_pkgs(True), {'A': ['1.0'], 'B': ['2.0']})
+            self.assertDictEqual(pacman.list_pkgs(True), mock_ret)
 
-        sortmock.assert_called_once()
+        sortmock.assert_called_with(mock_ret)
         stringifymock.assert_not_called()
 
     def test_group_list(self):
