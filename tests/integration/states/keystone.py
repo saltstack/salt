@@ -40,7 +40,7 @@ class KeystoneStateTest(integration.ModuleCase,
     token = 'administrator'
 
     @destructiveTest
-    def test_aaa_setup_keystone_endpoint(self):
+    def setUp(self):
         ret = self.run_state('keystone.service_present',
                              name='keystone',
                              description='OpenStack Identity',
@@ -106,57 +106,13 @@ class KeystoneStateTest(integration.ModuleCase,
         self.assertTrue(ret['keystone_|-demo_|-demo_|-user_present']['result'])
 
     @destructiveTest
-    def test_zzz_teardown_keystone_endpoint(self):
-        ret = self.run_state('keystone.user_absent',
-                             name='admin',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-user_absent']['result'])
-
-        ret = self.run_state('keystone.user_absent',
-                             name='demo',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-user_absent']['result'])
-
-        ret = self.run_state('keystone.role_absent',
-                             name='admin',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-role_absent']['result'])
-
-        ret = self.run_state('keystone.role_absent',
-                             name='user',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_absent']['result'])
-
-        ret = self.run_state('keystone.tenant_absent',
-                             name='admin',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-tenant_absent']['result'])
-
-        ret = self.run_state('keystone.tenant_absent',
-                             name='demo',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-tenant_absent']['result'])
-
-        ret = self.run_state('keystone.service_absent',
-                             name='keystone',
-                             connection_endpoint=self.endpoint,
-                             connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-service_absent']['result'])
-
-    @destructiveTest
     def test_keystone_v2(self):
         ret = self.run_state('keystone.service_present',
-                             name='nova',
+                             name='testv2',
                              description='Nova Service',
                              service_type='compute',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-service_present']['result'])
+        self.assertTrue(ret['keystone_|-testv2_|-testv2_|-service_present']['result'])
 
         ret = self.run_state('keystone.endpoint_present',
                              name='nova',
@@ -188,41 +144,46 @@ class KeystoneStateTest(integration.ModuleCase,
                              profile='adminv2')
         self.assertTrue(ret['keystone_|-test_|-test_|-user_present']['result'])
 
+        ret = self.run_state('keystone.service_absent',
+                             name='testv2',
+                             profile='adminv2')
+        self.assertTrue(ret['keystone_|-testv2_|-testv2_|-service_absent']['result'])
+
     @destructiveTest
     def test_keystone_v3(self):
         ret = self.run_state('keystone.service_present',
-                             name='glance',
+                             name='testv3',
                              description='Image Service',
                              service_type='image',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-service_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-service_present']['result'])
 
         ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
+                             name='testv3',
                              description='Glance Service',
                              interface='public',
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
 
         ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
+                             name='testv3',
                              description='Glance Service',
                              interface='internal',
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
 
         ret = self.run_state('keystone.endpoint_present',
-                             name='glance',
+                             name='testv3',
                              description='Glance Service',
                              interface='admin',
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-glance_|-glance_|-endpoint_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
 
         ret = self.run_state('keystone.project_present',
                              name='testv3',
@@ -243,6 +204,11 @@ class KeystoneStateTest(integration.ModuleCase,
                              roles={'testv3': ['user']},
                              profile='adminv3')
         self.assertTrue(ret['keystone_|-testv3_|-testv3_|-user_present']['result'])
+
+        ret = self.run_state('keystone.service_absent',
+                             name='testv3',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-service_absent']['result'])
 
 
 if __name__ == '__main__':
