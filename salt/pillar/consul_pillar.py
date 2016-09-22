@@ -186,9 +186,10 @@ def get_conn(opts, profile):
 
     consul_host = conf.get('consul.host', '127.0.0.1')
     consul_port = conf.get('consul.port', 8500)
+    consul_token = conf.get('consul.token', None)
 
     if HAS_CONSUL:
-        return consul.Consul(host=consul_host, port=consul_port)
+        return consul.Consul(host=consul_host, port=consul_port, token=consul_token)
     else:
         raise CommandExecutionError(
             '(unable to import consul, '
