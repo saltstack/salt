@@ -417,7 +417,7 @@ def install(name,
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1605, 1614, 1641, 3010]:
+    if result['retcode'] not in [0, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -665,7 +665,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] not in [0, 1605, 1614, 1641]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -757,7 +757,7 @@ def upgrade(name,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1605, 1614, 1641, 3010]:
+    if result['retcode'] not in [0, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
@@ -801,7 +801,7 @@ def update(name, source=None, pre_versions=False):
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] not in [0, 1641, 3010]:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
