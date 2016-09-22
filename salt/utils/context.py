@@ -177,6 +177,9 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
             r = r[k]
         return r
 
+    def __repr__(self):
+        return repr(self._dict())
+
     def __setitem__(self, key, val):
         self._dict()[key] = val
 
