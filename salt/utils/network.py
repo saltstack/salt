@@ -236,7 +236,7 @@ def natural_ipv4_netmask(ip, fmt='prefixlen'):
     else:
         mask = '8'
 
-    if format == 'netmask':
+    if fmt == 'netmask':
         return cidr_to_ipv4_netmask(mask)
     else:
         return '/' + mask
