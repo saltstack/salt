@@ -223,6 +223,25 @@ def is_ipv6(ip):
         return False
 
 
+def natural_ipv4_netmask(ip, fmt='prefixlen'):
+    '''
+    Returns the "natural" mask of an IPv4 address
+    '''
+    bits = _ipv4_to_bits(ip)
+
+    if bits.startswith('11'):
+        mask = '24'
+    elif bits.startswith('1'):
+        mask = '16'
+    else:
+        mask = '8'
+
+    if format == 'netmask':
+        return cidr_to_ipv4_netmask(mask)
+    else:
+        return '/' + mask
+
+
 def cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
