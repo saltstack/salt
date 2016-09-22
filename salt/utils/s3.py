@@ -140,6 +140,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                           data=data,
                                           verify=verify_ssl,
                                           stream=True)
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
         response = result.content
     elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,
