@@ -564,13 +564,13 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
         owner_query = 'OWNER {0}'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
-        optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
+        optionstext = ['{0} = {1}'.format(k, v) for k, v in six.iteritems(options)]
         options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
     query = 'CREATE TABLESPACE {0} {1} LOCATION \'{2}\' {3}'.format(name,
-                                                                owner_query,
-                                                                location,
-                                                                options_query)
+                                                                    owner_query,
+                                                                    location,
+                                                                    options_query)
 
     # Execute the command
     ret = _psql_prepare_and_run(['-c', query],
