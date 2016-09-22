@@ -31,7 +31,7 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Confirm this module is on a nilrt based system
+    Confirm this module is running on an Alpine Linux distribution
     '''
     if __grains__.get('os_family', False) == 'Alpine':
         return __virtualname__
