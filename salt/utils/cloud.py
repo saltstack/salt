@@ -830,7 +830,7 @@ def wait_for_winrm(host, port, username, password, timeout=900):
     while True:
         trycount += 1
         try:
-            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            s = winrm.Session(host, auth=(username, password), transport='ssl', server_cert_validation='ignore')
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
