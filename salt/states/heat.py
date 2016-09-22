@@ -18,7 +18,7 @@ Stack can be set as either absent or deploy.
     - params: {}
     - poll: 5
     - rollback: False
-    - timeout: 3600
+    - timeout: 60
 
   heat.absent:
     - name:
@@ -122,7 +122,7 @@ def _parse_template(tmpl_str):
 
 
 def deployed(name, template=None, enviroment=None, params=None, poll=5,
-             rollback=False, timeout=3600, update=False, profile=None,
+             rollback=False, timeout=60, update=False, profile=None,
              **connection_args):
     '''
     Deploy stack with the specified properties
@@ -294,7 +294,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
     return ret
 
 
-def absent(name, poll=5, profile=None):
+def absent(name, poll=5, timeout=60, profile=None):
     '''
     Ensure that the named stack is absent
 
@@ -303,6 +303,9 @@ def absent(name, poll=5, profile=None):
 
     poll
         Poll(in sec.) and report events until stack complete
+
+    timeout
+        Stack creation timeout in minutes
 
     profile
         Profile to use
@@ -333,7 +336,7 @@ def absent(name, poll=5, profile=None):
         return ret
 
     stack = __salt__['heat.delete_stack'](name=name, poll=poll,
-                                          profile=profile)
+                                          timeout=timeout, profile=profile)
 
     ret['result'] = stack['result']
     ret['comment'] = stack['comment']

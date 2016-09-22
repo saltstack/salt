@@ -263,7 +263,8 @@ def _get_stack_events(h_client, stack_id, event_args):
         return events
 
 
-def _poll_for_events(h_client, stack_name, action=None, poll_period=5, marker=None):
+def _poll_for_events(h_client, stack_name, action=None, poll_period=5,
+                     timeout=60, marker=None):
     '''
     Polling stack events
     '''
@@ -272,7 +273,7 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5, marker=No
         stop_check = lambda a: a in stop_status
     else:
         stop_check = lambda a: a.endswith('_COMPLETE') or a.endswith('_FAILED')
-
+    timeout_sec = timeout * 60
     no_event_polls = 0
     msg_template = ('\n Stack %(name)s %(status)s \n')
     while True:
@@ -306,6 +307,11 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5, marker=No
             no_event_polls = 0
 
         time.sleep(poll_period)
+        timeout_sec -= poll_period
+        if timeout_sec <= 0:
+            stack_status = '{0}_FAILED'.format(action)
+            msg = 'Timeout expired'
+            return stack_status, msg
 
 
 def list_stack(profile=None):
@@ -387,7 +393,7 @@ def show_stack(name=None, profile=None):
     return ret
 
 
-def delete_stack(name=None, poll=0, profile=None):
+def delete_stack(name=None, poll=0, timeout=60, profile=None):
     '''
     Delete a stack (heat stack-delete)
 
@@ -396,6 +402,9 @@ def delete_stack(name=None, poll=0, profile=None):
 
     poll
         Poll and report events until stack complete
+
+    timeout
+        Stack creation timeout in minute
 
     profile
         Profile to use
@@ -431,7 +440,8 @@ def delete_stack(name=None, poll=0, profile=None):
 
     if poll > 0:
         try:
-            stack_status, msg = _poll_for_events(h_client, name, action='DELETE', poll_period=poll)
+            stack_status, msg = _poll_for_events(h_client, name, action='DELETE',
+                                                 poll_period=poll, timeout=timeout)
         except exc.CommandError:
             ret['comment'] = 'Deleted stack {0}.'.format(name)
             return ret
@@ -450,7 +460,7 @@ def delete_stack(name=None, poll=0, profile=None):
 
 
 def create_stack(name=None, template_file=None, enviroment=None,
-                 parameters=None, poll=0, rollback=False, timeout=3600,
+                 parameters=None, poll=0, rollback=False, timeout=60,
                  profile=None):
     '''
     Create a stack (heat stack-create)
@@ -624,7 +634,8 @@ def create_stack(name=None, template_file=None, enviroment=None,
         ret['comment'] = '{0}'.format(ex)
         return ret
     if poll > 0:
-        stack_status, msg = _poll_for_events(h_client, name, action='CREATE', poll_period=poll)
+        stack_status, msg = _poll_for_events(h_client, name, action='CREATE',
+                                             poll_period=poll, timeout=timeout)
         if stack_status == 'CREATE_FAILED':
             ret['result'] = False
             ret['comment'] = 'Created stack FAILED\'{0}\'{1}.'.format(name, msg)
@@ -634,7 +645,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
 
 
 def update_stack(name=None, template_file=None, enviroment=None,
-                 parameters=None, poll=0, rollback=False, timeout=3600,
+                 parameters=None, poll=0, rollback=False, timeout=60,
                  profile=None):
     '''
     Update a stack (heat stack-template)
@@ -811,7 +822,8 @@ def update_stack(name=None, template_file=None, enviroment=None,
         return ret
 
     if poll > 0:
-        stack_status, msg = _poll_for_events(h_client, name, action='UPDATE', poll_period=poll)
+        stack_status, msg = _poll_for_events(h_client, name, action='UPDATE',
+                                             poll_period=poll, timeout=timeout)
         if stack_status == 'UPDATE_FAILED':
             ret['result'] = False
             ret['comment'] = 'Updated stack FAILED\'{0}\'{1}.'.format(name, msg)
