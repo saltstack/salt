@@ -2007,7 +2007,7 @@ def script(source,
     if salt.utils.is_windows() and runas and cwd is None:
         cwd = os.path.join(__opts__['cachedir'], 'wintmp')
         if not os.path.isdir(cwd):
-            __salt__['file.mkdir'](root)
+            __salt__['file.mkdir'](cwd)
         ret = __salt__['win_dacl.add_ace'](
             cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
             'FOLDER&SUBFOLDERS&FILES')
