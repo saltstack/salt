@@ -96,25 +96,6 @@ class NonBlockingPopen(subprocess.Popen):
             args if logging_command is None else logging_command
         )
 
-    def poll(self, flag=os.WNOHANG):
-        if self.returncode is None:
-            notintr = False
-            while not notintr:
-                try: 
-                    pid, sts = os.waitpid(self.pid, flag)
-                    notintr = True
-                except OSError as exc:
-                    if exc.errno != errno.EINTR:
-                        raise exc
-                if pid == self.pid:
-                    if os.WIFSIGNALED(sts):
-                        self.returncode = -os.WTERMSIG(sts)
-                    else:
-                        assert os.WIFEXITED(sts)
-                        self.returncode = os.WEXITSTATUS(sts)
-                return self.returncode
-
-
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)
 
