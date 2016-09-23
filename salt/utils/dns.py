@@ -66,15 +66,8 @@ def parse_resolv(src='/etc/resolv.conf'):
                                     if ip_net.version == 4:
                                         ip_addr = str(ip_net.network_address)
                                         # pylint: disable=protected-access
-                                        ip_bits = salt.utils.network.\
-                                            _ipv4_to_bits(ip_addr)
-
-                                        if ip_bits.startswith('11'):
-                                            mask = '/24'
-                                        elif ip_bits.startswith('1'):
-                                            mask = '/16'
-                                        else:
-                                            mask = '/8'
+                                        mask = salt.utils.network.\
+                                            natural_ipv4_netmask(ip_addr)
 
                                         ip_net = ipaddress.ip_network(
                                             '{0}{1}'.format(ip_addr, mask),
