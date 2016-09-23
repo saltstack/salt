@@ -887,7 +887,8 @@ steps to this process:
          #!/usr/bin/env sh
          salt-call event.fire_master update salt/fileserver/gitfs/update
 
-   b. To enable other git users to run the hook after a `push`, use sudo in the hook script: 
+   b. To enable other git users to run the hook after a `push`, use sudo in the hook script:
+
      .. code-block:: bash
 
          #!/usr/bin/env sh
@@ -896,7 +897,7 @@ steps to this process:
 4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
    Add the following policy to the sudoers file on the git server.
 
-   .. code-block::
+   .. code-block:: bash
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty
