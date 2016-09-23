@@ -47,10 +47,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.atomicfile
 import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
-import salt.utils.atomicfile
+import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
 
