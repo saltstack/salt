@@ -750,6 +750,8 @@ def dns_check(addr, safe=False, ipv6=False):
     exception. Obeys system preference for IPv4/6 address resolution.
     '''
     error = False
+    lookup = addr
+    seen_ipv6 = False
     try:
         # issue #21397: force glibc to re-read resolv.conf
         if HAS_RESINIT:
@@ -762,19 +764,28 @@ def dns_check(addr, safe=False, ipv6=False):
         else:
             addr = False
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
+                if h[0] == socket.AF_INET:
+                    addr = ip_bracket(h[4][0])
+                    break
+                elif h[0] == socket.AF_INET6:
+                    if not ipv6:
+                        seen_ipv6 = True
+                        continue
                     addr = ip_bracket(h[4][0])
                     break
             if not addr:
                 error = True
     except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        if seen_ipv6 and not addr:
+            err = ('DNS lookup of \'{0}\' failed, but ipv6 address ignored. Enable ipv6 in config to use it.').format(lookup)
+        else:
+            err = ('DNS lookup of \'{0}\' failed.').format(lookup)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
