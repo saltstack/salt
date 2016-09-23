@@ -165,6 +165,10 @@ def _fulfills_version_spec(versions, oper, desired_version,
     otherwise returns False
     '''
     cmp_func = __salt__.get('pkg.version_cmp')
+    # stripping "with_origin" dict wrapper
+    if salt.utils.is_freebsd():
+        if isinstance(versions, dict) and 'version' in versions:
+            versions = versions['version']
     for ver in versions:
         if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
@@ -1241,10 +1245,14 @@ def installed(
     failed_hold = None
     if targets or to_reinstall:
         reinstall = bool(to_reinstall)
+        force = False
+        if salt.utils.is_freebsd():
+            force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name,
                                               refresh=refresh,
                                               version=version,
+                                              force=force,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
                                               pkgs=pkgs,

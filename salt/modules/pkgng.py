@@ -1670,3 +1670,35 @@ def updating(name,
         python_shell=False,
         output_loglevel='trace'
     )
+
+
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
+    '''
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '2.1.11' '2.1.12'
+    '''
+    # Don't worry about ignore_epoch since we're shelling out to pkg.
+    sym = {
+        '<': -1,
+        '>': 1,
+        '=': 0,
+    }
+    try:
+        cmd = ['pkg', 'version', '--test-version', pkg1, pkg2]
+        ret = __salt__['cmd.run_all'](cmd,
+                                            output_loglevel='trace',
+                                            python_shell=False,
+                                            ignore_retcode=True)
+    except Exception as exc:
+        log.error(exc)
+
+    if ret['stdout'] in sym:
+        return sym[ret['stdout']]
+    return None
