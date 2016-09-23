@@ -93,7 +93,8 @@ def present(name,
         Name of the role to which privileges should be granted
 
     object_name
-       Name of the object on which the grant is to be performed
+       Name of the object on which the grant is to be performed.
+       'ALL' may be used for objects of type 'table' or 'sequence'.
 
     object_type
        The object type, which can be one of the following:
