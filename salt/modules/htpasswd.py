@@ -139,3 +139,46 @@ def userdel(pwfile, user, runas=None):
     out = __salt__['cmd.run'](cmd, runas=runas,
                               python_shell=False).splitlines()
     return out
+
+
+def verify(pwfile, user, password, opts='', runas=None):
+    '''
+    Return True if the htpasswd file exists, the user has an entry, and their
+    password matches.
+
+    pwfile
+        Fully qualified path to htpasswd file
+
+    user
+        User name
+
+    password
+        User password
+
+    opts
+        Valid options that can be passed are:
+
+            - `m`  Force MD5 encryption of the password (default).
+            - `d`  Force CRYPT encryption of the password.
+            - `p`  Do not encrypt the password (plaintext).
+            - `s`  Force SHA encryption of the password.
+
+    runas
+        The system user to run htpasswd command with
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' webutil.verify /etc/httpd/htpasswd larry maybepassword
+        salt '*' webutil.verify /etc/httpd/htpasswd larry maybepassword opts=ns
+    '''
+    if not os.path.exists(pwfile):
+        return False
+
+    cmd = ['htpasswd', '-bv{0}'.format(opts), pwfile, user, password]
+    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    log.debug('Result of verifying htpasswd for user {0}: {1}'.format(
+        user, ret))
+
+    return ret['retcode'] == 0
