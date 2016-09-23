@@ -664,14 +664,6 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
-        if self.opts.get('master_type') != 'disable':
-            self.opts['pillar'] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
-            ).compile_pillar()
 
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -689,6 +681,17 @@ class SMinion(MinionBase):
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
+
+        if self.opts.get('master_type') != 'disable':
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+                funcs=self.functions,
+                rend=self.rend,
+            ).compile_pillar()
 
 
 class MasterMinion(object):

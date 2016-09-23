@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-               pillar=None, pillarenv=None):
+               pillar=None, pillarenv=None, rend=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -48,7 +48,7 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
                 pillar=pillar, pillarenv=pillarenv)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
-                 pillar=pillar, pillarenv=pillarenv)
+                 pillar=pillar, pillarenv=pillarenv, rend=rend)
 
 
 # TODO: migrate everyone to this one!
@@ -123,7 +123,7 @@ class RemotePillar(object):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar=None, pillarenv=None):
+                 pillar=None, pillarenv=None, *args, **kwargs):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -259,7 +259,7 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar=None, pillarenv=None):
+                 pillar=None, pillarenv=None, rend=None):
         self.minion_id = minion_id
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
@@ -281,7 +281,10 @@ class Pillar(object):
             self.functions = functions
 
         self.matcher = salt.minion.Matcher(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
+        if rend is None:
+            self.rend = salt.loader.render(self.opts, self.functions)
+        else:
+            self.rend = rend
         ext_pillar_opts = copy.deepcopy(self.opts)
         # Fix self.opts['file_roots'] so that ext_pillars know the real
         # location of file_roots. Issue 5951
