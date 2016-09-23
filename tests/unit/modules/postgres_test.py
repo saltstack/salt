@@ -1301,6 +1301,34 @@ class PostgresTestCase(TestCase):
                     host='testhost', port='testport',
                     password='testpassword', user='testuser', runas='user')
 
+        # Test grant on all tables
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=False)):
+                ret = postgres.privileges_grant(
+                   'baruwa',
+                   'ALL',
+                   'table',
+                   'SELECT',
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "baruwa"'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
     def test_privileges_grant_group(self):
         '''
         Test granting privileges on group

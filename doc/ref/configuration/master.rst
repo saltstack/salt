@@ -2315,9 +2315,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_whitelist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 .. conf_master:: minionfs_blacklist
 
@@ -2341,9 +2341,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_blacklist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 
 .. _pillar-configuration:
