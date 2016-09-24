@@ -417,6 +417,9 @@ class Schedule(object):
             for prefix in cleanup:
                 self.delete_job_prefix(prefix)
 
+    def __getnewargs__(self):
+        return self.opts, self.functions, self.returners, self.intervals, None
+
     def option(self, opt):
         '''
         Return the schedule data structure
