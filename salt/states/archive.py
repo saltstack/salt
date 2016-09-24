@@ -84,7 +84,6 @@ def _cleanup_destdir(name):
 def extracted(name,
               source,
               archive_format,
-              archive_user=None,
               password=None,
               user=None,
               group=None,
@@ -371,7 +370,7 @@ def extracted(name,
                           .format(name.rstrip('/')))
         return ret
     elif not __salt__['file.directory_exists'](name):
-        __salt__['file.makedirs'](name, user=archive_user)
+        __salt__['file.makedirs'](name, user=user, group=group)
         created_destdir = True
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
