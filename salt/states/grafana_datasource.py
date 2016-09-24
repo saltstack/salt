@@ -26,8 +26,10 @@ Manage Grafana v2.0 data sources
 '''
 from __future__ import absolute_import
 
-import requests
+import json
 
+import salt.utils
+import salt.utils.http
 from salt.ext.six import string_types
 
 
@@ -89,26 +91,20 @@ def present(name,
         basic_auth, basic_auth_user, basic_auth_password, is_default, json_data)
 
     if datasource:
-        requests.put(
-            _get_url(profile, datasource['id']),
-            data,
-            headers=_get_headers(profile),
-            timeout=profile.get('grafana_timeout', 3),
-        )
+        salt.utils.http.query(_get_url(profile, datasource['id']), data=data,
+                              header_dict=_get_headers(profile),
+                              timeout=profile.get('grafana_timeout', 3))
         ret['result'] = True
-        ret['changes'] = _diff(datasource, data)
-        if ret['changes']['new'] or ret['changes']['old']:
-            ret['comment'] = 'Data source {0} updated'.format(name)
-        else:
-            ret['changes'] = None
+        ret['changes'] = salt.utils.compare_dicts(datasource, data)
+        if not ret['changes']:
             ret['comment'] = 'Data source {0} already up-to-date'.format(name)
+        else:
+            ret['comment'] = 'Data source {0} updated'.format(name)
     else:
-        requests.post(
-            '{0}/api/datasources'.format(profile['grafana_url']),
-            data,
-            headers=_get_headers(profile),
-            timeout=profile.get('grafana_timeout', 3),
-        )
+        url = '{0}/api/datasources'.format(profile['grafana_url'])
+        salt.utils.http.query(url, data=data, method='POST',
+                              header_dict=_get_headers(profile),
+                              timeout=profile.get('grafana_timeout', 3))
         ret['result'] = True
         ret['comment'] = 'New data source {0} added'.format(name)
         ret['changes'] = data
@@ -134,11 +130,10 @@ def absent(name, profile='grafana'):
         ret['comment'] = 'Data source {0} already absent'.format(name)
         return ret
 
-    requests.delete(
-        _get_url(profile, datasource['id']),
-        headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
-    )
+    salt.utils.http.query(_get_url(profile, datasource['id']),
+                          method='DELETE',
+                          header_dict=_get_headers(profile),
+                          timeout=profile.get('grafana_timeout', 3))
 
     ret['result'] = True
     ret['comment'] = 'Data source {0} was deleted'.format(name)
@@ -154,12 +149,15 @@ def _get_url(profile, datasource_id):
 
 
 def _get_datasource(profile, name):
-    response = requests.get(
-        '{0}/api/datasources'.format(profile['grafana_url']),
-        headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
-    )
-    data = response.json()
+    url = '{0}/api/datasources'.format(profile['grafana_url'])
+    response = salt.utils.http.query(url, status=True,
+                                     header_dict=_get_headers(profile),
+                                     timeout=profile.get('grafana_timeout', 3))
+
+    if response['status'] == 403:
+        return None
+
+    data = json.loads(response['body'])
     for datasource in data:
         if datasource['name'] == name:
             return datasource
@@ -199,16 +197,3 @@ def _get_json_data(name,
         'isDefault': is_default,
         'jsonData': json_data,
     }
-
-
-def _diff(old, new):
-    old_keys = old.keys()
-    old = old.copy()
-    new = new.copy()
-    for key in old_keys:
-        if key == 'id' or key == 'orgId':
-            del old[key]
-        elif old[key] == new[key]:
-            del old[key]
-            del new[key]
-    return {'old': old, 'new': new}
