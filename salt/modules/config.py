@@ -206,7 +206,9 @@ def merge(value,
                 ret = list(ret) + list(tmp)
     if ret is None and value in DEFAULTS:
         return DEFAULTS[value]
-    return ret or default
+    if ret is None:
+        return default
+    return ret
 
 
 def get(key, default='', delimiter=':', merge=None):
