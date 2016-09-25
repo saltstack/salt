@@ -261,7 +261,8 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False,
-                                      output_loglevel='trace')
+                                      output_loglevel='trace',
+                                      env={'LC_ALL': 'C', 'LANG': 'C'})
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
