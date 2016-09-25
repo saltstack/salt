@@ -238,6 +238,8 @@ class CkMinions(object):
                              exact_match=False):
         '''
         Helper function to search for minions in master caches
+        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
+        If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
 
@@ -256,11 +258,15 @@ class CkMinions(object):
                 cminions = self.cache.list('minions')
             else:
                 cminions = minions
+            if not cminions:
+                return minions
             minions = set(minions)
             for id_ in cminions:
+                if greedy and id_ not in minions:
+                    continue
                 mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
                 if mdata is None:
-                    if id_ in minions:
+                    if not greedy:
                         minions.remove(id_)
                     continue
                 search_results = mdata.get(search_type)
@@ -268,9 +274,10 @@ class CkMinions(object):
                                                 expr,
                                                 delimiter=delimiter,
                                                 regex_match=regex_match,
-                                                exact_match=exact_match) and id_ in minions:
+                                                exact_match=exact_match):
                     minions.remove(id_)
-        return list(minions)
+            minions = list(minions)
+        return minions
 
     def _check_grain_minions(self, expr, delimiter, greedy):
         '''
