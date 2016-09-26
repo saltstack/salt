@@ -36,18 +36,22 @@ shown in the table below.
     <https://docs.python.org/2/library/multiprocessing.html#logging>`_
     ``subwarning``, 25 and ``subdebug``, 5.
 
-Level    Numeric value Description
-======== ============= ========================================================================
-quiet    1000          Nothing should be logged at this level
-critical   50          Critical errors
-error      40          Errors
-warning    30          Warnings
-info       20          Normal log information
-profile    15          Profiling information on salt performance
-debug      10          Information useful for debugging both salt implementations and salt code
-trace       5          More detailed code debugging information
-garbage     1          Even more debugging information
-all         0          Everything
+
+========  =============  ========================================================================
+Level     Numeric value  Description
+========  =============  ========================================================================
+quiet     1000           Nothing should be logged at this level
+critical    50           Critical errors
+error       40           Errors
+warning     30           Warnings
+info        20           Normal log information
+profile     15           Profiling information on salt performance
+debug       10           Information useful for debugging both salt implementations and salt code
+trace        5           More detailed code debugging information
+garbage      1           Even more debugging information
+all          0           Everything
+========  =============  ========================================================================
+
 
 Available Configuration Settings
 ================================
@@ -83,7 +87,7 @@ Examples:
 .. code-block:: yaml
 
     log_file: file:///dev/log
-    
+
 .. code-block:: yaml
 
     log_file: file:///dev/log/LOG_DAEMON
