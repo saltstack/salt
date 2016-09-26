@@ -23,7 +23,7 @@ def __virtual__():
 
 
 def _ssh_flag(identity_path):
-    return '--ssh "ssh -i {0}"'.format(identity_path)
+    return ['--ssh', 'ssh -i {0}'.format(identity_path)]
 
 
 def revision(cwd, rev='tip', short=False, user=None):
@@ -181,7 +181,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     '''
     cmd = ['hg', 'pull']
     if identity:
-        cmd.append(_ssh_flag(identity))
+        cmd.extend(_ssh_flag(identity))
     if opts:
         for opt in opts.split():
             cmd.append(opt)
@@ -250,7 +250,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
         for opt in opts.split():
             cmd.append('{0}'.format(opt))
     if identity:
-        cmd.append(_ssh_flag(identity))
+        cmd.extend(_ssh_flag(identity))
     return __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
 

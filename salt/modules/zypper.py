@@ -1126,10 +1126,11 @@ def upgrade(refresh=True, skip_verify=False):
         refresh_db()
     old = list_pkgs()
 
-    to_append = ''
     if skip_verify:
-        to_append = '--no-gpg-checks'
-    __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', to_append)
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', '--no-gpg-checks')
+    else:
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
+
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         ret['result'] = False
         ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()

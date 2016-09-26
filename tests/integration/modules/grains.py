@@ -143,6 +143,7 @@ class TestModulesGrains(integration.ModuleCase):
                 get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
 
+@destructiveTest
 class GrainsAppendTestCase(integration.ModuleCase):
     '''
     Tests written specifically for the grains.append function.
@@ -150,13 +151,11 @@ class GrainsAppendTestCase(integration.ModuleCase):
     GRAIN_KEY = 'salttesting-grain-key'
     GRAIN_VAL = 'my-grain-val'
 
-    @destructiveTest
     def tearDown(self):
         test_grain = self.run_function('grains.get', [self.GRAIN_KEY])
         if test_grain and test_grain == [self.GRAIN_VAL]:
             self.run_function('grains.remove', [self.GRAIN_KEY, self.GRAIN_VAL])
 
-    @destructiveTest
     def test_grains_append(self):
         '''
         Tests the return of a simple grains.append call.
@@ -164,7 +163,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
-    @destructiveTest
     def test_grains_append_val_already_present(self):
         '''
         Tests the return of a grains.append call when the value is already present in the grains list.
@@ -178,7 +176,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
         self.assertEqual(messaging, ret)
 
-    @destructiveTest
     def test_grains_append_val_is_list(self):
         '''
         Tests the return of a grains.append call when val is passed in as a list.
@@ -187,7 +184,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
 
-    @destructiveTest
     def test_grains_append_call_twice(self):
         '''
         Tests the return of a grains.append call when the value is already present
