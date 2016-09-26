@@ -126,7 +126,8 @@ one. The worker pool is designed to handle complex and long-running processes
 such as Salt Orchestrate.
 
 tl;dr: Rendering Reactor SLS files MUST be simple and quick. The new process
-started by the worker threads can be long-running.
+started by the worker threads can be long-running. Using the reactor to fire
+an orchestrate runner would be ideal.
 
 Jinja Context
 -------------
