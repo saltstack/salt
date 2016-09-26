@@ -2908,12 +2908,21 @@ def privileges_grant(name,
         if object_type == 'group':
             query = 'GRANT {0} TO "{1}" WITH ADMIN OPTION'.format(
                 object_name, name)
+        elif (object_type in ('table', 'sequence') and
+                object_name.upper() == 'ALL'):
+            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO ' \
+                    '"{3}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name)
         else:
             query = 'GRANT {0} ON {1} {2} TO "{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), on_part, name)
     else:
         if object_type == 'group':
             query = 'GRANT {0} TO "{1}"'.format(object_name, name)
+        elif (object_type in ('table', 'sequence') and
+                object_name.upper() == 'ALL'):
+            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO "{3}"'.format(
+                _grants, object_type.upper(), prepend, name)
         else:
             query = 'GRANT {0} ON {1} {2} TO "{3}"'.format(
                 _grants, object_type.upper(), on_part, name)
