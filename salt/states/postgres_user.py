@@ -119,7 +119,7 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        Postres database username, if different from config or default.
+        Postgres database username, if different from config or default.
 
     db_password
         Postgres user's password, if any password, for a specified db_user.
