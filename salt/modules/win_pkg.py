@@ -1115,10 +1115,8 @@ def upgrade(refresh=True):
     '''
     Run a full system upgrade
 
-    Return a dict containing the new package names and versions::
-
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. note::
+        This feature is not yet implemented for Windows.
 
     CLI Example:
 
