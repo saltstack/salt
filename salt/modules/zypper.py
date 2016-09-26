@@ -165,11 +165,17 @@ class _Zypper(object):
         if self._is_error():
             self.__error_msg = msg and os.linesep.join(msg) or "Check Zypper's logs."
 
+    @property
     def stdout(self):
         return self.__call_result.get('stdout', '')
 
+    @property
     def stderr(self):
         return self.__call_result.get('stderr', '')
+
+    @property
+    def pid(self):
+        return self.__call_result.get('pid', '')
 
     def _is_error(self):
         '''
@@ -1099,10 +1105,13 @@ def upgrade(refresh=True, skip_verify=False):
         If set to False it depends on zypper if a refresh is
         executed.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -1117,11 +1126,6 @@ def upgrade(refresh=True, skip_verify=False):
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-    }
-
     if refresh:
         refresh_db()
     old = list_pkgs()
@@ -1131,13 +1135,21 @@ def upgrade(refresh=True, skip_verify=False):
     else:
         __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
 
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
-        ret['result'] = False
-        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        result = {
+            'retcode': __zypper__.exit_code,
+            'stdout': __zypper__.stdout,
+            'stderr': __zypper__.stderr,
+            'pid': __zypper__.pid,
+        }
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
