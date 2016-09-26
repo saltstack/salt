@@ -14,6 +14,7 @@ from salttesting import TestCase, skipIf
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
 
+import salt.exceptions as excs
 # Import Salt libraries
 import salt.exceptions as excs
 import salt.utils.vmware
@@ -35,9 +36,59 @@ log = logging.getLogger(__name__)
 class WaitForTaskTestCase(TestCase):
     '''Tests for salt.utils.vmware.wait_for_task'''
 
-    def test_info_state_running(self):
+    def test_first_task_info_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
         mock_task = MagicMock()
+        type(mock_task).info = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_first_task_info_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_task = MagicMock()
+        type(mock_task).info = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_inner_loop_task_info_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_task = MagicMock()
+        mock_info1 = MagicMock()
+        type(mock_task).info = PropertyMock(
+            side_effect=[mock_info1, exc])
+        type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_inner_loop_task_info_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_task = MagicMock()
+        mock_info1 = MagicMock()
+        type(mock_task).info = PropertyMock(
+            side_effect=[mock_info1, exc])
+        type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_info_state_running(self):
         # The 'bad' values are invalid in the while loop
+        mock_task = MagicMock()
         prop_mock_state = PropertyMock(side_effect=['running', 'bad', 'bad',
                                                     'success'])
         prop_mock_result = PropertyMock()
@@ -49,11 +100,27 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 4)
         self.assertEqual(prop_mock_result.call_count, 1)
 
-    def test_info_state_queued(self):
+    def test_info_state_running_continues_loop(self):
         mock_task = MagicMock()
-        # The 'bad' values are invalid in the while loop
-        prop_mock_state = PropertyMock(side_effect=['bad', 'queued', 'bad',
-                                                    'bad', 'success'])
+        # The 'fake' values are required to match all the lookups and end the
+        # loop
+        prop_mock_state = PropertyMock(side_effect=['running', 'fake', 'fake',
+                                                    'success'])
+        prop_mock_result = PropertyMock()
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).result = prop_mock_result
+        salt.utils.vmware.wait_for_task(mock_task,
+                                        'fake_instance_name',
+                                        'task_type')
+        self.assertEqual(prop_mock_state.call_count, 4)
+        self.assertEqual(prop_mock_result.call_count, 1)
+
+    def test_info_state_queued_continues_loop(self):
+        mock_task = MagicMock()
+        # The 'fake' values are required to match all the lookups and end the
+        # loop
+        prop_mock_state = PropertyMock(side_effect=['fake', 'queued', 'fake',
+                                                    'fake', 'success'])
         prop_mock_result = PropertyMock()
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).result = prop_mock_result
@@ -75,9 +142,8 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 3)
         self.assertEqual(prop_mock_result.call_count, 1)
 
-    def test_info_state_different_no_error_attr(self):
+    def test_info_error_exception(self):
         mock_task = MagicMock()
-        # The 'bad' values are invalid in the while loop
         prop_mock_state = PropertyMock(return_value='error')
         prop_mock_error = PropertyMock(side_effect=Exception('error exc'))
         type(mock_task.info).state = prop_mock_state
@@ -86,9 +152,35 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(prop_mock_state.call_count, 3)
-        self.assertEqual(prop_mock_error.call_count, 1)
-        self.assertEqual('error exc', excinfo.exception.message)
+        self.assertEqual(excinfo.exception.message, 'error exc')
+
+    def test_info_error_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_info_error_system_fault(self):
+        exc = vmodl.fault.SystemError()
+        exc.msg = 'SystemError msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareSystemError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'SystemError msg')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -402,5 +402,11 @@ class VMwareConnectionError(VMwareSaltError):
 
 class VMwareApiError(VMwareSaltError):
     '''
-    Used when a VMware object cannot be retrieved
+    Used when representing a generic VMware API error
+    '''
+
+
+class VMwareSystemError(VMwareSaltError):
+    '''
+    Used when representing a generic VMware system error
     '''
