@@ -22,6 +22,7 @@ pycparser==2.14
 pycurl==7.43.0
 PyMySQL==0.7.2
 pypiwin32==219
+pyOpenSSL==16.1.0
 python-dateutil==2.5.3
 python-gnupg==0.3.8
 pyzmq==15.2.0
