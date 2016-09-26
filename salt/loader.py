@@ -35,6 +35,7 @@ import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import reload_module
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -1286,7 +1287,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for submodule in submodules:
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + '.'):
-                reload(submodule)
+                reload_module(submodule)
                 self._reload_submodules(submodule)
 
     def _load_module(self, name):
