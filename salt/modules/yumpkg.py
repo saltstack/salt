@@ -1382,10 +1382,13 @@ def upgrade(name=None,
 
     Run a full system upgrade, a yum upgrade
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -1499,10 +1502,19 @@ def upgrade(name=None,
     cmd.append('upgrade')
     cmd.extend(targets)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
+
     return ret
 
 
