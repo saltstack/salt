@@ -1127,10 +1127,10 @@ def upgrade(refresh=True, skip_verify=False):
         refresh_db()
     old = list_pkgs()
 
-    to_append = ''
     if skip_verify:
-        to_append = '--no-gpg-checks'
-    __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', to_append)
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', '--no-gpg-checks')
+    else:
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
