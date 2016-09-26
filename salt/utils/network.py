@@ -5,6 +5,7 @@ Define some generic socket functions for network modules
 
 # Import python libs
 from __future__ import absolute_import
+import itertools
 import os
 import re
 import socket
@@ -240,6 +241,17 @@ def natural_ipv4_netmask(ip, fmt='prefixlen'):
         return cidr_to_ipv4_netmask(mask)
     else:
         return '/' + mask
+
+
+def rpad_ipv4_network(ip):
+    '''
+    Returns an IP network address padded with zeros.
+
+    Ex: '192.168.3' -> '192.168.3.0'
+        '10.209' -> '10.209.0.0'
+    '''
+    return '.'.join(itertools.islice(itertools.chain(ip.split('.'), '0000'), 0,
+                                     4))
 
 
 def cidr_to_ipv4_netmask(cidr_bits):
