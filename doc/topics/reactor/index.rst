@@ -163,9 +163,10 @@ For example:
     invoke_orchestrate_file:
       runner.state.orchestrate:
         - mods: orch.do_complex_thing
-        - pillar:
-            event_tag: {{ tag }}
-            event_data: {{ data | json() }}
+        - kwarg:
+            pillar:
+              event_tag: {{ tag }}
+              event_data: {{ data|json() }}
 
 .. code-block:: yaml
 
