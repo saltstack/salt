@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
@@ -85,7 +86,7 @@ def pvdisplay(pvname='', real=False):
         cmd.append(pvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         return {}
 
     out = cmd_ret['stdout'].splitlines()
@@ -131,7 +132,7 @@ def vgdisplay(vgname=''):
         cmd.append(vgname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         return {}
 
     out = cmd_ret['stdout'].splitlines()
@@ -176,7 +177,7 @@ def lvdisplay(lvname=''):
         cmd.append(lvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         return {}
 
     out = cmd_ret['stdout'].splitlines()
@@ -242,7 +243,7 @@ def pvcreate(devices, override=True, **kwargs):
             cmd.append('--{0}'.format(var))
             cmd.append(kwargs[var])
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out.get('retcode'):
+    if out.get('retcode') != exitcodes.EX_OK:
         raise CommandExecutionError(out.get('stderr'))
 
     # Verify pvcreate was successful
@@ -281,7 +282,7 @@ def pvremove(devices, override=True):
         return True
 
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out.get('retcode'):
+    if out.get('retcode') != exitcodes.EX_OK:
         raise CommandExecutionError(out.get('stderr'))
 
     # Verify pvcremove was successful
@@ -481,6 +482,6 @@ def lvresize(size, lvpath):
     ret = {}
     cmd = ['lvresize', '-L', str(size), lvpath]
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         return {}
     return ret

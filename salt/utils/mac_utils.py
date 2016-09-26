@@ -16,6 +16,7 @@ import os
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
+from salt.defaults import exitcodes
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
@@ -86,7 +87,7 @@ def _run_all(cmd):
     except TimedProcTimeoutError as exc:
         ret['stdout'] = str(exc)
         ret['stderr'] = ''
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
         ret['pid'] = proc.process.pid
         return ret
 
@@ -119,7 +120,7 @@ def execute_return_success(cmd):
 
     ret = _run_all(cmd)
 
-    if ret['retcode'] != 0 or 'not supported' in ret['stdout'].lower():
+    if ret['retcode'] != exitcodes.EX_OK or 'not supported' in ret['stdout'].lower():
         msg = 'Command Failed: {0}\n'.format(cmd)
         msg += 'Return Code: {0}\n'.format(ret['retcode'])
         msg += 'Output: {0}\n'.format(ret['stdout'])
@@ -143,7 +144,7 @@ def execute_return_result(cmd):
     '''
     ret = _run_all(cmd)
 
-    if ret['retcode'] != 0 or 'not supported' in ret['stdout'].lower():
+    if ret['retcode'] != exitcodes.EX_OK or 'not supported' in ret['stdout'].lower():
         msg = 'Command Failed: {0}\n'.format(cmd)
         msg += 'Return Code: {0}\n'.format(ret['retcode'])
         msg += 'Output: {0}\n'.format(ret['stdout'])

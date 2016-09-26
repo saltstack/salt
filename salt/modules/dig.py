@@ -6,6 +6,7 @@ The 'dig' command line tool must be installed in order to use this module.
 from __future__ import absolute_import
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.network
 
@@ -90,7 +91,7 @@ def A(host, nameserver=None):
 
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -122,7 +123,7 @@ def AAAA(host, nameserver=None):
 
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -154,7 +155,7 @@ def NS(domain, resolve=True, nameserver=None):
 
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -195,7 +196,7 @@ def SPF(domain, record='SPF', nameserver=None):
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # In this case, 0 is not the same as False
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as fallback.'
             .format(result['retcode'])
@@ -252,7 +253,7 @@ def MX(domain, resolve=False, nameserver=None):
 
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -290,7 +291,7 @@ def TXT(host, nameserver=None):
 
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(

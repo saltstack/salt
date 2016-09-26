@@ -13,6 +13,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.executors import ModuleExecutorBase
 import salt.utils
 import salt.syspaths
@@ -99,10 +100,10 @@ class SudoExecutor(ModuleExecutorBase):
 
         cmd_ret = __salt__['cmd.run_all'](self.cmd, use_vt=True, python_shell=False)
 
-        if cmd_ret['retcode'] == 0:
+        if cmd_ret['retcode'] == exitcodes.EX_OK:
             cmd_meta = json.loads(cmd_ret['stdout'])['local']
             ret = cmd_meta['return']
-            __context__['retcode'] = cmd_meta.get('retcode', 0)
+            __context__['retcode'] = cmd_meta.get('retcode', exitcodes.EX_OK)
         else:
             ret = cmd_ret['stderr']
             __context__['retcode'] = cmd_ret['retcode']

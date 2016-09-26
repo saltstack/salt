@@ -30,6 +30,7 @@ import os
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -229,7 +230,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
         else:
             out = __salt__['macpackage.install'](real_pkg, target, store, allow_untrusted)
 
-            if out['retcode'] != 0:
+            if out['retcode'] != exitcodes.EX_OK:
                 ret['result'] = False
                 ret['comment'] += '. {0} failed to install: {1}'.format(name, out)
             else:
@@ -253,13 +254,13 @@ def _mod_run_check(cmd_kwargs, onlyif, unless):
     else return True
     '''
     if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != exitcodes.EX_OK:
             return {'comment': 'onlyif execution failed',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == exitcodes.EX_OK:
             return {'comment': 'unless execution succeeded',
                     'skip_watch': True,
                     'result': True}

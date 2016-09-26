@@ -9,6 +9,7 @@ import logging
 import json
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 
@@ -139,7 +140,7 @@ def avail(search=None, verbose=False):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
 
@@ -173,7 +174,7 @@ def list_installed(verbose=False):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
 
@@ -201,7 +202,7 @@ def show(uuid):
     cmd = '{0} show {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
     ret = json.loads(res['stdout'])
@@ -226,7 +227,7 @@ def get(uuid):
     cmd = '{0} get {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
     ret = json.loads(res['stdout'])
@@ -253,7 +254,7 @@ def import_image(uuid, verbose=False):
     cmd = '{0} import {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
 
@@ -278,7 +279,7 @@ def delete(uuid):
     cmd = '{0} delete {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
     # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc
@@ -308,7 +309,7 @@ def vacuum(verbose=False):
     cmd = '{0} vacuum -f'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = _exit_status(retcode)
         return ret
     # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc (lx-centos-6@20150601)

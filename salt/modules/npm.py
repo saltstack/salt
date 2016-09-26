@@ -14,6 +14,7 @@ import logging
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
@@ -162,10 +163,10 @@ def install(pkg=None,
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
-    # npm >1.2.21 is putting the output to stderr even though retcode is 0
+    # npm >1.2.21 is putting the output to stderr even though retcode is exitcodes.EX_OK
     npm_output = result['stdout'] or result['stderr']
     try:
         return json.loads(npm_output)
@@ -246,7 +247,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
 
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         log.error(result['stderr'])
         return False
     return True
@@ -308,7 +309,7 @@ def list_(pkg=None, dir=None, runas=None, env=None):
 
     # npm will return error code 1 for both no packages found and an actual
     # error. The only difference between the two cases are if stderr is empty
-    if result['retcode'] != 0 and result['stderr']:
+    if result['retcode'] != exitcodes.EX_OK and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout']).get('dependencies', {})
@@ -353,7 +354,7 @@ def cache_clean(path=None, runas=None, env=None):
     result = __salt__['cmd.run_all'](
         cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         log.error(result['stderr'])
         return False
     return True
@@ -398,7 +399,7 @@ def cache_list(path=None, runas=None, env=None):
     result = __salt__['cmd.run_all'](
         cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
-    if result['retcode'] != 0 and result['stderr']:
+    if result['retcode'] != exitcodes.EX_OK and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
     return result['stdout']

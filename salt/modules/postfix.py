@@ -18,6 +18,7 @@ import re
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 SWWS = re.compile(r'^\s')
@@ -386,7 +387,7 @@ def delete(queue_id):
     cmd = 'postsuper -d {0}'.format(queue_id)
     result = __salt__['cmd.run_all'](cmd)
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         if queue_id == 'ALL':
             ret['message'] = 'Successfully removed all messages'
         else:
@@ -435,7 +436,7 @@ def hold(queue_id):
     cmd = 'postsuper -h {0}'.format(queue_id)
     result = __salt__['cmd.run_all'](cmd)
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         if queue_id == 'ALL':
             ret['message'] = 'Successfully placed all messages on hold'
         else:
@@ -484,7 +485,7 @@ def unhold(queue_id):
     cmd = 'postsuper -H {0}'.format(queue_id)
     result = __salt__['cmd.run_all'](cmd)
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         if queue_id == 'ALL':
             ret['message'] = 'Successfully set all message as unheld'
         else:
@@ -533,7 +534,7 @@ def requeue(queue_id):
     cmd = 'postsuper -r {0}'.format(queue_id)
     result = __salt__['cmd.run_all'](cmd)
 
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         if queue_id == 'ALL':
             ret['message'] = 'Successfully requeued all messages'
         else:

@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 
@@ -41,12 +42,12 @@ def make_image(location, size, fmt):
         return ''
     if not os.path.isdir(os.path.dirname(location)):
         return ''
-    if not __salt__['cmd.retcode'](
+    if __salt__['cmd.retcode'](
             'qemu-img create -f {0} {1} {2}M'.format(
                 fmt,
                 location,
                 size),
-                python_shell=False):
+            python_shell=False) == exitcodes.EX_OK:
         return location
     return ''
 
@@ -63,7 +64,7 @@ def convert(orig, dest, fmt):
     '''
     cmd = ('qemu-img', 'convert', '-O', fmt, orig, dest)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     else:
         return ret['stderr']

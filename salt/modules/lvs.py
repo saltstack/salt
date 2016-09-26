@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import SaltException
@@ -113,7 +114,7 @@ def add_service(protocol=None, service_address=None, scheduler='wlc'):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -148,7 +149,7 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -180,7 +181,7 @@ def delete_service(protocol=None, service_address=None):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -225,7 +226,7 @@ def add_server(protocol=None, service_address=None, server_address=None, packet_
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -270,7 +271,7 @@ def edit_server(protocol=None, service_address=None, server_address=None, packet
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -306,7 +307,7 @@ def delete_server(protocol=None, service_address=None, server_address=None):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -330,7 +331,7 @@ def clear():
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True
@@ -376,7 +377,7 @@ def list_(protocol=None, service_address=None):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = out['stdout'].strip()
@@ -406,7 +407,7 @@ def zero(protocol=None, service_address=None):
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
+    if out['retcode'] != exitcodes.EX_OK:
         ret = out['stderr'].strip()
     else:
         ret = True

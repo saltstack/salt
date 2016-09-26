@@ -12,6 +12,7 @@ import logging
 import salt.proxy.fx2
 import salt.modules.cmdmod
 import salt.modules.dracr
+from salt.defaults import exitcodes
 
 __proxyenabled__ = ['fx2']
 
@@ -74,7 +75,7 @@ def _grains():
                                        admin_username=username,
                                        admin_password=password)
 
-    if r.get('retcode', 0) == 0:
+    if r.get('retcode', exitcodes.EX_OK) == exitcodes.EX_OK:
         GRAINS_CACHE = r
     else:
         GRAINS_CACHE = {}

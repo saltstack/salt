@@ -24,6 +24,8 @@ from __future__ import absolute_import
 # Import python libs
 import re
 
+from salt.defaults import exitcodes
+
 
 def __virtual__():
     '''
@@ -144,7 +146,7 @@ def _run(name, mod, kwargs):
            'comment': ''}
 
     result = __salt__[mod](whyrun=__opts__['test'], **kwargs)
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
 
         if _has_changes(result['stdout']):
             # Populate the 'changes' dict if anything changed

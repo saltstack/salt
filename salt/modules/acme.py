@@ -31,6 +31,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ def cert(name,
 
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
-    if res['retcode'] != 0:
+    if res['retcode'] != exitcodes.EX_OK:
         return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if renew:

@@ -14,6 +14,7 @@ import string
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ def _timedatectl():
     '''
     ret = __salt__['cmd.run_all'](['timedatectl'], python_shell=False)
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         msg = 'timedatectl failed: {0}'.format(ret['stderr'])
         raise CommandExecutionError(msg)
 
@@ -417,7 +418,7 @@ def set_hwclock(clock):
                 'UTC is the only choice for SPARC architecture'
             )
         cmd = ['rtc', '-z', 'GMT' if clock.lower() == 'utc' else timezone]
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
 
@@ -432,7 +433,7 @@ def set_hwclock(clock):
     if 'Arch' in __grains__['os_family']:
         cmd = ['timezonectl', 'set-local-rtc',
                'true' if clock == 'localtime' else 'false']
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))

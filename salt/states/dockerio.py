@@ -144,6 +144,7 @@ import logging
 from salt.ext.six import string_types
 import salt.utils
 import salt.ext.six as six
+from salt.defaults import exitcodes
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -858,7 +859,7 @@ def run(name,
             if not onlyif:
                 return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if not __salt__['cmd.retcode'](onlyif) == 0:
+            if __salt__['cmd.retcode'](onlyif) != exitcodes.EX_OK:
                 return valid(comment='onlyif execution failed')
 
     if unless is not None:
@@ -866,7 +867,7 @@ def run(name,
             if unless:
                 return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if __salt__['cmd.retcode'](unless) == 0:
+            if __salt__['cmd.retcode'](unless) == exitcodes.EX_OK:
                 return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
@@ -874,7 +875,7 @@ def run(name,
             if not docked_onlyif:
                 return valid(comment='docked_onlyif execution failed')
         elif isinstance(docked_onlyif, string_types):
-            if not retcode(cid, docked_onlyif):
+            if retcode(cid, docked_onlyif) == exitcodes.EX_OK:
                 return valid(comment='docked_onlyif execution failed')
 
     if docked_unless is not None:
@@ -882,7 +883,7 @@ def run(name,
             if docked_unless:
                 return valid(comment='docked_unless execution succeeded')
         elif isinstance(docked_unless, string_types):
-            if retcode(cid, docked_unless):
+            if retcode(cid, docked_unless) != exitcodes.EX_OK:
                 return valid(comment='docked_unless execution succeeded')
 
     if __opts__['test']:

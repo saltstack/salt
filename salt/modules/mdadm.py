@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
@@ -128,7 +129,7 @@ def destroy(device):
     stop_cmd = ['mdadm', '--stop', device]
     zero_cmd = ['mdadm', '--zero-superblock']
 
-    if __salt__['cmd.retcode'](stop_cmd, python_shell=False):
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False) != exitcodes.EX_OK:
         for number in details['members']:
             zero_cmd.append(details['members'][number]['device'])
         __salt__['cmd.retcode'](zero_cmd, python_shell=False)
@@ -162,7 +163,7 @@ def stop():
     '''
     cmd = 'mdadm --stop --scan'
 
-    if __salt__['cmd.retcode'](cmd):
+    if __salt__['cmd.retcode'](cmd) != exitcodes.EX_OK:
         return True
 
     return False

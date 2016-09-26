@@ -168,6 +168,7 @@ import salt.ext.six as six
 import salt.utils
 import salt.utils.vmware
 import salt.utils.http
+from salt.defaults import exitcodes
 from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError
 
@@ -247,7 +248,7 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
             response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
                                                 protocol=protocol, port=port,
                                                 esxi_host=esxi_host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
                 ret.update({esxi_host: response})
@@ -255,7 +256,7 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
                                             protocol=protocol, port=port)
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
             ret.update({host: response})
@@ -315,7 +316,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
                                                 esxi_host=esxi_host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
                 # format the response stdout into something useful
@@ -324,7 +325,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                             protocol=protocol, port=port)
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
             # format the response stdout into something useful
@@ -390,7 +391,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
                                                 esxi_host=esxi_host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
                 ret.update({esxi_host: {'Coredump Enabled': enabled}})
@@ -399,7 +400,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                             protocol=protocol, port=port)
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             ret.update({host: {'Error': response.get('stdout')}})
         else:
             ret.update({host: {'Coredump Enabled': enabled}})
@@ -478,7 +479,7 @@ def set_coredump_network_config(host,
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
                                                 esxi_host=esxi_host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 response['success'] = False
             else:
                 response['success'] = True
@@ -489,7 +490,7 @@ def set_coredump_network_config(host,
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                             protocol=protocol, port=port)
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             response['success'] = False
         else:
             response['success'] = True
@@ -550,7 +551,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
             response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                                 protocol=protocol, port=port,
                                                 esxi_host=esxi_host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 ret.update({esxi_host: {'Error': response['stdout'],
                                         'success': False,
                                         'rulesets': None}})
@@ -561,7 +562,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
         # Handles a single host or a vCenter connection when no esxi_hosts are provided.
         response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                             protocol=protocol, port=port)
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             ret.update({host: {'Error': response['stdout'],
                                'success': False,
                                'rulesets': None}})
@@ -792,7 +793,7 @@ def set_syslog_config(host,
                                                    ruleset_enable=True, ruleset_name='syslog',
                                                    protocol=protocol, port=port,
                                                    esxi_hosts=[esxi_host]).get(esxi_host)
-                if response['retcode'] != 0:
+                if response['retcode'] != exitcodes.EX_OK:
                     ret.update({esxi_host: {'enable_firewall': {'message': response['stdout'],
                                                                 'success': False}}})
                 else:
@@ -802,7 +803,7 @@ def set_syslog_config(host,
             response = enable_firewall_ruleset(host, username, password,
                                                ruleset_enable=True, ruleset_name='syslog',
                                                protocol=protocol, port=port).get(host)
-            if response['retcode'] != 0:
+            if response['retcode'] != exitcodes.EX_OK:
                 ret.update({host: {'enable_firewall': {'message': response['stdout'],
                                                        'success': False}}})
             else:
@@ -3310,9 +3311,9 @@ def _format_syslog_config(cmd_ret):
     cmd_ret
         The return dictionary that comes from a cmd.run_all call.
     '''
-    ret_dict = {'success': cmd_ret['retcode'] == 0}
+    ret_dict = {'success': cmd_ret['retcode'] == exitcodes.EX_OK}
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         ret_dict['message'] = cmd_ret['stdout']
     else:
         for line in cmd_ret['stdout'].splitlines():
@@ -3470,8 +3471,8 @@ def _reset_syslog_config_params(host, username, password, cmd, resets, valid_res
                                            protocol=protocol, port=port,
                                            esxi_host=esxi_host)
             ret_dict[reset_param] = {}
-            ret_dict[reset_param]['success'] = ret['retcode'] == 0
-            if ret['retcode'] != 0:
+            ret_dict[reset_param]['success'] = ret['retcode'] == exitcodes.EX_OK
+            if ret['retcode'] != exitcodes.EX_OK:
                 all_success = False
                 ret_dict[reset_param]['message'] = ret['stdout']
         else:
@@ -3506,7 +3507,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
                                         esxi_host=esxi_host)
 
     # Update the return dictionary for success or error messages.
-    if response['retcode'] != 0:
+    if response['retcode'] != exitcodes.EX_OK:
         ret_dict.update({syslog_config: {'success': False,
                                          'message': response['stdout']}})
     else:
@@ -3522,7 +3523,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
         response = syslog_service_reload(host, username, password,
                                          protocol=protocol, port=port,
                                          esxi_hosts=esxi_host).get(host_name)
-        ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
+        ret_dict.update({'syslog_restart': {'success': response['retcode'] == exitcodes.EX_OK}})
 
     return ret_dict
 

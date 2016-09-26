@@ -13,6 +13,7 @@ import os
 import re
 
 # Import Salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 import salt.utils
 
@@ -95,7 +96,7 @@ def __execute_cmd(command, host=None,
                                                          modswitch),
         output_loglevel='quiet')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
         return False
@@ -129,7 +130,7 @@ def __execute_ret(command, host=None,
                                                          modswitch),
         output_loglevel='quiet')
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
     else:
@@ -193,7 +194,7 @@ def system_info(host=None,
                         admin_password=admin_password,
                         module=module)
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
         return cmd
@@ -257,13 +258,13 @@ def network_info(host=None,
                     admin_password=admin_password)
     if inv is None:
         cmd = {}
-        cmd['retcode'] = -1
+        cmd['retcode'] = exitcodes.EX_UNSET
         cmd['stdout'] = 'Problem getting switch inventory'
         return cmd
 
     if module not in inv.get('switch') and module not in inv.get('server'):
         cmd = {}
-        cmd['retcode'] = -1
+        cmd['retcode'] = exitcodes.EX_UNSET
         cmd['stdout'] = 'No module {0} found.'.format(module)
         return cmd
 
@@ -272,7 +273,7 @@ def network_info(host=None,
                         admin_password=admin_password,
                         module=module)
 
-    if cmd['retcode'] != 0:
+    if cmd['retcode'] != exitcodes.EX_OK:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
 
@@ -395,7 +396,7 @@ def list_users(host=None,
                             host=host, admin_username=admin_username,
                             admin_password=admin_password)
 
-        if cmd['retcode'] != 0:
+        if cmd['retcode'] != exitcodes.EX_OK:
             log.warning('racadm return an exit code \'{0}\'.'
                         .format(cmd['retcode']))
 
@@ -887,7 +888,7 @@ def server_powerstatus(host=None,
                         admin_password=admin_password,
                         module=module)
 
-    result = {'retcode': 0}
+    result = {'retcode': exitcodes.EX_OK}
     if ret['stdout'] == 'ON':
         result['status'] = True
         result['comment'] = 'Power is on'
@@ -955,7 +956,7 @@ def list_slotnames(host=None,
                             host=host, admin_username=admin_username,
                             admin_password=admin_password)
 
-    if slotraw['retcode'] != 0:
+    if slotraw['retcode'] != exitcodes.EX_OK:
         return slotraw
     slots = {}
     stripheader = True
@@ -1118,7 +1119,7 @@ def inventory(host=None, admin_username=None, admin_password=None):
                            admin_username=admin_username,
                            admin_password=admin_password)
 
-    if rawinv['retcode'] != 0:
+    if rawinv['retcode'] != exitcodes.EX_OK:
         return rawinv
 
     in_server = False
@@ -1319,7 +1320,7 @@ def get_general(cfg_sec, cfg_var, host=None,
                         admin_username=admin_username,
                         admin_password=admin_password)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return ret
@@ -1341,7 +1342,7 @@ def idrac_general(blade_name, command, idrac_password=None,
     :param host: Chassis hostname
     :param admin_username: CMC username
     :param admin_password: CMC password
-    :return: stdout if the retcode is 0, otherwise a standard cmd.run_all dictionary
+    :return: stdout if the retcode is EX_OK, otherwise a standard cmd.run_all dictionary
 
     CLI Example:
 
@@ -1365,7 +1366,7 @@ def idrac_general(blade_name, command, idrac_password=None,
                         admin_username='root',
                         admin_password=password)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return ret
@@ -1386,7 +1387,7 @@ def _update_firmware(cmd,
                         admin_username=admin_username,
                         admin_password=admin_password)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return ret
@@ -1399,7 +1400,7 @@ def bare_rac_cmd(cmd, host=None,
                         admin_username=admin_username,
                         admin_password=admin_password)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return ret

@@ -21,6 +21,7 @@ import re
 import shlex
 
 # Import 3rd-party libs
+from salt.defaults import exitcodes
 import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
@@ -326,7 +327,7 @@ def systemctl_reload():
         python_shell=False,
         redirect_stderr=True
     )
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Problem performing systemctl daemon-reload: %s' % out['stdout']
         )
@@ -583,7 +584,7 @@ def unmask(name):
                                   python_shell=False,
                                   redirect_stderr=True)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('Failed to unmask service \'%s\'' % name)
 
     return True
@@ -623,7 +624,7 @@ def mask(name, runtime=False):
                                   python_shell=False,
                                   redirect_stderr=True)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Failed to mask service \'%s\'' % name,
             info=out['stdout']
@@ -684,7 +685,7 @@ def start(name):
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('start', name, systemd_scope=True),
-        python_shell=False) == 0
+        python_shell=False) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -711,7 +712,7 @@ def stop(name):
     _check_for_unit_changes(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('stop', name, systemd_scope=True),
-        python_shell=False) == 0
+        python_shell=False) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -739,7 +740,7 @@ def restart(name):
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('restart', name, systemd_scope=True),
-        python_shell=False) == 0
+        python_shell=False) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -767,7 +768,7 @@ def reload_(name):
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('reload', name, systemd_scope=True),
-        python_shell=False) == 0
+        python_shell=False) == exitcodes.EX_OK
 
 
 def force_reload(name):
@@ -797,7 +798,7 @@ def force_reload(name):
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('force-reload', name, systemd_scope=True),
-        python_shell=False) == 0
+        python_shell=False) == exitcodes.EX_OK
 
 
 # The unused sig argument is required to maintain consistency with the API
@@ -816,7 +817,7 @@ def status(name, sig=None):  # pylint: disable=unused-argument
     _check_for_unit_changes(name)
     return __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
                                    python_shell=False,
-                                   ignore_retcode=True) == 0
+                                   ignore_retcode=True) == exitcodes.EX_OK
 
 
 # The unused kwargs argument is required to maintain consistency with the API
@@ -856,11 +857,11 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
             cmd.extend([service_exec, name, 'on'])
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
-                                       ignore_retcode=True) == 0
+                                       ignore_retcode=True) == exitcodes.EX_OK
     return __salt__['cmd.retcode'](
         _systemctl_cmd('enable', name, systemd_scope=True),
         python_shell=False,
-        ignore_retcode=True) == 0
+        ignore_retcode=True) == exitcodes.EX_OK
 
 
 # The unused kwargs argument is required to maintain consistency with the API
@@ -899,11 +900,11 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
             cmd.extend([service_exec, name, 'off'])
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
-                                       ignore_retcode=True) == 0
+                                       ignore_retcode=True) == exitcodes.EX_OK
     return __salt__['cmd.retcode'](
         _systemctl_cmd('disable', name, systemd_scope=True),
         python_shell=False,
-        ignore_recode=True) == 0
+        ignore_recode=True) == exitcodes.EX_OK
 
 
 # The unused kwargs argument is required to maintain consistency with the API
@@ -923,7 +924,7 @@ def enabled(name, **kwargs):  # pylint: disable=unused-argument
     # check templated services), and lastly check for a sysvinit service.
     if __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name),
                                python_shell=False,
-                               ignore_retcode=True) == 0:
+                               ignore_retcode=True) == exitcodes.EX_OK:
         return True
     elif '@' in name:
         # On older systemd releases, templated services could not be checked

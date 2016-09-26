@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 import logging
@@ -38,7 +39,7 @@ def _table_attrs(table):
     '''
     cmd = 'osqueryi --json "pragma table_info({0})"'.format(table)
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         attrs = []
         text = json.loads(res['stdout'])
         for item in text:
@@ -57,7 +58,7 @@ def _osquery(sql, format='json'):
 
     cmd = 'osqueryi --json "{0}"'.format(sql)
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         ret['data'] = json.loads(res['stdout'])
     else:
         ret['result'] = False

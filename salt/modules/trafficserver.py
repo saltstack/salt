@@ -14,6 +14,7 @@ import logging
 import subprocess
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt import utils
 
 __virtualname__ = 'trafficserver'
@@ -62,7 +63,7 @@ def _subprocess(cmd):
 
         if ret:
             return ret
-        elif retcode != 1:
+        elif retcode != exitcodes.EX_GENERIC:
             return True
         else:
             return False

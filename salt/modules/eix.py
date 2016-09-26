@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 
 def __virtual__():
@@ -34,16 +35,16 @@ def sync():
             cmd += ' -W'
         else:
             cmd += ' -w'
-        return __salt__['cmd.retcode'](cmd) == 0
+        return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
     else:
-        if __salt__['cmd.retcode'](cmd) == 0:
+        if __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK:
             return True
         # We fall back to "webrsync" if "rsync" fails for some reason
         if salt.utils.which('emerge-delta-webrsync'):  # We prefer 'delta-webrsync' to 'webrsync'
             cmd += ' -W'
         else:
             cmd += ' -w'
-        return __salt__['cmd.retcode'](cmd) == 0
+        return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def update():
@@ -57,4 +58,4 @@ def update():
         salt '*' eix.update
     '''
     cmd = 'eix-update --quiet'
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK

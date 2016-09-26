@@ -23,6 +23,7 @@ import logging
 
 # pylint: disable=import-error,no-name-in-module
 import salt.utils
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 # pylint: enable=import-error,no-name-in-module
@@ -181,7 +182,7 @@ def register(filename):
 
     cmd = '{0} registervm {1}'.format(vboxcmd(), filename)
     ret = salt.modules.cmdmod.run_all(cmd)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     return ret['stderr']
 
@@ -206,7 +207,7 @@ def unregister(name, delete=False):
     if delete is True:
         cmd += ' --delete'
     ret = salt.modules.cmdmod.run_all(cmd)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     return ret['stderr']
 
@@ -286,7 +287,7 @@ def create(name,
 
     cmd = '{0} create {1}'.format(vboxcmd(), params)
     ret = salt.modules.cmdmod.run_all(cmd)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     return ret['stderr']
 
@@ -393,7 +394,7 @@ def clonevm(name=None,
 
     cmd = '{0} clonevm {1}'.format(vboxcmd(), name)
     ret = salt.modules.cmdmod.run_all(cmd)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     return ret['stderr']
 
@@ -486,7 +487,7 @@ def clonemedium(medium,
 
     cmd = '{0} clonemedium {1}'.format(vboxcmd(), params)
     ret = salt.modules.cmdmod.run_all(cmd)
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return True
     return ret['stderr']
 

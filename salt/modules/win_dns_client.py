@@ -9,6 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 try:
     import wmi
 except ImportError:
@@ -64,7 +65,7 @@ def rm_dns(ip, interface='Local Area Connection'):
         salt '*' win_dns_client.rm_dns <ip> <interface>
     '''
     cmd = ['netsh', 'interface', 'ip', 'delete', 'dns', interface, ip, 'validate=no']
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def add_dns(ip, interface='Local Area Connection', index=1):
@@ -101,7 +102,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
            interface, ip, 'index={0}'.format(index), 'validate=no']
 
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def dns_dhcp(interface='Local Area Connection'):
@@ -115,7 +116,7 @@ def dns_dhcp(interface='Local Area Connection'):
         salt '*' win_dns_client.dns_dhcp <interface>
     '''
     cmd = ['netsh', 'interface', 'ip', 'set', 'dns', interface, 'source=dhcp']
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def get_dns_config(interface='Local Area Connection'):

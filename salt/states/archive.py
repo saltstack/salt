@@ -19,6 +19,7 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 import salt.utils
 
@@ -397,7 +398,7 @@ def extracted(name,
                 if salt.utils.which('xz'):
                     if __salt__['cmd.retcode'](['xz', '-l', filename],
                                                python_shell=False,
-                                               ignore_retcode=True) == 0:
+                                               ignore_retcode=True) == exitcodes.EX_OK:
                         # XZ-compressed data
                         log.debug(
                             'Tar file is XZ-compressed, attempting '
@@ -413,7 +414,7 @@ def extracted(name,
                             cmd.format(_cmd_quote(filename)),
                             cwd=name,
                             python_shell=True)
-                        if results['retcode'] != 0:
+                        if results['retcode'] != exitcodes.EX_OK:
                             if created_destdir:
                                 _cleanup_destdir(name)
                             ret['result'] = False
@@ -477,7 +478,7 @@ def extracted(name,
             tar_cmd.extend(['-f', filename])
 
             results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
-            if results['retcode'] != 0:
+            if results['retcode'] != exitcodes.EX_OK:
                 ret['result'] = False
                 ret['changes'] = results
                 return ret

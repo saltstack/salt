@@ -10,6 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {
@@ -36,7 +37,7 @@ def start(name):
     '''
     cmd = 'monit start {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -51,7 +52,7 @@ def stop(name):
     '''
     cmd = 'monit stop {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -66,7 +67,7 @@ def restart(name):
     '''
     cmd = 'monit restart {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def unmonitor(name):
@@ -81,7 +82,7 @@ def unmonitor(name):
     '''
     cmd = 'monit unmonitor {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def monitor(name):
@@ -96,7 +97,7 @@ def monitor(name):
     '''
     cmd = 'monit monitor {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def summary(svc_name=''):
@@ -175,7 +176,7 @@ def reload_():
         salt '*' monit.reload
     '''
     cmd = 'monit reload'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def configtest():
@@ -194,7 +195,7 @@ def configtest():
     cmd = 'monit -t'
     out = __salt__['cmd.run_all'](cmd)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         ret['comment'] = 'Syntax Error'
         ret['stderr'] = out['stderr']
         ret['result'] = False
@@ -265,4 +266,4 @@ def validate():
         salt '*' monit.validate
     '''
     cmd = 'monit validate'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK

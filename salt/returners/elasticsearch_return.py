@@ -57,6 +57,7 @@ import json
 
 # Import Salt libs
 import salt.utils.jid
+from salt.defaults import exitcodes
 
 __virtualname__ = 'elasticsearch'
 
@@ -95,7 +96,7 @@ def returner(ret):
     job_id = ret['jid']
     job_minion_id = ret['id']
     job_success = True if ret['return'] else False
-    job_retcode = ret.get('retcode', 1)
+    job_retcode = ret.get('retcode', exitcodes.EX_GENERIC)
 
     index = 'salt-{0}'.format(job_fun_escaped)
     if __salt__['config.option']('elasticsearch:index_date', False):

@@ -17,6 +17,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import Salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError
 
 
@@ -174,7 +175,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
         setup_command
     )
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return False
@@ -188,7 +189,7 @@ def _cygcheck(args, cyg_arch='x86_64'):
 
     ret = __salt__['cmd.run_all'](cmd)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return False

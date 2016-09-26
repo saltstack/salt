@@ -416,11 +416,11 @@ class CacheWorker(MultiprocessingProcess):
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, log_queue=None, pm_queue=None):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__(log_queue=log_queue)
+        super(CacheWorker, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.opts = opts
 
     # __setstate__ and __getstate__ are only used on Windows.
@@ -438,6 +438,9 @@ class CacheWorker(MultiprocessingProcess):
         '''
         Gather currently connected minions and update the cache
         '''
+
+        self._notify_ready()
+
         new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
         cc = cache_cli(self.opts)
         cc.get_cached()
@@ -453,11 +456,11 @@ class ConnectedCache(MultiprocessingProcess):
     the master publisher port.
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, log_queue=None, pm_queue=None):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__(log_queue=log_queue)
+        super(ConnectedCache, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -569,6 +572,7 @@ class ConnectedCache(MultiprocessingProcess):
         self.secure()
 
         log.info('ConCache started')
+        self._notify_ready()
 
         while self.running:
 

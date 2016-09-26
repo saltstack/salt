@@ -29,6 +29,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ def signal(signal=None):
     out = __salt__['cmd.run_all'](cmd)
 
     # A non-zero return code means fail
-    if out['retcode'] and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         ret = out['stderr'].strip()
     # 'apachectl configtest' returns 'Syntax OK' to stderr
     elif out['stderr']:

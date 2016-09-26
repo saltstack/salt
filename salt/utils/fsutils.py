@@ -14,6 +14,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -26,7 +27,7 @@ def _verify_run(out, cmd=None):
     '''
     Crash to the log if command execution was not successful.
     '''
-    if out.get('retcode', 0) and out['stderr']:
+    if out.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK and out['stderr']:
         if cmd:
             log.debug('Command: \'{0}\''.format(cmd))
 

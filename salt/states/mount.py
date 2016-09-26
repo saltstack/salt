@@ -32,6 +32,7 @@ import os.path
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 
 import logging
@@ -227,7 +228,7 @@ def mounted(name,
         _label = device.split('=')[1]
         cmd = 'blkid -t LABEL={0}'.format(_label)
         res = __salt__['cmd.run_all']('{0}'.format(cmd))
-        if res['retcode'] > 0:
+        if res['retcode'] != exitcodes.EX_OK:
             ret['comment'] = 'Unable to find device with label {0}.'.format(_label)
             ret['result'] = False
             return ret

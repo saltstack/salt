@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -68,10 +69,7 @@ def _retcode_to_bool(retcode):
     Returns:
         True on 0, else False
     '''
-    if retcode == 0:
-        return True
-    else:
-        return False
+    return retcode == exitcodes.EX_OK
 
 
 def _stdout_list_split(retcode, stdout='', splitstring='\n'):
@@ -86,7 +84,7 @@ def _stdout_list_split(retcode, stdout='', splitstring='\n'):
     Returns:
         List or False.
     '''
-    if retcode == 0:
+    if retcode == exitcodes.EX_OK:
         ret = stdout.split(splitstring)
         return ret
     else:

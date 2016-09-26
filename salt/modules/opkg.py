@@ -30,6 +30,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.itertools
 from salt.utils.decorators import which as _which
@@ -145,7 +146,7 @@ def refresh_db():
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -255,7 +256,7 @@ def install(name=None,
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -315,7 +316,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         output_loglevel='trace',
         python_shell=False
     )
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -393,7 +394,7 @@ def upgrade(refresh=True):
                                    python_shell=False,
                                    redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']
@@ -662,7 +663,7 @@ def list_upgrades(refresh=True):
                                    output_loglevel='trace',
                                    python_shell=False)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -717,7 +718,7 @@ def version_cmp(pkg1, pkg2):
                                           output_loglevel='trace',
                                           ignore_retcode=True,
                                           python_shell=False)
-        if retcode == 0:
+        if retcode == exitcodes.EX_OK:
             return ret
     return None
 

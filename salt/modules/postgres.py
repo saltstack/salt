@@ -50,6 +50,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -179,7 +180,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
-    if ret.get('retcode', 0) != 0:
+    if ret.get('retcode', 0) != exitcodes.EX_OK:
         log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
@@ -232,7 +233,7 @@ def _run_initdb(name,
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False, **kwargs)
 
-    if ret.get('retcode', 0) != 0:
+    if ret.get('retcode', 0) != exitcodes.EX_OK:
         log.error('Error initilizing the postgres data directory')
 
     if password is not None and not __salt__['file.remove'](pgpassfile):
@@ -411,7 +412,7 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                                    host=host, user=user, port=port,
                                    maintenance_db=maintenance_db,
                                    password=password)
-    if cmdret['retcode'] > 0:
+    if cmdret['retcode'] != exitcodes.EX_OK:
         return ret
 
     csv_file = StringIO(cmdret['stdout'])
@@ -545,7 +546,7 @@ def db_create(name,
                                 user=user, host=host, port=port,
                                 maintenance_db=maintenance_db,
                                 password=password, runas=runas)
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
@@ -586,7 +587,7 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
                                         maintenance_db=maintenance_db,
                                         password=password, runas=runas)
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         return False
 
     return True
@@ -613,7 +614,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
                                 runas=runas,
                                 maintenance_db=maintenance_db,
                                 password=password)
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 # Tablespace related actions
@@ -705,7 +706,7 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
                                 user=user, host=host, port=port,
                                 maintenance_db=maintenance_db,
                                 password=password, runas=runas)
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
@@ -748,7 +749,7 @@ def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
                                     user=user, host=host, port=port,
                                     maintenance_db=maintenance_db,
                                     password=password, runas=runas)
-        if ret['retcode'] != 0:
+        if ret['retcode'] != exitcodes.EX_OK:
             return False
 
     return True
@@ -775,7 +776,7 @@ def tablespace_remove(name, user=None, host=None, port=None,
                                 runas=runas,
                                 maintenance_db=maintenance_db,
                                 password=password)
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 # User related actions
@@ -1124,7 +1125,7 @@ def _role_create(name,
                                 maintenance_db=maintenance_db,
                                 password=password)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def user_create(username,
@@ -1236,7 +1237,7 @@ def _role_update(name,
                                 maintenance_db=maintenance_db,
                                 password=password)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def user_update(username,
@@ -1950,7 +1951,7 @@ def schema_create(dbname, name, owner=None,
                                 port=db_port, host=db_host,
                                 maintenance_db=dbname, runas=user)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def schema_remove(dbname, name,
@@ -2308,7 +2309,7 @@ def language_create(name,
                                 password=password,
                                 runas=runas)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def language_remove(name,
@@ -2365,7 +2366,7 @@ def language_remove(name,
                                 maintenance_db=maintenance_db,
                                 password=password)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def _make_privileges_list_query(name, object_type, prepend):
@@ -2935,7 +2936,7 @@ def privileges_grant(name,
                                 password=password,
                                 runas=runas)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def privileges_revoke(name,
@@ -3045,7 +3046,7 @@ def privileges_revoke(name,
                                 password=password,
                                 runas=runas)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def datadir_init(name,
@@ -3099,7 +3100,7 @@ def datadir_init(name,
         encoding=encoding,
         locale=locale,
         runas=runas)
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def datadir_exists(name):

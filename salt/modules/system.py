@@ -11,6 +11,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -142,14 +143,14 @@ def _date_bin_set_datetime(new_date):
     non_posix_cmd = cmd + [non_posix]
 
     ret_non_posix = __salt__['cmd.run_all'](non_posix_cmd, python_shell=False)
-    if ret_non_posix['retcode'] != 0:
+    if ret_non_posix['retcode'] != exitcodes.EX_OK:
         # We will now try the command again following posix
         # date MMDDhhmm[[CC]YY]
         posix = " {1:02}{2:02}{3:02}{4:02}{0:04}".format(*new_date.timetuple())
         posix_cmd = cmd + [posix]
 
         ret_posix = __salt__['cmd.run_all'](posix_cmd, python_shell=False)
-        if ret_posix['retcode'] != 0:
+        if ret_posix['retcode'] != exitcodes.EX_OK:
             # if both fail it's likely an invalid date string
             # so we will give back the error from the first attempt
             msg = 'date failed: {0}'.format(ret_non_posix['stderr'])

@@ -23,6 +23,7 @@ import base64
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
@@ -609,13 +610,13 @@ def _run(cmd,
                             break
                     except KeyboardInterrupt:
                         ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
-                        ret['retcode'] = 1
+                        ret['retcode'] = exitcodes.EX_GENERIC
                         break
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
                         exc_info_on_loglevel=logging.DEBUG)
-                    ret = {'retcode': 1, 'pid': '2'}
+                    ret = {'retcode': exitcodes.EX_GENERIC, 'pid': '2'}
                     break
                 # only set stdout on success as we already mangled in other
                 # cases
@@ -630,7 +631,7 @@ def _run(cmd,
             proc.close(terminate=True, kill=True)
     try:
         if ignore_retcode:
-            __context__['retcode'] = 0
+            __context__['retcode'] = exitcodes.EX_OK
         else:
             __context__['retcode'] = ret['retcode']
     except NameError:
@@ -917,7 +918,7 @@ def run(cmd,
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != exitcodes.EX_OK:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
@@ -1283,7 +1284,7 @@ def run_stdout(cmd,
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != exitcodes.EX_OK:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
@@ -1465,7 +1466,7 @@ def run_stderr(cmd,
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != exitcodes.EX_OK:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
@@ -1658,7 +1659,7 @@ def run_all(cmd,
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != exitcodes.EX_OK:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
@@ -1841,7 +1842,7 @@ def retcode(cmd,
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != exitcodes.EX_OK:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
@@ -2072,7 +2073,7 @@ def script(source,
         if not fn_:
             _cleanup_tempfile(path)
             return {'pid': 0,
-                    'retcode': 1,
+                    'retcode': exitcodes.EX_GENERIC,
                     'stdout': '',
                     'stderr': '',
                     'cache_error': True}
@@ -2081,7 +2082,7 @@ def script(source,
         if not fn_:
             _cleanup_tempfile(path)
             return {'pid': 0,
-                    'retcode': 1,
+                    'retcode': exitcodes.EX_GENERIC,
                     'stdout': '',
                     'stderr': '',
                     'cache_error': True}

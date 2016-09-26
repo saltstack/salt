@@ -108,6 +108,7 @@ import salt.ext.six.moves.http_client
 
 # Import Salt Libs
 import salt.returners
+from salt.defaults import exitcodes
 
 
 log = logging.getLogger(__name__)
@@ -361,7 +362,7 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
 
-    if ret.get('retcode') == 0:
+    if ret.get('retcode') == exitcodes.EX_OK:
         color = _options.get('color')
     else:
         color = 'red'

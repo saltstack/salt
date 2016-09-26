@@ -19,6 +19,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/rc.d/{0} -f start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -74,7 +75,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/rc.d/{0} -f stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -88,7 +89,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -105,7 +106,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
-    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -121,7 +122,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/etc/rc.d/{0} -f reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 import re

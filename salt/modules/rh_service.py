@@ -17,6 +17,7 @@ import os
 import stat
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ def _chkconfig_add(name):
     run-levels.
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
-    if __salt__['cmd.retcode'](cmd, python_shell=False) == 0:
+    if __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK:
         log.info('Added initscript "{0}" to chkconfig'.format(name))
         return True
     else:
@@ -156,7 +157,7 @@ def _service_is_chkconfig(name):
     Return True if the service is managed by chkconfig.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
-    return __salt__['cmd.retcode'](cmdline, python_shell=False, ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](cmdline, python_shell=False, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def _sysv_is_enabled(name, runlevel=None):
@@ -187,7 +188,7 @@ def _chkconfig_is_enabled(name, runlevel=None):
 
     if runlevel is None:
         runlevel = _runlevel()
-    if result['retcode'] == 0:
+    if result['retcode'] == exitcodes.EX_OK:
         for row in result['stdout'].splitlines():
             if '{0}:on'.format(runlevel) in row:
                 if row.split()[0] == name:
@@ -206,7 +207,7 @@ def _sysv_enable(name):
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
     cmd = '/sbin/chkconfig {0} on'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def _sysv_disable(name):
@@ -219,7 +220,7 @@ def _sysv_disable(name):
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
     cmd = '/sbin/chkconfig {0} off'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def _sysv_delete(name):
@@ -230,7 +231,7 @@ def _sysv_delete(name):
     if not _service_is_chkconfig(name):
         return False
     cmd = '/sbin/chkconfig --del {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def _upstart_delete(name):
@@ -414,7 +415,7 @@ def start(name):
         cmd = 'start {0}'.format(name)
     else:
         cmd = '/sbin/service {0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcod'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -448,7 +449,7 @@ def restart(name):
         cmd = 'restart {0}'.format(name)
     else:
         cmd = '/sbin/service {0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -465,7 +466,7 @@ def reload_(name):
         cmd = 'reload {0}'.format(name)
     else:
         cmd = '/sbin/service {0} reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -485,7 +486,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == exitcodes.EX_OK
 
 
 def delete(name, **kwargs):

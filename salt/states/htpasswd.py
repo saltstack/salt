@@ -16,6 +16,7 @@ Support for htpasswd module. Requires the apache2-utils package for Debian-based
 '''
 from __future__ import absolute_import
 import salt.utils
+from salt.defaults import exitcodes
 
 
 __virtualname__ = 'webutil'
@@ -62,7 +63,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
            'comment': '',
            'result': None}
 
-    exists = __salt__['file.grep'](htpasswd_file, name)['retcode'] == 0
+    exists = __salt__['file.grep'](htpasswd_file, name)['retcode'] == exitcodes.EX_OK
 
     # If user exists, but we're supposed to update the password, find out if
     # it's changed, but not if we're forced to update the file regardless.
@@ -82,7 +83,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
         useradd_ret = __salt__['webutil.useradd'](htpasswd_file, name,
                                                   password, opts=options,
                                                   runas=runas)
-        if useradd_ret['retcode'] == 0:
+        if useradd_ret['retcode'] == exitcodes.EX_OK:
             ret['result'] = True
             ret['comment'] = useradd_ret['stderr']
             ret['changes'] = {name: True}

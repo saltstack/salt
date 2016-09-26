@@ -29,7 +29,6 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
-import salt.defaults.exitcodes
 import salt.log
 import salt.loader
 import salt.minion
@@ -44,6 +43,7 @@ import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
+from salt.defaults import exitcodes
 from salt.utils import is_windows
 from salt.utils.process import MultiprocessingProcess
 
@@ -182,7 +182,7 @@ done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
-            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+            EX_THIN_PYTHON_INVALID=exitcodes.EX_THIN_PYTHON_INVALID,
             ).split('\n')])
 
 if not is_windows():
@@ -395,7 +395,7 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        if salt.defaults.exitcodes.EX_OK != retcode:
+        if exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
@@ -656,7 +656,7 @@ class SSH(object):
                     outputter,
                     self.opts)
         if final_exit:
-            sys.exit(salt.defaults.exitcodes.EX_AGGREGATE)
+            sys.exit(exitcodes.EX_AGGREGATE)
 
 
 class Single(object):
@@ -895,7 +895,7 @@ class Single(object):
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
 
-            retcode = 0
+            retcode = exitcodes.EX_OK
 
             pillar = salt.pillar.Pillar(
                     opts_pkg,
@@ -966,11 +966,11 @@ class Single(object):
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
-            retcode = 1
+            retcode = exitcodes.EX_GENERIC
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
-            retcode = 1
+            retcode = exitcodes.EX_GENERIC
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and 'local' in result:
@@ -1122,7 +1122,7 @@ ARGS = {10}\n'''.format(self.minion_config,
             # is a SHIM command for the master.
             shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
             log.debug('SHIM retcode({0}) and command: {1}'.format(retcode, shim_command))
-            if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
+            if 'deploy' == shim_command and retcode == exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -1181,22 +1181,22 @@ ARGS = {10}\n'''.format(self.minion_config,
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
+                (exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
                 'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
             ),
             (
-                (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
+                (exitcodes.EX_THIN_CHECKSUM,),
                 'checksum mismatched',
                 'The salt thin transfer was corrupted'
             ),
             (
-                (salt.defaults.exitcodes.EX_SCP_NOT_FOUND,),
+                (exitcodes.EX_SCP_NOT_FOUND,),
                 'scp not found',
                 'No scp binary. openssh-clients package required'
             ),
             (
-                (salt.defaults.exitcodes.EX_CANTCREAT,),
+                (exitcodes.EX_CANTCREAT,),
                 'salt path .* exists but is not a directory',
                 'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
             ),
@@ -1221,7 +1221,7 @@ ARGS = {10}\n'''.format(self.minion_config,
                 perm_error_fmt.format(stderr)
             ),
             (
-                (salt.defaults.exitcodes.EX_SOFTWARE,),
+                (exitcodes.EX_SOFTWARE,),
                 'exists but is not',
                 'An internal error occurred with the shim, please investigate:\n ' + stderr,
             ),

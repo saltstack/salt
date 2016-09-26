@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import ioflo.base.deeding
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
                     'fun_args': [],
                     'jid': pub['return']['pub']['jid'],
                     'return': True,
-                    'retcode': 0,
+                    'retcode': exitcodes.EX_OK,
                     'success': True,
                     'cmd': '_return',
                     'fun': u'test.ping',

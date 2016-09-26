@@ -11,6 +11,7 @@ import logging
 
 # Salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ def beacon(config):
 
     if 'screen_event' in config and config['screen_event']:
         last_value = last_state.get('screen_available', False)
-        screen_available = retcode == 0
+        screen_available = retcode == exitcodes.EX_OK
         if last_value != screen_available or 'screen_available' not in last_state:
             ret.append({'tag': 'screen_event', 'screen_available': screen_available})
 

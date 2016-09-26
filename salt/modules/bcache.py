@@ -25,6 +25,7 @@ import re
 from salt.ext import six
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -942,7 +943,7 @@ def _wait(lfunc, log_lvl=None, log_msg=None, tries=10):
     return False
 
 
-def _run_all(cmd, log_lvl=None, log_msg=None, exitcode=0):
+def _run_all(cmd, log_lvl=None, log_msg=None, exitcode=exitcodes.EX_OK):
     '''
     Simple wrapper around cmd.run_all
     log_msg can contain {0} for stderr

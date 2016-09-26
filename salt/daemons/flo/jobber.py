@@ -25,6 +25,7 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt.defaults import exitcodes
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
@@ -288,7 +289,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     func,
                     salt.utils.args.parse_input(data['arg']),
                     data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
+                sys.modules[func.__module__].__context__['retcode'] = exitcodes.EX_OK
 
                 executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call.get'])
                 if isinstance(executors, six.string_types):
@@ -337,7 +338,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     ret['return'] = return_data
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
                     'retcode',
-                    0
+                    exitcodes.EX_OK
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:

@@ -13,6 +13,7 @@ import os
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -96,9 +97,9 @@ def a2ensite(site):
     ret['Name'] = 'Apache2 Enable Site'
     ret['Site'] = site
 
-    if status == 1:
+    if status == exitcodes.EX_GENERIC:
         ret['Status'] = 'Site {0} Not found'.format(site)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Site {0} enabled'.format(site)
     else:
         ret['Status'] = status
@@ -132,7 +133,7 @@ def a2dissite(site):
 
     if status == 256:
         ret['Status'] = 'Site {0} Not found'.format(site)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Site {0} disabled'.format(site)
     else:
         ret['Status'] = status
@@ -186,9 +187,9 @@ def a2enmod(mod):
     ret['Name'] = 'Apache2 Enable Mod'
     ret['Mod'] = mod
 
-    if status == 1:
+    if status == exitcodes.EX_GENERIC:
         ret['Status'] = 'Mod {0} Not found'.format(mod)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Mod {0} enabled'.format(mod)
     else:
         ret['Status'] = status
@@ -222,7 +223,7 @@ def a2dismod(mod):
 
     if status == 256:
         ret['Status'] = 'Mod {0} Not found'.format(mod)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Mod {0} disabled'.format(mod)
     else:
         ret['Status'] = status
@@ -280,9 +281,9 @@ def a2enconf(conf):
     ret['Name'] = 'Apache2 Enable Conf'
     ret['Conf'] = conf
 
-    if status == 1:
+    if status == exitcodes.EX_GENERIC:
         ret['Status'] = 'Conf {0} Not found'.format(conf)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Conf {0} enabled'.format(conf)
     else:
         ret['Status'] = status
@@ -319,7 +320,7 @@ def a2disconf(conf):
 
     if status == 256:
         ret['Status'] = 'Conf {0} Not found'.format(conf)
-    elif status == 0:
+    elif status == exitcodes.EX_OK:
         ret['Status'] = 'Conf {0} disabled'.format(conf)
     else:
         ret['Status'] = status

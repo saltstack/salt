@@ -26,6 +26,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def __execute_kadmin(cmd):
         )
     else:
         log.error('Unable to find kerberos keytab/principal')
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
         ret['comment'] = 'Missing authentication keytab/principal'
 
     return ret
@@ -74,7 +75,7 @@ def list_principals():
 
     cmd = __execute_kadmin('list_principals')
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -102,7 +103,7 @@ def get_principal(name):
 
     cmd = __execute_kadmin('get_principal {0}'.format(name))
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -130,7 +131,7 @@ def list_policies():
 
     cmd = __execute_kadmin('list_policies')
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -158,7 +159,7 @@ def get_policy(name):
 
     cmd = __execute_kadmin('get_policy {0}'.format(name))
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -186,7 +187,7 @@ def get_privs():
 
     cmd = __execute_kadmin('get_privs')
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -221,7 +222,7 @@ def create_principal(name, enctypes=None):
 
     cmd = __execute_kadmin(krb_cmd)
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         if not cmd['stderr'].splitlines()[-1].startswith('WARNING:'):
             ret['comment'] = cmd['stderr'].splitlines()[-1]
             ret['result'] = False
@@ -245,7 +246,7 @@ def delete_principal(name):
 
     cmd = __execute_kadmin('delprinc -force {0}'.format(name))
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 
@@ -275,7 +276,7 @@ def create_keytab(name, keytab, enctypes=None):
 
     cmd = __execute_kadmin(krb_cmd)
 
-    if cmd['retcode'] != 0 or cmd['stderr']:
+    if cmd['retcode'] != exitcodes.EX_OK or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
         ret['result'] = False
 

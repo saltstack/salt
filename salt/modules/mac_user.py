@@ -25,6 +25,7 @@ from salt.ext.six import string_types
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -159,7 +160,7 @@ def delete(name, remove=False, force=False):
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    return _dscl(['/Users/{0}'.format(name)], ctype='delete')['retcode'] == 0
+    return _dscl(['/Users/{0}'.format(name)], ctype='delete')['retcode'] == exitcodes.EX_OK
 
 
 def getent(refresh=False):
@@ -517,7 +518,7 @@ def get_auto_login():
            '/Library/Preferences/com.apple.loginwindow.plist',
            'autoLoginUser']
     ret = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
-    return False if ret['retcode'] else ret['stdout']
+    return False if ret['retcode'] != exitcodes.EX_OK else ret['stdout']
 
 
 def enable_auto_login(name):

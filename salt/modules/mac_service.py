@@ -12,6 +12,7 @@ import plistlib
 from distutils.version import LooseVersion
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
@@ -204,7 +205,7 @@ def launchctl(sub_cmd, *args, **kwargs):
     ret = __salt__['cmd.run_all'](cmd, **kwargs)
 
     # Raise an error or return successful result
-    if ret['retcode']:
+    if ret['retcode'] != exitcodes.EX_OK:
         out = 'Failed to {0} service:\n'.format(sub_cmd)
         out += 'stdout: {0}\n'.format(ret['stdout'])
         out += 'stderr: {0}\n'.format(ret['stderr'])

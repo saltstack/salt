@@ -9,6 +9,7 @@ import re
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils.itertools
 from salt.exceptions import CommandExecutionError
 
@@ -60,7 +61,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
 
     ret = __salt__['cmd.run_all'](cmdline, runas=runas, python_shell=False)
 
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         raise CommandExecutionError(ret['stderr'])

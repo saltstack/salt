@@ -23,6 +23,7 @@ from distutils.version import LooseVersion as _LooseVersion
 # Import salt libs
 import salt.utils
 import salt.utils.url
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
@@ -2934,13 +2935,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['python_shell'] = True
     if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != exitcodes.EX_OK:
             return {'comment': 'onlyif execution failed',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == exitcodes.EX_OK:
             return {'comment': 'unless execution succeeded',
                     'skip_watch': True,
                     'result': True}

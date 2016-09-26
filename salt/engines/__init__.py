@@ -69,11 +69,11 @@ class Engine(SignalHandlingMultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners, proxy, log_queue=None):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, log_queue=None, pm_queue=None):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__(log_queue=log_queue)
+        super(Engine, self).__init__(log_queue=log_queue, pm_queue=pm_queue)
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -123,6 +123,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
                                           self.runners,
                                           proxy=self.proxy)
         kwargs = self.config or {}
+        self._notify_ready()
         try:
             self.engine[self.fun](**kwargs)
         except Exception as exc:

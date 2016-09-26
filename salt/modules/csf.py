@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils
 from salt.ext.six.moves import map
@@ -36,7 +37,7 @@ def _temp_exists(method, ip):
     _type = method.replace('temp', '').upper()
     cmd = "csf -t | awk -v code=1 -v type=_type -v ip=ip '$1==type && $2==ip {{code=0}} END {{exit code}}'".format(_type=_type, ip=ip)
     exists = __salt__['cmd.run_all'](cmd)
-    return not bool(exists['retcode'])
+    return exists['retcode'] == exitcodes.EX_OK
 
 
 def _exists_with_port(method, rule):
@@ -68,7 +69,7 @@ def exists(method,
         rule = _build_port_rule(ip, port, proto, direction, port_origin, ip_origin, comment)
         return _exists_with_port(method, rule)
     exists = __salt__['cmd.run_all']("egrep ^'{0} +' /etc/csf/csf.{1}".format(ip, method))
-    return not bool(exists['retcode'])
+    return exists['retcode'] == exitcodes.EX_OK
 
 
 def __csf_cmd(cmd):
@@ -78,7 +79,7 @@ def __csf_cmd(cmd):
     csf_cmd = '{0} {1}'.format(salt.utils.which('csf'), cmd)
     out = __salt__['cmd.run_all'](csf_cmd)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         if not out['stderr']:
             ret = out['stdout']
         else:
@@ -97,7 +98,7 @@ def _status_csf():
     '''
     cmd = 'test -e /etc/csf/csf.disable'
     out = __salt__['cmd.run_all'](cmd)
-    return bool(out['retcode'])
+    return out['retcode'] != exitcodes.EX_OK
 
 
 def _get_opt(method):

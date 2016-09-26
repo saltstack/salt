@@ -19,6 +19,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
@@ -227,7 +228,7 @@ def refresh_db():
     if pkgin:
         call = __salt__['cmd.run_all']('{0} up'.format(pkgin), output_loglevel='trace')
 
-        if call['retcode'] != 0:
+        if call['retcode'] != exitcodes.EX_OK:
             comment = ''
             if 'stderr' in call:
                 comment += call['stderr']
@@ -387,7 +388,7 @@ def install(name=None, refresh=False, fromrepo=None,
         output_loglevel='trace'
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -439,7 +440,7 @@ def upgrade():
                                    python_shell=False,
                                    redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']
@@ -518,7 +519,7 @@ def remove(name=None, pkgs=None, **kwargs):
         output_loglevel='trace'
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []

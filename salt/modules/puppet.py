@@ -12,6 +12,7 @@ import datetime
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -167,10 +168,10 @@ def run(*args, **kwargs):
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
     ret = __salt__['cmd.run_all'](repr(puppet), python_shell=puppet.useshell)
-    if ret['retcode'] in [0, 2]:
-        ret['retcode'] = 0
+    if ret['retcode'] in [exitcodes.EX_OK, 2]:
+        ret['retcode'] = exitcodes.EX_OK
     else:
-        ret['retcode'] = 1
+        ret['retcode'] = exitcodes.EX_GENERIC
 
     return ret
 

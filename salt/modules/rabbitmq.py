@@ -14,6 +14,7 @@ import random
 import string
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.itertools
 import salt.ext.six as six
@@ -34,7 +35,7 @@ def __virtual__():
 def _format_response(response, msg):
     error = 'RabbitMQ command failed: {0}'.format(response)
     if isinstance(response, dict):
-        if response['retcode'] != 0:
+        if response['retcode'] != exitcodes.EX_OK:
             raise CommandExecutionError(error)
         else:
             msg = response['stdout']
@@ -780,7 +781,7 @@ def plugin_is_enabled(name, runas=None):
         runas = salt.utils.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
     ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'RabbitMQ command failed: {0}'.format(ret['stderr'])
         )

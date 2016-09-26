@@ -17,6 +17,7 @@ import os
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
@@ -172,7 +173,7 @@ def setsebool(boolean, value, persist=False):
         cmd = 'setsebool -P {0} {1}'.format(boolean, value)
     else:
         cmd = 'setsebool {0} {1}'.format(boolean, value)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def setsebools(pairs, persist=False):
@@ -193,7 +194,7 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool '
     for boolean, value in six.iteritems(pairs):
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def list_sebool():
@@ -250,7 +251,7 @@ def setsemod(module, state):
         cmd = 'semodule -e {0}'.format(module)
     elif state.lower() == 'disabled':
         cmd = 'semodule -d {0}'.format(module)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def list_semod():

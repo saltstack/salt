@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 
@@ -53,7 +54,7 @@ def status():
     apcaccess = _check_apcaccess()
     res = __salt__['cmd.run_all'](apcaccess)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = 'Something with wrong executing apcaccess, is apcupsd running?'
         return ret
 

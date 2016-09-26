@@ -33,9 +33,9 @@ import time
 import tempfile
 
 # Import Salt libs
-import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.systemd
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -113,7 +113,7 @@ def _make_container_root(name):
     '''
     path = _root(name)
     if os.path.exists(path):
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = exitcodes.SALT_BUILD_FAIL
         raise CommandExecutionError(
             'Container {0} already exists'.format(name)
         )
@@ -130,7 +130,7 @@ def _make_container_root(name):
 
 def _build_failed(dst, name):
     try:
-        __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
+        __context__['retcode'] = exitcodes.SALT_BUILD_FAIL
         shutil.rmtree(dst)
     except OSError as exc:
         if exc.errno != errno.ENOENT:
@@ -154,7 +154,7 @@ def _bootstrap_arch(name, **kwargs):
     dst = _make_container_root(name)
     cmd = 'pacstrap -c -d {0} base'.format(dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         _build_failed(dst, name)
     return ret
 
@@ -180,7 +180,7 @@ def _bootstrap_debian(name, **kwargs):
     dst = _make_container_root(name)
     cmd = 'debootstrap --arch=amd64 {0} {1}'.format(version, dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         _build_failed(dst, name)
     return ret
 
@@ -201,7 +201,7 @@ def _bootstrap_fedora(name, **kwargs):
            '--disablerepo="*" --enablerepo=fedora install systemd passwd yum '
            'fedora-release vim-minimal'.format(version, dst))
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         _build_failed(dst, name)
     return ret
 
@@ -219,7 +219,7 @@ def _bootstrap_ubuntu(name, **kwargs):
     dst = _make_container_root(name)
     cmd = 'debootstrap --arch=amd64 {0} {1}'.format(version, dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         _build_failed(dst, name)
     return ret
 
@@ -763,7 +763,7 @@ def bootstrap_salt(name,
         needs_install = _needs_install(name)
     else:
         needs_install = True
-    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == exitcodes.EX_OK
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -811,7 +811,7 @@ def bootstrap_salt(name,
                 log.info('Running {0} in LXC container \'{1}\''
                          .format(cmd, name))
                 ret = retcode(name, cmd, output_loglevel='info',
-                                  use_vt=True) == 0
+                                  use_vt=True) == exitcodes.EX_OK
             else:
                 ret = False
         else:
@@ -974,7 +974,7 @@ def info(name, **kwargs):
     # Have to parse 'machinectl status' here since 'machinectl show' doesn't
     # contain IP address info or OS info. *shakes fist angrily*
     c_info = _machinectl('status {0}'.format(name))
-    if c_info['retcode'] != 0:
+    if c_info['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Unable to get info for container \'{0}\''.format(name)
         )
@@ -1034,8 +1034,8 @@ def enable(name):
         salt myminion nspawn.enable <name>
     '''
     cmd = 'systemctl enable systemd-nspawn@{0}'.format(name)
-    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
-        __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != exitcodes.EX_OK:
+        __context__['retcode'] = exitcodes.EX_UNAVAILABLE
         return False
     return True
 
@@ -1052,8 +1052,8 @@ def disable(name):
         salt myminion nspawn.enable <name>
     '''
     cmd = 'systemctl disable systemd-nspawn@{0}'.format(name)
-    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
-        __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != exitcodes.EX_OK:
+        __context__['retcode'] = exitcodes.EX_UNAVAILABLE
         return False
     return True
 
@@ -1075,8 +1075,8 @@ def start(name):
         cmd = 'systemctl start systemd-nspawn@{0}'.format(name)
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if ret['retcode'] != 0:
-        __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+    if ret['retcode'] != exitcodes.EX_OK:
+        __context__['retcode'] = exitcodes.EX_UNAVAILABLE
         return False
     return True
 
@@ -1098,8 +1098,8 @@ def stop(name, kill=False):
         cmd = 'systemctl stop systemd-nspawn@{0}'.format(name)
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if ret['retcode'] != 0:
-        __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+    if ret['retcode'] != exitcodes.EX_OK:
+        __context__['retcode'] = exitcodes.EX_UNAVAILABLE
         return False
     return True
 
@@ -1198,16 +1198,16 @@ def reboot(name, kill=False):
         cmd = 'systemctl stop systemd-nspawn@{0}'.format(name)
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
         # Now check if successful
-        if ret['retcode'] != 0:
-            __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+        if ret['retcode'] != exitcodes.EX_OK:
+            __context__['retcode'] = exitcodes.EX_UNAVAILABLE
             return False
         # Finally, start the container back up. No need to check the retcode a
         # second time, it'll be checked below once we exit the if/else block.
         cmd = 'systemctl start systemd-nspawn@{0}'.format(name)
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if ret['retcode'] != 0:
-        __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+    if ret['retcode'] != exitcodes.EX_OK:
+        __context__['retcode'] = exitcodes.EX_UNAVAILABLE
         return False
     return True
 
@@ -1249,8 +1249,8 @@ def remove(name, stop=False):
 
     if _sd_version() >= 219:
         ret = _machinectl('remove {0}'.format(name))
-        if ret['retcode'] != 0:
-            __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+        if ret['retcode'] != exitcodes.EX_OK:
+            __context__['retcode'] = exitcodes.EX_UNAVAILABLE
             _failed_remove(name, ret['stderr'])
     else:
         try:
@@ -1381,7 +1381,7 @@ def _pull_image(pull_type, image, name, **kwargs):
         pull_type, ' '.join(pull_opts), image, name
     )
     result = _machinectl(cmd, use_vt=True)
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         msg = 'Error occurred pulling image. Stderr from the pull command ' \
               '(if any) follows: '
         if result['stderr']:

@@ -10,6 +10,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -189,7 +190,7 @@ def _run_composer(action,
                                      env={'COMPOSER_HOME': composer_home},
                                      python_shell=False)
 
-    if result['retcode'] != 0:
+    if result['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(result['stderr'])
 
     if quiet is True:

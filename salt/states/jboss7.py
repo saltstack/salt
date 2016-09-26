@@ -359,7 +359,7 @@ def deployed(name, jboss_config, salt_source=None):
         ret['comment'] = comment
         ret['changes']['deployed'] = resolved_source
     else:
-        comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
+        comment = __append_comment(new_comment='''Deployment failed\nreturn retcode={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
         return _error(ret, comment)
 
     return ret

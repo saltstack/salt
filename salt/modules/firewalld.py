@@ -12,6 +12,7 @@ import re
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def __firewall_cmd(cmd):
     firewall_cmd = '{0} {1}'.format(salt.utils.which('firewall-cmd'), cmd)
     out = __salt__['cmd.run_all'](firewall_cmd)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         if not out['stderr']:
             msg = out['stdout']
         else:

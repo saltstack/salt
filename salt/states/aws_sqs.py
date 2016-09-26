@@ -16,6 +16,10 @@ information.
             - region: eu-west-1
 '''
 
+from __future__ import absolute_import
+
+from salt.defaults import exitcodes
+
 
 def __virtual__():
     '''
@@ -57,7 +61,7 @@ def exists(
                     name)
             return ret
         created = __salt__['aws_sqs.create_queue'](name, region, opts, user)
-        if created['retcode'] == 0:
+        if created['retcode'] == exitcodes.EX_OK:
             ret['changes']['new'] = created['stdout']
         else:
             ret['result'] = False
@@ -100,7 +104,7 @@ def absent(
                     name)
             return ret
         removed = __salt__['aws_sqs.delete_queue'](name, region, opts, user)
-        if removed['retcode'] == 0:
+        if removed['retcode'] == exitcodes.EX_OK:
             ret['changes']['removed'] = removed['stdout']
         else:
             ret['result'] = False

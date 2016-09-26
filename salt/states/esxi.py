@@ -97,6 +97,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
+from salt.defaults import exitcodes
 import salt.ext.six as six
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -942,7 +943,7 @@ def syslog_configured(name,
             enabled = __salt__[esxi_cmd]('enable_firewall_ruleset',
                                          ruleset_enable=firewall,
                                          ruleset_name='syslog').get(host)
-            if enabled.get('retcode') != 0:
+            if enabled.get('retcode') != exitcodes.EX_OK:
                 err = enabled.get('stderr')
                 out = enabled.get('stdout')
                 ret['comment'] = 'Error: {0}'.format(err if err else out)

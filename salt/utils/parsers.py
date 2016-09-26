@@ -387,8 +387,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         if not os.path.isfile(self.options.saltfile):
             self.error(
-                '\'{0}\' file does not exist.\n'.format(self.options.saltfile
-                )
+                '\'{0}\' file does not exist.\n'.format(self.options.saltfile)
             )
 
         # Make sure we have an absolute path
@@ -1365,9 +1364,10 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_after_parsed(self):
         group_options_selected = [
-                option for option in self.output_options_group.option_list if (
+            option for option in self.output_options_group.option_list if (
                 getattr(self.options, option.dest) and
-                (option.dest.endswith('_out') or option.dest == 'output'))
+                (option.dest.endswith('_out') or option.dest == 'output')
+            )
         ]
         if len(group_options_selected) > 1:
             self.error(
@@ -1816,7 +1816,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
             minion_id = None
 
         return config.minion_config(self.get_config_file_path(),
-                                   cache_minion_id=False, minion_id=minion_id)
+                                    cache_minion_id=False, minion_id=minion_id)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
@@ -2021,6 +2021,22 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             default=False,
             help=('Dump the master configuration values')
+        )
+        self.add_option(
+            '--retcode-passthrough',
+            default=True,
+            action='store_true',
+            help=('Exit with the salt module retcode and not the salt CLI'
+                  ' retcode (see --cli-retcode).')
+        )
+        self.add_option(
+            '--cli-retcode',
+            default=True,
+            action='store_false',
+            dest='retcode_passthrough',
+            help=('Exit with the salt CLI status rather than the retcode of'
+                  ' the called module (this is the old behavior - see'
+                  ' --retcode-passthrough).')
         )
 
     def _mixin_after_parsed(self):
@@ -2551,10 +2567,19 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
         )
         self.add_option(
             '--retcode-passthrough',
-            default=False,
+            default=True,
             action='store_true',
-            help=('Exit with the salt call retcode and not the salt binary '
-                  'retcode.')
+            help=('Exit with the salt module retcode and not the salt CLI'
+                  ' retcode (see --cli-retcode).')
+        )
+        self.add_option(
+            '--cli-retcode',
+            default=True,
+            action='store_false',
+            dest='retcode_passthrough',
+            help=('Exit with the salt CLI status rather than the retcode of'
+                  ' the called module (this is the old behavior - see'
+                  ' --retcode-passthrough).')
         )
         self.add_option(
             '--metadata',

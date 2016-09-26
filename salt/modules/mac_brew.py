@@ -16,6 +16,7 @@ import json
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -86,7 +87,7 @@ def _call_brew(cmd, redirect_stderr=False):
                                   output_loglevel='trace',
                                   python_shell=False,
                                   redirect_stderr=redirect_stderr)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'stdout: {stdout}\n'
             'stderr: {stderr}\n'
@@ -232,7 +233,7 @@ def remove(name=None, pkgs=None, **kwargs):
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
 
     out = _call_brew(cmd)
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -261,7 +262,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = 'brew update'
-    if _call_brew(cmd)['retcode']:
+    if _call_brew(cmd)['retcode'] != exitcodes.EX_OK:
         log.error('Failed to update')
         return False
 
@@ -285,7 +286,7 @@ def _info(*pkgs):
     '''
     cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
     brew_result = _call_brew(cmd)
-    if brew_result['retcode']:
+    if brew_result['retcode'] != exitcodes.EX_OK:
         log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
         return {}
     output = json.loads(brew_result['stdout'])
@@ -383,7 +384,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         cmd = 'brew install {0}'.format(formulas)
 
     out = _call_brew(cmd)
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -474,7 +475,7 @@ def upgrade(refresh=True):
     cmd = 'brew upgrade'
     call = _call_brew(cmd, redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']

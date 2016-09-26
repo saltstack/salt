@@ -38,7 +38,7 @@ DEBUG = True
 
 class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
-    Various integration tests for the salt-minion executable.
+    Various integration tests for the `salt-minion` command line executable.
     '''
     _call_binary_ = 'salt-minion'
 
@@ -173,7 +173,6 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
                 name=mname,
                 root_dir='init_script',
                 config_dir=os.path.join('etc', mname),
-                parent_dir=self._test_dir,
                 pid_file=pid_file,
                 configs={
                     'minion': {
@@ -190,7 +189,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
             _minions.append(minion)
 
         # Need salt-call, salt-minion for wrapper script
-        salt_call = testprogram.TestProgramSaltCall(root_dir='init_script', parent_dir=self._test_dir)
+        salt_call = testprogram.TestProgramSaltCall(root_dir='init_script')
         # Ensure that run-time files are generated
         salt_call.setup()
         sysconf_dir = os.path.dirname(_minions[0].abs_path(_minions[0].config_dir))
@@ -284,7 +283,6 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_user',
             configs={'minion': {'map': {'user': 'some_unknown_user_xyz'}}},
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         minion.setup()
@@ -312,7 +310,6 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='unknown_argument',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         minion.setup()
@@ -339,7 +336,6 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         minion = testprogram.TestDaemonSaltMinion(
             name='correct_usage',
-            parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
         minion.setup()

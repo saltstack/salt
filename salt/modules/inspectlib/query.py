@@ -22,6 +22,7 @@ import logging
 
 # Import Salt Libs
 import salt.utils.network
+from salt.defaults import exitcodes
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
 from salt.modules.inspectlib import EnvLoader
 from salt.modules.inspectlib.entities import (Package, PackageCfgFile, PayloadFile)
@@ -49,7 +50,7 @@ class SysInfo(object):
         Get a size of a disk.
         '''
         out = __salt__['cmd.run_all']("df {0}".format(device))
-        if out['retcode']:
+        if out['retcode'] != exitcodes.EX_OK:
             msg = "Disk size info error: {0}".format(out['stderr'])
             log.error(msg)
             raise SIException(msg)
@@ -99,7 +100,7 @@ class SysInfo(object):
         Get memory.
         '''
         out = __salt__['cmd.run_all']("vmstat -s")
-        if out['retcode']:
+        if out['retcode'] != exitcodes.EX_OK:
             raise SIException("Memory info error: {0}".format(out['stderr']))
 
         ret = dict()
@@ -260,7 +261,7 @@ class Query(EnvLoader):
         '''
         users = dict()
         out = __salt__['cmd.run_all']("passwd -S -a")
-        if out['retcode']:
+        if out['retcode'] != exitcodes.EX_OK:
             # System does not supports all accounts descriptions, just skipping.
             return users
         status = {'L': 'Locked', 'NP': 'No password', 'P': 'Usable password', 'LK': 'Locked'}

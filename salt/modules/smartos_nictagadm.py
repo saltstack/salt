@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 
@@ -79,7 +80,7 @@ def list_nictags(include_etherstubs=True):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else 'Failed to get list of nictags.'
     else:
         header = ['name', 'macaddress', 'link', 'type']
@@ -114,7 +115,7 @@ def vms(nictag):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    if retcode != 0:
+    if retcode != exitcodes.EX_OK:
         ret['Error'] = res['stderr'] if 'stderr' in res else 'Failed to get list of vms.'
     else:
         ret = res['stdout'].splitlines()
@@ -148,7 +149,7 @@ def exists(*nictag, **kwargs):
     res = __salt__['cmd.run_all'](cmd)
 
     if not kwargs.get('verbose', False):
-        ret = res['retcode'] == 0
+        ret = res['retcode'] == exitcodes.EX_OK
     else:
         missing = res['stderr'].splitlines()
         for nt in nictag:
@@ -205,7 +206,7 @@ def add(name, mac, mtu=1500):
         )
         res = __salt__['cmd.run_all'](cmd)
 
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         return True
     else:
         return {'Error': 'failed to create nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
@@ -264,7 +265,7 @@ def update(name, mac=None, mtu=None):
     )
     res = __salt__['cmd.run_all'](cmd)
 
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         return True
     else:
         return {'Error': 'failed to update nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
@@ -298,7 +299,7 @@ def delete(name, force=False):
     )
     res = __salt__['cmd.run_all'](cmd)
 
-    if res['retcode'] == 0:
+    if res['retcode'] == exitcodes.EX_OK:
         return True
     else:
         return {'Error': 'failed to delete nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}

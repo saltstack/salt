@@ -43,6 +43,7 @@ import logging
 
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -119,9 +120,9 @@ def refresh_db(full=False):
         salt '*' pkg.refresh_db full=True
     '''
     if full:
-        return __salt__['cmd.retcode']('/bin/pkg refresh --full') == 0
+        return __salt__['cmd.retcode']('/bin/pkg refresh --full') == exitcodes.EX_OK
     else:
-        return __salt__['cmd.retcode']('/bin/pkg refresh') == 0
+        return __salt__['cmd.retcode']('/bin/pkg refresh') == exitcodes.EX_OK
 
 
 def upgrade_available(name):
@@ -220,7 +221,7 @@ def upgrade(refresh=False, **kwargs):
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Error occurred updating package(s)',
             info={
@@ -395,7 +396,7 @@ def is_installed(name, **kwargs):
     '''
 
     cmd = '/bin/pkg list -Hv {0}'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 def search(name, versions_as_list=False, **kwargs):
@@ -414,7 +415,7 @@ def search(name, versions_as_list=False, **kwargs):
     ret = {}
     cmd = '/bin/pkg list -aHv {0}'.format(name)
     out = __salt__['cmd.run_all'](cmd)
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         # error = nothing found
         return {}
     # no error, processing pkg listing
@@ -501,7 +502,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Error occurred installing package(s)',
             info={
@@ -569,7 +570,7 @@ def remove(name=None, pkgs=None, **kwargs):
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError(
             'Error occurred removing package(s)',
             info={

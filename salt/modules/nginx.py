@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 
@@ -85,7 +86,7 @@ def configtest():
     cmd = '{0} -t'.format(__detect_os())
     out = __salt__['cmd.run_all'](cmd)
 
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         ret['comment'] = 'Syntax Error'
         ret['stderr'] = out['stderr']
         ret['result'] = False
@@ -123,7 +124,7 @@ def signal(signal=None):
     out = __salt__['cmd.run_all'](cmd)
 
     # A non-zero return code means fail
-    if out['retcode'] and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         ret = out['stderr'].strip()
     # 'nginxctl configtest' returns 'Syntax OK' to stderr
     elif out['stderr']:

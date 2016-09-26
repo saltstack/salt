@@ -40,6 +40,65 @@ if 'TimeoutError' not in __builtins__:
     __builtins__['TimeoutError'] = TimeoutError
 
 
+class _TestDir(object):
+    '''
+    An object to track users of an ephemeral test directory.
+
+    Will ensure that the directory is not destroyed while in-use.
+    Also tracks users and can evict the users if the directory must be
+    destroyed.
+    '''
+    def __init__(self, path=None, prefix='salt-testdaemon-'):
+        if path:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            self._dir = path
+        else:
+            self._dir = tempfile.mkdtemp(prefix=prefix)
+        self._shutdown = set()
+        atexit.register(self.destroy)
+
+    def destroy(self):
+        '''Destroys the directory after shutting down all users.'''
+        for shutdown in self._shutdown:
+            if not shutdown:
+                continue
+            shutdown()
+        self._shutdown = set()
+
+        if self._dir and os.path.exists(self._dir):
+            shutil.rmtree(self._dir)
+        self._dir = None
+
+    def pend(self, meth):
+        '''Registers a user of the test directory.'''
+        self._shutdown.add(meth)
+        return self._dir
+
+    def vacate(self, meth):
+        '''Removes a user of the test directory.'''
+        if meth in self._shutdown:
+            self._shutdown.remove(meth)
+
+
+TEST_DIR = _TestDir()
+
+
+def wait_for_path(path, timeout=10, exception=False):
+    '''Wait for a path to exist'''
+
+    endtime = time.time() + timeout
+    while True:
+        if os.path.exists(path):
+            return True
+        if endtime < time.time():
+            if exception:
+                raise TimeoutError('Timeout waiting for path "{0}"'.format(path))
+            else:
+                return False
+        time.sleep(0.2)
+
+
 class TestProgramMeta(type):
     '''
     Stack all inherited config_attrs and dirtree dirs from the base classes.
@@ -192,8 +251,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         for multiple scripts.
         '''
         if self._parent_dir is None:
-            self.created_parent_dir = True
-            self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+            self._parent_dir = TEST_DIR.pend(self.cleanup)
         else:
             self._parent_dir = os.path.abspath(os.path.normpath(self._parent_dir))
             if not os.path.exists(self._parent_dir):
@@ -317,10 +375,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 self.process.wait()
             except OSError:
                 pass
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
-        if self.created_parent_dir and os.path.exists(self.parent_dir):
-            shutil.rmtree(self.parent_dir)
+        TEST_DIR.vacate(self.cleanup)
 
     def run(
             self,
@@ -721,6 +776,7 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self.pid_dir = kwargs.pop('pid_dir', self.pid_dir)
+        self._up = False
         self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
@@ -741,26 +797,17 @@ class TestDaemon(TestProgram):
             daemon_pid = salt.utils.process.get_pidfile(pid_path)
         return daemon_pid
 
-    def wait_for_daemon_pid(self, timeout=10):
+    def wait_for_daemon(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
-        endtime = time.time() + timeout
-        while True:
-            pid = self.daemon_pid
-            if pid:
-                return pid
-            if endtime < time.time():
-                raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(
-                    self.name, self.abs_path(self.pid_path)
-                ))
-            time.sleep(0.2)
+        wait_for_path(self.abs_path(self.pid_path), timeout=timeout, exception=True)
 
     def is_running(self):
         '''Is the daemon running?'''
         ret = False
         if not self._shutdown:
             try:
-                pid = self.wait_for_daemon_pid()
-                ret = psutils.pid_exists(pid)
+                self.wait_for_daemon()
+                ret = psutils.pid_exists(self.daemon_pid)
             except TimeoutError:
                 pass
         return ret
@@ -769,7 +816,8 @@ class TestDaemon(TestProgram):
         '''Shutdown a running daemon'''
         if not self._shutdown:
             try:
-                pid = self.wait_for_daemon_pid(timeout)
+                self.wait_for_daemon(timeout)
+                pid = self.daemon_pid
                 integration.terminate_process_pid(pid)
             except TimeoutError:
                 pass
@@ -791,7 +839,10 @@ class TestSaltDaemon(six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSal
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-    pass
+    def __init__(self, *args, **kwargs):
+        if getattr(self, 'sock_dir', None) and 'sock_dir' in kwargs:
+            self.sock_dir = kwargs.pop('sock_dir')
+        super(TestSaltDaemon, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -799,12 +850,20 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    configs = {'master': {}}
+    configs = {'master': {'map': {'sock_dir': '{sock_dir}'}}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'master')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
         _ = cfgb.setdefault('user', getpass.getuser())
         super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
+
+    def wait_for_daemon(self, timeout=10):
+        '''Wait for the daemon to be alive and responding'''
+        time_start = time.time()
+        super(TestDaemonSaltMaster, self).wait_for_daemon(timeout=timeout)
 
 
 class TestDaemonSaltMinion(TestSaltDaemon):
@@ -812,7 +871,13 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    configs = {'minion': {'map': {'id': '{name}'}}}
+    configs = {'minion': {'map': {
+        'id': '{name}',
+        'sock_dir': '{sock_dir}',
+    }}}
+    config_attrs = set(['sock_dir'])
+
+    sock_dir = os.path.join('var', 'run', 'salt', 'minion')
 
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault('config_base', {})
@@ -872,13 +937,13 @@ class TestProgramCase(TestCase):
     def setUp(self):
         # Setup for scripts
         if not getattr(self, '_test_dir', None):
-            self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+            self._test_dir = TEST_DIR.pend(self.tearDown)
         super(TestProgramCase, self).setUp()
 
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
-            shutil.rmtree(self._test_dir)
+            TEST_DIR.vacate(self.tearDown)
             self._test_dir = None
         super(TestProgramCase, self).tearDown()
 

@@ -17,6 +17,7 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.defaults import exitcodes
 from salt.exceptions import CommandNotFoundError
 
 __func_alias__ = {
@@ -315,7 +316,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '{0} {1} onestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def stop(name):
@@ -329,7 +330,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '{0} {1} onestop'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -343,7 +344,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '{0} {1} onerestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def reload_(name):
@@ -357,7 +358,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '{0} {1} onereload'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def status(name, sig=None):
@@ -376,6 +377,6 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd,
-                                       python_shell=False,
-                                       ignore_retcode=True)
+    return __salt__['cmd.retcode'](cmd,
+                                   python_shell=False,
+                                   ignore_retcode=True) == exitcodes.EX_OK

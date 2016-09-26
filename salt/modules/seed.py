@@ -10,6 +10,7 @@ import os
 import shutil
 import logging
 import tempfile
+import uuid
 
 # Import salt libs
 import salt.crypt
@@ -17,7 +18,7 @@ import salt.utils
 import salt.utils.cloud
 import salt.config
 import salt.syspaths
-import uuid
+from salt.defaults import exitcodes
 
 
 # Set up logging
@@ -258,7 +259,7 @@ def _install(mpt):
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh {0} -c /tmp; fi'.format(os.path.join(tmppath, 'bootstrap-salt.sh'))
-    return not __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode']
+    return __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode'] == exitcodes.EX_OK
 
 
 def _check_resolv(mpt):
@@ -293,6 +294,6 @@ def _check_install(root):
         sh_,
         cmd)
 
-    return not __salt__['cmd.retcode'](cmd,
-                                       output_loglevel='quiet',
-                                       python_shell=True)
+    return __salt__['cmd.retcode'](cmd,
+                                   output_loglevel='quiet',
+                                   python_shell=True) == exitcodes.EX_OK

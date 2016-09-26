@@ -80,6 +80,7 @@ import logging
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -401,7 +402,7 @@ def install(name=None,
         output_loglevel='trace',
         python_shell=False
     )
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -478,7 +479,7 @@ def remove(name=None, pkgs=None, **kwargs):
         output_loglevel='trace',
         python_shell=False
     )
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []

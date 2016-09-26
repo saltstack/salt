@@ -23,6 +23,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 # Import 3rd-party libs
@@ -97,7 +98,7 @@ def present(name,
     for dev in devices:
         # mdadm -E exits with 0 iff all devices given are part of an array
         cmd = 'mdadm -E {0}'.format(dev)
-        can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
+        can_assemble[dev] = __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
     if True in six.itervalues(can_assemble) and False in six.itervalues(can_assemble):
         in_raid = sorted([x[0] for x in six.iteritems(can_assemble) if x[1]])

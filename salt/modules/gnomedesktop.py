@@ -20,6 +20,7 @@ try:
 except ImportError:
     HAS_GLIB = False
 
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class _GSettings(object):
         except KeyError:
             log.info('User does not exist')
             result = {}
-            result['retcode'] = 1
+            result['retcode'] = exitcodes.EX_GENERIC
             result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 

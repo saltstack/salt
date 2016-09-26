@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+'''
+Process management utilities and multi-processing classes.
+'''
+
 # Import python libs
 from __future__ import absolute_import, with_statement
 import copy
@@ -18,7 +22,6 @@ import multiprocessing.util
 
 
 # Import salt libs
-import salt.defaults.exitcodes
 import salt.utils
 import salt.log.setup
 import salt.defaults.exitcodes
@@ -76,6 +79,7 @@ def set_pidfile(pidfile, user):
     try:
         with salt.utils.fopen(pidfile, 'w+') as ofile:
             ofile.write(str(os.getpid()))
+            ofile.flush()
     except IOError:
         pass
 
@@ -250,7 +254,7 @@ class ProcessManager(object):
     '''
     A class which will manage processes that should be running
     '''
-    def __init__(self, name=None, wait_for_kill=1):
+    def __init__(self, name=None, wait_for_kill=1, notify_ready=None):
         # pid -> {tgt: foo, Process: object, args: args, kwargs: kwargs}
         self._process_map = {}
 
@@ -265,6 +269,10 @@ class ProcessManager(object):
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
         self._restart_processes = True
 
+        self._pm_queue = multiprocessing.Queue()  # for sub-processes to communicate with ProcessManager
+        self.notify_ready = notify_ready
+        self._ready = False
+
     def add_process(self, tgt, args=None, kwargs=None, name=None):
         '''
         Create a processes and args + kwargs
@@ -276,6 +284,8 @@ class ProcessManager(object):
 
         if kwargs is None:
             kwargs = {}
+        if self.notify_ready:
+            kwargs['pm_queue'] = self._pm_queue
 
         if salt.utils.is_windows():
             # Need to ensure that 'log_queue' is correctly transfered to
@@ -321,7 +331,8 @@ class ProcessManager(object):
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,
-                                          'Process': process}
+                                          'Process': process,
+                                          'ready': False}
         return process
 
     def restart_process(self, pid):
@@ -388,6 +399,12 @@ class ProcessManager(object):
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
+            self.check_children()
+            if self.check_ready():
+                break
+            time.sleep(0.2)
+
+        while True:
             log.trace('Process manager iteration')
             try:
                 # in case someone died while we were waiting...
@@ -424,6 +441,51 @@ class ProcessManager(object):
             for pid, mapping in six.iteritems(self._process_map):
                 if not mapping['Process'].is_alive():
                     self.restart_process(pid)
+
+    def check_ready(self):
+        '''
+        Check that the children are ready.
+        '''
+        # NOTE: Once all process are ready then the ProcessManager
+        # will latch self._ready to True.  This means that if, after
+        # the latch, a child process is restarted then readiness will
+        # not be checked and the notify_ready will not be sent
+        # (again).
+        #
+        # NOTE: It might be reasonable to merge check_ready() into
+        # check_children().
+        if not self._ready:
+            waiting = set([p for p, i in self._process_map.items() if not i['ready']])
+            log.debug('{0}:{1} waiting={2}'.format(self.name, os.getpid(), waiting))
+            while waiting:
+                try:
+                    pid, msg = self._pm_queue.get(block=False)
+                except queue.Empty:
+                    break
+                log.debug('{0}:{1} MSG {2}:{3}'.format(self.name, os.getpid(), pid, msg))
+                if pid not in self._process_map:
+                    log.warn('{0}:{1}: Message from PID {2} not a known process'.format(self.name, os.getpid(), pid))
+                    continue
+                if 'name' not in msg or 'contents' not in msg:
+                    log.warn('{0}:{1} Message from PID {2} is malformed'.format(self.name, os.getpid(), pid))
+                    continue
+                if msg['name'] == 'ready':
+                    self._process_map[pid]['ready'] = True
+                    if pid in waiting:
+                        log.debug('{0}:{1} PID {2} is ready'.format(self.name, os.getpid(), pid))
+                        waiting.remove(pid)
+                    else:
+                        log.debug('{0}:{1} Process PID {0}:{1} is redundantly ready: '.format(
+                            pid, self._process_map[pid]['tgt'])
+                        )
+
+            if not waiting:
+                log.debug('{0}:{1} PID {2} is ready'.format(self.name, os.getpid(), pid))
+                self._ready = True
+                if self.notify_ready:
+                    self.notify_ready()
+
+        return self._ready
 
     def kill_children(self, *args, **kwargs):
         '''
@@ -590,8 +652,10 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # salt.log.setup.get_multiprocessing_logging_queue().
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
+        self.pm_queue = kwargs.pop('pm_queue', None)
+
         # Call __init__ from 'multiprocessing.Process' only after removing
-        # 'log_queue' from kwargs.
+        # 'log_queue' and 'pm_queue' from kwargs.
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
         if salt.utils.is_windows():
@@ -660,6 +724,12 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # sys.stderr and set the proper exitcode and we have already logged
             # it above.
             raise
+
+    def _notify_ready(self):
+        if self.pm_queue:
+            msg = (os.getpid(), {'name': 'ready', 'contents': 'true'})
+            log.debug('{0} _notify_ready() => {1}'.format(self.name, msg))
+            self.pm_queue.put(msg)
 
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):

@@ -16,6 +16,7 @@ import re
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -63,7 +64,7 @@ def install(app_id, enable=True):
         output_loglevel='debug',
         python_shell=False
     )
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -126,7 +127,7 @@ def enable(app_id, enabled=True):
                 python_shell=False
             )
 
-            if call['retcode'] != 0:
+            if call['retcode'] != exitcodes.EX_OK:
                 comment = ''
                 if 'stderr' in call:
                     comment += call['stderr']
@@ -184,7 +185,7 @@ def remove(app_id):
         python_shell=False
     )
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']
@@ -216,7 +217,7 @@ def _get_assistive_access():
         python_shell=False
     )
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         comment = ''
         if 'stderr' in call:
             comment += call['stderr']

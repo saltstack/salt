@@ -448,7 +448,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._closing = False
 
-    def zmq_device(self):
+    def zmq_device(self, pm_queue=None):
         '''
         Multiprocessing target for the zmq queue device
         '''
@@ -483,6 +483,10 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         self.clients.bind(self.uri)
 
         self.workers.bind(self.w_uri)
+
+        if pm_queue:
+            msg = (os.getpid(), {'name': 'ready', 'contents': 'true'})
+            pm_queue.put(msg)
 
         while True:
             if self.clients.closed or self.workers.closed:
@@ -693,7 +697,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, pm_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
@@ -740,6 +744,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             pull_sock.bind(pull_uri)
         finally:
             os.umask(old_umask)
+
+        if pm_queue:
+            msg = (os.getpid(), {'name': 'ready', 'contents': 'true'})
+            pm_queue.put(msg)
 
         try:
             while True:

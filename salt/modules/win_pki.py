@@ -13,6 +13,7 @@ import json
 import logging
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError
 import ast
 import os
@@ -39,7 +40,7 @@ def __virtual__():
         cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'PKI' })"
         cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
 
-        if cmd_ret['retcode'] == 0:
+        if cmd_ret['retcode'] == exitcodes.EX_OK:
             return ast.literal_eval(cmd_ret['stdout'])
         return False
 
@@ -63,7 +64,7 @@ def _cmd_run(cmd, as_json=False):
         cmd_full.append(cmd)
     cmd_ret = __salt__['cmd.run_all'](str().join(cmd_full), shell='powershell', python_shell=True)
 
-    if cmd_ret['retcode'] != 0:
+    if cmd_ret['retcode'] != exitcodes.EX_OK:
         _LOG.error('Unable to execute command: %s\nError: %s', cmd, cmd_ret['stderr'])
 
     if as_json:

@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import os
 import re
 
+from salt.defaults import exitcodes
+
 POLICY_MAP_DICT = {
     'Adaptive': 'ad',
     'CLAROpt': 'co',
@@ -76,7 +78,7 @@ def add_license(key):
     '''
     result = {
         'result': False,
-        'retcode': -1,
+        'retcode': exitcodes.EX_UNSET,
         'output': ''
     }
 
@@ -89,7 +91,7 @@ def add_license(key):
 
     result['retcode'] = ret['retcode']
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         result['output'] = ret['stderr']
     else:
         result['output'] = ret['stdout']
@@ -104,7 +106,7 @@ def remove_license(key):
     '''
     result = {
         'result': False,
-        'retcode': -1,
+        'retcode': exitcodes.EX_UNSET,
         'output': ''
     }
 
@@ -117,7 +119,7 @@ def remove_license(key):
 
     result['retcode'] = ret['retcode']
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         result['output'] = ret['stderr']
     else:
         result['output'] = ret['stdout']

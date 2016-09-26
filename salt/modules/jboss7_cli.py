@@ -44,6 +44,7 @@ import pprint
 import time
 
 # Import Salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -72,7 +73,7 @@ def run_command(jboss_config, command, fail_on_error=True):
     '''
     cli_command_result = __call_cli(jboss_config, command)
 
-    if cli_command_result['retcode'] == 0:
+    if cli_command_result['retcode'] == exitcodes.EX_OK:
         cli_command_result['success'] = True
     else:
         if fail_on_error:
@@ -106,7 +107,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
     '''
     cli_command_result = __call_cli(jboss_config, operation, retries)
 
-    if cli_command_result['retcode'] == 0:
+    if cli_command_result['retcode'] == exitcodes.EX_OK:
         if _is_cli_output(cli_command_result['stdout']):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = cli_result['outcome'] == 'success'
@@ -155,11 +156,11 @@ def __call_cli(jboss_config, command, retries=1):
     if cli_command_result['retcode'] == 127:
         raise CommandExecutionError('Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. '.format(cli_path=jboss_config['cli_path']))
 
-    if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
+    if cli_command_result['retcode'] == exitcodes.EX_GENERIC and 'Unable to authenticate against controller' in cli_command_result['stderr']:
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
     # It may happen that eventhough server is up it may not respond to the call
-    if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
+    if cli_command_result['retcode'] == exitcodes.EX_GENERIC and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
         return __call_cli(jboss_config, command, retries - 1)

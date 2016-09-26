@@ -10,6 +10,7 @@ import logging
 import salt.loader
 import salt.utils
 import salt.utils.event
+from salt.defaults import exitcodes
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
@@ -66,9 +67,9 @@ def orchestrate(mods,
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
-        ret['data']['retcode'] = 0
+        ret['data']['retcode'] = exitcodes.EX_OK
     else:
-        ret['data']['retcode'] = 1
+        ret['data']['retcode'] = exitcodes.EX_GENERIC
     return ret
 
 # Aliases for orchestrate runner

@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 import salt.utils
 import salt.exceptions
+from salt.defaults import exitcodes
 
 
 def __virtual__():
@@ -48,7 +49,7 @@ def add(overlay):
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
     add_attempt = __salt__['cmd.run_all'](cmd, python_shell=False, stdin='y')
-    if add_attempt['retcode'] != 0:
+    if add_attempt['retcode'] != exitcodes.EX_OK:
         raise salt.exceptions.CommandExecutionError(add_attempt['stdout'])
     new_overlays = list_local()
 
@@ -82,7 +83,7 @@ def delete(overlay):
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
     delete_attempt = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if delete_attempt['retcode'] != 0:
+    if delete_attempt['retcode'] != exitcodes.EX_OK:
         raise salt.exceptions.CommandExecutionError(delete_attempt['stdout'])
     new_overlays = list_local()
 
@@ -113,7 +114,7 @@ def sync(overlay='ALL'):
         salt '*' layman.sync
     '''
     cmd = 'layman --quietness=0 --sync {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def list_local():

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt import utils, exceptions
 
@@ -66,7 +67,7 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
 
     retcode = result['retcode']
 
-    if retcode == 0:
+    if retcode == exitcodes.EX_OK:
         return result['stdout']
     raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + ' '.join(cmd))
 

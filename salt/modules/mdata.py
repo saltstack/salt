@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+from salt.defaults import exitcodes
 import salt.utils
 import salt.utils.decorators as decorators
 
@@ -122,7 +123,7 @@ def get_(*keyname):
         if mdata:
             cmd = '{0} {1}'.format(mdata, k)
             res = __salt__['cmd.run_all'](cmd)
-            ret[k] = res['stdout'] if res['retcode'] == 0 else ''
+            ret[k] = res['stdout'] if res['retcode'] == exitcodes.EX_OK else ''
         else:
             ret[k] = ''
 
@@ -151,7 +152,7 @@ def put_(keyname, val):
         cmd = 'echo {2} | {0} {1}'.format(mdata, keyname, val)
         ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
-    return ret['retcode'] == 0
+    return ret['retcode'] == exitcodes.EX_OK
 
 
 def delete_(*keyname):
@@ -175,7 +176,7 @@ def delete_(*keyname):
     for k in keyname:
         if mdata and k in valid_keynames:
             cmd = '{0} {1}'.format(mdata, k)
-            ret[k] = __salt__['cmd.run_all'](cmd)['retcode'] == 0
+            ret[k] = __salt__['cmd.run_all'](cmd)['retcode'] == exitcodes.EX_OK
         else:
             ret[k] = True
 

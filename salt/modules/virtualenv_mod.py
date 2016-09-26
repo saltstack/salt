@@ -13,6 +13,7 @@ import logging
 import os
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
@@ -162,7 +163,7 @@ def create(path,
             ret = __salt__['cmd.run_all'](
                     version_cmd, runas=user, python_shell=False
                 )
-            if ret['retcode'] > 0 or not ret['stdout'].strip():
+            if ret['retcode'] > exitcodes.EX_OK or not ret['stdout'].strip():
                 raise CommandExecutionError(
                     'Unable to get the virtualenv version output using \'{0}\'. '
                     'Returned data: {1}'.format(version_cmd, ret)
@@ -253,7 +254,7 @@ def create(path,
 
     # Let's create the virtualenv
     ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         # Something went wrong. Let's bail out now!
         return ret
 
@@ -278,7 +279,7 @@ def create(path,
         for fpath in glob.glob(os.path.join(path, 'distribute-*.tar.gz*')):
             os.unlink(fpath)
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         # Something went wrong. Let's bail out now!
         return ret
 
@@ -320,7 +321,7 @@ def get_site_packages(venv):
             'print sysconfig.get_python_lib()'
     )
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
     return ret['stdout']
@@ -355,7 +356,7 @@ def get_distribution_path(venv, distribution):
             )
     )
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
     return ret['stdout']
@@ -446,7 +447,7 @@ def get_resource_path(venv,
         )
     )
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
     return ret['stdout']
@@ -539,7 +540,7 @@ def get_resource_content(venv,
             )
     )
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != exitcodes.EX_OK:
         raise CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
     return ret['stdout']

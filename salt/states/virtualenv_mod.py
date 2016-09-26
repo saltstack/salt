@@ -17,6 +17,7 @@ import salt.utils
 from salt.exceptions import CommandNotFoundError
 
 from salt.ext import six
+from salt.defaults import exitcodes
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -192,7 +193,7 @@ def managed(name,
             ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
             return ret
 
-        if _ret['retcode'] != 0:
+        if _ret['retcode'] != exitcodes.EX_OK:
             ret['result'] = False
             ret['comment'] = _ret['stdout'] + _ret['stderr']
             return ret
@@ -272,8 +273,8 @@ def managed(name,
             use_vt=use_vt,
             env_vars=env_vars
         )
-        ret['result'] &= _ret['retcode'] == 0
-        if _ret['retcode'] > 0:
+        ret['result'] &= _ret['retcode'] == exitcodes.EX_OK
+        if _ret['retcode'] != exitcodes.EX_OK:
             ret['comment'] = '{0}\n{1}\n{2}'.format(ret['comment'],
                                                     _ret['stdout'],
                                                     _ret['stderr'])

@@ -22,6 +22,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -266,7 +267,7 @@ def _get_upgradable(backtrack=3):
                                    output_loglevel='trace',
                                    python_shell=False)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         msg = 'Failed to get upgrades'
         for key in ('stderr', 'stdout'):
             if call[key]:
@@ -421,17 +422,17 @@ def refresh_db():
         # We prefer 'delta-webrsync' to 'webrsync'
         if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
     else:
         if __salt__['cmd.retcode']('emerge --ask n --quiet --sync',
-                                   python_shell=False) == 0:
+                                   python_shell=False) == exitcodes.EX_OK:
             return True
         # We fall back to "webrsync" if "rsync" fails for some reason
         cmd = 'emerge-webrsync -q'
         # We prefer 'delta-webrsync' to 'webrsync'
         if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def _flags_changed(inst_flags, conf_flags):
@@ -686,7 +687,7 @@ def install(name=None,
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
     else:
         needed_changes = []
@@ -779,7 +780,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
     else:
         needed_changes = []
@@ -873,7 +874,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
                                    python_shell=False,
                                    redirect_stderr=True)
 
-    if call['retcode'] != 0:
+    if call['retcode'] != exitcodes.EX_OK:
         ret['result'] = False
         if call['stdout']:
             ret['comment'] = call['stdout']
@@ -966,7 +967,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         output_loglevel='trace',
         python_shell=False
     )
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []

@@ -22,6 +22,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ def add(name,
         cmd.append('-o')
     cmd.append(name)
 
-    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != exitcodes.EX_OK:
         return False
     else:
         # At this point, the user was successfully created, so return true
@@ -175,7 +176,7 @@ def delete(name, remove=False, force=False):
     if remove:
         cmd.append('-r')
     cmd.append(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def getent(refresh=False):
@@ -330,7 +331,7 @@ def chgroups(name, groups, append=False):
     if append:
         groups.update(ugrps)
     cmd = ['usermod', '-G', ','.join(groups), name]
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def chfullname(name, fullname):

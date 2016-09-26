@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 import sys
 import re
+
+from salt.defaults import exitcodes
 import salt.utils
 
 
@@ -225,14 +227,14 @@ def _bsd_bradd(br):
         return False
 
     if __salt__['cmd.retcode']('{0} {1} create up'.format(ifconfig, br),
-                               python_shell=False) != 0:
+                               python_shell=False) != exitcodes.EX_OK:
         return False
 
     # NetBSD is two cmds
     if kernel == 'NetBSD':
         brconfig = _tool_path('brconfig')
         if __salt__['cmd.retcode']('{0} {1} up'.format(brconfig, br),
-                                   python_shell=False) != 0:
+                                   python_shell=False) != exitcodes.EX_OK:
             return False
 
     return True

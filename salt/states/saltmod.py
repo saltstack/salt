@@ -33,6 +33,7 @@ import salt.syspaths
 import salt.utils
 import salt.utils.event
 import salt.ext.six as six
+from salt.defaults import exitcodes
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -463,7 +464,7 @@ def function(
         fail_minions = ()
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
-        if mdata.get('retcode'):
+        if mdata.get('retcode') != exitcodes.EX_OK:
             func_ret['result'] = False
             fail.add(minion)
         if mdata.get('failed', False):

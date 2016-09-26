@@ -13,6 +13,8 @@ that use SMF also. (e.g. SmartOS)
 # Import Python libs
 from __future__ import absolute_import
 
+from salt.defaults import exitcodes
+
 __func_alias__ = {
     'reload_': 'reload'
 }
@@ -162,7 +164,7 @@ def start(name):
     '''
     cmd = '/usr/sbin/svcadm enable -s -t {0}'.format(name)
     retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
-    if not retcode:
+    if retcode == exitcodes.EX_OK:
         return True
     if retcode == 3:
         # Return code 3 means there was a problem with the service
@@ -170,7 +172,7 @@ def start(name):
         # Attempt a clear and try one more time
         clear_cmd = '/usr/sbin/svcadm clear {0}'.format(name)
         __salt__['cmd.retcode'](clear_cmd, python_shell=False)
-        return not __salt__['cmd.retcode'](cmd, python_shell=False)
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
     return False
 
 
@@ -185,7 +187,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/usr/sbin/svcadm disable -s -t {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def restart(name):
@@ -199,7 +201,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/usr/sbin/svcadm restart {0}'.format(name)
-    if not __salt__['cmd.retcode'](cmd, python_shell=False):
+    if __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK:
         # calling restart doesn't clear maintenance
         # or tell us that the service is in the 'online' state
         return start(name)
@@ -217,7 +219,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/usr/sbin/svcadm refresh {0}'.format(name)
-    if not __salt__['cmd.retcode'](cmd, python_shell=False):
+    if __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK:
         # calling reload doesn't clear maintenance
         # or tell us that the service is in the 'online' state
         return start(name)
@@ -254,7 +256,7 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = '/usr/sbin/svcadm enable {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def disable(name, **kwargs):
@@ -268,7 +270,7 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = '/usr/sbin/svcadm disable {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == exitcodes.EX_OK
 
 
 def enabled(name, **kwargs):

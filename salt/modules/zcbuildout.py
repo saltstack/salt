@@ -42,6 +42,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 
 
@@ -1033,14 +1034,14 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if not onlyif:
                     _valid(status, 'onlyif execution failed')
             elif isinstance(onlyif, string_types):
-                if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
+                if retcode(onlyif, cwd=directory, runas=runas, env=env) != exitcodes.EX_OK:
                     _valid(status, 'onlyif execution failed')
         if unless is not None:
             if not isinstance(unless, string_types):
                 if unless:
                     _valid(status, 'unless execution succeeded')
             elif isinstance(unless, string_types):
-                if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
+                if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == exitcodes.EX_OK:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
         ret = status

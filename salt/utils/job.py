@@ -9,6 +9,7 @@ import salt.minion
 import salt.utils.jid
 import salt.utils.event
 import salt.utils.verify
+from salt.defaults import exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def get_retcode(ret):
     '''
     retcode = 0
     # if there is a dict with retcode, use that
-    if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+    if isinstance(ret, dict) and ret.get('retcode', exitcodes.EX_OK) != exitcodes.EX_OK:
         return ret['retcode']
     # if its a boolean, False means 1
     elif isinstance(ret, bool) and not ret:

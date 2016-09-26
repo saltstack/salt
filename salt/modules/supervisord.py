@@ -15,6 +15,7 @@ from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
 # Import salt libs
 import salt.utils
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -63,7 +64,7 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
 
 
 def _get_return(ret):
-    if ret['retcode'] == 0:
+    if ret['retcode'] == exitcodes.EX_OK:
         return ret['stdout']
     else:
         return ''

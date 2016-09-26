@@ -45,6 +45,7 @@ import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
+from salt.defaults import exitcodes
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -452,7 +453,7 @@ def latest_version(*names, **kwargs):
                                   output_loglevel='trace',
                                   ignore_retcode=True,
                                   python_shell=False)
-    if out['retcode'] != 0:
+    if out['retcode'] != exitcodes.EX_OK:
         if out['stderr']:
             # Check first if this is just a matter of the packages being
             # up-to-date.
@@ -712,7 +713,7 @@ def list_repo_pkgs(*args, **kwargs):
                 ignore_retcode=True,
                 python_shell=False
             )
-            if out['retcode'] == 0:
+            if out['retcode'] == exitcodes.EX_OK:
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
@@ -725,7 +726,7 @@ def list_repo_pkgs(*args, **kwargs):
                                           output_loglevel='trace',
                                           ignore_retcode=True,
                                           python_shell=False)
-            if out['retcode'] != 0 and 'Error:' in out['stdout']:
+            if out['retcode'] != exitcodes.EX_OK and 'Error:' in out['stdout']:
                 continue
             _parse_output(out['stdout'])
 
@@ -771,7 +772,7 @@ def list_upgrades(refresh=True, **kwargs):
                                   output_loglevel='trace',
                                   ignore_retcode=True,
                                   python_shell=False)
-    if out['retcode'] != 0 and 'Error:' in out:
+    if out['retcode'] != exitcodes.EX_OK and 'Error:' in out:
         return {}
 
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
@@ -846,8 +847,8 @@ def refresh_db(**kwargs):
     '''
     retcodes = {
         100: True,
-        0: None,
-        1: False,
+        exitcodes.EX_OK: None,
+        exitcodes.EX_GENERIC: False,
     }
 
     check_update_ = kwargs.pop('check_update', True)
@@ -1281,7 +1282,7 @@ def install(name=None,
                 python_shell=False,
                 redirect_stderr=True
             )
-            if out['retcode'] != 0:
+            if out['retcode'] != exitcodes.EX_OK:
                 errors.append(out['stdout'])
 
     targets = []
@@ -1301,7 +1302,7 @@ def install(name=None,
                 python_shell=False,
                 redirect_stderr=True
             )
-            if out['retcode'] != 0:
+            if out['retcode'] != exitcodes.EX_OK:
                 errors.append(out['stdout'])
 
     targets = []
@@ -1321,7 +1322,7 @@ def install(name=None,
                 python_shell=False,
                 redirect_stderr=True
             )
-            if out['retcode'] != 0:
+            if out['retcode'] != exitcodes.EX_OK:
                 errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
@@ -1569,7 +1570,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         python_shell=False
     )
 
-    if out['retcode'] != 0 and out['stderr']:
+    if out['retcode'] != exitcodes.EX_OK and out['stderr']:
         errors = [out['stderr']]
     else:
         errors = []
@@ -1706,7 +1707,7 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
                     python_shell=False
                 )
 
-                if out['retcode'] == 0:
+                if out['retcode'] == exitcodes.EX_OK:
                     ret[target].update(result=True)
                     ret[target]['comment'] = ('Package {0} is now being held.'
                                               .format(target))
@@ -1815,7 +1816,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     python_shell=False
                 )
 
-                if out['retcode'] == 0:
+                if out['retcode'] == exitcodes.EX_OK:
                     ret[target].update(result=True)
                     ret[target]['comment'] = ('Package {0} is no longer held.'
                                               .format(target))

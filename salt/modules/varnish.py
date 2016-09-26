@@ -16,6 +16,7 @@ import logging
 import re
 
 # Import salt libs
+from salt.defaults import exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ def ban(ban_expression):
 
         salt '*' varnish.ban ban_expression
     '''
-    return _run_varnishadm('ban', [ban_expression])['retcode'] == 0
+    return _run_varnishadm('ban', [ban_expression])['retcode'] == exitcodes.EX_OK
 
 
 def ban_list():
@@ -93,7 +94,7 @@ def ban_list():
         salt '*' varnish.ban_list
     '''
     ret = _run_varnishadm('ban.list')
-    if ret['retcode']:
+    if ret['retcode'] != exitcodes.EX_OK:
         return False
     else:
         return ret['stdout'].split('\n')[1:]
@@ -122,7 +123,7 @@ def param_set(param, value):
 
         salt '*' varnish.param_set param value
     '''
-    return _run_varnishadm('param.set', [param, str(value)])['retcode'] == 0
+    return _run_varnishadm('param.set', [param, str(value)])['retcode'] == exitcodes.EX_OK
 
 
 def param_show(param=None):
@@ -136,7 +137,7 @@ def param_show(param=None):
         salt '*' varnish.param_show param
     '''
     ret = _run_varnishadm('param.show', [param])
-    if ret['retcode']:
+    if ret['retcode'] != exitcodes.EX_OK:
         return False
     else:
         result = {}

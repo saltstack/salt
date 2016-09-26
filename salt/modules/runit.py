@@ -56,6 +56,7 @@ import time
 log = logging.getLogger(__name__)
 
 # Import salt libs
+from salt.defaults import exitcodes
 from salt.exceptions import CommandExecutionError
 import salt.utils
 
@@ -122,7 +123,7 @@ def start(name):
         salt '*' runit.start <service name>
     '''
     cmd = 'sv start {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 #-- states.service compatible args
@@ -140,7 +141,7 @@ def stop(name):
         salt '*' runit.stop <service name>
     '''
     cmd = 'sv stop {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 #-- states.service compatible
@@ -158,7 +159,7 @@ def reload_(name):
         salt '*' runit.reload <service name>
     '''
     cmd = 'sv reload {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 #-- states.service compatible
@@ -176,7 +177,7 @@ def restart(name):
         salt '*' runit.restart <service name>
     '''
     cmd = 'sv restart {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == exitcodes.EX_OK
 
 
 #-- states.service compatible
@@ -621,9 +622,9 @@ def enable(name, start=False, **kwargs):
     # before 'sv' have time to take care about it.
     # Documentation indicates that a change is handled within 5 seconds.
     cmd = 'sv status {0}'.format(_service_path(name))
-    retcode_sv = 1
+    retcode_sv = exitcodes.EX_GENERIC
     count_sv = 0
-    while retcode_sv != 0 and count_sv < 10:
+    while retcode_sv != exitcodes.EX_OK and count_sv < 10:
         time.sleep(0.5)
         count_sv += 1
         call = __salt__['cmd.run_all'](cmd)
@@ -635,10 +636,10 @@ def enable(name, start=False, **kwargs):
             os.unlink(down_file)
         except OSError:
             log.error('Unable to remove temp file {0}'.format(down_file))
-            retcode_sv = 1
+            retcode_sv = exitcodes.EX_GENERIC
 
     # if an error happened, revert our changes
-    if retcode_sv != 0:
+    if retcode_sv != exitcodes.EX_OK:
         os.unlink(os.path.join([_service_path(name), name]))
         return False
     return True
