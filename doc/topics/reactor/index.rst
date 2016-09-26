@@ -94,13 +94,16 @@ API and the runner system.  In this example, a command is published to the
 
 .. code-block:: yaml
 
-    {% if data['data']['orchestrate'] == 'refresh' %}
-    orchestrate_run:
-      runner.state.orchestrate
+    {% if data['data']['custom_var'] == 'runit' %}
+    call_runit_orch:
+      runner.state.orchestrate:
+        - mods: _orch/runit
     {% endif %}
 
-This example will execute the state.orchestrate runner and initiate an
-orchestrate execution.
+This example will execute the state.orchestrate runner and intiate an execution
+of the runit orchestrator located at ``/srv/salt/_orch/runit.sls``. Using
+``_orch/`` is any arbitrary path but it is recommended to avoid using "orchestrate"
+as this is most likely to cause confusion.
 
 The Goal of Writing Reactor SLS Files
 =====================================
