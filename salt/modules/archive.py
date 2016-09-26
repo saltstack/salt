@@ -6,6 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 import os
+import logging
 import contextlib  # For < 2.7 compat
 
 # Import salt libs
@@ -19,6 +20,8 @@ import salt.utils
 __func_alias__ = {
     'zip_': 'zip'
 }
+
+log = logging.getLogger(__name__)
 
 
 HAS_ZIPFILE = False
@@ -518,6 +521,12 @@ def unzip(zip_file, dest, excludes=None,
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ password='BadPassword'
     '''
+    # https://bugs.python.org/issue15795
+    log.warning('Due to bug 15795 in python\'s zip lib, the permissions of the'
+                ' extracted files may not be preserved when using archive.unzip')
+    log.warning('To preserve the permissions of extracted files, use'
+                ' archive.cmd_unzip')
+
     if not excludes:
         excludes = []
     if runas:
