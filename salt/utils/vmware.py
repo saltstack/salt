@@ -570,6 +570,22 @@ def get_inventory(service_instance):
     return service_instance.RetrieveContent()
 
 
+def get_root_folder(service_instance):
+    '''
+    Returns the root folder of a vCenter.
+
+    service_instance
+        The Service Instance Object for which to obtain the root folder.
+    '''
+    try:
+        log.trace('Retrieving root folder')
+        return service_instance.RetrieveContent().rootFolder
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def get_content(service_instance, obj_type, property_list=None,
                 container_ref=None, traversal_spec=None,
                 local_properties=False):
