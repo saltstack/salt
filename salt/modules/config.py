@@ -23,6 +23,7 @@ except ImportError:
 import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
+from salt.utils import traverse_dict
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -135,23 +136,43 @@ def option(
     '''
     Pass in a generic option and receive the value that will be assigned
 
+    .. note::
+
+        for .merge() and .option(), pillar paths are expressed using `.` rather
+        than the more typical `:`.
+
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' config.option redis.host
+
     '''
+
+    log.debug('CONFIG.OPTION: %s', value)
     if not omit_opts:
-        if value in __opts__:
-            return __opts__[value]
+        retval = traverse_dict(__opts__, value, None, delimiter='.')
+        if retval:
+            log.debug('CONFIG.OPTION (opts): %s', str(retval))
+            return retval
     if not omit_master:
-        if value in __pillar__.get('master', {}):
-            return __pillar__['master'][value]
+        master_pillar = __pillar__.get('master', {})
+        retval = traverse_dict(master_pillar, value, None, delimiter='.')
+        if retval:
+            log.debug('CONFIG.OPTION (master): %s', str(retval))
+            return retval
     if not omit_pillar:
-        if value in __pillar__:
-            return __pillar__[value]
-    if value in DEFAULTS:
-        return DEFAULTS[value]
+        retval = traverse_dict(__pillar__, value, None, delimiter='.')
+        if retval:
+            log.debug('CONFIG.OPTION (pillar): %s', str(retval))
+            return retval
+
+    retval = traverse_dict(DEFAULTS, value, None, delimiter='.')
+
+    if retval:
+        return retval
+
     return default
 
 
@@ -166,6 +187,12 @@ def merge(value,
     Same as ``option()`` except that it merges all matches, rather than taking
     the first match.
 
+    .. note::
+
+        for .merge() and .option(), pillar paths are expressed using `.` rather
+        than the more typical `:`.
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -174,13 +201,15 @@ def merge(value,
     '''
     ret = None
     if not omit_opts:
-        if value in __opts__:
-            ret = __opts__[value]
+        tmp = traverse_dict(__opts__, value, default, delimiter='.')
+        if tmp:
+            ret = tmp
             if isinstance(ret, str):
                 return ret
     if not omit_master:
-        if value in __pillar__.get('master', {}):
-            tmp = __pillar__['master'][value]
+        master_pillar = __pillar__.get('master', {})
+        if master_pillar:
+            tmp = traverse_dict(master_pillar, value, None, delimiter='.')
             if ret is None:
                 ret = tmp
                 if isinstance(ret, str):
@@ -192,8 +221,8 @@ def merge(value,
                                                                (list, tuple)):
                 ret = list(ret) + list(tmp)
     if not omit_pillar:
-        if value in __pillar__:
-            tmp = __pillar__[value]
+        tmp = traverse_dict(__pillar__, value, None, delimiter='.')
+        if tmp:
             if ret is None:
                 ret = tmp
                 if isinstance(ret, str):
@@ -204,8 +233,9 @@ def merge(value,
             elif isinstance(ret, (list, tuple)) and isinstance(tmp,
                                                                (list, tuple)):
                 ret = list(ret) + list(tmp)
-    if ret is None and value in DEFAULTS:
-        return DEFAULTS[value]
+
+    default = traverse_dict(DEFAULTS, value, None, delimiter='.')
+
     return ret or default
 
 
