@@ -274,7 +274,8 @@ class PkgModuleTest(integration.ModuleCase,
             ret = self.run_function(func)
 
             # The changes dictionary should not be empty.
-            self.assertIn('vim', ret)
+            self.assertIn('changes', ret)
+            self.assertIn('vim', ret['changes'])
         else:
             ret = self.run_function('pkg.list_updates')
             if ret == '':
