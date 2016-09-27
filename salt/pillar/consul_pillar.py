@@ -12,6 +12,9 @@ configuration file:
     my_consul_config:
       consul.host: 127.0.0.1
       consul.port: 8500
+      consul.token: my_consul_acl_token
+
+The ``consul.token`` is optional and requires python-consul >= 0.4.7.
 
 After the profile is created, configure the external pillar system to use it.
 Optionally, a root may be specified.
@@ -64,6 +67,7 @@ from salt.utils.dictupdate import update as dict_merge
 try:
     import consul
     HAS_CONSUL = True
+    CONSUL_VERSION = consul.__version__
 except ImportError:
     HAS_CONSUL = False
 
@@ -186,9 +190,14 @@ def get_conn(opts, profile):
 
     consul_host = conf.get('consul.host', '127.0.0.1')
     consul_port = conf.get('consul.port', 8500)
+    consul_token = conf.get('consul.token', None)
 
     if HAS_CONSUL:
-        return consul.Consul(host=consul_host, port=consul_port)
+        # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
+        if CONSUL_VERSION >= '0.4.7':
+            return consul.Consul(host=consul_host, port=consul_port, token=consul_token)
+        else:
+            return consul.Consul(host=consul_host, port=consul_port)
     else:
         raise CommandExecutionError(
             '(unable to import consul, '
