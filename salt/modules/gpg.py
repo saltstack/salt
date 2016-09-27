@@ -811,7 +811,10 @@ def trust_key(keyid=None,
 
     if not fingerprint:
         if keyid:
-            key = get_key(keyid)
+            if user:
+                key = get_key(keyid, user=user)
+            else:
+                key = get_key(keyid)
             if key:
                 if 'fingerprint' not in key:
                     ret['res'] = False
