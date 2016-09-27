@@ -71,10 +71,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
                     pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
