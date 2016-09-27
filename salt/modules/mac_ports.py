@@ -395,10 +395,13 @@ def upgrade(refresh=True):  # pylint: disable=W0613
     refresh
         Update ports with ``port selfupdate``
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -406,28 +409,22 @@ def upgrade(refresh=True):  # pylint: disable=W0613
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     if refresh:
         refresh_db()
 
     old = list_pkgs()
     cmd = ['port', 'upgrade', 'outdated']
-
-    try:
-        salt.utils.mac_utils.execute_return_success(cmd)
-    except CommandExecutionError as exc:
-        if 'Nothing to upgrade' in exc.strerror:
-            ret['comment'] = 'Nothing to upgrade'
-        else:
-            ret['result'] = False
-            ret['comment'] = exc.strerror
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret

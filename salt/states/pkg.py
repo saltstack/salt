@@ -2363,7 +2363,7 @@ def uptodate(name, refresh=False, **kwargs):
     ret = {'name': name,
            'changes': {},
            'result': False,
-           'comment': 'Failed to update.'}
+           'comment': 'Failed to update'}
 
     if 'pkg.list_upgrades' not in __salt__:
         ret['comment'] = 'State pkg.uptodate is not available'
@@ -2394,9 +2394,8 @@ def uptodate(name, refresh=False, **kwargs):
         return ret
 
     try:
-        updated = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
+        ret['changes'] = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
         if exc.info:
             # Get information for state return from the exception.
             ret['changes'] = exc.info.get('changes', {})
@@ -2407,12 +2406,8 @@ def uptodate(name, refresh=False, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    if updated.get('result') is False:
-        ret.update(updated)
-    else:
-        ret['changes'] = updated.get('changes', {})
-        ret['comment'] = 'Upgrade ran successfully.'
-        ret['result'] = True
+    ret['comment'] = 'Upgrade ran successfully'
+    ret['result'] = True
 
     return ret
 
