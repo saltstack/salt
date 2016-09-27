@@ -30,4 +30,8 @@ def generate(extra_mods='', overwrite=False, so_mods=''):
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     '''
+    conf_mods = __opts__.get('thin_extra_mods')
+    if conf_mods:
+        extra_mods = ','.join([conf_mods, extra_mods])
+
     return salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite, so_mods)
