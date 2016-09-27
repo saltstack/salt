@@ -11,6 +11,7 @@ import yaml
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -88,6 +89,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
         data = self.run_run('-d virt.list foo', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
@@ -175,6 +177,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             stdout=stdout, stderr=stderr
         )
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -189,6 +192,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

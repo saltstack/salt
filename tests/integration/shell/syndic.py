@@ -16,6 +16,7 @@ import shutil
 import logging
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -35,6 +36,7 @@ class SyndicTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
     _call_binary_ = 'salt-syndic'
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
