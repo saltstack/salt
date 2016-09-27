@@ -252,7 +252,7 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'], extra_mods=self.opts.get('thin_extra_mods'))
         self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
