@@ -7,16 +7,38 @@ A module to manage software on Windows
     minion, and it is using a different module (or gives an error similar to
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
+
+The following functions require the existence of a :ref:`windows repository
+<windows-package-manager>` metadata DB, typically created by running
+:py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`:
+
+- :py:func:`pkg.get_repo_data <salt.modules.win_pkg.get_repo_data>`
+- :py:func:`pkg.install <salt.modules.win_pkg.install>`
+- :py:func:`pkg.latest_version <salt.modules.win_pkg.latest_version>`
+- :py:func:`pkg.list_available <salt.modules.win_pkg.list_available>`
+- :py:func:`pkg.list_pkgs <salt.modules.win_pkg.list_pkgs>`
+- :py:func:`pkg.list_upgrades <salt.modules.win_pkg.list_upgrades>`
+- :py:func:`pkg.remove <salt.modules.win_pkg.remove>`
+
+If a metadata DB does not already exist and one of these functions is run, then
+one will be created from the repo SLS files that are present.
+
+As the creation of this metadata can take some time, the
+:conf_minion:`winrepo_cache_expire_min` minion config option can be used to
+suppress refreshes when the metadata is less than a given number of seconds
+old.
 '''
 
 # Import python future libs
 from __future__ import absolute_import
 from __future__ import unicode_literals
-import os
-import time
-#import locale
+import collections
+import datetime
+import errno
 import logging
+import os
 import re
+import time
 # pylint: disable=import-error,no-name-in-module
 from distutils.version import LooseVersion
 
@@ -380,10 +402,6 @@ def _get_reg_software():
                                             '{0}\\{1}'.format(key, reg_key),
                                             'DisplayName',
                                             use_32bit)['vdata']
-        #try:
-        #    d_name = d_name.decode(encoding)
-        #except Exception:
-        #    pass
 
         d_vers = __salt__['reg.read_value'](hive,
                                             '{0}\\{1}'.format(key, reg_key),
@@ -410,181 +428,197 @@ def _refresh_db_conditional(saltenv, **kwargs):
     returns True or False. And supports check the age of the existing
     generated metadata db, as well as ensure metadata db exists to begin with
 
-    :param str setenv: Salt environment
+    :param str saltenv: Salt environment
     :return: True Fetched or Cache uptodate, False to indicate an issue
     :rtype: bool
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
-    refresh_force = salt.utils.is_true(kwargs.pop('force', False))
-    raise_error = salt.utils.is_true(kwargs.pop('raise_error', False))
-    expired_max = 21600  # 6hr same as yum
-    expired_min = 0  # i.e. ignore force request if less than this young
-    if 'winrepo_cache_expire_max' in __opts__:
-        try:
-            expired_max = int(__opts__['winrepo_cache_expire_max'])
-        except ValueError:
-            pass
+    force = salt.utils.is_true(kwargs.pop('force', False))
+    failhard = salt.utils.is_true(kwargs.pop('failhard', False))
+    expired_max = __opts__['winrepo_cache_expire_max']
+    expired_min = __opts__['winrepo_cache_expire_min']
 
-    if 'winrepo_cache_expire_min' in __opts__:
-        try:
-            expired_min = int(__opts__['winrepo_cache_expire_min'])
-        except ValueError:
-            pass
-    (_, _, _, repo_age_sec) = _get_repo_src_dest_details(saltenv)
+    repo_details = _get_repo_details(saltenv)
 
-    # repo_age_sec is -1 if repo db does not exist
-    refresh = (repo_age_sec == -1 or
-        (refresh_force and (expired_min == 0 or repo_age_sec < expired_min)) or
-        (repo_age_sec > expired_max)
+    # Skip force if age less than minimum age
+    if force and expired_min > 0 and repo_details.winrepo_age < expired_min:
+        log.info(
+            'Refresh skipped, age of winrepo metadata in seconds (%s) is less '
+            'than winrepo_cache_expire_min (%s)',
+            repo_details.winrepo_age, expired_min
+        )
+        force = False
+
+    # winrepo_age is -1 if repo db does not exist
+    refresh = True if force \
+        or repo_details.winrepo_age == -1 \
+        or repo_details.winrepo_age > expired_max \
+        else False
+
+    if not refresh:
+        log.debug(
+            'Using existing pkg metadata db for saltenv \'%s\' (age is %s)',
+            saltenv, datetime.timedelta(seconds=repo_details.winrepo_age)
+        )
+        return True
+
+    if repo_details.winrepo_age == -1:
+        # no repo meta db
+        log.debug(
+            'No winrepo.p cache file for saltenv \'%s\', creating one now',
+            saltenv
         )
 
-    if refresh:
-        if expired_min == 0 and repo_age_sec > -1 and repo_age_sec < 60:
-            log.debug(
-                'pkg metadata db for %s less than a minute old and been asked to refresh it',
-                saltenv
-                )
-    else:
-        log.debug(
-                'Using existing pkg metadata db for %s which is %d minutes old',
-                saltenv,
-                int(repo_age_sec/60)
-                )
-        return True
-
-    results = refresh_db(saltenv=saltenv, verbose=False, raise_error=False)
-    if results.get('failed', 0) > 0:
-        if raise_error:
-            raise CommandExecutionError(
-                'Error occurred while generating repo db',
-                info=results
-                )
-        else:
-            return False
-    else:
-        return True
+    results = refresh_db(saltenv=saltenv, verbose=False, failhard=failhard)
+    try:
+        # Return True if there were no failed winrepo SLS files, and False if
+        # failures were reported.
+        return not bool(results.get('failed', 0))
+    except AttributeError:
+        return False
 
 
 def refresh_db(**kwargs):
     '''
-    Fectches and compile the metadata repository for windows packaging and returns status
-    of the results. See also pkg.genrepo
-
-    *Keyword Arguments (kwargs)*
-    See genrepo
+    Fectches metadata files and calls :py:func:`pkg.genrepo
+    <salt.modules.win_pkg.genrepo>` to compile updated repository metadata.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db saltenv=base
     '''
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = salt.utils.is_true(kwargs.pop('verbose', False))
-    raise_error = salt.utils.is_true(kwargs.pop('raise_error', True))
+    failhard = salt.utils.is_true(kwargs.pop('failhard', True))
     __context__.pop('winrepo.data', None)
-    (winrepo_source_dir, repo_path, _, _) = _get_repo_src_dest_details(saltenv)
+    repo_details = _get_repo_details(saltenv)
+
+    log.debug(
+        'Refreshing pkg metadata db for saltenv \'%s\' (age of existing '
+        'metadata is %s)',
+        saltenv, datetime.timedelta(seconds=repo_details.winrepo_age)
+    )
 
     # Clear minion repo-ng cache see #35342 discussion
-    log.info('Removing all *.sls files of "%s" tree', repo_path)
-    for root, _, files in os.walk(repo_path, followlinks=False):
+    log.info('Removing all *.sls files under \'%s\'', repo_details.local_dest)
+    failed = []
+    for root, _, files in os.walk(repo_details.local_dest, followlinks=False):
         for name in files:
             if name.endswith('.sls'):
                 full_filename = os.path.join(root, name)
                 try:
                     os.remove(full_filename)
-                except (OSError, IOError) as exc:
-                    raise CommandExecutionError(
-                        'Could not remove \'{0}\': {1}'.
-                        format(full_filename, exc)
-                        )
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to remove %s: %s', full_filename, exc)
+                        failed.append(full_filename)
+    if failed:
+        raise CommandExecutionError(
+            'Failed to clear one or more winrepo cache files',
+            info={'failed': failed}
+        )
 
     # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
-        winrepo_source_dir,
+        repo_details.winrepo_source_dir,
         saltenv,
         include_pat='*.sls'
     )
 
-    results = genrepo(saltenv=saltenv, verbose=verbose, raise_error=False)
+    return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)
 
-    if results.get('failed', 0) > 0 and raise_error:
-        raise CommandExecutionError(
-            'Error occurred while generating repo db',
-            info=results
+
+def _get_repo_details(saltenv):
+    '''
+    Return repo details for the specified saltenv as a namedtuple
+    '''
+    contextkey = 'winrepo._get_repo_details.{0}'.format(saltenv)
+
+    if contextkey in __context__:
+        (winrepo_source_dir, local_dest, winrepo_file) = __context__[contextkey]
+    else:
+        if 'win_repo_source_dir' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_repo_source_dir\' config option is deprecated, '
+                'please use \'winrepo_source_dir\' instead.'
             )
-    else:
-        return results
+            winrepo_source_dir = __opts__['win_repo_source_dir']
+        else:
+            winrepo_source_dir = __opts__['winrepo_source_dir']
 
+        dirs = [__opts__['cachedir'], 'files', saltenv]
+        url_parts = _urlparse(winrepo_source_dir)
+        dirs.append(url_parts.netloc)
+        dirs.extend(url_parts.path.strip('/').split('/'))
+        local_dest = os.sep.join(dirs)
 
-def _get_repo_src_dest_details(saltenv):
-    '''
-    :param str setenv: salt environment
-    :return: Trupple of salt url source and local cache path
-    :rtype: tuple
-    '''
-    if 'win_repo_source_dir' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_source_dir\' config option is deprecated, please '
-            'use \'winrepo_source_dir\' instead.'
-        )
-        winrepo_source_dir = __opts__['win_repo_source_dir']
-    else:
-        winrepo_source_dir = __opts__['winrepo_source_dir']
-
-    dirs = [__opts__['cachedir'], 'files', saltenv]
-    url_parts = _urlparse(winrepo_source_dir)
-    dirs.append(url_parts.netloc)
-    dirs.extend(url_parts.path.strip('/').split('/'))
-    local_dest_path = os.sep.join(dirs)
-
-    winrepo_file = os.path.join(local_dest_path, 'winrepo.p')  # Default
-    if 'winrepo_cachefile' in __opts__:
+        winrepo_file = os.path.join(local_dest, 'winrepo.p')  # Default
         # Check for a valid windows file name
-        if re.search(
-            '[\\\\/:*?"<>|]',
-            __opts__['winrepo_cachefile'],
-            flags=re.IGNORECASE
-            ) is None:
+        if not re.search(r'[\/:*?"<>|]',
+                         __opts__['winrepo_cachefile'],
+                         flags=re.IGNORECASE):
             winrepo_file = os.path.join(
-                local_dest_path,
+                local_dest,
                 __opts__['winrepo_cachefile']
                 )
         else:
-            log.error('minion cofiguration option "winrepo_cachefile" ignored,'
-                'set to an invalid value %s, ensure its a valid file name',
-                __opts__['winrepo_cachefile']
-                )
-
-    # Do some safety checks on the repo_path as its contents can be removed,
-    # this includes check for bad coding
-    for pathchecks in [
-            '[a-z]\\:\\\\$',
-            '\\\\$',
-            re.escape(os.environ.get('SystemRoot', 'C:\\Windows')),
-            ]:
-        if re.match(pathchecks, local_dest_path, flags=re.IGNORECASE) is not None:
             log.error(
-                'Local cache dir seems a bad choice "%s"',
-                local_dest_path
-                )
-            raise CommandExecutionError(
-                'Error local cache dir seems a bad choice',
-                info=local_dest_path
+                'minion cofiguration option \'winrepo_cachefile\' has been '
+                'ignored as its value (%s) is invalid. Please ensure this '
+                'option is set to a valid filename.',
+                __opts__['winrepo_cachefile']
+            )
+
+        # Do some safety checks on the repo_path as its contents can be removed,
+        # this includes check for bad coding
+        paths = (
+            r'[a-z]\:\\$',
+            r'\\$',
+            re.escape(os.environ.get('SystemRoot', r'C:\Windows'))
+        )
+        for path in paths:
+            if re.match(path, local_dest, flags=re.IGNORECASE) is not None:
+                raise CommandExecutionError(
+                    'Local cache dir {0} is not a good location'.format(local_dest)
                 )
 
-    if not os.path.exists(local_dest_path):
-        os.makedirs(local_dest_path)
+        __context__[contextkey] = (winrepo_source_dir, local_dest, winrepo_file)
+
+    try:
+        os.makedirs(local_dest)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise CommandExecutionError(
+                'Failed to create {0}: {1}'.format(local_dest, exc)
+            )
 
     winrepo_age = -1
     try:
-        if os.path.isfile(winrepo_file):
-            winrepo_age = time.time()-os.stat(winrepo_file).st_mtime
-    except (OSError, ValueError):
-        pass
+        stat_result = os.stat(winrepo_file)
+        mtime = stat_result.st_mtime
+        winrepo_age = time.time() - mtime
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise CommandExecutionError(
+                'Failed to get age of {0}: {1}'.format(winrepo_file, exc)
+            )
+    except AttributeError:
+        # Shouldn't happen but log if it does
+        log.warning('st_mtime missing from stat result %s', stat_result)
+    except TypeError:
+        # Shouldn't happen but log if it does
+        log.warning('mtime of %s (%s) is an invalid type', winrepo_file, mtime)
 
-    return (winrepo_source_dir, local_dest_path, winrepo_file, winrepo_age)
+    repo_details = collections.namedtuple(
+        'RepoDetails',
+        ('winrepo_source_dir', 'local_dest', 'winrepo_file', 'winrepo_age')
+    )
+    return repo_details(winrepo_source_dir, local_dest, winrepo_file, winrepo_age)
 
 
 def genrepo(**kwargs):
@@ -596,37 +630,35 @@ def genrepo(**kwargs):
     .. code-block:: bash
 
         salt-run pkg.genrepo
-        salt -G 'os:windows' pkg.genrepo verbose=true raise_error=false
+        salt -G 'os:windows' pkg.genrepo verbose=true failhard=false
         salt -G 'os:windows' pkg.genrepo saltenv=base
 
     *Keyword Arguments (kwargs)*
 
-    :param str saltenv: Salt environment. Default 'base'
+    :param str saltenv: Salt environment. Default: ``base``
 
     :param bool verbose:
         Return verbose data structure which includes 'success_list', a list of
         all sls files and the package names contained within. Default 'False'
 
-    :param bool raise_error:
-        Raise an exception error.  'True' - Errors are reported as text strings,
-        with data also return as a string. 'False' - No error is raise still
-        allowing a data structure to be return, which includes any errors.
-        Default 'True'.
-
+    :param bool failhard:
+        If ``True``, an error will be raised if any repo SLS files failed to
+        proess. If ``False``, no error will be raised, and a dictionary
+        containing the full results will be returned.
     '''
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = salt.utils.is_true(kwargs.pop('verbose', False))
-    raise_error = salt.utils.is_true(kwargs.pop('raise_error', True))
+    failhard = salt.utils.is_true(kwargs.pop('failhard', True))
 
     ret = {}
     successful_verbose = {}
     total_files_processed = 0
     ret['repo'] = {}
-    ret['!errors'] = {}
-    (_, repo_local, winrepo, _) = _get_repo_src_dest_details(saltenv)
+    ret['errors'] = {}
+    repo_details = _get_repo_details(saltenv)
 
-    for root, _, files in os.walk(repo_local, followlinks=False):
-        short_path = os.path.relpath(root, repo_local)
+    for root, _, files in os.walk(repo_details.local_dest, followlinks=False):
+        short_path = os.path.relpath(root, repo_details.local_dest)
         if short_path == '.':
             short_path = ''
         for name in files:
@@ -638,19 +670,19 @@ def genrepo(**kwargs):
                     ret,
                     successful_verbose
                     )
-    with salt.utils.fopen(winrepo, 'w+b') as repo_cache:
+    with salt.utils.fopen(repo_details.winrepo_file, 'w+b') as repo_cache:
         repo_cache.write(msgpack.dumps(ret))
     # save reading it back again. ! this breaks due to utf8 issues
     #__context__['winrepo.data'] = ret
     successful_count = len(successful_verbose)
-    error_count = len(ret['!errors'])
+    error_count = len(ret['errors'])
     if verbose:
         results = {
             'total': total_files_processed,
             'success': successful_count,
             'failed': error_count,
             'success_list': successful_verbose,
-            'failed_list': ret['!errors']
+            'failed_list': ret['errors']
             }
     else:
         if error_count > 0:
@@ -658,7 +690,7 @@ def genrepo(**kwargs):
                 'total': total_files_processed,
                 'success': successful_count,
                 'failed': error_count,
-                'failed_list': ret['!errors']
+                'failed_list': ret['errors']
                 }
         else:
             results = {
@@ -667,85 +699,76 @@ def genrepo(**kwargs):
                 'failed': error_count
                 }
 
-    if error_count > 0 and raise_error:
+    if error_count > 0 and failhard:
         raise CommandExecutionError(
             'Error occurred while generating repo db',
             info=results
-            )
+        )
     else:
         return results
 
 
 def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
+
+    def _failed_compile(msg):
+        log.error(msg)
+        ret.setdefault('errors', {})[short_path_name] = [msg]
+        return False
+
     try:
         config = salt.template.compile_template(
             file,
             renderers,
             __opts__['renderer'],
-            __opts__.get('renderer_blacklist', ""),
-            __opts__.get('renderer_whitelist', ""))
+            __opts__.get('renderer_blacklist', ''),
+            __opts__.get('renderer_whitelist', ''))
     except SaltRenderError as exc:
-        log.error('failed to compile "{0}", check syntax, {1}'
-            .format(short_path_name, exc)
-            )
-        ret.setdefault('!errors', {}).update(
-            {short_path_name: ['failed to compile, check syntax, {0}'.format(exc)]})
-        # skip to the next file
-        return False
+        msg = 'Failed to compile \'{0}\': {1}'.format(short_path_name, exc)
+        return _failed_compile(msg)
     except Exception as exc:
-        log.error('failed to read "{0}", {1}'.format(
-            short_path_name, exc))
-        ret.setdefault('!errors', {}).update(
-            {short_path_name: ['failed to read {0}'.format(exc)]})
-        return False
+        msg = 'Failed to read \'{0}\': {1}'.format(short_path_name, exc)
+        return _failed_compile(msg)
 
     if config:
         revmap = {}
-        error_msg_list = []
+        errors = []
         pkgname_ok_list = []
         for pkgname, versions in six.iteritems(config):
             if pkgname in ret['repo']:
                 log.error(
-                    'pkgname "{0}" within "{1}",  already defined, skipping.'
-                    .format(pkgname, short_path_name)
-                    )
-                error_msg_list.append(
-                    'pkgname "{0}" already defined'
-                    .format(pkgname)
-                    )
+                    'package \'%s\' within \'%s\' already defined, skipping',
+                    pkgname, short_path_name
+                )
+                errors.append('package \'{0}\' already defined'.format(pkgname))
                 break
             for version, repodata in six.iteritems(versions):
                 # Ensure version is a string/unicode
                 if not isinstance(version, six.string_types):
+                    msg = (
+                        'package \'{0}\'{{0}}, version number {1} '
+                        'is not a string'.format(pkgname, version)
+                    )
                     log.error(
-                        'pkgname "{0}" version "{1}" within "{2}", '
-                        '"version number" is not a string'
-                        .format(pkgname, version, short_path_name)
-                        )
-                    error_msg_list.append(
-                        'pkgname "{0}", version "{1}" is not a string'
-                        .format(pkgname, version)
-                        )
+                        msg.format(' within \'{0}\''.format(short_path_name))
+                    )
+                    errors.append(msg.format(''))
                     continue
-                #Ensure version contains a dict
+                # Ensure version contains a dict
                 if not isinstance(repodata, dict):
-                    log.error(
-                        'pkgname "{0}" version "{1}" within "{2}", '
-                        '"version number" is not defined as dictionary(hash) key'
-                        .format(pkgname, version, short_path_name)
-                        )
-                    error_msg_list.append(
-                        'pkgname "{0}", version "{1}" is not defined as a '
-                        'dictionary(hash) key'
+                    msg = (
+                        'package \'{0}\'{{0}}, repo data for '
+                        'version number {1} is not defined as a dictionary '
                         .format(pkgname, version)
-                        )
+                    )
+                    log.error(
+                        msg.format(' within \'{0}\''.format(short_path_name))
+                    )
+                    errors.append(msg.format(''))
                     continue
                 revmap[repodata['full_name']] = pkgname
-        if error_msg_list:
-            ret.setdefault(
-                '!errors', {}).update({short_path_name: error_msg_list}
-                )
+        if errors:
+            ret.setdefault('errors', {})[short_path_name] = errors
         else:
             if pkgname not in pkgname_ok_list:
                 pkgname_ok_list.append(pkgname)
@@ -753,8 +776,9 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
             ret.setdefault('name_map', {}).update(revmap)
             successful_verbose[short_path_name] = config.keys()
     else:
-        log.debug('no data within "{0}" after processing'.format(short_path_name))
-        successful_verbose[short_path_name] = []  # i.e. no pkgname found after render
+        log.debug('No data within \'%s\' after processing', short_path_name)
+        # no pkgname found after render
+        successful_verbose[short_path_name] = []
 
 
 def _get_source_sum(source_hash, file_path, saltenv):
@@ -1493,25 +1517,23 @@ def get_repo_data(saltenv='base'):
 
         salt '*' pkg.get_repo_data
     '''
-
-    (_, _, winrepo, repo_age_sec) = _get_repo_src_dest_details(saltenv)
-
     # we only call refresh_db if it does not exist, as we want to return
     # the existing data even if its old, other parts of the code call this,
     # but they will call refresh if they need too.
-    if repo_age_sec == -1:
-        # no repo meta db
-        log.debug('No winrepo.p cache file. Refresh pkg db now.')
-        _refresh_db_conditional(saltenv=saltenv)
+    repo_details = _get_repo_details(saltenv)
+    if repo_details.winrepo_age == -1:
+	# no repo meta db
+	log.debug('No winrepo.p cache file. Refresh pkg db now.')
+	_refresh_db_conditional(saltenv=saltenv)
 
     if 'winrepo.data' in __context__:
-        log.trace('get_repo_data called return memory cache')
+        log.trace('get_repo_data returning results from __context__')
         return __context__['winrepo.data']
     else:
         log.trace('get_repo_data called reading from disk')
 
     try:
-        with salt.utils.fopen(winrepo, 'rb') as repofile:
+        with salt.utils.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 __context__['winrepo.data'] = repodata
@@ -1523,22 +1545,6 @@ def get_repo_data(saltenv='base'):
         log.error('Not able to read repo file')
         log.exception(exc)
         return {}
-
-
-def get_name_map(saltenv='base'):
-    '''
-    Return a reverse map of full pkg names to the names recognized by winrepo.
-
-    :param str saltenv: Salt environment. Default ``base``
-
-    :return: A dictionary of the name map from contents of metadata db.
-    :rtype: dict
-
-    CLI Example:
-    .. code-block:: bash
-        salt '*' pkg.get_name_map
-    '''
-    return _get_name_map(saltenv)
 
 
 def _get_name_map(saltenv='base'):
