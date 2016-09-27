@@ -120,17 +120,17 @@ def beacon(config):
     for func in config:
         data = __salt__['status.{0}'.format(func)]()
         ret[func] = {}
-        for item in config[func]:
-            if item == 'all':
-                ret[func] = data
-            else:
+        item = config[func]
+        if item == 'all':
+            ret[func] = data
+        else:
+            try:
                 try:
-                    try:
-                        ret[func][item] = data[item]
-                    except TypeError:
-                        ret[func][item] = data[int(item)]
-                except KeyError as exc:
-                    ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
+                    ret[func][item] = data[item]
+                except TypeError:
+                    ret[func][item] = data[int(item)]
+            except KeyError as exc:
+                ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
 
     return [{
         'tag': ctime,
