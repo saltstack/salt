@@ -109,8 +109,8 @@ Reactor and Orchestrator SLS File Locations
 -------------------------------------------
 
 Reactor SLS files are stored in the same location as State SLS files. This means
-that both ``file_roots`` and ``gitfs_remotes`` both impact what SLS files are
-available to the reactor.
+that both ``file_roots`` and ``gitfs_remotes`` impact what SLS files are
+available to the reactor and orchestrator.
 
 It is recommended to keep reactor and orchestrator SLS files in their own uniquely
 named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``, ``react/``,
