@@ -1627,24 +1627,6 @@ def managed(name,
         if not context:
             context = {}
         context['accumulator'] = accum_data[name]
-    if 'file.check_managed_changes' in __salt__:
-        ret['pchanges'] = __salt__['file.check_managed_changes'](
-            name,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            template,
-            context,
-            defaults,
-            __env__,
-            contents,
-            skip_verify,
-            **kwargs
-        )
-    else:
-        ret['pchanges'] = {}
 
     if show_diff is not None:
         show_changes = show_diff
@@ -1656,6 +1638,22 @@ def managed(name,
 
     try:
         if __opts__['test']:
+            if 'file.check_managed_changes' in __salt__:
+                ret['pchanges'] = __salt__['file.check_managed_changes'](
+                    name,
+                    source,
+                    source_hash,
+                    user,
+                    group,
+                    mode,
+                    template,
+                    context,
+                    defaults,
+                    __env__,
+                    contents,
+                    skip_verify,
+                    **kwargs
+                )
             if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
