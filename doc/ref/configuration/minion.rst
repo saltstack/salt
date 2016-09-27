@@ -2005,6 +2005,41 @@ have other services that need to go with it.
 
     update_restart_services: ['salt-minion']
 
+.. conf_minion:: winrepo_cache_expire_min
+
+``winrepo_cache_expire_min``
+----------------------------
+
+.. versionadded:: Carbon
+
+Default: ``0``
+
+If set to a nonzero integer, then passing ``refresh=True`` to functions in the
+:mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows
+repo metadata if the age of the metadata is less than this value. The exception
+to this is :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`, which
+will always refresh the metadata, regardless of age.
+
+.. code-block:: yaml
+
+    winrepo_cache_expire_min: 1800
+
+.. conf_minion:: winrepo_cache_expire_max
+
+``winrepo_cache_expire_max``
+----------------------------
+
+.. versionadded:: Carbon
+
+Default: ``21600``
+
+If the windows repo metadata is older than this value, and the metadata is
+needed by a function in the :mod:`windows pkg module <salt.modules.win_pkg>`,
+the metadata will be refreshed.
+
+.. code-block:: yaml
+
+    winrepo_cache_expire_max: 86400
 
 .. _winrepo-minion-config-opts:
 
