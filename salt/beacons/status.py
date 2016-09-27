@@ -88,6 +88,9 @@ from __future__ import absolute_import
 import logging
 import datetime
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
