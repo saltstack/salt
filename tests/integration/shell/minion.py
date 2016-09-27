@@ -47,6 +47,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         'subminion',
     )
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
@@ -72,7 +73,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
                 config_dir,
                 pid_path
             ),
-            timeout=5,
+            timeout=25,
             catch_stderr=True,
             with_retcode=True
         )
@@ -87,7 +88,7 @@ class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
             self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+                'Failed to setup the Syslog logging handler', 'STDOUT: {0}\nSTDERR: {1}'.format('\n'.join(ret[0]), '\n'.join(ret[1])),
             )
             self.assertEqual(ret[2], 2)
         finally:

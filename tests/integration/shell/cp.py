@@ -15,6 +15,7 @@ import pipes
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -111,6 +112,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_issue_7754(self):
         try:
             old_cwd = os.getcwd()

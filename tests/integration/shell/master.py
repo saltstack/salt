@@ -15,6 +15,7 @@ import signal
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -29,6 +30,7 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
     _call_binary_ = 'salt-master'
 
+    @skipIf(os.getuid(), 'Disabled for non-root user')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
