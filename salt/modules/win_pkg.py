@@ -386,7 +386,8 @@ def _get_reg_software():
                    'WIC',
                    'Not Found',
                    '(value not set)',
-                   '']
+                   '',
+                   None]
     #encoding = locale.getpreferredencoding()
     reg_software = {}
 
