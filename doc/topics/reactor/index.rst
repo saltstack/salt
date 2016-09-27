@@ -105,16 +105,17 @@ of the runit orchestrator located at ``/srv/salt/_orch/runit.sls``. Using
 ``_orch/`` is any arbitrary path but it is recommended to avoid using "orchestrate"
 as this is most likely to cause confusion.
 
-Reactor SLS File Location
--------------------------
+Reactor and Orchestrator SLS File Locations
+-------------------------------------------
 
 Reactor SLS files are stored in the same location as State SLS files. This means
 that both ``file_roots`` and ``gitfs_remotes`` both impact what SLS files are
 available to the reactor.
 
-It is suggested to keep these files in a uniquely named directory, such as ``_orch/``
-or ``orchestration/`` to avoid confusion between referencing SLS files and calling
-the orchestrate runner, state, or execution modules.
+It is recommended to keep reactor and orchestrator SLS files in their own uniquely
+named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``, ``react/``,
+``_reactor/``, etc. Keeping a unique name helps prevent confusion when trying to
+read through this a few years down the road.
 
 The Goal of Writing Reactor SLS Files
 =====================================
