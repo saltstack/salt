@@ -106,6 +106,12 @@ def beacon(config):
     '''
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
+    ret = {}
+    if salt.utils.is_windows():
+        return [{
+            'tag': ctime,
+            'data': ret,
+        }]
 
     if len(config) < 1:
         config = {
@@ -116,7 +122,6 @@ def beacon(config):
             'time': 'all',
         }
 
-    ret = {}
     for func in config:
         data = __salt__['status.{0}'.format(func)]()
         ret[func] = {}
