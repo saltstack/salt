@@ -84,13 +84,9 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
-# SaltRenderError required by win_pkg
-# pylint: disable=W0611
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError,
-    SaltRenderError
+    CommandExecutionError, MinionError, SaltInvocationError
 )
-# pylint: enable=W0611
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
@@ -100,15 +96,18 @@ import salt.ext.six as six
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
-    # pylint: disable=W0611
-    # pylint: disable=import-error,no-name-in-module
+    # pylint: disable=import-error,no-name-in-module,unused-import
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    from salt.exceptions import SaltRenderError
+    import collections
+    import datetime
+    import errno
     import time
     # pylint: disable=import-error
-    # pylint: enable=W0611
+    # pylint: enable=unused-import
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
-    from salt.modules.win_pkg import _get_repo_src_dest_details
+    from salt.modules.win_pkg import _get_repo_details
     from salt.modules.win_pkg import _refresh_db_conditional
     from salt.modules.win_pkg import refresh_db
     from salt.modules.win_pkg import genrepo
@@ -117,8 +116,8 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
-    _get_repo_src_dest_details = \
-        _namespaced_function(_get_repo_src_dest_details, globals())
+    _get_repo_details = \
+        _namespaced_function(_get_repo_details, globals())
     _refresh_db_conditional = \
         _namespaced_function(_refresh_db_conditional, globals())
     refresh_db = _namespaced_function(refresh_db, globals())
