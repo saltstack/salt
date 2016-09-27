@@ -1523,7 +1523,7 @@ def get_repo_data(saltenv='base'):
     if repo_details.winrepo_age == -1:
         # no repo meta db
         log.debug('No winrepo.p cache file. Refresh pkg db now.')
-        _refresh_db_conditional(saltenv=saltenv)
+        refresh_db(saltenv=saltenv)
 
     if 'winrepo.data' in __context__:
         log.trace('get_repo_data returning results from __context__')
