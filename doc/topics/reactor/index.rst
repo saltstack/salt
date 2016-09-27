@@ -97,7 +97,7 @@ API and the runner system.  In this example, a command is published to the
     {% if data['data']['custom_var'] == 'runit' %}
     call_runit_orch:
       runner.state.orchestrate:
-        - mods: _orch/runit
+        - mods: _orch.runit
     {% endif %}
 
 This example will execute the state.orchestrate runner and intiate an execution
@@ -162,7 +162,7 @@ For example:
     # /srv/reactor/some_event.sls
     invoke_orchestrate_file:
       runner.state.orchestrate:
-        - mods: orch.do_complex_thing
+        - mods: _orch.do_complex_thing # /srv/salt/_orch/do_complex_thing.sls
         - kwarg:
             pillar:
               event_tag: {{ tag }}
@@ -170,7 +170,7 @@ For example:
 
 .. code-block:: yaml
 
-    # /srv/salt/orch/do_complex_thing.sls
+    # /srv/salt/_orch/do_complex_thing.sls
     {% set tag = salt.pillar.get('event_tag') %}
     {% set data = salt.pillar.get('event_data') %}
 
@@ -188,8 +188,9 @@ For example:
         - tgt: {{ data.bar }}
         - sls:
           - do_thing_on_minion
-        - pillar:
-            baz: {{ data.baz }}
+        - kwarg:
+            pillar:
+              baz: {{ data.baz }}
         - require:
           - salt: do_first_thing
 
@@ -471,7 +472,7 @@ This works with Orchestrate files as well:
 
     call_some_orchestrate_file:
       runner.state.orchestrate:
-        - mods: some_orchestrate_file
+        - mods: _orch.some_orchestrate_file
         - pillar:
             stuff: things
 
@@ -479,7 +480,9 @@ Which is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt-run state.orchestrate some_orchestrate_file pillar='{stuff: things}'
+    salt-run state.orchestrate _orch.some_orchestrate_file pillar='{stuff: things}'
+
+This expects to find a file at /srv/salt/_orch/some_orchestrate_file.sls.
 
 Finally, that data is available in the state file using the normal Pillar
 lookup syntax. The following example is grabbing web server names and IP
