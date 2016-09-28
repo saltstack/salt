@@ -50,7 +50,7 @@ def present(name, definition):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    index_exists = __salt__['elasticsearch.index_exists'](name=name)
+    index_exists = __salt__['elasticsearch.index_exists'](index=name)
     if not index_exists:
         if __opts__['test']:
             ret['comment'] = 'Index {0} will be created'.format(name)
