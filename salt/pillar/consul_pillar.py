@@ -114,9 +114,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-
 import re
-
 import yaml
 
 from salt.exceptions import CommandExecutionError
@@ -260,6 +258,10 @@ def get_conn(opts, profile):
     if 'dc' in params:
         pillarenv = opts_merged.get('pillarenv') or 'base'
         params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
+
+    consul_host = params.get('host')
+    consul_port = params.get('port')
+    consul_token = params.get('token')
 
     if HAS_CONSUL:
         # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
