@@ -859,6 +859,9 @@ VALID_OPTS = {
     #
     # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
     'proxy_merge_grains_in_module': bool,
+
+    # Extra modules for Salt Thin
+    'thin_extra_mods': str,
 }
 
 # default configurations
@@ -1340,6 +1343,7 @@ DEFAULT_MASTER_OPTS = {
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
     'python3_bin': 'python3',
+    'thin_extra_mods': '',
 }
 
 
