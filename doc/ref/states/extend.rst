@@ -43,7 +43,7 @@ addition to anything it is already watching.
 Extend is a Top Level Declaration
 ---------------------------------
 
-This means that ``extend`` can only be called once in an sls, if if is used
+This means that ``extend`` can only be called once in an sls, if it is used
 twice then only one of the extend blocks will be read. So this is WRONG:
 
 .. code-block:: yaml
