@@ -370,7 +370,9 @@ class _LegacyGitPillar(object):
                       'initializing the repo: {0}. Maybe '
                       'git is not available.'.format(exc))
         except Exception as exc:
-            log.exception('Undefined exception in git pillar')
+            log.exception('Undefined exception in git pillar. '
+                    'This may be a bug should be reported to the '
+                    'SaltStack developers.')
 
         # Git directory we are working on
         # Should be the same as self.repo.working_dir
