@@ -69,7 +69,7 @@ def mounted(name,
 
     fstype
         The filesystem type, this will be ``xfs``, ``ext2/3/4`` in the case of classic
-        filesystems, and ``fuse`` in the case of fuse mounts
+        filesystems, ``fuse`` in the case of fuse mounts, and ``nfs`` in the case of nfs mounts
 
     mkmnt
         If the mount point is not present then the state will fail, set ``mkmnt: True``
@@ -94,7 +94,7 @@ def mounted(name,
         Set if the mount should be mounted immediately, Default is ``True``
 
     user
-        The user to own the mount; this defaults to the user salt is
+        The account used to execute the mount; this defaults to the user salt is
         running as on the minion
 
     match_on
