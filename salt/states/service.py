@@ -327,6 +327,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if 'enabled' in kwargs:
         return _enabled_used_error(ret)
 
+    if 'service.refresh' in __salt__:
+        __salt__['service.refresh'](name)
+
     # Check if the service is available
     try:
         if not _available(name, ret):
