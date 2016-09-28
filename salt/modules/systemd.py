@@ -71,19 +71,6 @@ def _canonical_unit_name(name):
     return '%s.service' % name
 
 
-def _check_for_unit_changes(name):
-    '''
-    Check for modified/updated unit files, and run a daemon-reload if any are
-    found.
-    '''
-    contextkey = 'systemd._check_for_unit_changes.{0}'.format(name)
-    if contextkey not in __context__:
-        if _untracked_custom_unit_found(name) or _unit_file_changed(name):
-            systemctl_reload()
-        # Set context key to avoid repeating this check
-        __context__[contextkey] = True
-
-
 def _clear_context():
     '''
     Remove context
@@ -93,6 +80,7 @@ def _clear_context():
     for key in list(__context__):
         try:
             if key.startswith('systemd._systemctl_status.') \
+                    or key.startswith('systemd.refresh.') \
                     or key in ('systemd.systemd_services',):
                 __context__.pop(key)
         except AttributeError:
@@ -533,7 +521,7 @@ def unmask(name):
 
         salt '*' service.unmask <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     mask_status = masked(name)
     if not mask_status:
         log.debug('Service \'%s\' is not masked', name)
@@ -577,7 +565,7 @@ def mask(name, runtime=False):
 
         salt '*' service.mask <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
 
     cmd = 'mask --runtime' if runtime else 'mask'
     out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name, systemd_scope=True),
@@ -611,7 +599,7 @@ def masked(name):
 
         salt '*' service.masked <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     out = __salt__['cmd.run'](
         _systemctl_cmd('is-enabled', name),
         python_shell=False,
@@ -641,7 +629,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('start', name, systemd_scope=True),
@@ -669,10 +657,34 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('stop', name, systemd_scope=True),
         python_shell=False) == 0
+
+
+def refresh(name):
+    '''
+    .. versionadded:: 2016.3.4
+
+    Checks for a new/changed unit file by the specified name, and calls
+    ``systemctl daemon-reload`` if necessary.
+
+    name
+        Service name to refresh
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.refresh <service name>
+    '''
+    contextkey = 'systemd.refresh.%s' % name
+    if contextkey not in __context__:
+        if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+            systemctl_reload()
+        # Set context key to avoid repeating this check
+        __context__[contextkey] = True
 
 
 def restart(name):
@@ -696,7 +708,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('restart', name, systemd_scope=True),
@@ -724,7 +736,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('reload', name, systemd_scope=True),
@@ -754,7 +766,7 @@ def force_reload(name):
 
         salt '*' service.force_reload <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('force-reload', name, systemd_scope=True),
@@ -774,7 +786,7 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 
         salt '*' service.status <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     return __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
                                    python_shell=False,
                                    ignore_retcode=True) == 0
@@ -803,7 +815,7 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' service.enable <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     unmask(name)
     if name in _get_sysv_services():
         cmd = []
@@ -847,7 +859,7 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' service.disable <service name>
     '''
-    _check_for_unit_changes(name)
+    refresh(name)
     if name in _get_sysv_services():
         cmd = []
         if salt.utils.systemd.has_scope(__context__) \
