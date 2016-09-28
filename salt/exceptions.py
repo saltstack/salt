@@ -400,6 +400,12 @@ class VMwareConnectionError(VMwareSaltError):
     '''
 
 
+class VMwareObjectRetrievalError(VMwareSaltError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
 class VMwareApiError(VMwareSaltError):
     '''
     Used when representing a generic VMware API error
