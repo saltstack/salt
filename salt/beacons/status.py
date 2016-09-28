@@ -88,6 +88,9 @@ from __future__ import absolute_import
 import logging
 import datetime
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -106,6 +109,12 @@ def beacon(config):
     '''
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
+    ret = {}
+    if salt.utils.is_windows():
+        return [{
+            'tag': ctime,
+            'data': ret,
+        }]
 
     if len(config) < 1:
         config = {
@@ -116,21 +125,20 @@ def beacon(config):
             'time': 'all',
         }
 
-    ret = {}
     for func in config:
         data = __salt__['status.{0}'.format(func)]()
         ret[func] = {}
-        for item in config[func]:
-            if item == 'all':
-                ret[func] = data
-            else:
+        item = config[func]
+        if item == 'all':
+            ret[func] = data
+        else:
+            try:
                 try:
-                    try:
-                        ret[func][item] = data[item]
-                    except TypeError:
-                        ret[func][item] = data[int(item)]
-                except KeyError as exc:
-                    ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
+                    ret[func][item] = data[item]
+                except TypeError:
+                    ret[func][item] = data[int(item)]
+            except KeyError as exc:
+                ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
 
     return [{
         'tag': ctime,
