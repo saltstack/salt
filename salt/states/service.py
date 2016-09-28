@@ -109,6 +109,9 @@ def _enable(name, started, result=True, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
+    # Set default expected result
+    ret['result'] = result
+
     # Check to see if this minion supports enable
     if 'service.enable' not in __salt__ or 'service.enabled' not in __salt__:
         if started is True:
@@ -147,10 +150,9 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     if __salt__['service.enable'](name, **kwargs):
-        after_toggle_enable_status = __salt__['service.enabled'](name,
-                                                                 **kwargs)
         # Service has been enabled
         ret['changes'] = {}
+        after_toggle_enable_status = __salt__['service.enabled'](name, **kwargs)
         # on upstart, certain services like apparmor will always return
         # False, even if correctly activated
         # do not trigger a change
@@ -168,16 +170,14 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     # Service failed to be enabled
+    ret['result'] = False
     if started is True:
-        ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
                           ' but the service is running').format(name)
     elif started is None:
-        ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
                           ' but the service was already running').format(name)
     else:
-        ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
                           ' and the service is dead').format(name)
     return ret
@@ -199,6 +199,9 @@ def _disable(name, started, result=True, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
+    # Set default expected result
+    ret['result'] = result
+
     # is enable/disable available?
     if 'service.disable' not in __salt__ or 'service.disabled' not in __salt__:
         if started is True:
@@ -213,8 +216,8 @@ def _disable(name, started, result=True, **kwargs):
                               ' service {0} is dead').format(name)
         return ret
 
-    before_toggle_disable_status = __salt__['service.disabled'](name)
     # Service can be disabled
+    before_toggle_disable_status = __salt__['service.disabled'](name)
     if before_toggle_disable_status:
         # Service is disabled
         if started is True:
@@ -240,8 +243,6 @@ def _disable(name, started, result=True, **kwargs):
         # Service has been disabled
         ret['changes'] = {}
         after_toggle_disable_status = __salt__['service.disabled'](name)
-        # Service has been disabled
-        ret['changes'] = {}
         # on upstart, certain services like apparmor will always return
         # False, even if correctly activated
         # do not trigger a change
@@ -267,7 +268,6 @@ def _disable(name, started, result=True, **kwargs):
         ret['comment'] = ('Failed when setting service {0} to not start'
                           ' at boot, but the service was already running'
                           ).format(name)
-        return ret
     else:
         ret['comment'] = ('Failed when setting service {0} to not start'
                           ' at boot, and the service is dead').format(name)
@@ -368,12 +368,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, False, result=False, **kwargs))
         elif enable is False:
             ret.update(_disable(name, False, result=False, **kwargs))
-    else:
-        ret['comment'] = 'Started Service {0}'.format(name)
-        if enable is True:
-            ret.update(_enable(name, True, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, True, **kwargs))
+        return ret
+
+    if init_delay:
+        time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
@@ -382,17 +380,27 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     else:
         after_toggle_enable_status = True
     if (
-        (before_toggle_enable_status != after_toggle_enable_status) or
-        (before_toggle_status != after_toggle_status)
+            (before_toggle_enable_status != after_toggle_enable_status) or
+            (before_toggle_status != after_toggle_status)
     ) and not ret.get('changes', {}):
-        ret['changes'][name] = func_ret
+        ret['changes'][name] = after_toggle_status
+
+    if after_toggle_status:
+        ret['comment'] = 'Started Service {0}'.format(name)
+    else:
+        ret['comment'] = 'Service {0} failed to start'.format(name)
+
+    if enable is True:
+        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
+    elif enable is False:
+        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, **kwargs))
 
     if init_delay:
-        time.sleep(init_delay)
         ret['comment'] = (
             '{0}\nDelayed return for {1} seconds'
             .format(ret['comment'], init_delay)
         )
+
     return ret
 
 
@@ -423,7 +431,6 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Check if the service is available
     try:
         if not _available(name, ret):
-            ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -437,6 +444,8 @@ def dead(name, enable=None, sig=None, **kwargs):
         before_toggle_enable_status = __salt__['service.enabled'](name)
     else:
         before_toggle_enable_status = True
+
+    # See if the service is already dead
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
@@ -445,12 +454,12 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret.update(_disable(name, None, **kwargs))
         return ret
 
+    # Run the tests
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    # be sure to stop, in case we mis detected in the check
     func_ret = __salt__['service.stop'](name)
     if not func_ret:
         ret['result'] = False
@@ -459,12 +468,8 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret.update(_enable(name, True, result=False, **kwargs))
         elif enable is False:
             ret.update(_disable(name, True, result=False, **kwargs))
-    else:
-        ret['comment'] = 'Service {0} was killed'.format(name)
-        if enable is True:
-            ret.update(_enable(name, False, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, False, **kwargs))
+        return ret
+
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
     if 'service.enabled' in __salt__:
@@ -472,10 +477,23 @@ def dead(name, enable=None, sig=None, **kwargs):
     else:
         after_toggle_enable_status = True
     if (
-        (before_toggle_enable_status != after_toggle_enable_status) or
-        (before_toggle_status != after_toggle_status)
+            (before_toggle_enable_status != after_toggle_enable_status) or
+            (before_toggle_status != after_toggle_status)
     ) and not ret.get('changes', {}):
-        ret['changes'][name] = func_ret
+        ret['changes'][name] = after_toggle_status
+
+    # be sure to stop, in case we mis detected in the check
+    if after_toggle_status:
+        ret['result'] = False
+        ret['comment'] = 'Service {0} failed to die'.format(name)
+    else:
+        ret['comment'] = 'Service {0} was killed'.format(name)
+
+    if enable is True:
+        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+    elif enable is False:
+        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+
     return ret
 
 
