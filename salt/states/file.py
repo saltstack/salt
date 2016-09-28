@@ -1722,28 +1722,25 @@ def managed(name,
         if not context:
             context = {}
         context['accumulator'] = accum_data[name]
-    if 'file.check_managed_changes' in __salt__:
-        ret['pchanges'] = __salt__['file.check_managed_changes'](
-            name,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            template,
-            context,
-            defaults,
-            __env__,
-            contents,
-            skip_verify,
-            keep_mode,
-            **kwargs
-        )
-    else:
-        ret['pchanges'] = {}
 
     try:
         if __opts__['test']:
+            if 'file.check_managed_changes' in __salt__:
+                ret['pchanges'] = __salt__['file.check_managed_changes'](
+                    name,
+                    source,
+                    source_hash,
+                    user,
+                    group,
+                    mode,
+                    template,
+                    context,
+                    defaults,
+                    __env__,
+                    contents,
+                    skip_verify,
+                    **kwargs
+                )
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
             elif ret['pchanges']:
