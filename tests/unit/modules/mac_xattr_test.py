@@ -55,8 +55,10 @@ class XAttrTestCase(TestCase):
         '''
         with patch.object(salt.utils.mac_utils, 'execute_return_result',
                           MagicMock(return_value='expected results')) as mock:
-            self.assertEqual(xattr.read('/path/to/file', 'com.attr', True),
-                             'expected results')
+            self.assertEqual(
+                xattr.read('/path/to/file', 'com.attr', **{'hex': True}),
+                'expected results'
+            )
             mock.assert_called_once_with('xattr -p -x "com.attr" "/path/to/file"')
 
     @patch('salt.utils.mac_utils.execute_return_result',
