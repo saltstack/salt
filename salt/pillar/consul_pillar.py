@@ -259,16 +259,11 @@ def get_conn(opts, profile):
         pillarenv = opts_merged.get('pillarenv') or 'base'
         params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
 
-    consul_host = params.get('host')
-    consul_port = params.get('port')
-    consul_token = params.get('token')
-
     if HAS_CONSUL:
         # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
-        if CONSUL_VERSION >= '0.4.7':
-            return consul.Consul(host=consul_host, port=consul_port, token=consul_token)
-        else:
-            return consul.Consul(host=consul_host, port=consul_port)
+        if CONSUL_VERSION < '0.4.7' and params.get('target'):
+            params.pop('target')
+        return consul.Consul(**params)
     else:
         raise CommandExecutionError(
             '(unable to import consul, '
