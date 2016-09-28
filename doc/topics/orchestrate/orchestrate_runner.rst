@@ -44,6 +44,18 @@ The ``state.sls``, ``state.highstate``, et al. functions allow you to statefully
 manage each minion and the ``state.orchestrate`` runner allows you to
 statefully manage your entire infrastructure.
 
+Writing SLS Files
+~~~~~~~~~~~~~~~~~
+
+Orchestrate SLS files are stored in the same location as State SLS files. This
+means that both ``file_roots`` and ``gitfs_remotes`` impact what SLS files are
+available to the reactor and orchestrator.
+
+It is recommended to keep reactor and orchestrator SLS files in their own uniquely
+named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``, ``react/``,
+``_reactor/``, etc. Keeping a unique name helps prevent confusion when trying to
+read through this a few years down the road.
+
 Executing the Orchestrate Runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
