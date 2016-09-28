@@ -191,6 +191,14 @@ def _fulfills_version_spec(versions, oper, desired_version,
         if isinstance(versions, dict) and 'version' in versions:
             versions = versions['version']
     for ver in versions:
+        if oper == '==':
+            # support wildcards in desired version
+            limit = desired_version.find('*')
+            if limit == -1:
+                limit = None
+            ver =  ver[:limit]
+            desired_version = desired_version[:limit]
+
         if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
                                        ver2=desired_version,
