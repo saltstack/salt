@@ -20,6 +20,8 @@ configuration file:
 
 All parameters are optional.
 
+The ``consul.token`` requires python-consul >= 0.4.7.
+
 If you have a multi-datacenter Consul cluster you can map your ``pillarenv``s
 to your data centers by providing a dictionary of mappings in ``consul.dc``
 field:
@@ -124,6 +126,7 @@ from salt.utils.dictupdate import update as dict_merge
 try:
     import consul
     HAS_CONSUL = True
+    CONSUL_VERSION = consul.__version__
 except ImportError:
     HAS_CONSUL = False
 
@@ -259,7 +262,11 @@ def get_conn(opts, profile):
         params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
 
     if HAS_CONSUL:
-        return consul.Consul(**params)
+        # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
+        if CONSUL_VERSION >= '0.4.7':
+            return consul.Consul(host=consul_host, port=consul_port, token=consul_token)
+        else:
+            return consul.Consul(host=consul_host, port=consul_port)
     else:
         raise CommandExecutionError(
             '(unable to import consul, '
