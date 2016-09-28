@@ -1159,7 +1159,7 @@ class Minion(MinionBase):
             self.win_proc.append(process)
 
 			
-     def _check_moduleReadyness(self,function_name, minion_instance): 
+     def _check_module_readyness(self,function_name, minion_instance): 
 	'''
         This method check the availability of function with function_name,
         If the function is not available, it run saltutils.sync_modules to
@@ -1184,7 +1184,7 @@ class Minion(MinionBase):
                           log.warning(function_name+' loaded @retries={0}'.format(retries), exc_info_on_loglevel=logging.DEBUG)
                        else:
                           log.warning(function_name+' failed to load after 3 times retries', exc_info_on_loglevel=logging.DEBUG)
-                       break; 
+                       break
                    else:
                        time.sleep(1)
                        msg=function_name+" still not found:"
@@ -1205,7 +1205,7 @@ class Minion(MinionBase):
             minion_instance = cls(opts)
 
         function_name = data['fun']               
-        minion_instance._check_moduleReadyness(function_name,minion_instance)
+        minion_instance._check_module_readyness(function_name, minion_instance)
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
@@ -1358,7 +1358,7 @@ class Minion(MinionBase):
             'success': {},
         }
         for ind in range(0, len(data['fun'])):
-            minion_instance._check_moduleReadyness(data['fun'][ind],minion_instance)
+            minion_instance._check_module_readyness(data['fun'][ind], minion_instance)
 
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
