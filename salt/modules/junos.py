@@ -356,7 +356,7 @@ def install_config(path=None, **kwargs):
         conn.timeout = kwargs['timeout']
 
     if kwargs['template']:
-        options = {'template_path': path}
+        options = {'template_path': path, 'template_vars': __pillar__['proxy']}
     else:
         options = {'path': path}
 
