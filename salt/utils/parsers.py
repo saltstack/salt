@@ -2476,6 +2476,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Pass in extra files to include in the state tarball'
         )
         self.add_option(
+            '--thin-extra-modules',
+            dest='thin_extra_mods',
+            default=None,
+            help='One or comma-separated list of extra Python modules'
+                 'to be included into Thin Salt.')
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
