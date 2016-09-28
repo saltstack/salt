@@ -230,30 +230,41 @@ class CkMinions(object):
                              exact_match=False):
         '''
         Helper function to search for minions in master caches
+        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
+        If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
+        cdir = os.path.join(self.opts['cachedir'], 'minions')
+
+        def list_cached_minions():
+            if not os.path.isdir(cdir):
+                return []
+            return os.listdir(cdir)
 
         if greedy:
-            mlist = []
+            minions = []
             for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                 if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
-                    mlist.append(fn_)
-            minions = set(mlist)
+                    minions.append(fn_)
         elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+            minions = list_cached_minions()
         else:
-            return list()
+            return []
 
         if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
+            if greedy:
+                cminions = list_cached_minions()
+            else:
+                cminions = minions
+            if not cminions:
+                return minions
+            minions = set(minions)
+            for id_ in cminions:
+                if greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
+                    if not greedy:
                         minions.remove(id_)
                     continue
                 search_results = self.serial.load(
@@ -263,9 +274,10 @@ class CkMinions(object):
                                                 expr,
                                                 delimiter=delimiter,
                                                 regex_match=regex_match,
-                                                exact_match=exact_match) and id_ in minions:
+                                                exact_match=exact_match):
                     minions.remove(id_)
-        return list(minions)
+            minions = list(minions)
+        return minions
 
     def _check_grain_minions(self, expr, delimiter, greedy):
         '''
