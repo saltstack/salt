@@ -256,9 +256,9 @@ class PkgModuleTest(integration.ModuleCase,
         if os_family == 'Suse':
             # pkg.latest version returns empty if the latest version is already installed
             vim_version_dict = self.run_function('pkg.latest_version', ['vim'])
-            print('vim_version_dict: {0}'.format(vim_version_dict))
             if vim_version_dict == {}:
-                # Latest version is installed, get its version and construct a version selector so the immediately previous version is selected
+                # Latest version is installed, get its version and construct
+                # a version selector so the immediately previous version is selected
                 vim_version_dict = self.run_function('pkg.info_available', ['vim'])
                 vim_version = 'version=<'+vim_version_dict['vim']['version']
             else:
@@ -268,7 +268,6 @@ class PkgModuleTest(integration.ModuleCase,
 
             # Install a version of vim that should need upgrading
             ret = self.run_function('pkg.install', ['vim', vim_version])
-            print('pkg.install result: {0}'.format(ret))
 
             # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
             ret = self.run_function(func)
