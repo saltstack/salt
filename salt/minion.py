@@ -1893,7 +1893,7 @@ class Minion(MinionBase):
         elif tag.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif package.startswith('__schedule_return'):
+        elif tag.startswith('__schedule_return'):
             # reporting current connection with master
             if data['schedule'].startswith(master_event(type='alive', master='')):
                 if data['return']:
@@ -1948,7 +1948,7 @@ class Minion(MinionBase):
                         master, self.pub_channel = yield self.eval_master(
                                                             opts=self.opts,
                                                             failed=True,
-                                                            failback=package.startswith(master_event(type='failback')))
+                                                            failback=tag.startswith(master_event(type='failback')))
                     except SaltClientError:
                         pass
 
