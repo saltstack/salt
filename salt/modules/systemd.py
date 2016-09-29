@@ -521,6 +521,8 @@ def available(name):
         salt '*' service.available sshd
     '''
     out = _systemctl_status(name).lower()
+    if 'could not be found.' in out:
+        return False
     for line in salt.utils.itertools.split(out, '\n'):
         match = re.match(r'\s+loaded:\s+(\S+)', line)
         if match:
