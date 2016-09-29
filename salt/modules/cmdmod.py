@@ -2718,7 +2718,7 @@ def shell_info(shell):
                             ret['crlversion'] = ret['crlversion'][1::]
                     elif attribute['vname'].lower() == 'pscompatibleversion':
                         # reg attribute does not end in s, the powershell attibute does
-                        ret['pscompatibleversions'] = attribute['vdata'].replace(' ','').split(',')
+                        ret['pscompatibleversions'] = attribute['vdata'].replace(' ', '').split(',')
                     else:
                         # keys are lower case as python is case sensitive the registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
@@ -2767,12 +2767,12 @@ def shell_info(shell):
             ret['version_raw'] = pattern_result.group(1)
 
     if 'version_raw' in ret:
-        version_results=re.match(r'(\d[\d.]*)',ret['version_raw'])
+        version_results = re.match(r'(\d[\d.]*)', ret['version_raw'])
         if version_results:
             ret['installed'] = True
-            ver_list=version_results.group(1).split('.')[:3]
+            ver_list = version_results.group(1).split('.')[:3]
             if len(ver_list) == 1:
-              ver_list.append('0')
+                ver_list.append('0')
             ret['version'] = '.'.join(ver_list[:3])
     else:
         ret['installed'] = None  # Have an unexpect result
