@@ -36,13 +36,13 @@ def __virtual__():
 
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if (
-           powershell_info['installed'] and
-           ('version_major' in powershell_info) and
-           (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
+         powershell_info['installed'] and
+         (distutils.version.StrictVersion(powershell_info['version']) >= distutils.version.StrictVersion('5.0'))
         ):
+        return __virtualname__
+    else:
         return (False, 'Module DSC: Module only works with PowerShell 5 or newer.')
 
-    return __virtualname__
 
 
 def _pshell(cmd, cwd=None, json_depth=2):
@@ -122,9 +122,9 @@ def psversion():
         'replaced by \'cmd.shell_info\'.'
     )
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed'] and 'version_major' in powershell_info:
+    if powershell_info['installed']:
         try:
-            return int(powershell_info['version_major'])
+            return int(powershell_info['version'].split('.')[0])
         except ValueError:
             pass
     return 0
