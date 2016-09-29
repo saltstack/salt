@@ -417,8 +417,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat3 = os.stat(output_file)
             # Mode must have changed since we're creating a new log file
             self.assertNotEqual(stat1.st_mode, stat3.st_mode)
-            # Data was appended to file
-            self.assertEqual(stat1.st_size, stat3.st_size)
         finally:
             if os.path.exists(output_file):
                 os.unlink(output_file)
