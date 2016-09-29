@@ -40,6 +40,12 @@ class PipModuleTest(integration.ModuleCase):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
+    def _check_download_error(ret):
+        '''
+        Checks to see if a download error looks transitory
+        '''
+        return any(w in ret for w in ('URLError'))
+
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
         self.run_function('virtualenv.create', [self.venv_dir])
@@ -78,6 +84,8 @@ class PipModuleTest(integration.ModuleCase):
             'pip.install', requirements=req1_filename, user=this_user,
             no_chown=True, bin_env=self.venv_dir
         )
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
@@ -90,6 +98,8 @@ class PipModuleTest(integration.ModuleCase):
         # Let's create the testing virtualenv
         self.run_function('virtualenv.create', [self.venv_dir])
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         self.assertEqual(ret['retcode'], 0)
         self.assertIn('installed pep8', ret['stdout'])
         ret = self.run_function(
@@ -109,6 +119,8 @@ class PipModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
         )
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
@@ -123,7 +135,8 @@ class PipModuleTest(integration.ModuleCase):
             bin_env=self.venv_dir,
             upgrade=True
         )
-
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
@@ -157,6 +170,8 @@ class PipModuleTest(integration.ModuleCase):
             editable='{0}'.format(','.join(editables)),
             bin_env=self.venv_dir
         )
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn(
@@ -180,6 +195,8 @@ class PipModuleTest(integration.ModuleCase):
             editable='{0}'.format(','.join(editables)),
             bin_env=self.venv_dir
         )
+        if self._check_download_error(ret['stdout']):
+            self.skipTest('Test skipped due to pip download error')
         try:
             self.assertEqual(ret['retcode'], 0)
             for package in ('Blinker', 'SaltTesting', 'pep8'):
