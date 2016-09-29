@@ -30,6 +30,23 @@ Management zpool
               /dev/disk2
               /dev/disk3
 
+    partitionpool:
+      zpool.present:
+        - config:
+            import: false
+            force: true
+        - properties:
+            comment: disk partition salty storage pool
+            ashift: '12'
+            feature@lz4_compress: enabled
+        - filesystem_properties:
+            compression: lz4
+            atime: on
+            relatime: on
+        - layout:
+            disk-0:
+              /dev/disk/by-uuid/3e43ce94-77af-4f52-a91b-6cdbb0b0f41b
+
     simplepool:
       zpool.present:
         - config:
