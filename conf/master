@@ -1022,5 +1022,13 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+
 # Save runner returns to the job cache
 #runner_returns: True
+
+# Permanently include any available Python 3rd party modules into Salt Thin
+# when they are generated for Salt-SSH or other purposes.
+# The modules should be named by the names they are actually imported inside the Python.
+# The value of the parameters can be either one module or a comma separated list of them.
+#thin_extra_mods: foo,bar
+

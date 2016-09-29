@@ -57,7 +57,10 @@ class ServiceTestCase(TestCase):
                 'result': True},
                {'changes': {},
                 'comment': 'The service salt is already running',
-                'name': 'salt', 'result': True}]
+                'name': 'salt', 'result': True},
+               {'changes': 'saltstack',
+                'comment': 'Service salt failed to start', 'name': 'salt',
+                'result': True}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
@@ -98,6 +101,13 @@ class ServiceTestCase(TestCase):
                 with patch.dict(service.__salt__, {'service.status': fmock}):
                     self.assertDictEqual(service.running("salt"), ret[3])
 
+            with patch.dict(service.__opts__, {'test': False}):
+                with patch.dict(service.__salt__, {'service.status': MagicMock(side_effect=[False, False]),
+                                                   'service.enabled': MagicMock(side_effecct=[True, True]),
+                                                   'service.start': MagicMock(return_value='stack')}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.running('salt', True), ret[6])
+
     def test_dead(self):
         '''
             Test to ensure that the named service is dead
@@ -113,8 +123,8 @@ class ServiceTestCase(TestCase):
                 'comment': 'Service salt was killed', 'name': 'salt',
                 'result': True},
                {'changes': {},
-                'comment': 'Service salt was killed', 'name': 'salt',
-                'result': True},
+                'comment': 'Service salt failed to die', 'name': 'salt',
+                'result': False},
                {'changes': 'saltstack',
                 'comment': 'The service salt is already dead', 'name': 'salt',
                 'result': True}]
@@ -149,7 +159,7 @@ class ServiceTestCase(TestCase):
                         self.assertDictEqual(service.dead("salt", True), ret[1])
 
                 with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[True, True, False]),
-                                                   'service.status': MagicMock(side_effect=[True, True, False]),
+                                                   'service.status': MagicMock(side_effect=[True, False, False]),
                                                    'service.stop': MagicMock(return_value="stack")}):
                     with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
                         self.assertDictEqual(service.dead("salt", True), ret[3])
