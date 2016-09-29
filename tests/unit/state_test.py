@@ -108,6 +108,34 @@ class HighStateTestCase(TestCase):
                                                    'state2,state3')
         self.assertEqual(matches, {'env': ['state2', 'state3']})
 
+    def test_show_state_usage(self):
+        # monkey patch sub methods
+        self.highstate.avail = {
+            'base': ['state.a', 'state.b','state.c']
+        }
+
+        def verify_tops(*args, **kwargs):
+            return []
+
+        def get_top(*args, **kwargs):
+            return None
+
+        def top_matches(*args, **kwargs):
+            return {'base': ['state.a', 'state.b']}
+
+        self.highstate.verify_tops = verify_tops
+        self.highstate.get_top = get_top
+        self.highstate.top_matches = top_matches
+
+        # get compile_state_usage() result
+        state_usage_dict = self.highstate.compile_state_usage()
+
+        self.assertEqual(state_usage_dict['base']['count_unused'], 1)
+        self.assertEqual(state_usage_dict['base']['count_used'], 2)
+        self.assertEqual(state_usage_dict['base']['count_all'], 3)
+        self.assertEqual(state_usage_dict['base']['used'], ['state.a', 'state.b'])
+        self.assertEqual(state_usage_dict['base']['unused'], ['state.c'])
+
 
 class TopFileMergeTestCase(TestCase):
     '''

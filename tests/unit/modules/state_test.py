@@ -191,6 +191,13 @@ class MockState(object):
             return "A"
 
         @staticmethod
+        def compile_state_usage():
+            '''
+                Mock compile_state_usage method
+            '''
+            return "A"
+
+        @staticmethod
         def pop_active():
             '''
                 Mock pop_active method
@@ -566,6 +573,21 @@ class StateTestCase(TestCase):
             self.assertRaises(AssertionError, state.show_lowstate)
 
             self.assertTrue(state.show_lowstate())
+
+    def test_show_state_usage(self):
+        '''
+            Test to list out the state usage that will be applied to this minion
+        '''
+
+        mock = MagicMock(side_effect=["A", None, None])
+        with patch.object(state, '_check_queue', mock):
+            self.assertEqual(state.show_state_usage(), "A")
+
+            self.assertRaises(SaltInvocationError,
+                              state.show_state_usage,
+                              pillar="A")
+
+            self.assertEqual(state.show_state_usage(), "A")
 
     def test_sls_id(self):
         '''
