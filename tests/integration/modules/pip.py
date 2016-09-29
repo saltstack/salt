@@ -40,11 +40,11 @@ class PipModuleTest(integration.ModuleCase):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
-    def _check_download_error(ret):
+    def _check_download_error(self, ret):
         '''
         Checks to see if a download error looks transitory
         '''
-        return any(w in ret for w in ('URLError'))
+        return any(w in ret for w in ['URLError'])
 
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
