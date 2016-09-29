@@ -1203,7 +1203,7 @@ class Minion(MinionBase):
         if not minion_instance:
             minion_instance = cls(opts)
 
-        function_name = data['fun']          
+        function_name = data['fun']
         minion_instance._check_module_readyness(function_name, minion_instance)
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
