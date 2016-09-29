@@ -1159,8 +1159,8 @@ class Minion(MinionBase):
             self.win_proc.append(process)
 
 			
-     def _check_module_readyness(self,function_name, minion_instance): 
-	'''
+    def _check_module_readyness(self,function_name, minion_instance): 
+        '''
         This method check the availability of function with function_name,
         If the function is not available, it run saltutils.sync_modules to
         get the module from salt-master. 
