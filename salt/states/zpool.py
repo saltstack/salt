@@ -73,7 +73,7 @@ def __virtual__():
     else:
         return (
             False,
-            '{0} state module can only be loaded on illumos, Solaris, SmartOS, FreeBSD, ...'.format(
+            '{0} state module can only be loaded on illumos, Solaris, SmartOS, FreeBSD, Linux, ...'.format(
                 __virtualname__
             )
         )
