@@ -3516,6 +3516,44 @@ class BaseHighState(object):
 
         return chunks
 
+    def compile_state_usage(self):
+        '''
+        Return all used and unused states for the minion based on the top match data
+        '''
+        err = []
+        top = self.get_top()
+        err += self.verify_tops(top)
+
+        if err:
+            return err
+
+        matches = self.top_matches(top)
+        state_usage = {}
+
+        for saltenv, states in self.avail.items():
+            env_usage = {
+                'used': [],
+                'unused': [],
+                'count_all': 0,
+                'count_used': 0,
+                'count_unused': 0
+            }
+
+            env_matches = matches.get(saltenv)
+
+            for state in states:
+                env_usage['count_all'] += 1
+                if state in env_matches:
+                    env_usage['count_used'] += 1
+                    env_usage['used'].append(state)
+                else:
+                    env_usage['count_unused'] += 1
+                    env_usage['unused'].append(state)
+
+            state_usage[saltenv]= env_usage
+
+        return state_usage
+
 
 class HighState(BaseHighState):
     '''
