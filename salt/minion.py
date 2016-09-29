@@ -1165,32 +1165,32 @@ class Minion(MinionBase):
         get the module from salt-master. 
         '''
         if function_name not in minion_instance.functions:
-          # sync module first. _args = []_kwargs = {}
-          log.warning('could not find '+function_name+' will sync modules from master... ', exc_info_on_loglevel=logging.DEBUG)
-          func_sync=minion_instance.functions['saltutil.sync_modules']
-          args, kwargs = load_args_and_kwargs(
+            # sync module first. _args = []_kwargs = {}
+            log.warning('could not find '+function_name+' will sync modules from master... ', exc_info_on_loglevel=logging.DEBUG)
+            func_sync=minion_instance.functions['saltutil.sync_modules']
+            args, kwargs = load_args_and_kwargs(
                     func_sync,
                     [])
-          func_sync(*args, **kwargs)
-          retries = 0
-          while True:
-              try:
-                  retries += 1
-                  minion_instance.functions, minion_instance.returners, minion_instance.function_errors = minion_instance._load_modules()
-                  log.warning('could not find '+function_name+' will reload modules... ', exc_info_on_loglevel=logging.DEBUG)
-                  if (function_name in minion_instance.functions or retries > 3):
-                      if function_name in minion_instance.functions:
-                          log.warning(function_name+' loaded @retries={0}'.format(retries), exc_info_on_loglevel=logging.DEBUG)
-                      else:
-                          log.warning(function_name+' failed to load after 3 times retries', exc_info_on_loglevel=logging.DEBUG)
-                      break
-                  else:
-                      time.sleep(1)
-                      msg = function_name+" still not found:"
-                      log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-              except:
-                  msg = 'The minion function caused an exception'
-                  log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+            func_sync(*args, **kwargs)
+            retries = 0
+            while True:
+                try:
+                    retries += 1
+                    minion_instance.functions, minion_instance.returners, minion_instance.function_errors = minion_instance._load_modules()
+                    log.warning('could not find '+function_name+' will reload modules... ', exc_info_on_loglevel=logging.DEBUG)
+                    if (function_name in minion_instance.functions or retries > 3):
+                        if function_name in minion_instance.functions:
+                            log.warning(function_name+' loaded @retries={0}'.format(retries), exc_info_on_loglevel=logging.DEBUG)
+                        else:
+                            log.warning(function_name+' failed to load after 3 times retries', exc_info_on_loglevel=logging.DEBUG)
+                        break
+                    else:
+                        time.sleep(1)
+                        msg = function_name+" still not found:"
+                        log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                except:
+                    msg = 'The minion function caused an exception'
+                    log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
 		
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
