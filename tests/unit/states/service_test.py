@@ -101,21 +101,12 @@ class ServiceTestCase(TestCase):
                 with patch.dict(service.__salt__, {'service.status': fmock}):
                     self.assertDictEqual(service.running("salt"), ret[3])
 
-                with contextlib.nested(
-                    patch.dict(service.__opts__, {'test': False}),
-                    patch.dict(
-                        service.__salt__, {
-                            'service.status':
-                            MagicMock(side_effect=[False, False]),
-                            'service.enabled':
-                            MagicMock(side_effect=[True, True]),
-                            'service.start':
-                            MagicMock(return_value="stack")}),
-                    patch.object(
-                        service, '_enable',
-                        MagicMock(return_value={'changes': 'saltstack'}))
-                ):
-                    self.assertDictEqual(service.running("salt", True), ret[6])
+            with patch.dict(service.__opts__, {'test': False}):
+                with patch.dict(service.__salt__, {'service.status': MagicMock(side_effect=[False, False]),
+                                                   'service.enabled': MagicMock(side_effecct=[True, True]),
+                                                   'service.start': MagicMock(return_value='stack')}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.running('salt', True), ret[6])
 
     def test_dead(self):
         '''
