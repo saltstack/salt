@@ -155,7 +155,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
             zpool create mypool mirror /tmp/vdisk0 /tmp/vdisk1 /tmp/vdisk2
 
-        Creating a 3-way mirror! Why you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
+        Creating a 3-way mirror! While you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
 
     '''
     ret = {'name': name,
