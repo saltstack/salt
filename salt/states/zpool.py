@@ -158,7 +158,6 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         Creating a 3-way mirror! Why you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -300,7 +299,6 @@ def absent(name, export=False, force=False):
         force destroy or export
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': None,
