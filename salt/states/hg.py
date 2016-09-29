@@ -13,15 +13,16 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - rev: tip
           - target: /tmp/example_repo
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import shutil
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
@@ -130,12 +131,27 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts):
                 ret,
                 test_result)
 
-    pull_out = __salt__['hg.pull'](target, user=user, identity=identity, opts=opts, repository=name)
+    try:
+        pull_out = __salt__['hg.pull'](target, user=user, identity=identity, opts=opts, repository=name)
+    except CommandExecutionError as err:
+        ret['result'] = False
+        ret['comment'] = err
+        return ret
 
     if rev:
-        __salt__['hg.update'](target, rev, force=clean, user=user)
+        try:
+            __salt__['hg.update'](target, rev, force=clean, user=user)
+        except CommandExecutionError as err:
+            ret['result'] = False
+            ret['comment'] = err
+            return ret
     else:
-        __salt__['hg.update'](target, 'tip', force=clean, user=user)
+        try:
+            __salt__['hg.update'](target, 'tip', force=clean, user=user)
+        except CommandExecutionError as err:
+            ret['result'] = False
+            ret['comment'] = err
+            return ret
 
     new_rev = __salt__['hg.revision'](cwd=target, user=user, rev='.')
 
@@ -172,13 +188,23 @@ def _handle_existing(ret, target, force):
 
 
 def _clone_repo(ret, target, name, user, identity, rev, opts):
-    result = __salt__['hg.clone'](target, name, user=user, identity=identity, opts=opts)
+    try:
+        result = __salt__['hg.clone'](target, name, user=user, identity=identity, opts=opts)
+    except CommandExecutionError as err:
+        ret['result'] = False
+        ret['comment'] = err
+        return ret
 
     if not os.path.isdir(target):
         return _fail(ret, result)
 
     if rev:
-        __salt__['hg.update'](target, rev, user=user)
+        try:
+            __salt__['hg.update'](target, rev, user=user)
+        except CommandExecutionError as err:
+            ret['result'] = False
+            ret['comment'] = err
+            return ret
 
     new_rev = __salt__['hg.revision'](cwd=target, user=user)
     message = 'Repository {0} cloned to {1}'.format(name, target)

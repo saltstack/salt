@@ -746,6 +746,16 @@ authentication with minions
 
     ssh_use_home_key: False
 
+``thin_extra_mods``
+-------------------
+
+Default: None
+
+List of additional modules, needed to be included into the Salt Thin.
+Pass a list of importable Python modules that are typically located in
+the `site-packages` Python directory so they will be also always included
+into the Salt Thin, once generated.
+
 Master Security Settings
 ========================
 

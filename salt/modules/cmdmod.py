@@ -21,6 +21,7 @@ import traceback
 import fnmatch
 import base64
 import re
+import tempfile
 
 # Import salt libs
 import salt.utils
@@ -28,7 +29,8 @@ import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
 from salt.utils import vt
-from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
+    SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
@@ -2032,8 +2034,8 @@ def script(source,
 
     def _cleanup_tempfile(path):
         try:
-            os.remove(path)
-        except (IOError, OSError) as exc:
+            __salt__['file.remove'](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
             log.error(
                 'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
                     path,
@@ -2050,6 +2052,12 @@ def script(source,
             )
         kwargs.pop('__env__')
 
+    if salt.utils.is_windows() and runas and cwd is None:
+        cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
+        __salt__['win_dacl.add_ace'](
+            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
+            'FOLDER&SUBFOLDERS&FILES')
+
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
@@ -2062,7 +2070,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2071,7 +2082,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2098,7 +2112,10 @@ def script(source,
                bg=bg,
                password=password,
                **kwargs)
-    _cleanup_tempfile(path)
+    if salt.utils.is_windows() and runas:
+        _cleanup_tempfile(cwd)
+    else:
+        _cleanup_tempfile(path)
     return ret
 
 

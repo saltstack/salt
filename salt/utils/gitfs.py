@@ -660,6 +660,17 @@ class GitProvider(object):
         '''
         raise NotImplementedError()
 
+    def get_checkout_target(self):
+        '''
+        Resolve dynamically-set branch
+        '''
+        if self.branch == '__env__':
+            target = self.opts.get('environment') or 'base'
+            return self.opts['{0}_base'.format(self.role)] \
+                if target == 'base' \
+                else target
+        return self.branch
+
     def get_tree(self, tgt_env):
         '''
         This function must be overridden in a sub-class
@@ -713,6 +724,7 @@ class GitPython(GitProvider):
         GitPython when running these functions vary in different versions of
         GitPython.
         '''
+        tgt_ref = self.get_checkout_target()
         try:
             head_sha = self.repo.rev_parse('HEAD').hexsha
         except Exception:
@@ -720,11 +732,11 @@ class GitPython(GitProvider):
             # we fetch first before ever checking anything out.
             head_sha = None
 
-        # 'origin/' + self.branch ==> matches a branch head
-        # 'tags/' + self.branch + '@{commit}' ==> matches tag's commit
+        # 'origin/' + tgt_ref ==> matches a branch head
+        # 'tags/' + tgt_ref + '@{commit}' ==> matches tag's commit
         for rev_parse_target, checkout_ref in (
-                ('origin/' + self.branch, 'origin/' + self.branch),
-                ('tags/' + self.branch + '@{commit}', 'tags/' + self.branch)):
+                ('origin/' + tgt_ref, 'origin/' + tgt_ref),
+                ('tags/' + tgt_ref, 'tags/' + tgt_ref)):
             try:
                 target_sha = self.repo.rev_parse(rev_parse_target).hexsha
             except Exception:
@@ -768,7 +780,7 @@ class GitPython(GitProvider):
             return self.check_root()
         log.error(
             'Failed to checkout %s from %s remote \'%s\': remote ref does '
-            'not exist', self.branch, self.role, self.id
+            'not exist', tgt_ref, self.role, self.id
         )
         return None
 
@@ -1024,9 +1036,10 @@ class Pygit2(GitProvider):
         '''
         Checkout the configured branch/tag
         '''
-        local_ref = 'refs/heads/' + self.branch
-        remote_ref = 'refs/remotes/origin/' + self.branch
-        tag_ref = 'refs/tags/' + self.branch
+        tgt_ref = self.get_checkout_target()
+        local_ref = 'refs/heads/' + tgt_ref
+        remote_ref = 'refs/remotes/origin/' + tgt_ref
+        tag_ref = 'refs/tags/' + tgt_ref
 
         try:
             local_head = self.repo.lookup_reference('HEAD')
@@ -1193,7 +1206,7 @@ class Pygit2(GitProvider):
         except Exception as exc:
             log.error(
                 'Failed to checkout {0} from {1} remote \'{2}\': {3}'.format(
-                    self.branch,
+                    tgt_ref,
                     self.role,
                     self.id,
                     exc
@@ -1203,7 +1216,7 @@ class Pygit2(GitProvider):
             return None
         log.error(
             'Failed to checkout {0} from {1} remote \'{2}\': remote ref '
-            'does not exist'.format(self.branch, self.role, self.id)
+            'does not exist'.format(tgt_ref, self.role, self.id)
         )
         return None
 
