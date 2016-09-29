@@ -1188,7 +1188,7 @@ class Minion(MinionBase):
                         time.sleep(1)
                         msg = function_name+" still not found:"
                         log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                except:
+                except Exception as err:
                     msg = 'The minion function caused an exception'
                     log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
 
