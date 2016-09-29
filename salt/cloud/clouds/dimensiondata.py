@@ -18,6 +18,8 @@ using the existing Libcloud driver for Dimension Data.
       region: dd-na
       driver: dimensiondata
 
+:maintainer: Anthony Shaw <anthonyshaw@apache.org>
+:depends: libcloud >= 1.2.1
 '''
 
 # Import python libs
@@ -171,12 +173,29 @@ def create(vm_):
         location = conn.ex_get_location_by_id(vm_['location'])
         images = conn.list_images(location=location)
         image = [x for x in images if x.id == vm_['image']][0]
-        networks = conn.ex_list_network_domains(location=location)
-        network_domain = [y for y in networks if y.name ==
-                          vm_['network_domain']][0]
-        # Use the first VLAN in the network domain
-        vlan = conn.ex_list_vlans(location=location,
-                                  network_domain=network_domain)[0]
+        network_domains = conn.ex_list_network_domains(location=location)
+        try:
+            network_domain = [y for y in network_domains
+                              if y.name == vm_['network_domain']][0]
+        except IndexError:
+            network_domain = conn.ex_create_network_domain(
+                location=location,
+                name=vm_['network_domain'],
+                plan='ADVANCED',
+                description=''
+            )
+
+        try:
+            vlan = [y for y in conn.ex_list_vlans(
+                location=location,
+                network_domain=network_domain)
+                    if y.name == vm_['vlan']][0]
+        except (IndexError, KeyError):
+            # Use the first VLAN in the network domain
+            vlan = conn.ex_list_vlans(
+                location=location,
+                network_domain=network_domain)[0]
+
         kwargs = {
             'name': vm_['name'],
             'image': image,
