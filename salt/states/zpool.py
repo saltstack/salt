@@ -44,8 +44,7 @@ Management zpool
             atime: on
             relatime: on
         - layout:
-            disk-0:
-              /dev/disk/by-uuid/3e43ce94-77af-4f52-a91b-6cdbb0b0f41b
+            - /dev/disk/by-uuid/3e43ce94-77af-4f52-a91b-6cdbb0b0f41b
 
     simplepool:
       zpool.present:
@@ -181,7 +180,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     # parse layout
     if layout:
         for root_dev in layout:
-            if '-' not in root_dev:
+            if root_dev.count('-') != 1:
                 continue
             layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
 
@@ -258,7 +257,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                     params = []
                     params.append(name)
                     for root_dev in layout:
-                        if '-' in root_dev:  # special device
+                        if root_dev.count('-') == 1:  # special device
                             # NOTE: accomidate non existing 'disk' vdev
                             if root_dev.split('-')[0] != 'disk':
                                 params.append(root_dev.split('-')[0])  # add the type by stripping the ID
