@@ -152,6 +152,7 @@ import logging
 import salt.returners
 import salt.utils.jid
 import salt.exceptions
+from salt.ext.six import string_types
 
 # Import third party libs
 try:
@@ -200,9 +201,15 @@ def _get_options(ret=None):
                                                    __salt__=__salt__,
                                                    __opts__=__opts__,
                                                    defaults=defaults)
-    # Ensure port is an int
-    if 'port' in _options:
-        _options['port'] = int(_options['port'])
+    # post processing
+    for k, v in _options.iteritems():
+        if isinstance(v, string_types) and v.lower() == 'none':
+            # Ensure 'None' is rendered as None
+            _options[k] = None
+        if k == 'port':
+            # Ensure port is an int
+            _options[k] = int(v)
+
     return _options
 
 
