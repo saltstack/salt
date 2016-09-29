@@ -120,6 +120,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+.. code-block:: yaml
+
+    add-saml-provider:
+      boto_iam.saml_provider_present:
+        - name: my_saml_provider
+        - saml_metadata_document: salt://base/files/provider.xml
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
 '''
 
 # Import Python Libs
@@ -129,12 +138,11 @@ import json
 import os
 
 # Import Salt Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
-from salt.ext.six import string_types
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext import six
 
 # Import 3rd party libs
 try:
@@ -146,6 +154,24 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'boto_iam'
+
+
+if six.PY2:
+    def _byteify(thing):
+        # Note that we intentionally don't treat odicts here - they won't compare equal
+        # in many circumstances where AWS treats them the same...
+        if isinstance(thing, dict):
+            return dict([(_byteify(k), _byteify(v)) for k, v in thing.iteritems()])
+        elif isinstance(thing, list):
+            return [_byteify(m) for m in thing]
+        elif isinstance(thing, unicode):  # pylint: disable=W1699
+            return thing.encode('utf-8')
+        else:
+            return thing
+
+else:  # six.PY3
+    def _byteify(text):
+        return text
 
 
 def __virtual__():
@@ -265,7 +291,8 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
     return ret
 
 
-def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
+def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None,
+                 save_format="{2}\n{0}\n{3}\n{1}\n"):
     '''
 
     .. versionadded:: 2015.8.0
@@ -294,6 +321,11 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    save_format (dict)
+        Save format is repeated for each key. Default format is "{2}\n{0}\n{3}\n{1}\n",
+        where {0} and {1} are placeholders for new key_id and key respectively,
+        whereas {2} and {3} are "key_id-{number}" and 'key-{number}' strings kept for compatibility.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -337,12 +369,15 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         log.debug('Created is : {0}'.format(created))
         response = 'create_access_key_response'
         result = 'create_access_key_result'
-        new_keys['key-{0}'.format(i)] = created[response][result]['access_key']['access_key_id']
-        new_keys['key_id-{0}'.format(i)] = created[response][result]['access_key']['secret_access_key']
+        new_keys[str(i)] = {}
+        new_keys[str(i)]['key_id'] = created[response][result]['access_key']['access_key_id']
+        new_keys[str(i)]['secret_key'] = created[response][result]['access_key']['secret_access_key']
     try:
         with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
-            for key_id, access_key in new_keys.items():
-                _wrf.write('{0}\n{1}\n'.format(key_id, access_key))
+            for key_num, key in new_keys.items():
+                key_id = key['key_id']
+                secret_key = key['secret_key']
+                _wrf.write(save_format.format(key_id, secret_key, 'key_id-{0}'.format(key_num), 'key-{0}'.format(key_num)))
         ret['comment'] = 'Keys have been written to file {0}/{1}.'.format(save_dir, name)
         ret['result'] = True
         ret['changes'] = new_keys
@@ -513,16 +548,13 @@ def _user_policies_present(name, policies=None, region=None, key=None, keyid=Non
     policies_to_create = {}
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, string_types):
-            dict_policy = json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+        if isinstance(policy, six.string_types):
+            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
-            dict_policy = policy
-        _policy = __salt__['boto_iam.get_user_policy'](
-            name, policy_name, region, key, keyid, profile
-        )
+            dict_policy = _byteify(policy)
+        _policy = _byteify(__salt__['boto_iam.get_user_policy'](name, policy_name, region, key, keyid, profile))
         if _policy != dict_policy:
+            log.debug("Policy mismatch:\n{0}\n{1}".format(_policy, dict_policy))
             policies_to_create[policy_name] = policy
     _list = __salt__['boto_iam.get_all_user_policies'](
         user_name=name, region=region, key=key, keyid=keyid, profile=profile
@@ -761,7 +793,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
                 return ret
     ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} users are set to be removed.'.format(name)])
     existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
-    ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
+    _ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -920,16 +952,13 @@ def _group_policies_present(
     policies_to_create = {}
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
-        if isinstance(policy, string_types):
-            dict_policy = json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+        if isinstance(policy, six.string_types):
+            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
-            dict_policy = policy
-        _policy = __salt__['boto_iam.get_group_policy'](
-            name, policy_name, region, key, keyid, profile
-        )
+            dict_policy = _byteify(policy)
+        _policy = _byteify(__salt__['boto_iam.get_group_policy'](name, policy_name, region, key, keyid, profile))
         if _policy != dict_policy:
+            log.debug("Policy mismatch:\n{0}\n{1}".format(_policy, dict_policy))
             policies_to_create[policy_name] = policy
     _list = __salt__['boto_iam.get_all_group_policies'](
         name, region, key, keyid, profile
@@ -1377,12 +1406,12 @@ def policy_present(name, policy_document, path=None, description=None,
         ret['comment'] = ' '.join([ret['comment'], 'Policy {0} is present.'.format(name)])
         _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
                                                        region, key, keyid, profile).get('policy_version', {})
-        if isinstance(_describe['document'], string_types):
+        if isinstance(_describe['document'], six.string_types):
             describeDict = json.loads(_describe['document'])
         else:
             describeDict = _describe['document']
 
-        if isinstance(policy_document, string_types):
+        if isinstance(policy_document, six.string_types):
             policy_document = json.loads(policy_document)
 
         r = salt.utils.compare_dicts(describeDict, policy_document)
@@ -1480,6 +1509,113 @@ def policy_absent(name,
     ret['changes']['old'] = {'policy': name}
     ret['changes']['new'] = {'policy': None}
     ret['comment'] = 'Policy {0} deleted.'.format(name)
+    return ret
+
+
+def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded::
+
+    Ensure the SAML provider with the specified name is present.
+
+    name (string)
+        The name of the SAML provider.
+
+    saml_metadata_document (string)
+        The xml document of the SAML provider.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if 'salt://' in saml_metadata_document:
+        try:
+            saml_metadata_document = __salt__['cp.get_file_str'](saml_metadata_document)
+            ET.fromstring(saml_metadata_document)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'SAML document file {0} not found or could not be loaded'.format(name)
+            ret['result'] = False
+            return ret
+    for provider in __salt__['boto_iam.list_saml_providers'](region=region,
+                                                             key=key, keyid=keyid,
+                                                             profile=profile):
+        if provider == name:
+            ret['comment'] = 'SAML provider {0} is present.'.format(name)
+            return ret
+    if __opts__['test']:
+        ret['comment'] = 'SAML provider {0} is set to be create.'.format(name)
+        ret['result'] = None
+        return ret
+    created = __salt__['boto_iam.create_saml_provider'](name, saml_metadata_document,
+                                                        region=region, key=key, keyid=keyid,
+                                                        profile=profile)
+    if created:
+        ret['comment'] = 'SAML provider {0} was created.'.format(name)
+        ret['changes']['new'] = name
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'SAML provider {0} failed to be created.'.format(name)
+    return ret
+
+
+def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded::
+
+    Ensure the SAML provider with the specified name is absent.
+
+    name (string)
+        The name of the SAML provider.
+
+    saml_metadata_document (string)
+        The xml document of the SAML provider.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    provider = __salt__['boto_iam.list_saml_providers'](region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
+    if len(provider) == 0:
+        ret['comment'] = 'SAML provider {0} is absent.'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'SAML provider {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_iam.delete_saml_provider'](name, region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
+    if deleted is not False:
+        ret['comment'] = 'SAML provider {0} was deleted.'.format(name)
+        ret['changes']['old'] = name
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'SAML provider {0} failed to be deleted.'.format(name)
     return ret
 
 

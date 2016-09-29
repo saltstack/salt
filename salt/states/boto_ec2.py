@@ -58,6 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.utils
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -846,13 +847,22 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             log.info("EIP not requested.")
 
     if public_ip or allocation_id:
-        r = __salt__['boto_ec2.get_eip_address_info'](
-                addresses=public_ip, allocation_ids=allocation_id,
-                region=region, key=key, keyid=keyid, profile=profile)
+        # This can take a bit to show up, give it a chance to...
+        tries = 10
+        secs = 3
+        for t in range(tries):
+            r = __salt__['boto_ec2.get_eip_address_info'](
+                    addresses=public_ip, allocation_ids=allocation_id,
+                    region=region, key=key, keyid=keyid, profile=profile)
+            if r:
+                break
+            else:
+                log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
+                        tries * secs, public_ip or allocation_id))
+                time.sleep(secs)
         if not r:
             ret['result'] = False
-            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip if
-                    public_ip else allocation_id)
+            ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip or allocation_id)
             return ret
         ip = r[0]['public_ip']
         if r[0].get('instance_id'):
@@ -914,7 +924,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
 
 def instance_absent(name, instance_name=None, instance_id=None,
                     release_eip=False, region=None, key=None, keyid=None,
-                    profile=None):
+                    profile=None, filters=None):
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
@@ -935,8 +945,17 @@ def instance_absent(name, instance_name=None, instance_id=None,
     profile
         (variable) - A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+    filters
+        (dict) - A dict of additional filters to use in matching the instance to
+        delete.
 
-    .. versionadded:: 2016.3.0
+    YAML example fragment:
+
+    .. code-block:: yaml
+        - filters:
+            vpc-id: vpc-abcdef12
+
+    .. versionupdated:: Carbon
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
@@ -951,7 +970,8 @@ def instance_absent(name, instance_name=None, instance_id=None,
         try:
             instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
                                                       region=region, key=key, keyid=keyid,
-                                                      profile=profile, in_states=running_states)
+                                                      profile=profile, in_states=running_states,
+                                                      filters=filters)
         except CommandExecutionError as e:
             ret['result'] = None
             ret['comment'] = ("Couldn't determine current status of instance "
@@ -960,7 +980,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
 
     instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
                                                     key=key, keyid=keyid, profile=profile,
-                                                    return_objs=True)
+                                                    return_objs=True, filters=filters)
     if not len(instances):
         ret['result'] = True
         ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
@@ -993,20 +1013,33 @@ def instance_absent(name, instance_name=None, instance_id=None,
     if release_eip:
         ip = getattr(instance, 'ip_address', None)
         if ip:
-            args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+            base_args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+            public_ip = None
+            alloc_id = None
+            assoc_id = None
             if getattr(instance, 'vpc_id', None):
-                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **args)
-                if len(r):
-                    args.update({'allocation_ids': r[0].allocation_id})
+                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
+                if len(r) and 'allocation_id' in r[0]:
+                    alloc_id = r[0]['allocation_id']
+                    assoc_id = r[0].get('association_id')
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret['result'] = False
                     ret['comment'] = "Can't determine AllocationId for address {0}.".format(ip)
                     return ret
             else:
-                args.update({'public_ip': instance.ip_address})
-            if __salt__['boto_ec2.release_eip_address'](**args):
-                ret['changes']['old'] = {'public_ip': ip}
+                public_ip = instance.ip_address
+
+            if assoc_id:
+                # Race here - sometimes the terminate above will already have dropped this
+                if not __salt__['boto_ec2.disassociate_eip_address'](association_id=assoc_id,
+                                                                     **base_args):
+                    log.warning("Failed to disassociate EIP {0}.".format(ip))
+
+            if __salt__['boto_ec2.release_eip_address'](allocation_id=alloc_id, public_ip=public_ip,
+                                                        **base_args):
+                log.info("Released EIP address {0}".format(public_ip or r[0]['public_ip']))
+                ret['changes']['old']['public_ip'] = public_ip or r[0]['public_ip']
             else:
                 ret['result'] = False
                 ret['comment'] = "Failed to release EIP {0}.".format(ip)
@@ -1113,5 +1146,87 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
         ret['changes'] = {'old': {'volume_id': vol}, 'new': {'volume_id': None}}
     else:
         ret['comment'] = 'Error deleting volume {0}.'.format(vol)
+        ret['result'] = False
+    return ret
+
+
+def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
+                   keyid=None, profile=None):
+    '''
+    Ensure EC2 volume(s) matching the given filters have the defined tags.
+
+    name
+        State definition name.
+
+    tag_maps
+        List of dicts of filters and tags, where 'filters' is a dict suitable for passing
+        to the 'filters' argument of boto_ec2.get_all_volumes(), and 'tags' is a dict of
+        tags to be set on volumes as matched by the given filters.  The filter syntax is
+        extended to permit passing either a list of volume_ids or an instance_name (with
+        instance_name being the Name tag of the instance to which the desired volumes are
+        mapped).  Each mapping in the list is applied separately, so multiple sets of
+        volumes can be all tagged differently with one call to this function.
+
+    YAML example fragment:
+
+    .. code-block:: yaml
+        - filters:
+            attachment.instance_id: i-abcdef12
+          tags:
+            Name: dev-int-abcdef12.aws-foo.com
+        - filters:
+            attachment.device: /dev/sdf
+          tags:
+            ManagedSnapshots: true
+            BillingGroup: bubba.hotep@aws-foo.com
+        - filters:
+            instance_name: prd-foo-01.aws-foo.com
+          tags:
+            Name: prd-foo-01.aws-foo.com
+            BillingGroup: infra-team@aws-foo.com
+        - filters:
+            volume_ids: [ vol-12345689, vol-abcdef12 ]
+          tags:
+            BillingGroup: infra-team@aws-foo.com
+
+    authoritative
+        Should un-declared tags currently set on matched volumes be deleted?  Boolean.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    args = {'tag_maps': tag_maps, 'authoritative': authoritative,
+            'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+
+    if __opts__['test']:
+        args['dry_run'] = True
+        r = __salt__['boto_ec2.set_volumes_tags'](**args)
+        if r.get('changes'):
+            ret['comment'] = 'The following changes would be applied: {0}'.format(r)
+        return ret
+    r = __salt__['boto_ec2.set_volumes_tags'](**args)
+    if r['success'] is True:
+        ret['comment'] = 'Tags applied.'
+        ret['changes'] = r['changes']
+    else:
+        ret['comment'] = 'Error updating requested volume tags.'
         ret['result'] = False
     return ret

@@ -120,9 +120,8 @@ def _write_file(folder, filename, data):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    fout = salt.utils.fopen(path, 'w')
-    fout.write(data)
-    fout.close()
+    with salt.utils.fopen(path, 'w') as fp_:
+        fp_.write(data)
 
     return 0
 

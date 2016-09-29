@@ -84,7 +84,6 @@ def _cleanup_destdir(name):
 def extracted(name,
               source,
               archive_format,
-              archive_user=None,
               password=None,
               user=None,
               group=None,
@@ -94,6 +93,7 @@ def extracted(name,
               if_missing=None,
               keep=False,
               trim_output=False,
+              skip_verify=False,
               source_hash_update=None,
               use_cmd_unzip=False,
               **kwargs):
@@ -175,6 +175,13 @@ def extracted(name,
 
         .. versionadded:: 2016.3.0
 
+    skip_verify:False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.4
+
     archive_format
         ``tar``, ``zip`` or ``rar``
 
@@ -250,12 +257,12 @@ def extracted(name,
     use_cmd_unzip
         When archive_format is zip, setting this flag to True will use the archive.cmd_unzip module function
 
-        .. versionadded:: Boron
+        .. versionadded:: Carbon
 
     kwargs
         kwargs to pass to the archive.unzip or archive.unrar function
 
-        .. versionadded:: Boron
+        .. versionadded:: Carbon
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -326,6 +333,7 @@ def extracted(name,
                                                source=source,
                                                source_hash=source_hash,
                                                makedirs=True,
+                                               skip_verify=skip_verify,
                                                saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
@@ -362,7 +370,7 @@ def extracted(name,
                           .format(name.rstrip('/')))
         return ret
     elif not __salt__['file.directory_exists'](name):
-        __salt__['file.makedirs'](name, user=archive_user)
+        __salt__['file.makedirs'](name, user=user, group=group)
         created_destdir = True
 
     log.debug('Extracting {0} to {1}'.format(filename, name))

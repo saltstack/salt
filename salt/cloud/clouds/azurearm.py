@@ -473,7 +473,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     data['network_profile']['network_interfaces'] = ifaces
     data['resource_group'] = resource_group
 
-    salt.utils.cloud.cache_node(
+    __utils__['cloud.cache_node'](
         salt.utils.simple_types_filter(data),
         __active_provider_name__,
         __opts__
@@ -1021,7 +1021,11 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     poller = compconn.virtual_machines.create_or_update(
         vm_['resource_group'], vm_['name'], params
     )
-    poller.wait()
+    try:
+        poller.wait()
+    except CloudError as exc:
+        log.warn('There was a cloud error: {0}'.format(exc))
+        log.warn('This may or may not indicate an actual problem')
 
     try:
         return show_instance(vm_['name'], call='action')
@@ -1052,11 +1056,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -1113,7 +1118,7 @@ def create(vm_):
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
@@ -1129,11 +1134,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1173,7 +1179,7 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
     result.wait()
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     cleanup_disks = config.get_cloud_config_value(
         'cleanup_disks',

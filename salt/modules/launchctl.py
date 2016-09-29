@@ -224,7 +224,10 @@ def status(job_label, runas=None):
 
     if launchctl_data:
         if BEFORE_YOSEMITE:
-            return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+            if six.PY3:
+                return 'PID' in plistlib.loads(launchctl_data)
+            else:
+                return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
         else:
             pattern = '"PID" = [0-9]+;'
             return True if re.search(pattern, launchctl_data) else False

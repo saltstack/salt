@@ -219,7 +219,7 @@ def pvcreate(devices, override=True, **kwargs):
     if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
-    cmd = ['pvcreate']
+    cmd = ['pvcreate', '-y']
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
@@ -347,7 +347,15 @@ def vgextend(vgname, devices):
     return vgdata
 
 
-def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **kwargs):
+def lvcreate(lvname,
+             vgname,
+             size=None,
+             extents=None,
+             snapshot=None,
+             pv=None,
+             thinvolume=False,
+             thinpool=False,
+             **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
@@ -355,17 +363,31 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
 
     .. code-block:: bash
 
-        salt '*' lvm.lvcreate new_volume_name vg_name size=10G
-        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 pv=/dev/sdb
-        salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
+        salt '*' lvm.lvcreate new_volume_name     vg_name size=10G
+        salt '*' lvm.lvcreate new_volume_name     vg_name extents=100 pv=/dev/sdb
+        salt '*' lvm.lvcreate new_snapshot        vg_name snapshot=volume_name size=3G
+
+    .. versionadded:: to_complete
+
+    Support for thin pools and thin volumes
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' lvm.lvcreate new_thinpool_name   vg_name               size=20G thinpool=True
+        salt '*' lvm.lvcreate new_thinvolume_name vg_name/thinpool_name size=10G thinvolume=True
+
     '''
     if size and extents:
         return 'Error: Please specify only one of size or extents'
+    if thinvolume and thinpool:
+        return 'Error: Please set only one of thinvolume or thinpool to True'
 
     valid = ('activate', 'chunksize', 'contiguous', 'discards', 'stripes',
              'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
              'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
-             'readahead', 'regionsize', 'thin', 'thinpool', 'type',
+             'readahead', 'regionsize', 'type',
              'virtualsize', 'zero')
     no_parameter = ('noudevsync', 'ignoremonitoring', )
 
@@ -377,14 +399,25 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
             elif k in valid:
                 extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
 
-    cmd = [salt.utils.which('lvcreate'), '-n', lvname]
+    cmd = [salt.utils.which('lvcreate')]
+
+    if thinvolume:
+        cmd.extend(['--thin', '-n', lvname])
+    elif thinpool:
+        cmd.extend(['--thinpool', lvname])
+    else:
+        cmd.extend(['-n', lvname])
 
     if snapshot:
         cmd.extend(['-s', '{0}/{1}'.format(vgname, snapshot)])
     else:
         cmd.append(vgname)
 
-    if size:
+    if size and thinvolume:
+        cmd.extend(['-V', '{0}'.format(size)])
+    elif extents and thinvolume:
+        return 'Error: Thin volume size cannot be specified as extents'
+    elif size:
         cmd.extend(['-L', '{0}'.format(size)])
     elif extents:
         cmd.extend(['-l', '{0}'.format(extents)])

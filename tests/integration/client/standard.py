@@ -45,7 +45,8 @@ class StdTest(integration.ModuleCase):
         # create fake minion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file
-        salt.utils.fopen(key_file, 'a').close()
+        with salt.utils.fopen(key_file, 'a'):
+            pass
         # ping that minion and ensure it times out
         try:
             cmd_iter = self.client.cmd_cli(
@@ -120,12 +121,13 @@ class StdTest(integration.ModuleCase):
         '''
         Test return/messaging on a disconnected minion
         '''
-        test_ret = {'ret': 'Minion did not return. [Not connected]', 'out': 'no_return'}
+        test_ret = {'ret': 'Minion did not return. [No response]', 'out': 'no_return'}
 
         # Create a minion key, but do not start the "fake" minion. This mimics
         # a disconnected minion.
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
-        salt.utils.fopen(key_file, 'a').close()
+        with salt.utils.fopen(key_file, 'a'):
+            pass
 
         # ping disconnected minion and ensure it times out and returns with correct message
         try:

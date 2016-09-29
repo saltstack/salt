@@ -32,6 +32,7 @@ try:
     import boto
     import boto3
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -42,6 +43,7 @@ except ImportError:
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
+required_botocore_version = '1.4.41'
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +65,11 @@ def _has_required_boto():
         return False
     elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
         return False
+    elif LooseVersion(found_botocore_version) < LooseVersion(required_botocore_version):
+        return False
     else:
         return True
+
 
 if _has_required_boto():
     region = 'us-east-1'
@@ -102,7 +107,32 @@ if _has_required_boto():
                       actions=[{'lambda': {'functionArn': 'arn:aws:::function'}}],
                       ruleDisabled=True)
 
+    thing_type_name = 'test_thing_type'
+    thing_type_desc = 'test_thing_type_desc'
+    thing_type_attr_1 = 'test_thing_type_search_attr_1'
+    thing_type_ret = dict(
+        thingTypeName=thing_type_name,
+        thingTypeProperties=dict(
+            thingTypeDescription=thing_type_desc,
+            searchableAttributes=[thing_type_attr_1],
+        ),
+        thingTypeMetadata=dict(
+            deprecated=False,
+            creationDate='test_thing_type_create_date'
+        )
+    )
+    thing_type_arn = 'test_thing_type_arn'
+    create_thing_type_ret = dict(
+        thingTypeName=thing_type_name,
+        thingTypeArn=thing_type_arn
+    )
 
+
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto3_version))
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTestCaseBase(TestCase):
     conn = None
 
@@ -128,11 +158,129 @@ class BotoIoTTestCaseMixin(object):
     pass
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
+    '''
+    TestCase for salt.modules.boto_iot module
+    '''
+
+    def test_that_when_checking_if_a_thing_type_exists_and_a_thing_type_exists_the_thing_type_exists_method_returns_true(self):
+        '''
+        Tests checking iot thing type existence when the iot thing type already exists
+        '''
+        self.conn.describe_thing_type.return_value = thing_type_ret
+        result = boto_iot.thing_type_exists(thingTypeName=thing_type_name, **conn_parameters)
+
+        self.assertTrue(result['exists'])
+
+    def test_that_when_checking_if_a_thing_type_exists_and_a_thing_type_does_not_exist_the_thing_type_exists_method_returns_false(self):
+        '''
+        Tests checking iot thing type existence when the iot thing type does not exist
+        '''
+        self.conn.describe_thing_type.side_effect = not_found_error
+        result = boto_iot.thing_type_exists(thingTypeName='non existent thing type', **conn_parameters)
+
+        self.assertFalse(result['exists'])
+
+    def test_that_when_checking_if_a_thing_type_exists_and_boto3_returns_an_error_the_thing_type_exists_method_returns_error(self):
+        '''
+        Tests checking iot thing type existence when boto returns an error
+        '''
+        self.conn.describe_thing_type.side_effect = ClientError(error_content, 'describe_thing_type')
+        result = boto_iot.thing_type_exists(thingTypeName='mythingtype', **conn_parameters)
+
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('describe_thing_type'))
+
+    def test_that_when_describing_thing_type_and_thing_type_exists_the_describe_thing_type_method_returns_thing_type(self):
+        '''
+        Tests describe thing type for an existing thing type
+        '''
+        self.conn.describe_thing_type.return_value = thing_type_ret
+        result = boto_iot.describe_thing_type(thingTypeName=thing_type_name, **conn_parameters)
+
+        self.assertEqual(result.get('thing_type'), thing_type_ret)
+
+    def test_that_when_describing_thing_type_and_thing_type_does_not_exists_the_describe_thing_type_method_returns_none(self):
+        '''
+        Tests describe thing type for an non existent thing type
+        '''
+        self.conn.describe_thing_type.side_effect = not_found_error
+        result = boto_iot.describe_thing_type(thingTypeName='non existent thing type', **conn_parameters)
+
+        self.assertEqual(result.get('thing_type'), None)
+
+    def test_that_when_describing_thing_type_and_boto3_returns_error_an_error_the_describe_thing_type_method_returns_error(self):
+        self.conn.describe_thing_type.side_effect = ClientError(error_content, 'describe_thing_type')
+        result = boto_iot.describe_thing_type(thingTypeName='mythingtype', **conn_parameters)
+
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('describe_thing_type'))
+
+    def test_that_when_creating_a_thing_type_succeeds_the_create_thing_type_method_returns_true(self):
+        '''
+        tests True when thing type created
+        '''
+        self.conn.create_thing_type.return_value = create_thing_type_ret
+        result = boto_iot.create_thing_type(thingTypeName=thing_type_name,
+                                            thingTypeDescription=thing_type_desc,
+                                            searchableAttributesList=[thing_type_attr_1],
+                                            **conn_parameters)
+        self.assertTrue(result['created'])
+        self.assertTrue(result['thingTypeArn'], thing_type_arn)
+
+    def test_that_when_creating_a_thing_type_fails_the_create_thing_type_method_returns_error(self):
+        '''
+        tests False when thing type not created
+        '''
+        self.conn.create_thing_type.side_effect = ClientError(error_content, 'create_thing_type')
+        result = boto_iot.create_thing_type(thingTypeName=thing_type_name,
+                                            thingTypeDescription=thing_type_desc,
+                                            searchableAttributesList=[thing_type_attr_1],
+                                            **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_thing_type'))
+
+    def test_that_when_deprecating_a_thing_type_succeeds_the_deprecate_thing_type_method_returns_true(self):
+        '''
+        tests True when deprecate thing type succeeds
+        '''
+        self.conn.deprecate_thing_type.return_value = {}
+        result = boto_iot.deprecate_thing_type(thingTypeName=thing_type_name,
+                                               undoDeprecate=False,
+                                               **conn_parameters)
+
+        self.assertTrue(result.get('deprecated'))
+        self.assertEqual(result.get('error'), None)
+
+    def test_that_when_deprecating_a_thing_type_fails_the_deprecate_thing_type_method_returns_error(self):
+        '''
+        tests False when thing type fails to deprecate
+        '''
+        self.conn.deprecate_thing_type.side_effect = ClientError(error_content, 'deprecate_thing_type')
+        result = boto_iot.deprecate_thing_type(thingTypeName=thing_type_name,
+                                               undoDeprecate=False,
+                                               **conn_parameters)
+
+        self.assertFalse(result.get('deprecated'))
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('deprecate_thing_type'))
+
+    def test_that_when_deleting_a_thing_type_succeeds_the_delete_thing_type_method_returns_true(self):
+        '''
+        tests True when delete thing type succeeds
+        '''
+        self.conn.delete_thing_type.return_value = {}
+        result = boto_iot.delete_thing_type(thingTypeName=thing_type_name, **conn_parameters)
+
+        self.assertTrue(result.get('deleted'))
+        self.assertEqual(result.get('error'), None)
+
+    def test_that_when_deleting_a_thing_type_fails_the_delete_thing_type_method_returns_error(self):
+        '''
+        tests False when delete thing type fails
+        '''
+        self.conn.delete_thing_type.side_effect = ClientError(error_content, 'delete_thing_type')
+        result = boto_iot.delete_thing_type(thingTypeName=thing_type_name, **conn_parameters)
+        self.assertFalse(result.get('deleted'))
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('delete_thing_type'))
+
+
 class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot module
@@ -481,8 +629,10 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
+                                       ' or equal to version {0}.  The botocore'
+                                       ' module must be greater than or equal to'
+                                       ' version {1}.'
+        .format(required_boto3_version, required_botocore_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''

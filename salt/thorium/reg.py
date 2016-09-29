@@ -17,6 +17,15 @@ __func_alias__ = {
 def set_(name, add, match):
     '''
     Add a value to the named set
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          reg.set:
+            - add: bar
+            - match: my/custom/event
     '''
     ret = {'name': name,
            'changes': {},
@@ -27,7 +36,10 @@ def set_(name, add, match):
         __reg__[name]['val'] = set()
     for event in __events__:
         if salt.utils.expr_match(event['tag'], match):
-            val = event['data']['data'].get(add)
+            try:
+                val = event['data']['data'].get(add)
+            except KeyError:
+                val = event['data'].get(add)
             if val is None:
                 val = 'None'
             ret['changes'][add] = val
@@ -35,15 +47,17 @@ def set_(name, add, match):
     return ret
 
 
-def list_(name, add, match, stamp=False):
+def list_(name, add, match, stamp=False, prune=0):
     '''
     Add the specified values to the named list
 
     If ``stamp`` is True, then the timestamp from the event will also be added
+    if ``prune`` is set to an integer higher than ``0``, then only the last
+        ``prune`` values will be kept in the list.
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         foo:
           reg.list:
@@ -61,14 +75,20 @@ def list_(name, add, match, stamp=False):
         __reg__[name] = {}
         __reg__[name]['val'] = []
     for event in __events__:
+        try:
+            event_data = event['data']['data']
+        except KeyError:
+            event_data = event['data']
         if salt.utils.expr_match(event['tag'], match):
             item = {}
             for key in add:
-                if key in event['data']['data']:
-                    item[key] = event['data']['data'][key]
+                if key in event_data:
+                    item[key] = event_data[key]
                     if stamp is True:
                         item['time'] = event['data']['_stamp']
             __reg__[name]['val'].append(item)
+    if prune > 0:
+        __reg__[name]['val'] = __reg__[name]['val'][:prune]
     return ret
 
 
@@ -77,6 +97,15 @@ def mean(name, add, match):
     Accept a numeric value from the matched events and store a running average
     of the values in the given register. If the specified value is not numeric
     it will be skipped
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          reg.mean:
+            - add: data_field
+            - match: my/custom/event
     '''
     ret = {'name': name,
            'changes': {},
@@ -88,10 +117,14 @@ def mean(name, add, match):
         __reg__[name]['total'] = 0
         __reg__[name]['count'] = 0
     for event in __events__:
+        try:
+            event_data = event['data']['data']
+        except KeyError:
+            event_data = event['data']
         if salt.utils.expr_match(event['tag'], match):
-            if add in event['data']['data']:
+            if add in event_data:
                 try:
-                    comp = int(event['data']['data'])
+                    comp = int(event_data)
                 except ValueError:
                     continue
             __reg__[name]['total'] += comp
@@ -104,9 +137,9 @@ def clear(name):
     '''
     Clear the namespace from the register
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         clearns:
           reg.clear:
@@ -125,9 +158,9 @@ def delete(name):
     '''
     Delete the namespace from the register
 
-    USAGE::
+    USAGE:
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         deletens:
           reg.delete:

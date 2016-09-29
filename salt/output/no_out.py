@@ -14,7 +14,7 @@ def __virtual__():
     return __virtualname__
 
 
-def output(ret):
+def output(ret, **kwargs):  # pylint: disable=unused-argument
     '''
     Don't display data. Used when you only are interested in the
     return.

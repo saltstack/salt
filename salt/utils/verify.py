@@ -23,6 +23,7 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
+from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
@@ -515,8 +516,10 @@ def verify_log(opts):
     '''
     If an insecre logging configuration is found, show a warning
     '''
-    if opts.get('log_level') in ('garbage', 'trace', 'debug'):
-        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
+    level = LOG_LEVELS.get(opts.get('log_level').lower(), logging.NOTSET)
+
+    if level < logging.INFO:
+        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
 def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):

@@ -35,7 +35,7 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'SUSE': ['aalib', 'python-pssh'],
+    'Suse': ['aalib', 'python-pssh'],
     'MacOS': ['libpng', 'jpeg'],
     'Windows': ['firefox', '7zip'],
 }
@@ -596,6 +596,36 @@ class PkgTest(integration.ModuleCase,
                 ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'],
                 'Package {0} is already up-to-date'.format(target)
             )
+
+    @requires_salt_modules('pkg.group_install')
+    @requires_system_grains
+    def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
+        '''
+        Tests that a CommandExecutionError is caught and the state returns False when
+        the package group is missing. Before this fix, the state would stacktrace.
+        See Issue #35819 for bug report.
+        '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
+        # Group install not available message
+        grp_install_msg = 'pkg.group_install not available for this platform'
+
+        # Run the pkg.group_installed state with a fake package group
+        ret = self.run_state('pkg.group_installed', name='handle_missing_pkg_group',
+                             skip=['foo-bar-baz'])
+        ret_comment = ret['pkg_|-handle_missing_pkg_group_|-handle_missing_pkg_group_|-group_installed']['comment']
+
+        # Not all package managers support group_installed. Skip this test if not supported.
+        if ret_comment == grp_install_msg:
+            self.skipTest(grp_install_msg)
+
+        # Test state should return False and should have the right comment
+        self.assertSaltFalseReturn(ret)
+        self.assertEqual(ret_comment, 'An error was encountered while installing/updating group '
+                                      '\'handle_missing_pkg_group\': Group \'handle_missing_pkg_group\' '
+                                      'not found.')
 
 if __name__ == '__main__':
     from integration import run_tests

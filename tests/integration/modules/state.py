@@ -28,6 +28,11 @@ class StateModuleTest(integration.ModuleCase,
 
     maxDiff = None
 
+    @classmethod
+    def setUpClass(cls):
+        mod_case = integration.ModuleCase()
+        mod_case.run_function('saltutil.sync_all')
+
     def test_show_highstate(self):
         '''
         state.show_highstate
@@ -112,9 +117,19 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        if salt.utils.is_windows():
+            self.run_function('state.request', mods='modules.state.requested_win')
+        else:
+            self.run_function('state.request', mods='modules.state.requested')
+
         ret = self.run_function('state.run_request')
-        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+
+        if salt.utils.is_windows():
+            key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
+        else:
+            key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
+
+        result = ret[key]['result']
         self.assertTrue(result)
 
     def test_run_request_failed_no_request_staged(self):
@@ -145,17 +160,33 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual(textwrap.dedent('''\
+        with salt.utils.fopen(testfile, 'r') as fp_:
+            testfile_contents = fp_.read()
+
+        contents = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
+            ''')
 
+        if not salt.utils.is_windows():
+            contents += os.linesep
+
+        contents += textwrap.dedent('''\
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
             fi
-            '''), salt.utils.fopen(testfile, 'r').read())
+            ''')
+
+        if salt.utils.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
+        self.assertMultiLineEqual(
+                contents, testfile_contents)
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -164,17 +195,10 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual(textwrap.dedent('''\
-            # set variable identifying the chroot you work in (used in the prompt below)
-            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-                debian_chroot=$(cat /etc/debian_chroot)
-            fi
+        with salt.utils.fopen(testfile, 'r') as fp_:
+            testfile_contents = fp_.read()
 
-            # enable bash completion in interactive shells
-            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-                . /etc/bash_completion
-            fi
-            '''), salt.utils.fopen(testfile, 'r').read())
+        self.assertMultiLineEqual(contents, testfile_contents)
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -199,7 +223,7 @@ class StateModuleTest(integration.ModuleCase,
         )
 
     def test_issue_1879_too_simple_contains_check(self):
-        contents = textwrap.dedent('''\
+        expected = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
@@ -209,6 +233,12 @@ class StateModuleTest(integration.ModuleCase,
                 . /etc/bash_completion
             fi
             ''')
+
+        if salt.utils.is_windows():
+            new_contents = expected.splitlines()
+            expected = os.linesep.join(new_contents)
+            expected += os.linesep
+
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
@@ -232,10 +262,9 @@ class StateModuleTest(integration.ModuleCase,
 
         # Does it match?
         try:
-            self.assertMultiLineEqual(
-                contents,
-                salt.utils.fopen(testfile, 'r').read()
-            )
+            with salt.utils.fopen(testfile, 'r') as fp_:
+                contents = fp_.read()
+            self.assertMultiLineEqual(expected, contents)
             # Make sure we don't re-append existing text
             ret = self.run_function(
                 'state.sls', mods='issue-1879.step-1', timeout=120
@@ -246,10 +275,10 @@ class StateModuleTest(integration.ModuleCase,
                 'state.sls', mods='issue-1879.step-2', timeout=120
             )
             self.assertSaltTrueReturn(ret)
-            self.assertMultiLineEqual(
-                contents,
-                salt.utils.fopen(testfile, 'r').read()
-            )
+
+            with salt.utils.fopen(testfile, 'r') as fp_:
+                contents = fp_.read()
+            self.assertMultiLineEqual(expected, contents)
         except Exception:
             if os.path.exists(testfile):
                 shutil.copy(testfile, testfile + '.bak')
@@ -321,7 +350,8 @@ class StateModuleTest(integration.ModuleCase,
             'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
         )
 
-        template = salt.utils.fopen(template_path, 'r').read()
+        with salt.utils.fopen(template_path, 'r') as fp_:
+            template = fp_.read()
         try:
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
@@ -362,7 +392,8 @@ class StateModuleTest(integration.ModuleCase,
             'files', 'file', 'base', 'issue-2068-template-str.sls'
         )
 
-        template = salt.utils.fopen(template_path, 'r').read()
+        with salt.utils.fopen(template_path, 'r') as fp_:
+            template = fp_.read()
         try:
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
@@ -998,6 +1029,21 @@ class StateModuleTest(integration.ModuleCase,
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
+
+    def test_multiple_onfail_requisite(self):
+        '''
+        test to ensure state is run even if only one
+        of the onfails fails. This is a test for the issue:
+        https://github.com/saltstack/salt/issues/22370
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple')
+
+        retcode = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'itworked')
 
     def test_onfail_in_requisite(self):
         '''

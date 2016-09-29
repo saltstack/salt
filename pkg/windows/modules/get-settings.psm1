@@ -38,7 +38,8 @@ Function Get-Settings {
 
         # Location of programs on 32 bit Windows
         $32bitPaths = @{
-            "NSISDir" = "C:\Program Files\NSIS"
+            "NSISDir"        = "C:\Program Files\NSIS"
+            "VCforPythonDir" = "C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0"
         }
         $ini.Add("32bitPaths", $32bitPaths)
 
@@ -64,6 +65,7 @@ Function Get-Settings {
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
             "libsodium"  = "libsodium.dll"
+            "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
 
@@ -73,6 +75,7 @@ Function Get-Settings {
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
             "libsodium"  = "libsodium.dll"
+            "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)
 

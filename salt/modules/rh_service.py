@@ -61,11 +61,10 @@ def __virtual__():
         'OEL',
         'SUSE  Enterprise Server',
         'SUSE',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'VirtuozzoLinux'
     ))
     if __grains__['os'] in enable:
-        if __grains__['os'] == 'XenServer':
-            return __virtualname__
 
         if __grains__['os'] == 'SUSE':
             if str(__grains__['osrelease']).startswith('11'):
@@ -74,6 +73,15 @@ def __virtual__():
                 return (False, 'Cannot load rh_service module on SUSE > 11')
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
+
+        if __grains__['os'] == 'XenServer':
+            if osrelease_major >= 7:
+                return (
+                    False,
+                    'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'as virtual \'service\''
+                )
+            return __virtualname__
 
         if __grains__['os'] == 'Fedora':
             if osrelease_major >= 15:

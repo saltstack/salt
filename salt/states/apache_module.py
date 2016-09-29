@@ -16,6 +16,8 @@ Enable and disable apache modules.
       apache_module.disabled:
         - name: cgi
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 from salt.ext.six import string_types
 
@@ -33,6 +35,8 @@ def __virtual__():
 def enabled(name):
     '''
     Ensure an Apache module is enabled.
+
+    .. versionadded:: 2016.3.0
 
     name
         Name of the Apache module
@@ -66,11 +70,10 @@ def enabled(name):
 
 def enable(name):
     '''
-    Ensure an Apache module is enabled.
+    Ensure an Apache module is enabled. This function is deprecated and will be
+    removed in Salt Nitrogen. Please use the ``enabled`` state function instead.
 
-    .. warning::
-
-        This function is deprecated and will be removed in Salt Nitrogen.
+    .. deprecated:: 2016.3.0
 
     name
         Name of the Apache module

@@ -17,7 +17,11 @@ import logging
 import os
 import time
 import difflib
-from pwd import getpwuid
+try:
+    from pwd import getpwuid
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
 import salt.utils
@@ -46,26 +50,45 @@ SNAPPER_DBUS_OBJECT = 'org.opensuse.Snapper'
 SNAPPER_DBUS_PATH = '/org/opensuse/Snapper'
 SNAPPER_DBUS_INTERFACE = 'org.opensuse.Snapper'
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
-bus = None  # pylint: disable=invalid-name
-snapper = None  # pylint: disable=invalid-name
+bus = None
+system_bus_error = None
+snapper = None
+snapper_error = None
 
 if HAS_DBUS:
-    bus = dbus.SystemBus()  # pylint: disable=invalid-name
-    if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
-        snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,  # pylint: disable=invalid-name
-                                                SNAPPER_DBUS_PATH),
-                                 dbus_interface=SNAPPER_DBUS_INTERFACE)
+    try:
+        bus = dbus.SystemBus()
+    except dbus.DBusException as exc:
+        log.error(exc)
+        system_bus_error = exc
+    else:
+        if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
+            try:
+                snapper = dbus.Interface(bus.get_object(SNAPPER_DBUS_OBJECT,
+                                                        SNAPPER_DBUS_PATH),
+                                         dbus_interface=SNAPPER_DBUS_INTERFACE)
+            except (dbus.DBusException, ValueError) as exc:
+                log.error(exc)
+                snapper_error = exc
+        else:
+            snapper_error = 'snapper is missing'
+# pylint: enable=invalid-name
 
 
 def __virtual__():
+    error_msg = 'The snapper module cannot be loaded: {0}'
     if not HAS_DBUS:
-        return (False, 'The snapper module cannot be loaded:'
-                ' missing python dbus module')
+        return False, error_msg.format('missing python dbus module')
     elif not snapper:
-        return (False, 'The snapper module cannot be loaded:'
-                ' missing snapper')
+        return False, error_msg.format(snapper_error)
+    elif not bus:
+        return False, error_msg.format(system_bus_error)
+    elif not HAS_PWD:
+        return False, error_msg.format('pwd module not available')
+
     return 'snapper'
 
 
@@ -229,6 +252,12 @@ def _get_last_snapshot(config='root'):
 def status_to_string(dbus_status):
     '''
     Converts a numeric dbus snapper status into a string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.status_to_string <dbus_status>
     '''
     status_tuple = (
         dbus_status & 0b000000001, dbus_status & 0b000000010, dbus_status & 0b000000100,
@@ -291,7 +320,10 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
 
     Returns the number of the created snapshot.
 
+    CLI example:
+
     .. code-block:: bash
+
         salt '*' snapper.create_snapshot
     '''
     if not userdata:
@@ -374,15 +406,18 @@ def run(function, *args, **kwargs):
     `**kwargs`
         kwargs for the function to call (default: None)
 
-    .. code-block:: bash
-        salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
-
     This  would run append text to /etc/motd using the file.append
     module, and will create two snapshots, pre and post with the associated
     metadata. The jid will be available as salt_jid in the userdata of the
     snapshot.
 
     You can immediately see the changes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
     '''
     config = kwargs.pop("config", "root")
     description = kwargs.pop("description", "snapper.run[{0}]".format(function))
@@ -491,6 +526,12 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
 
         You to undo changes between num_pre and the current version of the
         files use num_post=0.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.undo
     '''
     pre, post = _get_num_interval(config, num_pre, num_post)
 
@@ -543,7 +584,7 @@ def undo_jid(jid, config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -570,7 +611,7 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
     num_post
         last snapshot ID to compare. Default is 0 (current state)
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -653,7 +694,7 @@ def diff_jid(jid, config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -673,7 +714,7 @@ def create_baseline(tag="baseline", config='root'):
     config
         Configuration name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

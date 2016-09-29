@@ -37,6 +37,9 @@ import salt.utils
 import salt.utils.network
 import salt.utils.dns
 
+if salt.utils.is_windows():
+    import salt.utils.win_osinfo
+
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
@@ -62,7 +65,9 @@ if salt.utils.is_windows():
         import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         import win32api
+        import salt.modules.reg
         HAS_WMI = True
+        __salt__['reg.read_value'] = salt.modules.reg.read_value
     except ImportError:
         log.exception(
             'Unable to import Python wmi module, some core grains '
@@ -87,7 +92,10 @@ def _windows_cpudata():
             grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
         except ValueError:
             grains['num_cpus'] = 1
-    grains['cpu_model'] = platform.processor()
+    grains['cpu_model'] = __salt__['reg.read_value'](
+                       "HKEY_LOCAL_MACHINE",
+                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                       "ProcessorNameString").get('vdata')
     return grains
 
 
@@ -392,7 +400,8 @@ def _memdata(osdata):
                     if not len(comps) > 1:
                         continue
                     if comps[0].strip() == 'MemTotal':
-                        grains['mem_total'] = int(comps[1].split()[0]) / 1024
+                        # Use floor division to force output to be an integer
+                        grains['mem_total'] = int(comps[1].split()[0]) // 1024
     elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
@@ -602,7 +611,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             if 'Manufacturer: Bochs' in output:
                 grains['virtual'] = 'kvm'
-            if 'BHYVE  BVXSDT' in output:
+            if 'BHYVE' in output:
                 grains['virtual'] = 'bhyve'
             # Product Name: (oVirt) www.ovirt.org
             # Red Hat Community virtualization Project based on kvm
@@ -866,6 +875,10 @@ def _windows_platform_data():
     Use the platform module for as much as we can.
     '''
     # Provides:
+    #    kernelrelease
+    #    osversion
+    #    osrelease
+    #    osservicepack
     #    osmanufacturer
     #    manufacturer
     #    productname
@@ -876,6 +889,7 @@ def _windows_platform_data():
     #    windowsdomain
     #    motherboard.productname
     #    motherboard.serialnumber
+    #    virtual
 
     if not HAS_WMI:
         return {}
@@ -884,7 +898,7 @@ def _windows_platform_data():
         wmi_c = wmi.WMI()
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
         systeminfo = wmi_c.Win32_ComputerSystem()[0]
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+        # https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
         osinfo = wmi_c.Win32_OperatingSystem()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
         biosinfo = wmi_c.Win32_BIOS()[0]
@@ -892,9 +906,8 @@ def _windows_platform_data():
         timeinfo = wmi_c.Win32_TimeZone()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboard = {}
-        motherboard['product'] = None
-        motherboard['serial'] = None
+        motherboard = {'product': None,
+                       'serial': None}
         try:
             motherboardinfo = wmi_c.Win32_BaseBoard()[0]
             motherboard['product'] = motherboardinfo.Product
@@ -902,13 +915,40 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
-        # the name of the OS comes with a bunch of other data about the install
-        # location. For example:
-        # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
-        (osfullname, _) = osinfo.Name.split('|', 1)
-        osfullname = osfullname.strip()
+        os_release = platform.release()
+        info = salt.utils.win_osinfo.get_os_version_info()
+
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # Check for Python >=2.7.12 or >=3.5.2
+        ver = pythonversion()['pythonversion']
+        if ((six.PY2 and
+                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
+            or
+            (six.PY3 and
+                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
+            # (Product Type 1 is Desktop, Everything else is Server)
+            if info['ProductType'] > 1:
+                server = {'Vista': '2008Server',
+                          '7': '2008ServerR2',
+                          '8': '2012Server',
+                          '8.1': '2012ServerR2',
+                          '10': '2016Server'}
+                os_release = server.get(os_release,
+                                        'Grain not found. Update lookup table '
+                                        'in the `_windows_platform_data` '
+                                        'function in `grains\\core.py`')
+
+        service_pack = None
+        if info['ServicePackMajor'] > 0:
+            service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
 
         grains = {
+            'kernelrelease': osinfo.Version,
+            'osversion': osinfo.Version,
+            'osrelease': os_release,
+            'osservicepack': service_pack,
             'osmanufacturer': osinfo.Manufacturer,
             'manufacturer': systeminfo.Manufacturer,
             'productname': systeminfo.Model,
@@ -916,12 +956,12 @@ def _windows_platform_data():
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
             'serialnumber': biosinfo.SerialNumber,
-            'osfullname': osfullname,
+            'osfullname': osinfo.Caption,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
             'motherboard': {
                 'productname': motherboard['product'],
-                'serialnumber': motherboard['serial']
+                'serialnumber': motherboard['serial'],
             }
         }
 
@@ -999,6 +1039,7 @@ _OS_NAME_MAP = {
     'enterprise': 'OEL',
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
+    'cloudlinux': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
@@ -1019,6 +1060,7 @@ _OS_FAMILY_MAP = {
     'Fedora': 'RedHat',
     'Chapeau': 'RedHat',
     'Korora': 'RedHat',
+    'FedBerry': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
@@ -1034,15 +1076,15 @@ _OS_FAMILY_MAP = {
     'VMwareESX': 'VMware',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
-    'SLES': 'SUSE',
-    'SUSE Enterprise Server': 'SUSE',
-    'SUSE  Enterprise Server': 'SUSE',
-    'SLED': 'SUSE',
-    'openSUSE': 'SUSE',
-    'SUSE': 'SUSE',
-    'openSUSE Leap': 'SUSE',
-    'openSUSE Tumbleweed': 'SUSE',
-    'SLES_SAP': 'SUSE',
+    'SLES': 'Suse',
+    'SUSE Enterprise Server': 'Suse',
+    'SUSE  Enterprise Server': 'Suse',
+    'SLED': 'Suse',
+    'openSUSE': 'Suse',
+    'SUSE': 'Suse',
+    'openSUSE Leap': 'Suse',
+    'openSUSE Tumbleweed': 'Suse',
+    'SLES_SAP': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1149,11 +1191,8 @@ def os_data():
         grains['osrelease'] = 'proxy'
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
+        grains['osfullname'] = 'proxy'
     elif salt.utils.is_windows():
-        with salt.utils.winapi.Com():
-            wmi_c = wmi.WMI()
-            grains['osrelease'] = grains['kernelrelease']
-            grains['osversion'] = grains['kernelrelease'] = wmi_c.Win32_OperatingSystem()[0].Version
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
@@ -1177,6 +1216,8 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['os'],
             ver=grains['osrelease'])
+
+        grains['init'] = 'Windows'
 
         return grains
     elif salt.utils.is_linux():
@@ -1279,7 +1320,12 @@ def os_data():
                             grains[
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
-            if 'lsb_distrib_id' not in grains:
+            if grains.get('lsb_distrib_description', '').lower().startswith('antergos'):
+                # Antergos incorrectly configures their /etc/lsb-release,
+                # setting the DISTRIB_ID to "Arch". This causes the "os" grain
+                # to be incorrectly set to "Arch".
+                grains['osfullname'] = 'Antergos Linux'
+            elif 'lsb_distrib_id' not in grains:
                 if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
                     os_release = _parse_os_release()
                     if 'NAME' in os_release:
@@ -1394,8 +1440,7 @@ def os_data():
                 grains.pop('lsb_distrib_release', None)
             grains['osrelease'] = \
                 grains.get('lsb_distrib_release', osrelease).strip()
-        grains['oscodename'] = grains.get('lsb_distrib_codename',
-                                          oscodename).strip()
+        grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
@@ -1449,6 +1494,7 @@ def os_data():
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
+        grains['init'] = 'launchd'
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
@@ -1512,9 +1558,11 @@ def os_data():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
-        grains['osmajorrelease'] = grains['osrelease_info'][0]
-        os_name = 'os' if grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname'
-        grains['osfinger'] = '{0}-{1}'.format(grains[os_name], grains['osrelease_info'][0])
+        grains['osmajorrelease'] = str(grains['osrelease_info'][0])  # This will be an integer in the two releases
+        os_name = grains['os' if grains.get('os') in (
+            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+        grains['osfinger'] = '{0}-{1}'.format(
+            os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 
     return grains
 
@@ -1584,72 +1632,30 @@ def append_domain():
     return grain
 
 
-def ip4():
+def ip_fqdn():
     '''
-    Return a list of ipv4 addrs
+    Return ip address and FQDN grains
     '''
-
     if salt.utils.is_proxy():
         return {}
 
-    return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
+    ret = {}
+    ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
+    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
 
+    _fqdn = hostname()['fqdn']
+    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
+        key = 'fqdn_ip' + ipv_num
+        if not ret['ipv' + ipv_num]:
+            ret[key] = []
+        else:
+            try:
+                info = socket.getaddrinfo(_fqdn, None, socket_type)
+                ret[key] = list(set(item[4][0] for item in info))
+            except socket.error:
+                ret[key] = []
 
-def fqdn_ip4():
-    '''
-    Return a list of ipv4 addrs of fqdn
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    addrs = []
-    try:
-        hostname_grains = hostname()
-        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
-        addrs = list(set(item[4][0] for item in info))
-    except socket.error:
-        pass
-    return {'fqdn_ip4': addrs}
-
-
-def has_ipv6():
-    '''
-    Check whether IPv6 is supported on this platform.
-
-    .. versionadded:: Carbon
-    '''
-
-    return {'has_ipv6': socket.has_ipv6}
-
-
-def ip6():
-    '''
-    Return a list of ipv6 addrs
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
-
-
-def fqdn_ip6():
-    '''
-    Return a list of ipv6 addrs of fqdn
-    '''
-
-    if salt.utils.is_proxy():
-        return {}
-
-    addrs = []
-    try:
-        hostname_grains = hostname()
-        info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
-        addrs = list(set(item[4][0] for item in info))
-    except socket.error:
-        pass
-    return {'fqdn_ip6': addrs}
+    return ret
 
 
 def ip_interfaces():

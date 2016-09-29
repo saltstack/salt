@@ -20,6 +20,29 @@ def cmd(
         **kwargs):
     '''
     Execute a remote execution command
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.sleep
+            - arg:
+              - 30
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.sleep
+            - kwarg:
+              length: 30
     '''
     ret = {'name': name,
            'changes': {},

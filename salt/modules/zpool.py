@@ -304,28 +304,6 @@ def iostat(zpool=None, sample_time=0):
     return ret
 
 
-def zpool_list():
-    '''
-    .. deprecated:: 2014.7.0
-       Use :py:func:`~salt.modules.zpool.list` instead.
-
-    Return a list of all pools in the system with health status and space usage
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zpool.zpool_list
-    '''
-    salt.utils.warn_until(
-            'Carbon',
-            'The \'zpool_list()\' module function is being deprecated and is '
-            'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
-            'Salt Carbon.'
-        )
-    return list_()
-
-
 def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     '''
     .. versionadded:: 2015.5.0

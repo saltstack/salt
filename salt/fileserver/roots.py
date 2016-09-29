@@ -159,7 +159,7 @@ def update():
             'backend': 'roots'}
 
     # generate the new map
-    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__, __opts__['file_roots'])
 
     old_mtime_map = {}
     # if you have an old map, load that
@@ -327,12 +327,16 @@ def _file_lists(load, form):
             for root, dirs, files in os.walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(__opts__, d)]
+
                 dir_rel_fn = os.path.relpath(root, path)
                 if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
                     dir_rel_fn = dir_rel_fn.replace('\\', '/')
                 ret['dirs'].append(dir_rel_fn)
                 if len(dirs) == 0 and len(files) == 0:
-                    if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
+                    if dir_rel_fn not in ('.', '..') \
+                            and not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
                         ret['empty_dirs'].append(dir_rel_fn)
                 for fname in files:
                     is_link = os.path.islink(os.path.join(root, fname))
@@ -406,6 +410,8 @@ def symlink_list(load):
             prefix = ''
         # Adopting rsync functionality here and stopping at any encounter of a symlink
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):
+            # Don't walk any directories that match file_ignore_regex or glob
+            dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(__opts__, d)]
             for fname in files:
                 if not os.path.islink(os.path.join(root, fname)):
                     continue

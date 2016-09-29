@@ -43,6 +43,8 @@ import salt.defaults.exitcodes
 
 try:
     import psutil
+    if not hasattr(psutil, 'virtual_memory'):
+        raise ImportError('Version of psutil too old.')
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -84,7 +86,7 @@ def _gather_buffer_space():
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
         total_mem = grains['mem_total']
-    # Return the higher number between 5% of the system memory and 100MB
+    # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
 # For the time being this will be a fixed calculation
@@ -159,6 +161,12 @@ VALID_OPTS = {
     # master
     'syndic_finger': str,
 
+    # The caching mechanism to use for the PKI key store. Can substantially decrease master publish
+    # times. Available types:
+    # 'maint': Runs on a schedule as a part of the maintanence process.
+    # '': Disable the key cache [default]
+    'key_cache': str,
+
     # The user under which the daemon should run
     'user': str,
 
@@ -175,6 +183,11 @@ VALID_OPTS = {
 
     # The directory to store all cache files.
     'cachedir': str,
+
+    # Append minion_id to these directories.  Helps with
+    # multiple proxies and minions running on the same machine.
+    # Allowed elements in the list: pki_dir, cachedir, extension_modules
+    'append_minionid_config_dirs': list,
 
     # Flag to cache jobs locally.
     'cache_jobs': bool,
@@ -221,6 +234,10 @@ VALID_OPTS = {
     # List of startup states
     'sls_list': list,
 
+    # Configuration for snapper in the state system
+    'snapper_states': bool,
+    'snapper_states_config': str,
+
     # A top file to execute if startup_states == 'top'
     'top_file': str,
 
@@ -240,10 +257,10 @@ VALID_OPTS = {
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these modules
     'disable_modules': list,
 
-    # FIXME Does not appear to be implemented
+    # Refuse to load these returners
     'disable_returners': list,
 
     # Tell the loader to only load modules in this list
@@ -429,9 +446,9 @@ VALID_OPTS = {
     'return_retry_timer': int,
     'return_retry_timer_max': int,
 
-    # Specify a returner in which all events will be sent to. Requires that the returner in question
-    # have an event_return(event) function!
-    'event_return': str,
+    # Specify one or more returners in which all events will be sent to. Requires that the returners
+    # in question have an event_return(event) function!
+    'event_return': (list, string_types),
 
     # The number of events to queue up in memory before pushing them down the pipe to an event returner
     # specified by 'event_return'
@@ -498,6 +515,10 @@ VALID_OPTS = {
 
     # The number of hours to keep jobs around in the job cache on the master
     'keep_jobs': int,
+
+    # If the returner supports `clean_old_jobs`, then at cleanup time,
+    # archive the job data before deleting it.
+    'archive_jobs': bool,
 
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
@@ -603,6 +624,7 @@ VALID_OPTS = {
     'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
+    'client_acl_verify': bool,
     'client_acl_blacklist': dict,
     'publisher_acl': dict,
     'publisher_acl_blacklist': dict,
@@ -673,6 +695,9 @@ VALID_OPTS = {
     # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
     'engines': list,
 
+    # Whether or not to store runner returns in the job cache
+    'runner_returns': bool,
+
     'serial': str,
     'search': str,
 
@@ -703,6 +728,8 @@ VALID_OPTS = {
     'winrepo_dir': str,
     'winrepo_dir_ng': str,
     'winrepo_cachefile': str,
+    'winrepo_cache_expire_max': int,
+    'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
     'winrepo_branch': str,
@@ -780,6 +807,7 @@ VALID_OPTS = {
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
+    'ssh_sudo_user': str,
     'ssh_timeout': float,
     'ssh_user': str,
     'ssh_scan_ports': str,
@@ -880,6 +908,11 @@ VALID_OPTS = {
     'proxy_password': str,
     'proxy_port': int,
 
+    # Minion de-dup jid cache max size
+    'minion_jid_queue_hwm': int,
+
+    # Minion data cache driver (one of satl.cache.* modules)
+    'cache': str,
 }
 
 # default configurations
@@ -903,6 +936,7 @@ DEFAULT_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
+    'append_minionid_config_dirs': [],
     'cache_jobs': False,
     'grains_cache': False,
     'grains_cache_expiration': 300,
@@ -939,7 +973,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
     },
-    'top_file_merging_strategy': 'merge',
+    'top_file_merging_strategy': 'default',
     'env_order': [],
     'default_top': 'base',
     'fileserver_limit_traversal': False,
@@ -981,7 +1015,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
-    'hash_type': 'md5',
+    'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -1026,6 +1060,8 @@ DEFAULT_MINION_OPTS = {
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
+    'snapper_states': False,
+    'snapper_states_config': 'root',
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,
@@ -1047,6 +1083,8 @@ DEFAULT_MINION_OPTS = {
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
+    'winrepo_cache_expire_max': 21600,
+    'winrepo_cache_expire_min': 0,
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
@@ -1072,7 +1110,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 2048,
     'transport': 'zeromq',
-    'auth_timeout': 60,
+    'auth_timeout': 5,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
     'auth_safemode': False,
@@ -1115,6 +1153,7 @@ DEFAULT_MINION_OPTS = {
     'proxy_username': '',
     'proxy_password': '',
     'proxy_port': 0,
+    'minion_jid_queue_hwm': 100,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1132,8 +1171,10 @@ DEFAULT_MASTER_OPTS = {
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
+    'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
@@ -1150,7 +1191,7 @@ DEFAULT_MASTER_OPTS = {
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
-    'top_file_merging_strategy': 'merge',
+    'top_file_merging_strategy': 'default',
     'env_order': [],
     'environment': None,
     'default_top': 'base',
@@ -1223,6 +1264,7 @@ DEFAULT_MASTER_OPTS = {
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},
+    'client_acl_verify': True,
     'client_acl_blacklist': {},
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1241,7 +1283,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_ignoresymlinks': False,
     'fileserver_limit_traversal': False,
     'max_open_files': 100000,
-    'hash_type': 'md5',
+    'hash_type': 'sha256',
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
@@ -1287,6 +1329,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_whitelist': [],
     'event_return_blacklist': [],
     'event_match_type': 'startswith',
+    'runner_returns': True,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -1333,9 +1376,11 @@ DEFAULT_MASTER_OPTS = {
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
+    'regen_thin': False,
     'ssh_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
+    'ssh_sudo_user': '',
     'ssh_timeout': 60,
     'ssh_user': 'root',
     'ssh_scan_ports': '22',
@@ -1376,6 +1421,7 @@ DEFAULT_MASTER_OPTS = {
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
     'python3_bin': 'python3',
+    'cache': 'localfs',
 }
 
 
@@ -1388,6 +1434,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
+    'append_minionid_config_dirs': ['cachedir'],
     'default_include': 'proxy.d/*.conf',
 }
 
@@ -1397,6 +1444,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
     'ssh_auth': '',
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'cloud'),
     'keysize': 4096,
     'os': '',
     'script': 'bootstrap-salt',
@@ -1419,8 +1467,8 @@ CLOUD_CONFIG_DEFAULTS = {
 
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
-    'pidfile': '/var/run/salt-api.pid',
-    'logfile': '/var/log/salt/api',
+    'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
+    'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
@@ -1794,7 +1842,8 @@ def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
                   cache_minion_id=False,
-                  ignore_config_errors=True):
+                  ignore_config_errors=True,
+                  minion_id=None):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -1834,7 +1883,9 @@ def minion_config(path,
     overrides.update(include_config(include, path, verbose=True,
                                     exit_on_config_errors=not ignore_config_errors))
 
-    opts = apply_minion_config(overrides, defaults, cache_minion_id=cache_minion_id)
+    opts = apply_minion_config(overrides, defaults,
+                               cache_minion_id=cache_minion_id,
+                               minion_id=minion_id)
     _validate_opts(opts)
     return opts
 
@@ -1868,6 +1919,7 @@ def syndic_config(master_config_path,
         'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
+        'log_level': master_opts['log_level'],
         'id': minion_opts['id'],
         'pki_dir': minion_opts['pki_dir'],
         'master': opts['syndic_master'],
@@ -1941,16 +1993,17 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     '''
     Read in the salt cloud config and return the dict
     '''
-    # Load the cloud configuration
-    overrides = load_config(
-        path,
-        env_var,
-        os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
-    )
     if path:
         config_dir = os.path.dirname(path)
     else:
         config_dir = salt.syspaths.CONFIG_DIR
+
+    # Load the cloud configuration
+    overrides = load_config(
+        path,
+        env_var,
+        os.path.join(config_dir, 'cloud')
+    )
 
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
@@ -2065,6 +2118,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
 
+    # cloud config has a seperate cachedir
+    del master_config['cachedir']
+
     # 2nd - salt-cloud configuration which was loaded before so we could
     # extract the master configuration file if needed.
 
@@ -2146,6 +2202,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # recurse opts for sdb configs
     apply_sdb(opts)
+
+    # prepend root_dir
+    prepend_root_dirs = ['cachedir']
+    prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options
     return opts
@@ -2850,7 +2910,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         non_size_drivers.append('linode')
 
     # If cloning on VMware, specifying image is not necessary.
-    if driver == 'vmware' and profile_key.get('image', True):
+    if driver == 'vmware' and 'image' not in list(profile_key.keys()):
         non_image_drivers.append('vmware')
 
     if driver not in non_image_drivers:
@@ -2986,7 +3046,8 @@ def get_id(opts, cache_minion_id=False):
 
 def apply_minion_config(overrides=None,
                         defaults=None,
-                        cache_minion_id=False):
+                        cache_minion_id=False,
+                        minion_id=None):
     '''
     Returns minion configurations dict.
     '''
@@ -3000,19 +3061,27 @@ def apply_minion_config(overrides=None,
 
     opts['__cli'] = os.path.basename(sys.argv[0])
 
-    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
-        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
-
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
     if not opts.get('id'):
-        opts['id'], using_ip_for_id = get_id(
-                opts,
-                cache_minion_id=cache_minion_id)
+        if minion_id:
+            opts['id'] = minion_id
+        else:
+            opts['id'], using_ip_for_id = get_id(
+                    opts,
+                    cache_minion_id=cache_minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
+
+    for directory in opts.get('append_minionid_config_dirs', []):
+        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+            newdirectory = os.path.join(opts[directory], opts['id'])
+            opts[directory] = newdirectory
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
@@ -3302,12 +3371,15 @@ def api_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt's master default opts
-    defaults = DEFAULT_MASTER_OPTS
+    # Let's grab a copy of salt's master opts
+    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
     # Let's override them with salt-api's required defaults
-    defaults.update(DEFAULT_API_OPTS)
-
-    return client_config(path, defaults=defaults)
+    api_opts = {
+        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
+        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile'])
+    }
+    opts.update(api_opts)
+    return opts
 
 
 def spm_config(path):

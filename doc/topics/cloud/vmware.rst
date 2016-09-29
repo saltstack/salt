@@ -129,6 +129,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           Hard disk 3:
             size: 5
             controller: SCSI controller 3
+            datastore: smalldiskdatastore
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
@@ -219,7 +220,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     the current VM/template\'s vCPU count is used.
 
 ``cores_per_socket``
-    .. versionadded:: Boron
+    .. versionadded:: Carbon
     Enter the number of cores per vCPU that you want the VM/template to have. If not specified,
     this will default to 1. 
     
@@ -274,6 +275,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
             controller as well as the hard disk at the same time.
+        datastore
+            The name of a valid datastore should you wish the new disk to be in
+            a datastore other than the default for the VM.
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
@@ -581,6 +585,32 @@ Example of a minimal profile:
      cluster: 'Prod'
 
 
+Cloning from a Snapshot
+=======================
+
+.. versionadded:: 2016.3.4
+
+Cloning a template works similar to cloning a VM except for the fact that
+a snapshot number must be provided.
+
+Example of a minimal profile:
+
+.. code-block:: yaml
+
+  my-template-clone:
+     provider: vcenter01
+     clonefrom: 'salt_vm'
+     snapshot: 3
+
+.. image:: /_static/snapshot_manager.png
+    :align: center
+    :scale: 70%
+
+.. note::
+    The previous diagram shows how to identify the snapshot number. Selected
+    (third snapshot) is number 3.
+
+
 Creating a VM
 =============
 
@@ -637,6 +667,7 @@ Example of a complete profile:
           Hard disk 0:
             controller: 'SCSI controller 0'
             size: 20
+            mode: 'independent_nonpersistent'
         cd:
           CD/DVD drive 0:
             controller: 'IDE 0'
@@ -653,3 +684,27 @@ Example of a complete profile:
     be available. In such cases, the closest match to another ``image`` should
     be used. In the example above, a Debian 8 VM is created using the image
     ``debian7_64Guest`` which is for a Debian 7 guest.
+
+
+Specifying disk backing mode
+============================
+
+.. versionadded:: Nitrogen
+
+Disk backing mode can now be specified when cloning a VM. This option
+can be set in the cloud profile as shown in example below:
+
+.. code-block:: yaml
+
+    my-vm:
+      provider: esx01
+      datastore: esx01-datastore
+      resourcepool: Resources
+      folder: vm
+      devices:
+        disk:
+          Hard disk 1:
+            mode: 'independent_nonpersistent'
+          Hard disk 2:
+            size: 15
+            mode: 'independent_nonpersistent'

@@ -35,6 +35,7 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError)
 
@@ -54,7 +55,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    if __grains__.get('os_family', '') != 'SUSE':
+    if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
     if not salt.utils.which('zypper'):
@@ -100,6 +101,21 @@ class _Zypper(object):
         self.__no_lock = False
         self.__no_raise = False
         self.__refresh = False
+        self.__ignore_repo_failure = False
+        self.__systemd_scope = False
+
+    def __call__(self, *args, **kwargs):
+        '''
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        # Ignore exit code for 106 (repo is not available)
+        if 'no_repo_failure' in kwargs:
+            self.__ignore_repo_failure = kwargs['no_repo_failure']
+        if 'systemd_scope' in kwargs:
+            self.__systemd_scope = kwargs['systemd_scope']
+        return self
 
     def __getattr__(self, item):
         '''
@@ -149,11 +165,17 @@ class _Zypper(object):
         if self._is_error():
             self.__error_msg = msg and os.linesep.join(msg) or "Check Zypper's logs."
 
+    @property
     def stdout(self):
         return self.__call_result.get('stdout', '')
 
+    @property
     def stderr(self):
         return self.__call_result.get('stderr', '')
+
+    @property
+    def pid(self):
+        return self.__call_result.get('pid', '')
 
     def _is_error(self):
         '''
@@ -240,8 +262,12 @@ class _Zypper(object):
         # However, Zypper lock needs to be always respected.
         was_blocked = False
         while True:
-            log.debug("Calling Zypper: " + ' '.join(self.__cmd))
-            self.__call_result = __salt__['cmd.run_all'](self.__cmd, **kwargs)
+            cmd = []
+            if self.__systemd_scope:
+                cmd.extend(['systemd-run', '--scope'])
+            cmd.extend(self.__cmd)
+            log.debug("Calling Zypper: " + ' '.join(cmd))
+            self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
 
@@ -275,13 +301,18 @@ class _Zypper(object):
             __salt__['event.fire_master']({'success': not len(self.error_msg),
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
-        if self.error_msg and not self.__no_raise:
+        if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
         return self._is_xml_mode() and dom.parseString(self.__call_result['stdout']) or self.__call_result['stdout']
 
 
 __zypper__ = _Zypper()
+
+
+def _systemd_scope():
+    return salt.utils.systemd.has_scope(__context__) \
+        and __salt__['config.get']('systemd.scope', True)
 
 
 def list_upgrades(refresh=True, **kwargs):
@@ -357,9 +388,12 @@ def info_installed(*names, **kwargs):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
-            if type(value) == str:
+            if isinstance(value, six.string_types):
                 # Check, if string is encoded in a proper UTF-8
-                value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                if six.PY3:
+                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+                else:
+                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
                     value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
@@ -811,6 +845,7 @@ def mod_repo(repo, **kwargs):
         cmd_opt = global_cmd_opt + ['mr'] + cmd_opt + [repo]
         __zypper__.refreshable.xml.call(*cmd_opt)
 
+    comment = None
     if call_refresh:
         # when used with "zypper ar --refresh" or "zypper mr --refresh"
         # --gpg-auto-import-keys is not doing anything
@@ -818,11 +853,13 @@ def mod_repo(repo, **kwargs):
         refresh_opts = global_cmd_opt + ['refresh'] + [repo]
         __zypper__.xml.call(*refresh_opts)
     elif not added and not cmd_opt:
-        raise CommandExecutionError(
-            'Specified arguments did not result in modification of repo'
-        )
+        comment = 'Specified arguments did not result in modification of repo'
 
-    return get_repo(repo)
+    repo = get_repo(repo)
+    if comment:
+        repo['comment'] = comment
+
+    return repo
 
 
 def refresh_db():
@@ -843,11 +880,14 @@ def refresh_db():
     for line in out.splitlines():
         if not line:
             continue
-        if line.strip().startswith('Repository'):
-            key = line.split('\'')[1].strip()
-            if 'is up to date' in line:
-                ret[key] = False
-        elif line.strip().startswith('Building'):
+        if line.strip().startswith('Repository') and '\'' in line:
+            try:
+                key = line.split('\'')[1].strip()
+                if 'is up to date' in line:
+                    ret[key] = False
+            except IndexError:
+                continue
+        elif line.strip().startswith('Building') and '\'' in line:
             key = line.split('\'')[1].strip()
             if 'done' in line:
                 ret[key] = True
@@ -862,8 +902,23 @@ def install(name=None,
             downloadonly=None,
             skip_verify=False,
             version=None,
+            ignore_repo_failure=False,
             **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Install the passed package(s), add refresh=True to force a 'zypper refresh'
     before package is installed.
 
@@ -927,6 +982,10 @@ def install(name=None,
         .. code-block:: bash
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+
+    ignore_repo_failure
+        Zypper returns error code 106 if one of the repositories are not available for various reasons.
+        In case to set strict check, this parameter needs to be set to True. Default: False.
 
 
     Returns a dict containing the new package names and versions::
@@ -996,10 +1055,11 @@ def install(name=None,
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
+    systemd_scope = _systemd_scope()
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
-        for line in __zypper__.call(*cmd).splitlines():
+        for line in __zypper__(no_repo_failure=ignore_repo_failure, systemd_scope=systemd_scope).call(*cmd).splitlines():
             match = re.match(r"^The selected package '([^']+)'.+has lower version", line)
             if match:
                 downgrades.append(match.group(1))
@@ -1007,7 +1067,7 @@ def install(name=None,
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
-        __zypper__.call(*cmd)
+        __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1024,6 +1084,20 @@ def install(name=None,
 
 def upgrade(refresh=True, skip_verify=False):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Run a full system upgrade, a zypper upgrade
 
     refresh
@@ -1031,10 +1105,13 @@ def upgrade(refresh=True, skip_verify=False):
         If set to False it depends on zypper if a refresh is
         executed.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -1049,26 +1126,30 @@ def upgrade(refresh=True, skip_verify=False):
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-    }
-
     if refresh:
         refresh_db()
     old = list_pkgs()
 
-    to_append = ''
     if skip_verify:
-        to_append = '--no-gpg-checks'
-    __zypper__.noraise.call('update', '--auto-agree-with-licenses', to_append)
-    if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
-        ret['result'] = False
-        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', '--no-gpg-checks')
     else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
+        result = {
+            'retcode': __zypper__.exit_code,
+            'stdout': __zypper__.stdout,
+            'stderr': __zypper__.stderr,
+            'pid': __zypper__.pid,
+        }
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
@@ -1088,9 +1169,11 @@ def _uninstall(name=None, pkgs=None):
     if not targets:
         return {}
 
+    systemd_scope = _systemd_scope()
+
     errors = []
     while targets:
-        __zypper__.call('remove', *targets[:500])
+        __zypper__(systemd_scope=systemd_scope).call('remove', *targets[:500])
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
@@ -1107,6 +1190,20 @@ def _uninstall(name=None, pkgs=None):
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages with ``zypper -n remove``
 
     name
@@ -1137,6 +1234,20 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any zypper commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper -n remove -u``
 
@@ -1595,14 +1706,17 @@ def download(*packages, **kwargs):
     pkg_ret = {}
     for dld_result in __zypper__.xml.call('download', *packages).getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
+        path = dld_result.getElementsByTagName("localfile")[0].getAttribute("path")
         pkg_info = {
             'repository-name': repo.getAttribute('name'),
             'repository-alias': repo.getAttribute('alias'),
+            'path': path,
         }
         key = _get_first_aggregate_text(
             dld_result.getElementsByTagName('name')
         )
-        pkg_ret[key] = pkg_info
+        if __salt__['lowpkg.checksum'](pkg_info['path']):
+            pkg_ret[key] = pkg_info
 
     if pkg_ret:
         failed = [pkg for pkg in packages if pkg not in pkg_ret]

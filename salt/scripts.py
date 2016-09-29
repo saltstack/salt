@@ -8,9 +8,13 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 import time
+import signal
 import logging
+import functools
 import threading
 import traceback
+import signal
+import functools
 from random import randint
 
 # Import salt libs
@@ -38,6 +42,29 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
         raise exc
 
 
+def _handle_signals(client, signum, sigframe):
+    trace = traceback.format_exc()
+    try:
+        hardcrash = client.options.hard_crash
+    except (AttributeError, KeyError):
+        hardcrash = False
+    _handle_interrupt(
+        SystemExit('\nExiting gracefully on Ctrl-c'),
+        Exception('\nExiting with hard crash Ctrl-c'),
+        hardcrash, trace=trace)
+
+
+def _install_signal_handlers(client):
+    # Install the SIGINT/SIGTERM handlers if not done so far
+    if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+
+    if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+
+
 def salt_master():
     '''
     Start the salt master.
@@ -53,9 +80,13 @@ def minion_process():
     '''
     import salt.utils
     import salt.cli.daemons
+
     # salt_minion spawns this function in a new process
 
     salt.utils.appendproctitle('KeepAlive')
+
+    def handle_hup(manager, sig, frame):
+        manager.minion.reload()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -81,6 +112,9 @@ def minion_process():
         thread.start()
 
     minion = salt.cli.daemons.Minion()
+    signal.signal(signal.SIGHUP,
+                  functools.partial(handle_hup,
+                                    minion))
 
     try:
         minion.start()
@@ -102,7 +136,10 @@ def salt_minion():
     Auto restart minion on error.
     '''
     import signal
-    import functools
+
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
@@ -138,6 +175,9 @@ def salt_minion():
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
             signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGHUP,
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
         except Exception:  # pylint: disable=broad-except
@@ -284,6 +324,9 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     pid = os.getpid()
     try:
@@ -298,22 +341,12 @@ def salt_key():
     Manage the authentication keys with salt-key.
     '''
     import salt.cli.key
-    client = None
     try:
         client = salt.cli.key.SaltKey()
+        _install_signal_handlers(client)
         client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
     except Exception as err:
-        sys.stderr.write("Error: {0}\n".format(err.message))
+        sys.stderr.write("Error: {0}\n".format(err))
 
 
 def salt_cp():
@@ -322,20 +355,9 @@ def salt_cp():
     master.
     '''
     import salt.cli.cp
-    client = None
-    try:
-        client = salt.cli.cp.SaltCPCli()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.cp.SaltCPCli()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_call():
@@ -346,20 +368,9 @@ def salt_call():
     import salt.cli.call
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.call.SaltCall()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.call.SaltCall()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_run():
@@ -369,20 +380,9 @@ def salt_run():
     import salt.cli.run
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.run.SaltRun()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.run.SaltRun()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_ssh():
@@ -392,20 +392,10 @@ def salt_ssh():
     import salt.cli.ssh
     if '' in sys.path:
         sys.path.remove('')
-    client = None
     try:
         client = salt.cli.ssh.SaltSSH()
+        _install_signal_handlers(client)
         client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
     except SaltClientError as err:
         trace = traceback.format_exc()
         try:
@@ -438,26 +428,18 @@ def salt_cloud():
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
-    client = None
-    try:
-        client = salt.cloud.cli.SaltCloud()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cloud.cli.SaltCloud()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_api():
     '''
     The main function for salt-api
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.api
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
     sapi.start()
@@ -471,20 +453,9 @@ def salt_main():
     import salt.cli.salt
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.salt.SaltCMD()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.salt.SaltCMD()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_spm():
@@ -496,3 +467,17 @@ def salt_spm():
     import salt.cli.spm
     spm = salt.cli.spm.SPM()  # pylint: disable=E1120
     spm.run()
+
+
+def salt_extend(extension, name, description, salt_dir, merge):
+    '''
+    Quickstart for developing on the saltstack installation
+
+    .. versionadded:: Carbon
+    '''
+    import salt.utils.extend
+    salt.utils.extend.run(extension=extension,
+                          name=name,
+                          description=description,
+                          salt_dir=salt_dir,
+                          merge=merge)

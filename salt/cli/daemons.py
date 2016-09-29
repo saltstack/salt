@@ -409,7 +409,9 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.
-        self.config['id'] = self.values.proxyid
+        # We used to set this here.  Now it is set in ProxyMinionOptionParser
+        # by passing it via setup_config to config.minion_config
+        # self.config['id'] = self.values.proxyid
 
         try:
             if self.config['verify_env']:

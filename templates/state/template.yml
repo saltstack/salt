@@ -1,0 +1,7 @@
+description: "State module"
+questions:
+    depending_libraries:
+        question: "What libraries does this module depend upon?"
+    virtual_name:
+        question: "What module virtual name to use?"
+        default: "{{module_name}}"

@@ -168,6 +168,7 @@ def create(Bucket,
             kwargs['CreateBucketConfiguration'] = {'LocationConstraint': LocationConstraint}
         location = conn.create_bucket(Bucket=Bucket,
                                   **kwargs)
+        conn.get_waiter("bucket_exists").wait(Bucket=Bucket)
         if location:
             log.info('The newly created bucket name is located at {0}'.format(location['Location']))
 

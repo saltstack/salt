@@ -267,7 +267,7 @@ class MinionSwarm(Swarm):
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'minion')
             with open(spath) as conf:
-                data = yaml.load(conf)
+                data = yaml.load(conf) or {}
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)

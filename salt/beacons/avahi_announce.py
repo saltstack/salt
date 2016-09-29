@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
- Beacon to announce via avahi (zeroconf)
+Beacon to announce via avahi (zeroconf)
+
+.. versionadded:: Carbon
+
+Dependencies
+============
+
+- python-avahi
+- dbus-python
 
 '''
 # Import Python libs
 from __future__ import absolute_import
 import logging
+import time
 
 # Import 3rd Party libs
 try:
@@ -13,7 +22,12 @@ try:
     HAS_PYAVAHI = True
 except ImportError:
     HAS_PYAVAHI = False
-import dbus
+
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    HAS_DBUS = False
 
 log = logging.getLogger(__name__)
 
@@ -29,11 +43,15 @@ GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
 
 def __virtual__():
     if HAS_PYAVAHI:
-        return __virtualname__
-    return False
+        if HAS_DBUS:
+            return __virtualname__
+        return False, 'The {0} beacon cannot be loaded. The ' \
+                      '\'python-dbus\' dependency is missing.'.format(__virtualname__)
+    return False, 'The {0} beacon cannot be loaded. The ' \
+                  '\'python-avahi\' dependency is missing.'.format(__virtualname__)
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -51,23 +69,59 @@ def beacon(config):
     Broadcast values via zeroconf
 
     If the announced values are static, it is adviced to set run_once: True
-    (do not poll) on the beacon configuration. Grains can be used to define
-    txt values using the syntax: grains.<grain_name>
+    (do not poll) on the beacon configuration.
 
-    The default servicename its the hostname grain value.
+    The following are required configuration settings:
+        'servicetype': The service type to announce.
+        'port': The port of the service to announce.
+        'txt': The TXT record of the service being announced as a dict.
+               Grains can be used to define TXT values using the syntax:
+                   grains.<grain_name>
+               or:
+                   grains.<grain_name>[i]
+               where i is an integer representing the index of the grain to
+               use. If the grain is not a list, the index is ignored.
+
+    The following are optional configuration settings:
+        'servicename': Set the name of the service. Will use the hostname from
+                       __grains__['host'] if not set.
+        'reset_on_change': If true and there is a change in TXT records
+                           detected, it will stop announcing the service and
+                           then restart announcing the service. This
+                           interruption in service announcement may be
+                           desirable if the client relies on changes in the
+                           browse records to update its cache of the TXT
+                           records.
+                           Defaults to False.
+        'reset_wait': The number of seconds to wait after announcement stops
+                      announcing and before it restarts announcing in the
+                      case where there is a change in TXT records detected
+                      and 'reset_on_change' is True.
+                      Defaults to 0.
+        'copy_grains': If set to True, it will copy the grains passed into
+                       the beacon when it backs them up to check for changes
+                       on the next iteration. Normally, instead of copy, it
+                       would use straight value assignment. This will allow
+                       detection of changes to grains where the grains are
+                       modified in-place instead of completely replaced.
+                       In-place grains changes are not currently done in the
+                       main Salt code but may be done due to a custom
+                       plug-in.
+                       Defaults to False.
 
     Example Config
 
     .. code-block:: yaml
 
        beacons:
-          avahi_announce:
-             run_once: True
-             servicetype: _demo._tcp
-             txt:
-                ProdName: grains.productname
-                SerialNo: grains.serialnumber
-                Comments: 'this is a test'
+         avahi_announce:
+           run_once: True
+           servicetype: _demo._tcp
+           port: 1234
+           txt:
+             ProdName: grains.productname
+             SerialNo: grains.serialnumber
+             Comments: 'this is a test'
     '''
     ret = []
     changes = {}
@@ -75,7 +129,7 @@ def beacon(config):
 
     global LAST_GRAINS
 
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate[0]:
         log.warning('Beacon {0} configuration invalid, '
                     'not adding. {1}'.format(__virtualname__, _validate[1]))
@@ -89,8 +143,20 @@ def beacon(config):
     for item in config['txt']:
         if config['txt'][item].startswith('grains.'):
             grain = config['txt'][item][7:]
-            txt[item] = __grains__[grain]
-            if LAST_GRAINS and (LAST_GRAINS[grain] != __grains__[grain]):
+            grain_index = None
+            square_bracket = grain.find('[')
+            if square_bracket != -1 and grain[-1] == ']':
+                grain_index = int(grain[square_bracket+1:-1])
+                grain = grain[:square_bracket]
+
+            grain_value = __grains__.get(grain, '')
+            if isinstance(grain_value, list):
+                if grain_index is not None:
+                    grain_value = grain_value[grain_index]
+                else:
+                    grain_value = ','.join(grain_value)
+            txt[item] = grain_value
+            if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
                 changes[str('txt.' + item)] = txt[item]
         else:
             txt[item] = config['txt'][item]
@@ -103,15 +169,29 @@ def beacon(config):
             changes['servicename'] = servicename
             changes['servicetype'] = config['servicetype']
             changes['port'] = config['port']
-        else:
+            GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
+                             servicename, config['servicetype'], '', '',
+                             dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
+            GROUP.Commit()
+        elif config.get('reset_on_change', False):
             GROUP.Reset()
-        GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                         servicename, config['servicetype'], '', '',
-                         dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
-        GROUP.Commit()
+            reset_wait = config.get('reset_wait', 0)
+            if reset_wait > 0:
+                time.sleep(reset_wait)
+            GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
+                             servicename, config['servicetype'], '', '',
+                             dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
+            GROUP.Commit()
+        else:
+            GROUP.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
+                                servicename, config['servicetype'], '',
+                                avahi.dict_to_txt_array(txt))
 
         ret.append({'tag': 'result', 'changes': changes})
 
-    LAST_GRAINS = __grains__
+    if config.get('copy_grains', False):
+        LAST_GRAINS = __grains__.copy()
+    else:
+        LAST_GRAINS = __grains__
 
     return ret

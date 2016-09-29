@@ -978,6 +978,7 @@ class FileTestCase(TestCase):
     # 'comment' function tests: 1
 
     @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
@@ -1004,9 +1005,7 @@ class FileTestCase(TestCase):
             self.assertDictEqual(filestate.comment(name, regex), ret)
 
         with patch.object(os.path, 'isabs', mock_t):
-            with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock,
-                             'file.search': mock}):
+            with patch.dict(filestate.__salt__, {'file.search': mock}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1016,8 +1015,7 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock_t,
-                             'file.search': mock_t,
+                            {'file.search': mock_t,
                              'file.comment': mock_t,
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
@@ -1036,6 +1034,7 @@ class FileTestCase(TestCase):
     # 'uncomment' function tests: 1
 
     @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
@@ -1064,8 +1063,7 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock,
-                             'file.search': mock,
+                            {'file.search': mock,
                              'file.uncomment': mock_t,
                              'file.comment_line': mock_t}):
                 comt = ('Pattern already uncommented')
@@ -1121,7 +1119,6 @@ class FileTestCase(TestCase):
                          'file.makedirs': mock_t,
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
-                         'file.contains_regex_multiline': mock_f,
                          'file.search': mock_f,
                          'file.prepend': mock_t}):
             with patch.object(os.path, 'isdir', mock_t):
@@ -1682,9 +1679,6 @@ class FileTestCase(TestCase):
                 ts = datetime(starting.year, 1, 1)
             elif every.months:
                 ts = datetime(starting.year, starting.month, 1)
-            elif every.weeks:
-                # This breaks if the start of the week is in a previous month.
-                ts = datetime(starting.year, starting.month, starting.day - starting.weekday())
             elif every.days:
                 ts = datetime(starting.year, starting.month, starting.day)
             elif every.hours:

@@ -3,6 +3,19 @@
 Installation of packages using OS package managers such as yum or apt-get
 =========================================================================
 
+..note::
+    On minions running systemd>=205, as of version 2015.8.12, 2016.3.3, and
+    Carbon, `systemd-run(1)`_ is now used to isolate commands which modify
+    installed packages from the ``salt-minion`` daemon's control group. This is
+    done to keep systemd from killing the package manager commands spawned by
+    Salt, when Salt updates itself (see ``KillMode`` in the `systemd.kill(5)`_
+    manpage for more information). If desired, usage of `systemd-run(1)`_ can
+    be suppressed by setting a :mod:`config option <salt.modules.config.get>`
+    called ``systemd.use_scope``, with a value of ``False`` (no quotes).
+
+.. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+.. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
 Salt can manage software packages via the pkg state module, packages can be
 set up to be installed, latest, removed and purged. Package management
 declarations are typically rather simple:
@@ -83,14 +96,34 @@ import salt.ext.six as six
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
+    # pylint: disable=import-error,no-name-in-module,unused-import
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    from salt.exceptions import SaltRenderError
+    import collections
+    import datetime
+    import errno
+    import time
+    # pylint: disable=import-error
+    # pylint: enable=unused-import
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import get_repo_data
+    from salt.modules.win_pkg import _get_repo_details
+    from salt.modules.win_pkg import _refresh_db_conditional
+    from salt.modules.win_pkg import refresh_db
+    from salt.modules.win_pkg import genrepo
+    from salt.modules.win_pkg import _repo_process_pkg_sls
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
-    from salt.modules.win_pkg import _get_local_repo_dir
-    _get_local_repo_dir = _namespaced_function(_get_local_repo_dir, globals())
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
+    _get_repo_details = \
+        _namespaced_function(_get_repo_details, globals())
+    _refresh_db_conditional = \
+        _namespaced_function(_refresh_db_conditional, globals())
+    refresh_db = _namespaced_function(refresh_db, globals())
+    genrepo = _namespaced_function(genrepo, globals())
+    _repo_process_pkg_sls = \
+        _namespaced_function(_repo_process_pkg_sls, globals())
     _get_latest_pkg_version = \
         _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
@@ -117,11 +150,42 @@ def __virtual__():
     return 'pkg.install' in __salt__
 
 
-def __gen_rtag():
+def _refresh_tag_file(**kwargs):
     '''
-    Return the location of the refresh tag
+    Internal use only in this module
+
+    :param str create:
+        Create Tag to indicate a refresh is required. Called in mod_init()
+    :param str refresh:
+        None - Determine action. i.e. if tag file exists refresh
+        True - refresh is required
+        False - No future refresh required, even if tag file exists
+    :return: New refresh state
+    :rtype: bool
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
-    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
+    rtag = os.path.join(__opts__['cachedir'], 'pkg_refresh')
+    if salt.utils.is_true(kwargs.get('create', False)):
+        if not os.path.exists(rtag):
+            with salt.utils.fopen(rtag, 'w+'):
+                pass
+        return True
+
+    refresh = kwargs.get('refresh', None)
+    if refresh is not None:
+        refresh = salt.utils.is_true(refresh)  # considers None False
+
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+        )
+
+    if refresh is False:
+        if os.path.isfile(rtag):
+            os.remove(rtag)
+
+    return refresh
 
 
 def _get_comparison_spec(pkgver):
@@ -562,6 +626,8 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
 
         if __grains__['os'] == 'FreeBSD' and origin:
             cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
+        elif __grains__['os'] == 'OpenBSD':
+            cver = new_pkgs.get(pkgname.split('%')[0])
         elif __grains__['os_family'] == 'Debian':
             cver = new_pkgs.get(pkgname.split('=')[0])
         else:
@@ -733,8 +799,11 @@ def installed(
                   - dos2unix
                   - salt-minion: 2015.8.5-1.el6
 
+        If the version given is the string ``latest``, the latest available
+        package version will be installed à la ``pkg.latest``.
+
     :param bool refresh:
-        This parameter controls whether or not the packge repo database is
+        This parameter controls whether or not the package repo database is
         updated prior to installing the requested package(s).
 
         If ``True``, the package database will be refreshed (``apt-get
@@ -750,6 +819,37 @@ def installed(
         will be performed for ``pkg`` states which do not explicitly set
         ``refresh`` to ``True``. This prevents needless additional refreshes
         from slowing down the Salt run.
+
+    :param str cache_valid_time:
+
+        .. versionadded:: Carbon
+
+        This parameter sets the value in seconds after which the cache is
+        marked as invalid, and a cache update is necessary. This overwrites
+        the ``refresh`` parameter's default behavior.
+
+        Example:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed:
+                - fromrepo: mycustomrepo
+                - skip_verify: True
+                - skip_suggestions: True
+                - version: 2.0.6~ubuntu3
+                - refresh: True
+                - cache_valid_time: 300
+                - allow_updates: True
+                - hold: False
+
+        In this case, a refresh will not take place for 5 minutes since the last
+        ``apt-get update`` was executed on the system.
+
+        .. note::
+
+            This parameter is available only on Debian based distributions and
+            has no effect on the rest.
 
     :param str fromrepo:
         Specify a repository from which to install
@@ -953,8 +1053,6 @@ def installed(
         A list of packages to install from a software repository. All packages
         listed under ``pkgs`` will be installed via a single command.
 
-        Example:
-
         .. code-block:: yaml
 
             mypkgs:
@@ -980,12 +1078,10 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
 
-        Additionally, :mod:`ebuild <salt.modules.ebuild>`,
-        :mod:`pacman <salt.modules.pacman>` and
-        :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-        ``>`` operators for more control over what versions will be installed. For
-
-        Example:
+        Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
+        <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support
+        the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over
+        what versions will be installed. For example:
 
         .. code-block:: yaml
 
@@ -1002,9 +1098,7 @@ def installed(
         With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a
         use flag list and/or if the given packages should be in
         package.accept_keywords file and/or the overlay from which you want the
-        package to be installed.
-
-        For example:
+        package to be installed. For example:
 
         .. code-block:: yaml
 
@@ -1147,11 +1241,9 @@ def installed(
                 'comment': 'No packages to install provided'}
 
     kwargs['saltenv'] = __env__
-    rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or
-        (os.path.isfile(rtag) and refresh is not False)
-    )
+
+    refresh = _refresh_tag_file(refresh=refresh)
+
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1165,7 +1257,21 @@ def installed(
         version = str(version)
 
     if version is not None and version == 'latest':
-        version = __salt__['pkg.latest_version'](name, **kwargs)
+        try:
+            version = __salt__['pkg.latest_version'](name,
+                                                     fromrepo=fromrepo,
+                                                     refresh=refresh)
+        except CommandExecutionError as exc:
+            refresh = _refresh_tag_file(refresh=False)  # del tag
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'An error was encountered while checking the '
+                               'newest available version of package(s): {0}'
+                               .format(exc)}
+
+        refresh = _refresh_tag_file(refresh=False)  # del tag
+
         # If version is empty, it means the latest version is installed
         # so we grab that version to avoid passing an empty string
         if not version:
@@ -1178,6 +1284,7 @@ def installed(
                         'comment': exc.strerror}
 
     kwargs['allow_updates'] = allow_updates
+
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
@@ -1185,7 +1292,10 @@ def installed(
                                    normalize=normalize,
                                    ignore_epoch=ignore_epoch,
                                    reinstall=reinstall,
+                                   refresh=refresh,
                                    **kwargs)
+    # _find_install_targets calls list_pkgs which calls refresh_db so del Tag
+    refresh = _refresh_tag_file(refresh=False)  # del tag
 
     try:
         (desired, targets, to_unpurge,
@@ -1333,9 +1443,6 @@ def installed(
                                               normalize=normalize,
                                               update_holds=update_holds,
                                               **kwargs)
-
-            if os.path.isfile(rtag) and refresh:
-                os.remove(rtag)
         except CommandExecutionError as exc:
             ret = {'name': name, 'result': False}
             if exc.info:
@@ -1414,7 +1521,7 @@ def installed(
     else:
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
-        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, refresh=refresh, **kwargs)
         ok, failed = _verify_install(desired, new_pkgs,
                                      ignore_epoch=ignore_epoch)
         modified = [x for x in ok if x in targets]
@@ -1611,7 +1718,7 @@ def latest(
         Skip the GPG verification check for the package to be installed
 
     refresh
-        This parameter controls whether or not the packge repo database is
+        This parameter controls whether or not the package repo database is
         updated prior to checking for the latest available version of the
         requested packages.
 
@@ -1629,6 +1736,31 @@ def latest(
         will be performed for ``pkg`` states which do not explicitly set
         ``refresh`` to ``True``. This prevents needless additional refreshes
         from slowing down the Salt run.
+
+    :param str cache_valid_time:
+
+        .. versionadded:: Carbon
+
+        This parameter sets the value in seconds after which the cache is
+        marked as invalid, and a cache update is necessary. This overwrites
+        the ``refresh`` parameter's default behavior.
+
+        Example:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.latest:
+                - refresh: True
+                - cache_valid_time: 300
+
+        In this case, a refresh will not take place for 5 minutes since the last
+        ``apt-get update`` was executed on the system.
+
+        .. note::
+
+            This parameter is available only on Debian based distributions and
+            has no effect on the rest.
 
 
     Multiple Package Installation Options:
@@ -1698,11 +1830,6 @@ def latest(
                - report_reboot_exit_codes: False
 
     '''
-    rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or
-        (os.path.isfile(rtag) and refresh is not False)
-    )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -1730,6 +1857,7 @@ def latest(
             desired_pkgs = [name]
 
     kwargs['saltenv'] = __env__
+    refresh = _refresh_tag_file(refresh=refresh)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -1737,6 +1865,7 @@ def latest(
                                                refresh=refresh,
                                                **kwargs)
     except CommandExecutionError as exc:
+        refresh = _refresh_tag_file(refresh=False)  # del tag
         return {'name': name,
                 'changes': {},
                 'result': False,
@@ -1752,10 +1881,7 @@ def latest(
                 'result': False,
                 'comment': exc.strerror}
 
-    # Remove the rtag if it exists, ensuring only one refresh per salt run
-    # (unless overridden with refresh=True)
-    if os.path.isfile(rtag) and refresh:
-        os.remove(rtag)
+    refresh = _refresh_tag_file(refresh=False)  # del tag
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, six.string_types):
@@ -1767,15 +1893,21 @@ def latest(
     problems = []
     for pkg in desired_pkgs:
         if not avail[pkg]:
+            # Package either a) is up-to-date, or b) does not exist
             if not cur[pkg]:
+                # Package does not exist
                 msg = 'No information found for \'{0}\'.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
             elif watch_flags \
                     and __grains__.get('os') == 'Gentoo' \
                     and __salt__['portage_config.is_changed_uses'](pkg):
-                targets[pkg] = avail[pkg]
+                # Package is up-to-date, but Gentoo USE flags are changing so
+                # we need to add it to the targets
+                targets[pkg] = cur[pkg]
         else:
+            # Package either a) is not installed, or b) is installed and has an
+            # upgrade available
             targets[pkg] = avail[pkg]
 
     if problems:
@@ -2233,6 +2365,19 @@ def uptodate(name, refresh=False, **kwargs):
     refresh
         refresh the package database before checking for new upgrades
 
+    :param str cache_valid_time:
+        This parameter sets the value in seconds after which cache marked as invalid,
+        and cache update is necessary. This overwrite ``refresh`` parameter
+        default behavior.
+
+        In this case cache_valid_time is set, refresh will not take place for
+        amount in seconds since last ``apt-get update`` executed on the system.
+
+        .. note::
+
+            This parameter available only on Debian based distributions, and
+            have no effect on the rest.
+
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
@@ -2241,7 +2386,7 @@ def uptodate(name, refresh=False, **kwargs):
     ret = {'name': name,
            'changes': {},
            'result': False,
-           'comment': 'Failed to update.'}
+           'comment': 'Failed to update'}
 
     if 'pkg.list_upgrades' not in __salt__:
         ret['comment'] = 'State pkg.uptodate is not available'
@@ -2272,9 +2417,8 @@ def uptodate(name, refresh=False, **kwargs):
         return ret
 
     try:
-        updated = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
+        ret['changes'] = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
         if exc.info:
             # Get information for state return from the exception.
             ret['changes'] = exc.info.get('changes', {})
@@ -2285,12 +2429,8 @@ def uptodate(name, refresh=False, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    if updated.get('result') is False:
-        ret.update(updated)
-    else:
-        ret['changes'] = updated.get('changes', {})
-        ret['comment'] = 'Upgrade ran successfully.'
-        ret['result'] = True
+    ret['comment'] = 'Upgrade ran successfully'
+    ret['result'] = True
 
     return ret
 
@@ -2369,7 +2509,13 @@ def group_installed(name, skip=None, include=None, **kwargs):
             if not isinstance(item, six.string_types):
                 include[idx] = str(item)
 
-    diff = __salt__['pkg.group_diff'](name)
+    try:
+        diff = __salt__['pkg.group_diff'](name)
+    except CommandExecutionError as err:
+        ret['comment'] = ('An error was encountered while installing/updating '
+                          'group \'{0}\': {1}.'.format(name, err))
+        return ret
+
     mandatory = diff['mandatory']['installed'] + \
         diff['mandatory']['not installed']
 
@@ -2461,9 +2607,7 @@ def mod_init(low):
         ret = __salt__['pkg.ex_mod_init'](low)
 
     if low['fun'] == 'installed' or low['fun'] == 'latest':
-        rtag = __gen_rtag()
-        if not os.path.exists(rtag):
-            salt.utils.fopen(rtag, 'w+').write('')
+        _refresh_tag_file(create=True)
         return ret
     return False
 

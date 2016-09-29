@@ -212,7 +212,12 @@ def present(
         if not security_group_ids:
             security_group_ids = []
         _security_group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
-            cache_security_group_names, vpc_id, region, key, keyid, profile
+            groups=cache_security_group_names,
+            vpc_id=vpc_id,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile
         )
         security_group_ids.extend(_security_group_ids)
         cache_security_group_names = None

@@ -143,17 +143,6 @@ and should be named ``proxy``. If the file is not there by default, create it.
 This file should contain the location of your Salt Master that the Salt Proxy
 will connect to.
 
-.. note::
-
-    If you're running your ESXi Proxy Minion on version of Salt that is 2015.8.2
-    or newer, you also need to set ``add_proxymodule_to_opts: False`` in your
-    proxy config file. The need to specify this configuration will be removed with
-    Salt ``2016.3.0``, the next major feature release. See the `New in 2015.8.2`_
-    section of the Proxy Minion documentation for more information.
-
-.. _New in 2015.8.2: https://docs.saltstack.com/en/latest/topics/proxyminion/index.html#new-in-2015-8-2
-
-
 Example Proxy Config File:
 
 .. code-block:: yaml
@@ -161,7 +150,6 @@ Example Proxy Config File:
     # /etc/salt/proxy
 
     master: <salt-master-location>
-    add_proxymodule_to_opts: False
 
 
 Pillar Profiles
@@ -274,7 +262,6 @@ Proxy Config File:
     # /etc/salt/proxy
 
     master: <salt-master-location>
-    add_proxymodule_to_opts: False
 
 Pillar Top File:
 

@@ -20,6 +20,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
@@ -35,7 +36,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos', 'ManjaroLinux'):
+    if __grains__['os_family'] == 'Arch':
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
@@ -96,14 +97,6 @@ def latest_version(*names, **kwargs):
         except (ValueError, IndexError):
             pass
 
-    pkgs = {}
-
-    for name in names:
-        if not ret[name]:
-            if not pkgs:
-                pkgs = list_pkgs()
-            if name in pkgs:
-                ret[name] = pkgs[name]
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
@@ -162,10 +155,17 @@ def list_upgrades(refresh=False, root=None, **kwargs):  # pylint: disable=W0613
         out = call['stdout']
 
     for line in salt.utils.itertools.split(out, '\n'):
-        comps = line.split(' ')
-        if len(comps) != 2:
+        try:
+            pkgname, pkgver = line.split()
+        except ValueError:
             continue
-        upgrades[comps[0]] = comps[1]
+        if pkgname.lower() == 'downloading' and '.db' in pkgver.lower():
+            # Antergos (and possibly other Arch derivatives) add lines when pkg
+            # metadata is being downloaded. Because these lines, when split,
+            # contain two columns (i.e. 'downloading community.db...'), we will
+            # skip this line to keep it from being interpreted as an upgrade.
+            continue
+        upgrades[pkgname] = pkgver
     return upgrades
 
 
@@ -299,13 +299,13 @@ def group_list():
             ret['partially_installed'].append(group)
         available.pop(group)
 
-    # Now installed and partially installed are set, whatever is left is the available list.
-
-    ret['available'] = available.keys()
-
     ret['installed'].sort()
     ret['partially_installed'].sort()
-    ret['available'].sort()
+
+    # Now installed and partially installed are set, whatever is left is the available list.
+    # In Python 3, .keys() returns an iterable view instead of a list. sort() cannot be
+    # called on views. Use sorted() instead. Plus it's just as efficient as sort().
+    ret['available'] = sorted(available.keys())
 
     return ret
 
@@ -438,15 +438,29 @@ def install(name=None,
             sources=None,
             **kwargs):
     '''
-    Install (pacman -S) the passed package, add refresh=True to install with
-    -y, add sysupgrade=True to install with -u.
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any pacman commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
+    Install (``pacman -S``) the specified packag(s). Add ``refresh=True`` to
+    install with ``-y``, add ``sysupgrade=True`` to install with ``-u``.
 
     name
         The name of the package to be installed. Note that this parameter is
-        ignored if either "pkgs" or "sources" is passed. Additionally, please
-        note that this option can only be used to install packages from a
-        software repository. To install a package file manually, use the
-        "sources" option.
+        ignored if either ``pkgs`` or ``sources`` is passed. Additionally,
+        please note that this option can only be used to install packages from
+        a software repository. To install a package file manually, use the
+        ``sources`` option.
 
         CLI Example:
 
@@ -519,12 +533,24 @@ def install(name=None,
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']
 
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.append('pacman')
+
     if pkg_type == 'file':
-        cmd = ['pacman', '-U', '--noprogressbar', '--noconfirm'] + pkg_params
+        cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
+        cmd.extend(pkg_params)
     elif pkg_type == 'repository':
+        cmd.append('-S')
+        if salt.utils.is_true(refresh):
+            cmd.append('-y')
+        if salt.utils.is_true(sysupgrade):
+            cmd.append('-u')
+        cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
         targets = []
         problems = []
-        options = ['--noprogressbar', '--noconfirm', '--needed']
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
@@ -538,20 +564,15 @@ def install(name=None,
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                 else:
-                    msg = 'Invalid version string \'{0}\' for package ' \
-                          '\'{1}\''.format(version_num, name)
+                    msg = ('Invalid version string \'{0}\' for package '
+                           '\'{1}\''.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
                 log.error(problem)
             return {}
 
-        if salt.utils.is_true(refresh):
-            options.append('-y')
-        if salt.utils.is_true(sysupgrade):
-            options.append('-u')
-
-        cmd = ['pacman', '-S'] + options + targets
+        cmd.extend(targets)
 
     old = list_pkgs()
     out = __salt__['cmd.run_all'](
@@ -580,15 +601,32 @@ def install(name=None,
 
 def upgrade(refresh=False, root=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any pacman commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Run a full system upgrade, a pacman -Syu
 
     refresh
         Whether or not to refresh the package database before installing.
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
 
     CLI Example:
 
@@ -601,27 +639,30 @@ def upgrade(refresh=False, root=None, **kwargs):
            'comment': ''}
 
     old = list_pkgs()
-    cmd = ['pacman', '-Su', '--noprogressbar', '--noconfirm']
 
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['pacman', '-Su', '--noprogressbar', '--noconfirm'])
     if salt.utils.is_true(refresh):
         cmd.append('-y')
 
     if root is not None:
         cmd.extend(('-r', root))
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
@@ -641,10 +682,14 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    cmd = ['pacman',
-           '-Rsc' if action == 'purge' else '-R',
-           '--noprogressbar',
-           '--noconfirm'] + targets
+    remove_arg = '-Rsc' if action == 'purge' else '-R'
+
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend(['pacman', remove_arg, '--noprogressbar', '--noconfirm'])
+    cmd.extend(targets)
 
     if 'root' in kwargs:
         cmd.extend(('-r', kwargs['root']))
@@ -675,6 +720,20 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any pacman commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Remove packages with ``pacman -R``.
 
     name
@@ -705,6 +764,20 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands which modify installed packages from the
+        ``salt-minion`` daemon's control group. This is done to keep systemd
+        from killing any pacman commands spawned by Salt when the
+        ``salt-minion`` service is restarted. (see ``KillMode`` in the
+        `systemd.kill(5)`_ manpage for more information). If desired, usage of
+        `systemd-run(1)`_ can be suppressed by setting a :mod:`config option
+        <salt.modules.config.get>` called ``systemd.scope``, with a value of
+        ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+    .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
+
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``pacman -Rsc``
 

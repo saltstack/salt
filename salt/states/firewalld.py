@@ -194,7 +194,7 @@ def service(name,
     Ensure the service exists and encompasses the specified ports and
     protocols.
 
-    .. versionadded:: Boron
+    .. versionadded:: Carbon
     '''
     ret = {'name': name,
            'result': False,

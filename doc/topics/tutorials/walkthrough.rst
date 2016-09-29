@@ -91,7 +91,7 @@ the firewall tutorial is available :doc:`here </topics/tutorials/firewall>`.
 
 Finding the Salt Master
 ~~~~~~~~~~~~~~~~~~~~~~~
-When a minion starts, by default it searches for a system that resolves to the ``salt`` hostname`` on the network.
+When a minion starts, by default it searches for a system that resolves to the ``salt`` hostname on the network.
 If found, the minion initiates the handshake and key authentication process with the Salt master.
 This means that the easiest configuration approach is to set internal DNS to resolve the name ``salt`` back to the Salt Master IP.
 

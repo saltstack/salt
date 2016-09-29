@@ -5,6 +5,7 @@ Define some generic socket functions for network modules
 
 # Import python libs
 from __future__ import absolute_import
+import itertools
 import os
 import re
 import socket
@@ -223,6 +224,36 @@ def is_ipv6(ip):
         return False
 
 
+def natural_ipv4_netmask(ip, fmt='prefixlen'):
+    '''
+    Returns the "natural" mask of an IPv4 address
+    '''
+    bits = _ipv4_to_bits(ip)
+
+    if bits.startswith('11'):
+        mask = '24'
+    elif bits.startswith('1'):
+        mask = '16'
+    else:
+        mask = '8'
+
+    if fmt == 'netmask':
+        return cidr_to_ipv4_netmask(mask)
+    else:
+        return '/' + mask
+
+
+def rpad_ipv4_network(ip):
+    '''
+    Returns an IP network address padded with zeros.
+
+    Ex: '192.168.3' -> '192.168.3.0'
+        '10.209' -> '10.209.0.0'
+    '''
+    return '.'.join(itertools.islice(itertools.chain(ip.split('.'), '0000'), 0,
+                                     4))
+
+
 def cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
@@ -436,7 +467,10 @@ def _interfaces_ifconfig(out):
                     if not salt.utils.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
-                if addr_obj['address'] != '::' and addr_obj['prefixlen'] != 0:  # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                if not salt.utils.is_sunos() \
+                        or addr_obj['address'] != '::' \
+                        and addr_obj['prefixlen'] != 0:
                     data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:
@@ -756,22 +790,6 @@ def in_subnet(cidr, addr=None):
         if ipaddress.ip_address(ip_addr) in cidr:
             return True
     return False
-
-
-def ip_in_subnet(addr, cidr):
-    '''
-    Returns True if given IP is within specified subnet, otherwise False
-
-    .. deprecated:: Carbon
-       Use :py:func:`~salt.utils.network.in_subnet` instead
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Carbon. Please use \'in_subnet\' instead.'
-    )
-
-    return in_subnet(cidr, addr)
 
 
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):

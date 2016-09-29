@@ -54,6 +54,26 @@ def _normalize_server_settings(**settings):
 def server_setting(name, settings=None, server=_DEFAULT_SERVER):
     '''
     Ensure the value is set for the specified setting.
+
+    .. note::
+
+        The setting names are case-sensitive.
+
+    :param str settings: A dictionary of the setting names and their values.
+    :param str server: The SMTP server name.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        smtp-settings:
+            win_smtp_server.server_setting:
+                - settings:
+                    LogType: 1
+                    LogFilePeriod: 1
+                    MaxMessageSize: 16777216
+                    MaxRecipients: 10000
+                    MaxSessionSize: 16777216
     '''
     ret = {'name': name,
            'changes': {},
@@ -111,6 +131,17 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
 def active_log_format(name, log_format, server=_DEFAULT_SERVER):
     '''
     Manage the active log format for the SMTP server.
+
+    :param str log_format: The log format name.
+    :param str server: The SMTP server name.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        smtp-log-format:
+            win_smtp_server.active_log_format:
+                - log_format: Microsoft IIS Log File Format
     '''
     ret = {'name': name,
            'changes': {},
@@ -136,6 +167,42 @@ def active_log_format(name, log_format, server=_DEFAULT_SERVER):
 def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEFAULT_SERVER):
     '''
     Manage IP list for SMTP connections.
+
+    :param str addresses: A dictionary of IP + subnet pairs.
+    :param bool grant_by_default: Whether the addresses should be a blacklist or whitelist.
+    :param str server: The SMTP server name.
+
+    Example of usage for creating a whitelist:
+
+    .. code-block:: yaml
+
+        smtp-connection-whitelist:
+            win_smtp_server.connection_ip_list:
+                - addresses:
+                    127.0.0.1: 255.255.255.255
+                    172.16.1.98: 255.255.255.255
+                    172.16.1.99: 255.255.255.255
+                - grant_by_default: False
+
+    Example of usage for creating a blacklist:
+
+   .. code-block:: yaml
+
+        smtp-connection-blacklist:
+            win_smtp_server.connection_ip_list:
+                - addresses:
+                    172.16.1.100: 255.255.255.255
+                    172.16.1.101: 255.255.255.255
+                - grant_by_default: True
+
+    Example of usage for allowing any source to connect:
+
+    .. code-block:: yaml
+
+        smtp-connection-blacklist:
+            win_smtp_server.connection_ip_list:
+                - addresses: {}
+                - grant_by_default: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -166,6 +233,72 @@ def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEF
 def relay_ip_list(name, addresses=None, server=_DEFAULT_SERVER):
     '''
     Manage IP list for SMTP relay connections.
+
+    Due to the unusual way that Windows stores the relay IPs, it is advisable to retrieve
+    the existing list you wish to set from a pre-configured server.
+
+    For example, setting '127.0.0.1' as an allowed relay IP through the GUI would generate
+    an actual relay IP list similar to the following:
+
+    .. code-block:: cfg
+
+        ['24.0.0.128', '32.0.0.128', '60.0.0.128', '68.0.0.128', '1.0.0.0', '76.0.0.0',
+          '0.0.0.0', '0.0.0.0', '1.0.0.0', '1.0.0.0', '2.0.0.0', '2.0.0.0', '4.0.0.0',
+          '0.0.0.0', '76.0.0.128', '0.0.0.0', '0.0.0.0', '0.0.0.0', '0.0.0.0',
+          '255.255.255.255', '127.0.0.1']
+
+    .. note::
+
+        Setting the list to None corresponds to the restrictive 'Only the list below' GUI parameter
+        with an empty access list configured, and setting an empty list/tuple corresponds to the
+        more permissive 'All except the list below' GUI parameter.
+
+    :param str addresses: A list of the relay IPs. The order of the list is important.
+    :param str server: The SMTP server name.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        smtp-relay-list:
+          win_smtp_server.relay_ip_list:
+            - addresses:
+                - 24.0.0.128
+                - 32.0.0.128
+                - 60.0.0.128
+                - 1.0.0.0
+                - 76.0.0.0
+                - 0.0.0.0
+                - 0.0.0.0
+                - 1.0.0.0
+                - 1.0.0.0
+                - 2.0.0.0
+                - 2.0.0.0
+                - 4.0.0.0
+                - 0.0.0.0
+                - 76.0.0.128
+                - 0.0.0.0
+                - 0.0.0.0
+                - 0.0.0.0
+                - 0.0.0.0
+                - 255.255.255.255
+                - 127.0.0.1
+
+    Example of usage for disabling relaying:
+
+    .. code-block:: yaml
+
+        smtp-relay-list:
+            win_smtp_server.relay_ip_list:
+                - addresses: None
+
+    Example of usage for allowing relaying from any source:
+
+    .. code-block:: yaml
+
+        smtp-relay-list:
+            win_smtp_server.relay_ip_list:
+                - addresses: []
     '''
     ret = {'name': name,
            'changes': {},

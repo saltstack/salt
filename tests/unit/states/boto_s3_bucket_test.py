@@ -272,6 +272,11 @@ if _has_required_boto():
     }
 
 
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto3_version))
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoS3BucketStateTestCaseBase(TestCase):
     conn = None
 
@@ -292,11 +297,6 @@ class BotoS3BucketStateTestCaseBase(TestCase):
         session_instance.client.return_value = self.conn
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMixin):
     '''
     TestCase for salt.modules.boto_s3_bucket state.module

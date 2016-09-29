@@ -23,7 +23,8 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-from salt.utils import fopen, is_darwin, vt
+import salt.utils
+import salt.utils.vt
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -37,7 +38,7 @@ class VTTestCase(TestCase):
         if not sys.stdin.isatty():
             self.skipTest('Not attached to a TTY. The test would fail.')
         cols = random.choice(range(80, 250))
-        terminal = vt.Terminal(
+        terminal = salt.utils.vt.Terminal(
             'echo "Foo!"',
             shell=True,
             cols=cols,
@@ -61,7 +62,7 @@ class VTTestCase(TestCase):
             # Get current number of PTY's
             try:
                 if os.path.exists('/proc/sys/kernel/pty/nr'):
-                    with fopen('/proc/sys/kernel/pty/nr') as fh_:
+                    with salt.utils.fopen('/proc/sys/kernel/pty/nr') as fh_:
                         return int(fh_.read().strip())
 
                 proc = subprocess.Popen(
@@ -72,7 +73,7 @@ class VTTestCase(TestCase):
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
             except (ValueError, OSError, IOError):
-                if is_darwin():
+                if salt.utils.is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
                         'Unable to find out how many PTY\'s are open on Darwin - '
@@ -85,7 +86,7 @@ class VTTestCase(TestCase):
         # Using context manager's
         for idx in range(0, nr_ptys + n_executions):
             try:
-                with vt.Terminal('echo "Run {0}"'.format(idx),
+                with salt.utils.vt.Terminal('echo "Run {0}"'.format(idx),
                                 shell=True,
                                 stream_stdout=False,
                                 stream_stderr=False) as terminal:
@@ -105,7 +106,7 @@ class VTTestCase(TestCase):
         # Not using context manager's
         for idx in range(0, nr_ptys + n_executions):
             try:
-                terminal = vt.Terminal('echo "Run {0}"'.format(idx),
+                terminal = salt.utils.vt.Terminal('echo "Run {0}"'.format(idx),
                                        shell=True,
                                        stream_stdout=False,
                                        stream_stderr=False)
@@ -125,7 +126,10 @@ class VTTestCase(TestCase):
     @skipIf(True, 'Disabled until we can figure out how to make this more reliable.')
     def test_isalive_while_theres_data_to_read(self):
         expected_data = 'Alive!\n'
-        term = vt.Terminal('echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        term = salt.utils.vt.Terminal('echo "Alive!"',
+                                      shell=True,
+                                      stream_stdout=False,
+                                      stream_stderr=False)
         buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
@@ -150,7 +154,10 @@ class VTTestCase(TestCase):
             term.close(terminate=True, kill=True)
 
         expected_data = 'Alive!\n'
-        term = vt.Terminal('echo "Alive!" 1>&2', shell=True, stream_stdout=False, stream_stderr=False)
+        term = salt.utils.vt.Terminal('echo "Alive!" 1>&2',
+                                      shell=True,
+                                      stream_stdout=False,
+                                      stream_stderr=False)
         buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
@@ -175,7 +182,10 @@ class VTTestCase(TestCase):
             term.close(terminate=True, kill=True)
 
         expected_data = 'Alive!\nAlive!\n'
-        term = vt.Terminal('echo "Alive!"; sleep 5; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        term = salt.utils.vt.Terminal('echo "Alive!"; sleep 5; echo "Alive!"',
+                                      shell=True,
+                                      stream_stdout=False,
+                                      stream_stderr=False)
         buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:

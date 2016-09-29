@@ -39,7 +39,7 @@ def __virtual__():
 
 def _parse_pkg_string(pkg):
     '''
-    Parse pkg string and return a tuple of packge name, separator, and
+    Parse pkg string and return a tuple of package name, separator, and
     package version.
 
     Cabal support install package with following format:

@@ -129,6 +129,13 @@
 # This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
+# Append minion_id to these directories.  Helps with
+# multiple proxies and minions running on the same machine.
+# Allowed elements in the list: pki_dir, cachedir, extension_modules
+# Normally not needed unless running several proxies and/or minions on the same machine
+# Defaults to ['cachedir'] for proxies, [] (empty list) for regular minions
+#append_minionid_config_dirs:
+
 # Verify and set permissions on configuration directories at startup.
 #verify_env: True
 
@@ -396,10 +403,23 @@
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
-# access the master has to the minion.
-#disable_modules: [cmdmod,test]
+# access the master has to the minion.  The default here is the empty list,
+# below is an example of how this needs to be formatted in the config file
+#disable_modules:
+#  - cmdmod
+#  - test
 #disable_returners: []
-#
+
+# This is the reverse of disable_modules.  The default, like disable_modules, is the empty list,
+# but if this option is set to *anything* then *only* those modules will load.
+# Note that this is a very large hammer and it can be quite difficult to keep the minion working
+# the way you think it should since Salt uses many modules internally itself.  At a bare minimum
+# you need the following enabled or else the minion won't start.
+#whitelist_modules:
+#  - cmdmod
+#  - test
+#  - config
+
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
 # of third party modules. Modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and
@@ -463,6 +483,11 @@
 # Isolates the pillar environment on the minion side. This functions the same
 # as the environment setting, but for pillar instead of states.
 #pillarenv: None
+#
+# Set this option to 'True' to force a 'KeyError' to be raised whenever an
+# attempt to retrieve a named value from pillar fails. When this option is set
+# to 'False', the failed attempt returns an empty string. Default is 'False'.
+#pillar_raise_on_missing: False
 #
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
@@ -605,7 +630,7 @@
 
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running
-# "salt-key -F master" on the Salt master.
+# "salt-key -f master.pub" on the Salt master.
 #master_finger: ''
 
 

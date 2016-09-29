@@ -128,7 +128,12 @@ class IptablesTestCase(TestCase):
         # Should allow no-arg jump options
         self.assertEqual(iptables.build_rule(jump='CLUSTERIP',
                                              **{'new': ''}),
-                         '--jump CLUSTERIP --new ')
+                         '--jump CLUSTERIP --new')
+
+        # Should allow no-arg jump options as None
+        self.assertEqual(iptables.build_rule(jump='CT',
+                                             **{'notrack': None}),
+                         '--jump CT --notrack')
 
         # should build match-sets with single string
         self.assertEqual(iptables.build_rule(**{'match-set': 'src flag1,flag2'}),

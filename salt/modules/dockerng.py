@@ -262,19 +262,18 @@ import pipes
 import re
 import shutil
 import string
-import sys
 import time
 import uuid
 import base64
 import errno
-from subprocess import list2cmdline
+import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from salt.utils.decorators \
-    import identical_signature_wrapper as _mimic_signature
 import salt.utils
+import salt.utils.decorators
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -282,10 +281,6 @@ import salt.fileclient
 
 from salt.state import HighState
 import salt.client.ssh.state
-
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 # pylint: disable=import-error
 try:
@@ -296,8 +291,7 @@ except ImportError:
     HAS_DOCKER_PY = False
 
 try:
-    PY_VERSION = sys.version_info[0]
-    if PY_VERSION == 2:
+    if six.PY2:
         import backports.lzma as lzma
     else:
         import lzma
@@ -546,6 +540,14 @@ VALID_CREATE_OPTS = {
         'min_docker': (1, 5, 0),
         'default': '',
     },
+    'log_config': {
+        'path': 'HostConfig:LogConfig',
+        'min_docker': (1, 4, 0),
+        'default': {
+            'Type': None,
+            'Config': {},
+        }
+    },
 }
 
 
@@ -619,7 +621,7 @@ class _api_version(object):
                     .format(self.api_version, current_api_version)
                 )
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return _mimic_signature(func, wrapper)
+        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
 
 
 class _client_version(object):
@@ -648,7 +650,7 @@ class _client_version(object):
                         ' `docker.version` = "{0}"'.format(minion_conf))
                 raise CommandExecutionError(error_message)
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return _mimic_signature(func, wrapper)
+        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
 
 
 def _docker_client(wrapped):
@@ -790,8 +792,11 @@ def _get_client(timeout=None):
             except Exception as exc:
                 raise CommandExecutionError(
                     'Docker machine {0} failed: {1}'.format(docker_machine, exc))
-
-        __context__['docker.client'] = docker.Client(**client_kwargs)
+        try:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
+        except docker.errors.DockerException:
+            log.error('Could not initialize Docker client')
+            return False
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
@@ -945,6 +950,8 @@ def _client_wrapper(attr, *args, **kwargs):
     Common functionality for getting information from a container
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
+    if 'docker.client' not in __context__:
+        raise CommandExecutionError('Docker service not running or not installed?')
     func = getattr(__context__['docker.client'], attr)
     if func is None:
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
@@ -1811,6 +1818,31 @@ def _validate_input(kwargs,
                 'pid_mode can only be \'host\', if set'
             )
 
+    def _valid_log_config():  # pylint: disable=unused-variable
+        '''
+        Needs to be a dictionary that might contain keys Type and Config
+        '''
+        try:
+            _valid_dict('log_config')
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'log_config must be of type \'dict\', if set'
+            )
+
+        log_config = kwargs.get('log_config')
+        log_config_type = log_config.get('Type', None)
+        if log_config_type and not isinstance(log_config_type,
+                                              six.string_types):
+            raise SaltInvocationError(
+                'log_config[\'type\'] must be of type \'str\''
+            )
+
+        log_config_config = log_config.get('Config', {})
+        if log_config_config and not isinstance(log_config_config, dict):
+            raise SaltInvocationError(
+                'log_config[\'config\'] must be of type \'dict\''
+            )
+
     def _valid_labels():  # pylint: disable=unused-variable
         '''
         Must be a dict or a list of strings
@@ -2164,9 +2196,11 @@ def images(verbose=False, **kwargs):
             if img_id is None:
                 continue
             for item in img:
-                img_state = 'untagged' \
-                    if img['RepoTags'] == ['<none>:<none>'] \
-                    else 'tagged'
+                img_state = ('untagged' if
+                             img['RepoTags'] in (
+                               ['<none>:<none>'],  # docker API <1.24
+                               None,  # docker API >=1.24
+                             ) else 'tagged')
                 bucket = __context__.setdefault('docker.images', {})
                 bucket = bucket.setdefault(img_state, {})
                 img_key = key_map.get(item, item)
@@ -2349,8 +2383,9 @@ def list_tags():
     '''
     ret = set()
     for item in six.itervalues(images()):
-        for repo_tag in item.get('RepoTags', []):
-            ret.add(repo_tag)
+        if not item.get('RepoTags'):
+            continue
+        ret.update(set(item['RepoTags']))
     return sorted(ret)
 
 
@@ -3014,6 +3049,14 @@ def create(image,
 
         Example: ``pid_mode=host``
 
+    log_config
+        Set container's log driver and options
+
+        Example: ``log_conf:
+                     Type: json-file
+                     Config:
+                       max-file: '10'``
+
     **RETURN DATA**
 
     A dictionary containing the following keys:
@@ -3394,7 +3437,8 @@ def export(name,
         if compression != 'gzip':
             # gzip doesn't use a Compressor object, it uses a .open() method to
             # open the filehandle. If not using gzip, we need to open the
-            # filehandle here.
+            # filehandle here. We make sure to close it in the "finally" block
+            # below.
             out = salt.utils.fopen(path, 'wb')
         response = _client_wrapper('export', name)
         buf = None
@@ -5653,6 +5697,8 @@ def call(name, function, *args, **kwargs):
     '''
     Executes a salt function inside a container
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion dockerng.call test.ping
@@ -5670,7 +5716,7 @@ def call(name, function, *args, **kwargs):
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
     # put_archive reqires the path to exist
-    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_thin_argv))
+    ret = __salt__['dockerng.run_all'](name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
@@ -5694,7 +5740,7 @@ def call(name, function, *args, **kwargs):
         ] + list(args) + ['{0}={1}'.format(key, value) for (key, value) in kwargs.items() if not key.startswith('__')]
 
         ret = __salt__['dockerng.run_all'](name,
-                                           list2cmdline(map(str, salt_argv)))
+                                           subprocess.list2cmdline(map(str, salt_argv)))
         # python not found
         if ret['retcode'] != 0:
             raise CommandExecutionError(ret['stderr'])
@@ -5713,7 +5759,7 @@ def call(name, function, *args, **kwargs):
     finally:
         # delete the thin dir so that it does not end in the image
         rm_thin_argv = ['rm', '-rf', thin_dest_path]
-        __salt__['dockerng.run_all'](name, list2cmdline(rm_thin_argv))
+        __salt__['dockerng.run_all'](name, subprocess.list2cmdline(rm_thin_argv))
 
 
 def sls(name, mods=None, saltenv='base', **kwargs):
@@ -5723,6 +5769,8 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     For example, if your master defines the states ``web`` and ``rails``, you
     can apply them to a container:
     states by doing:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5747,7 +5795,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     trans_dest_path = _generate_tmp_path()
     mkdirp_trans_argv = ['mkdir', '-p', trans_dest_path]
     # put_archive requires the path to exist
-    ret = __salt__['dockerng.run_all'](name, list2cmdline(mkdirp_trans_argv))
+    ret = __salt__['dockerng.run_all'](name, subprocess.list2cmdline(mkdirp_trans_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
 
@@ -5765,7 +5813,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     finally:
         # delete the trans dir so that it does not end in the image
         rm_trans_argv = ['rm', '-rf', trans_dest_path]
-        __salt__['dockerng.run_all'](name, list2cmdline(rm_trans_argv))
+        __salt__['dockerng.run_all'](name, subprocess.list2cmdline(rm_trans_argv))
         # delete the local version of the trans tar
         try:
             os.remove(trans_tar)
@@ -5785,7 +5833,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     return ret
 
 
-def sls_build(name, base='fedora', mods=None, saltenv='base',
+def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
               **kwargs):
     '''
     Build a docker image using the specified sls modules and base image.
@@ -5793,6 +5841,8 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
     For example, if your master defines the states ``web`` and ``rails``, you
     can build a docker image inside myminion that results of applying those
     states by doing:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5806,6 +5856,7 @@ def sls_build(name, base='fedora', mods=None, saltenv='base',
 
     # start a new container
     ret = __salt__['dockerng.create'](image=base,
+                                      name=name,
                                       cmd='/usr/bin/sleep infinity',
                                       interactive=True, tty=True)
     id_ = ret['Id']

@@ -422,6 +422,118 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
         return False
 
 
+def assign_private_ip_addresses(network_interface_name=None, network_interface_id=None,
+                                private_ip_addresses=None, secondary_private_ip_address_count=None,
+                                allow_reassignment=False, region=None, key=None,
+                                keyid=None, profile=None):
+    '''
+    Assigns one or more secondary private IP addresses to a network interface.
+
+    network_interface_id
+        (string) - ID of the network interface to associate the IP with (exclusive with 'network_interface_name')
+    network_interface_name
+        (string) - Name of the network interface to associate the IP with (exclusive with 'network_interface_id')
+    private_ip_addresses
+        (list) - Assigns the specified IP addresses as secondary IP addresses to the network interface (exclusive with 'secondary_private_ip_address_count')
+    secondary_private_ip_address_count
+        (int) - The number of secondary IP addresses to assign to the network interface. (exclusive with 'private_ip_addresses')
+    allow_reassociation
+        (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
+
+    returns
+        (bool)   - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
+        salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni secondary_private_ip_address_count=2
+
+    .. versionadded:: Nitrogen
+    '''
+    if not salt.utils.exactly_one((network_interface_name,
+                                   network_interface_id)):
+        raise SaltInvocationError("Exactly one of 'network_interface_name', "
+                                  "'network_interface_id' must be provided")
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if network_interface_name:
+        try:
+            network_interface_id = get_network_interface_id(
+                network_interface_name, region=region, key=key, keyid=keyid,
+                profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+        if not network_interface_id:
+            log.error("Given network_interface_name '{0}' cannot be mapped to "
+                      "an network_interface_id".format(network_interface_name))
+            return False
+
+    try:
+        return conn.assign_private_ip_addresses(network_interface_id=network_interface_id,
+                                                private_ip_addresses=private_ip_addresses,
+                                                secondary_private_ip_address_count=secondary_private_ip_address_count,
+                                                allow_reassignment=allow_reassignment)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def unassign_private_ip_addresses(network_interface_name=None, network_interface_id=None,
+                                  private_ip_addresses=None, region=None,
+                                  key=None, keyid=None, profile=None):
+    '''
+    Unassigns one or more secondary private IP addresses from a network interface
+
+    network_interface_id
+        (string) - ID of the network interface to associate the IP with (exclusive with 'network_interface_name')
+    network_interface_name
+        (string) - Name of the network interface to associate the IP with (exclusive with 'network_interface_id')
+    private_ip_addresses
+        (list) - Assigns the specified IP addresses as secondary IP addresses to the network interface.
+
+    returns
+        (bool)   - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.unassign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
+
+    .. versionadded:: Nitrogen
+    '''
+    if not salt.utils.exactly_one((network_interface_name,
+                                   network_interface_id)):
+        raise SaltInvocationError("Exactly one of 'network_interface_name', "
+                                  "'network_interface_id' must be provided")
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if network_interface_name:
+        try:
+            network_interface_id = get_network_interface_id(
+                network_interface_name, region=region, key=key, keyid=keyid,
+                profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+        if not network_interface_id:
+            log.error("Given network_interface_name '{0}' cannot be mapped to "
+                      "an network_interface_id".format(network_interface_name))
+            return False
+
+    try:
+        return conn.unassign_private_ip_addresses(network_interface_id=network_interface_id,
+                                                  private_ip_addresses=private_ip_addresses)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def get_zones(region=None, key=None, keyid=None, profile=None):
     '''
     Get a list of AZs for the configured region.
@@ -439,7 +551,7 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
 
 def find_instances(instance_id=None, name=None, tags=None, region=None,
                    key=None, keyid=None, profile=None, return_objs=False,
-                   in_states=None):
+                   in_states=None, filters=None):
 
     '''
     Given instance properties, find and return matching instance ids
@@ -451,6 +563,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         salt myminion boto_ec2.find_instances # Lists all instances
         salt myminion boto_ec2.find_instances name=myinstance
         salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+        salt myminion boto_ec2.find_instances filters='{"vpc-id": "vpc-12345678"}'
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -468,7 +581,10 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
             for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
-        reservations = conn.get_all_instances(**filter_parameters)
+        if filters:
+            filter_parameters['filters'].update(filters)
+
+        reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
         log.debug('The filters criteria {0} matched the following '
                   'instances:{1}'.format(filter_parameters, instances))
@@ -490,7 +606,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
 def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
                  key=None, keyid=None, profile=None, description=None, no_reboot=False,
-                 dry_run=False):
+                 dry_run=False, filters=None):
     '''
     Given instance properties that define exactly one instance, create AMI and return AMI-id.
 
@@ -505,7 +621,7 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
 
     instances = find_instances(instance_id=instance_id, name=instance_name, tags=tags,
                                region=region, key=key, keyid=keyid, profile=profile,
-                               return_objs=True)
+                               return_objs=True, filters=filters)
 
     if not instances:
         log.error('Source instance not found')
@@ -533,7 +649,7 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+        salt myminion boto_ec2.find_images tags='{"mytag": "value"}'
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -573,7 +689,7 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
 
 
 def terminate(instance_id=None, name=None, region=None,
-              key=None, keyid=None, profile=None):
+              key=None, keyid=None, profile=None, filters=None):
     '''
     Terminate the instance described by instance_id or name.
 
@@ -586,7 +702,8 @@ def terminate(instance_id=None, name=None, region=None,
     '''
     instances = find_instances(instance_id=instance_id, name=name,
                                region=region, key=key, keyid=keyid,
-                               profile=profile, return_objs=True)
+                               profile=profile, return_objs=True,
+                               filters=filters)
     if instances in (False, None, []):
         return instances
 
@@ -599,7 +716,7 @@ def terminate(instance_id=None, name=None, region=None,
 
 
 def get_id(name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=None):
+           keyid=None, profile=None, in_states=None, filters=None):
 
     '''
     Given instance properties, return the instance id if it exists.
@@ -612,7 +729,8 @@ def get_id(name=None, tags=None, region=None, key=None,
 
     '''
     instance_ids = find_instances(name=name, tags=tags, region=region, key=key,
-                                  keyid=keyid, profile=profile, in_states=in_states)
+                                  keyid=keyid, profile=profile, in_states=in_states,
+                                  filters=filters)
     if instance_ids:
         log.info("Instance ids: {0}".format(" ".join(instance_ids)))
         if len(instance_ids) == 1:
@@ -626,7 +744,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=None):
+           keyid=None, profile=None, in_states=None, filters=None):
     '''
     Given a instance id, check to see if the given instance id exists.
 
@@ -641,7 +759,7 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
     '''
     instances = find_instances(instance_id=instance_id, name=name, tags=tags,
                                region=region, key=key, keyid=keyid,
-                               profile=profile, in_states=in_states)
+                               profile=profile, in_states=in_states, filters=filters)
     if instances:
         log.info('Instance exists.')
         return True
@@ -952,7 +1070,7 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create mykey /root/
+        salt myminion boto_ec2.create_key mykey /root/
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1049,7 +1167,7 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
 
 
 def get_attribute(attribute, instance_name=None, instance_id=None, region=None, key=None,
-                  keyid=None, profile=None):
+                  keyid=None, profile=None, filters=None):
     '''
     Get an EC2 instance attribute.
 
@@ -1088,7 +1206,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
+                                      filters=filters)
             if len(instances) > 1:
                 log.error('Found more than one EC2 instance matching the criteria.')
                 return False
@@ -1106,7 +1225,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
 
 
 def set_attribute(attribute, attribute_value, instance_name=None, instance_id=None, region=None, key=None, keyid=None,
-                  profile=None):
+                  profile=None, filters=None):
     '''
     Set an EC2 instance attribute.
     Returns whether the operation succeeded or not.
@@ -1145,7 +1264,8 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
+                                      filters=filters)
             if len(instances) != 1:
                 raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
             instance_id = instances[0]
@@ -1582,6 +1702,127 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
         return []
 
 
+def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
+                    region=None, key=None, keyid=None, profile=None):
+    '''
+    tag_maps (list)
+        List of dicts of filters and tags, where 'filters' is a dict suitable for passing to the
+        'filters' argument of get_all_volumes() above, and 'tags' is a dict of tags to be set on
+        volumes (via create_tags/delete_tags) as matched by the given filters.  The filter syntax
+        is extended to permit passing either a list of volume_ids or an instance_name (with
+        instance_name being the Name tag of the instance to which the desired volumes are mapped).
+        Each mapping in the list is applied separately, so multiple sets of volumes can be all
+        tagged differently with one call to this function.  If filtering by instance Name, You may
+        additionally limit the instances matched by passing in a list of desired instance states.
+        The default set of states is ('pending', 'rebooting', 'running', 'stopping', 'stopped').
+
+    YAML example fragment:
+
+    .. code-block:: yaml
+        - filters:
+            attachment.instance_id: i-abcdef12
+          tags:
+            Name: dev-int-abcdef12.aws-foo.com
+        - filters:
+            attachment.device: /dev/sdf
+          tags:
+            ManagedSnapshots: true
+            BillingGroup: bubba.hotep@aws-foo.com
+          in_states:
+          - stopped
+          - terminated
+        - filters:
+            instance_name: prd-foo-01.aws-foo.com
+          tags:
+            Name: prd-foo-01.aws-foo.com
+            BillingGroup: infra-team@aws-foo.com
+        - filters:
+            volume_ids: [ vol-12345689, vol-abcdef12 ]
+          tags:
+            BillingGroup: infra-team@aws-foo.com
+
+    authoritative (bool)
+        If true, any existing tags on the matched volumes, and not explicitly requested here, will
+        be removed.
+
+    dry_run (bool)
+        If true, don't change anything, just return a dictionary describing any changes which
+        would have been applied.
+
+    returns (dict)
+        A dict dsecribing status and any changes.
+
+    .. versionadded:: Carbon
+    '''
+    ret = {'success': True, 'comment': '', 'changes': {}}
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+    for tm in tag_maps:
+        filters = tm.get('filters')
+        tags = tm.get('tags')
+        if not isinstance(filters, dict):
+            raise SaltInvocationError('Tag filters must be a dictionary: got {0}'.format(filters))
+        if not isinstance(tags, dict):
+            raise SaltInvocationError('Tags must be a dictionary: got {0}'.format(tags))
+        args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+        new_filters = {}
+        log.debug('got filters: {0}'.format(filters))
+        instance_id = None
+        in_states = tm.get('in_states', running_states)
+        try:
+            for k, v in six.iteritems(filters):
+                if k == 'volume_ids':
+                    args['volume_ids'] = v
+                elif k == 'instance_name':
+                    instance_id = get_id(name=v, in_states=in_states, region=region, key=key,
+                                         keyid=keyid, profile=profile)
+                    if not instance_id:
+                        msg = "Couldn't resolve instance Name {0} to an ID.".format(v)
+                        raise CommandExecutionError(msg)
+                    new_filters['attachment.instance_id'] = instance_id
+                else:
+                    new_filters[k] = v
+        except CommandExecutionError as e:
+            log.warning(e)
+            continue  # Hmme, abort or do what we can...?  Guess the latter for now.
+        args['filters'] = new_filters
+        volumes = get_all_volumes(**args)
+        log.debug('got volume list: {0}'.format(volumes))
+        changes = {'old': {}, 'new': {}}
+        for vol in volumes:
+            log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+            curr = set(dict(getattr(vol, 'tags', {})).keys())
+            log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+            req = set(tags.keys())
+            add = list(req - curr)
+            update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
+            remove = list(curr - req)
+            if add or update or (authoritative and remove):
+                changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
+                changes['new'][vol.id] = tags
+            else:
+                log.debug('No changes needed for vol.id {0}'.format(vol.id))
+            if len(add):
+                d = dict((k, tags[k]) for k in add)
+                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
+            if len(update):
+                d = dict((k, tags[k]) for k in update)
+                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+            if not dry_run:
+                if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
+                    ret['success'] = False
+                    ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
+                    return ret
+                if authoritative:
+                    if len(remove):
+                        log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                        if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
+                            ret['success'] = False
+                            ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
+                            return ret
+        ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
+    return ret
+
+
 def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Create new metadata tags for the specified resource ids.
@@ -1609,6 +1850,43 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.create_tags(resource_ids, tags)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete metadata tags for the specified resource ids.
+
+    resource_ids
+        (string) or (list) – List of resource IDs.  A plain string will be converted to a list of one element.
+    tags
+        (dict) or (list) – Either a dictionary containing name/value pairs or a list containing just tag names.
+                           If you pass in a dictionary, the values must match the actual tag values or the tag
+                           will not be deleted. If you pass in a value of None for the tag value, all tags with
+                           that name will be deleted.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.delete_tags vol-12345678 '{"Name": "myVolume01"}'
+        salt-call boto_ec2.delete_tags vol-12345678 '["Name","MountPoint"]'
+
+    .. versionadded:: Carbon
+
+    '''
+    if not isinstance(resource_ids, list):
+        resource_ids = [resource_ids]
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.delete_tags(resource_ids, tags)
         return True
     except boto.exception.BotoServerError as e:
         log.error(e)

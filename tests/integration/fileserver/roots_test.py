@@ -104,7 +104,13 @@ class RootsTest(integration.ModuleCase):
                 'rel': 'testfile'
             }
             ret = roots.file_hash(load, fnd)
-            self.assertDictEqual(ret, {'hsum': '98aa509006628302ce38ce521a7f805f', 'hash_type': 'md5'})
+            self.assertDictEqual(
+                ret,
+                {
+                    'hsum': 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df',
+                    'hash_type': 'sha256'
+                }
+            )
 
     def test_file_list_emptydirs(self):
         if integration.TMP_STATE_TREE not in self.master_opts['file_roots']['base']:

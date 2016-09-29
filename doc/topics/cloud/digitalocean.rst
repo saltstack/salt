@@ -179,4 +179,13 @@ Miscellaneous Information
 
 .. note::
 
+   If you need to perform the bootstrap using the local interface for droplets,
+   this can be done by setting ``ssh_interface: private`` in your config. By
+   default the salt-cloud script would run on the public interface however if firewall
+   is preventing the connection to the Droplet over the public interface you might need
+   to set this option to connect via private interface. Also, to use this feature
+   ``private_networking: True`` must be set in the config.
+
+.. note::
+
     Additional documentation is available from `DigitalOcean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.

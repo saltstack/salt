@@ -370,7 +370,7 @@ class PostgresExtensionTestCase(TestCase):
         self.assertEqual(
             ret,
             {'comment': 'The extension foo has been installed',
-             'changes': {}, 'name': 'foo', 'result': True}
+             'changes': {'foo': 'Installed'}, 'name': 'foo', 'result': True}
         )
         ret = postgres_extension.present('foo')
         self.assertEqual(
@@ -382,7 +382,7 @@ class PostgresExtensionTestCase(TestCase):
         self.assertEqual(
             ret,
             {'comment': 'The extension foo has been upgraded',
-             'changes': {}, 'name': 'foo', 'result': True}
+             'changes': {'foo': 'Upgraded'}, 'name': 'foo', 'result': True}
         )
 
     @patch.dict(OPTS, {'test': True})

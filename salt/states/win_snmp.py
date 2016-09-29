@@ -24,6 +24,18 @@ def agent_settings(name, contact, location, services=None):
     :param str contact: The SNMP contact.
     :param str location: The SNMP location.
     :param str services: A list of selected services.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        snmp-agent-settings:
+            win_snmp.agent_settings:
+                - contact: Test Contact
+                - location: Test Location
+                - services:
+                    - Physical
+                    - Internet
     '''
     ret = {'name': name,
            'changes': {},
@@ -81,6 +93,14 @@ def auth_traps_enabled(name, status=True):
     Manage the sending of authentication traps.
 
     :param bool status: The enabled status.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        snmp-auth-traps:
+            win_snmp.auth_traps_enabled:
+                - status: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -111,6 +131,16 @@ def community_names(name, communities=None):
     Manage the SNMP accepted community names and their permissions.
 
     :param str communities: A dictionary of SNMP communities and permissions.
+
+    Example of usage:
+
+    .. code-block:: yaml
+
+        snmp-community-names:
+            win_snmp.community_names:
+                - communities:
+                    TestCommunity: Read Only
+                    OtherCommunity: Read Write
     '''
     ret = {'name': name,
            'changes': dict(),

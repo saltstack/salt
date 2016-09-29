@@ -28,7 +28,7 @@ def __virtual__():
         return __virtualname__
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -59,7 +59,7 @@ def beacon(config):
     log.trace('glxinfo beacon starting')
     ret = []
 
-    _validate = validate(config)
+    _validate = __validate__(config)
     if not _validate[0]:
         return ret
 

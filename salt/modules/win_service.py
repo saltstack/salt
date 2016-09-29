@@ -2,8 +2,7 @@
 '''
 Windows Service module.
 
-.. versionadded:: Carbon
-    Rewritten to use PyWin32
+.. versionchanged:: Carbon - Rewritten to use PyWin32
 '''
 
 # Import python libs
@@ -407,7 +406,13 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    if not status(name):
+    # net stop issues a stop command and waits briefly (~30s), but will give
+    # up if the service takes too long to stop with a misleading
+    # "service could not be stopped" message and RC 0.
+
+    cmd = ['net', 'stop', '/y', name]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
+    if 'service was stopped' in res:
         return True
 
     try:
@@ -617,6 +622,14 @@ def modify(name,
         run_interactive (bool): If this setting is True, the service will be
         allowed to interact with the user. Not recommended for services that run
         with elevated privileges.
+
+    Returns (dict): A dictionary of changes made
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.modify spooler start_type=disabled
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx
@@ -1165,7 +1178,7 @@ def config(name,
         salt '*' service.config <service name> <path to exe> display_name='<display name>'
     '''
     salt.utils.warn_until(
-        'Nitrogen',
+        'Oxygen',
         'The \'service.change\' function is deprecated, and will be removed in '
         'Salt {version}. Please use \'service.modify\' instead.')
 

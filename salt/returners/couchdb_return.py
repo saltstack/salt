@@ -42,7 +42,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 On concurrent database access
 ==============================
 
-As this returner creates a couchdb document whith the salt job id as document id
+As this returner creates a couchdb document with the salt job id as document id
 and as only one document with a given id can exist in a given couchdb database,
 it is advised for most setups that every minion be configured to write to it own
 database (the value of ``couchdb.db`` may be suffixed with the minion id),

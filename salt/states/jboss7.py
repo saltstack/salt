@@ -418,6 +418,7 @@ def __get_artifact(salt_source):
                     saltenv=__env__,
                     context=None,
                     defaults=None,
+                    skip_verify=False,
                     kwargs=None)
 
                 manage_result = __salt__['file.manage_file'](

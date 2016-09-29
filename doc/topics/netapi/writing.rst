@@ -43,7 +43,7 @@ actually starts the service. This is started in a multiprocess.
 Multiple instances
 ==================
 
-.. versionadded:: Boron
+.. versionadded:: Carbon
 
 :py:mod:`~salt.netapi.rest_cherrypy` and :py:mod:`~salt.netapi.rest_tornado`
 support running multiple instances by copying and renaming entire directory

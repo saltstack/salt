@@ -6,47 +6,71 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
 .. versionadded:: 2015.8.0
 
-:configuration:
-    This engine can be run on the master or on a minion.
-
-    Example Config:
-        engines:
-          - sqs_events:
-             queue: test
-             profile: my-sqs-profile #optional
-
-    Explicit sqs credentials are accepted but this engine can also utilize
-    IAM roles assigned to the instance through Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
-
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the config file of the master or minion, as appropriate::
-
-        sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
-        sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        sqs.message_format: json
-
-    A region may also be specified in the configuration::
-
-        sqs.region: us-east-1
-
-    If a region is not specified, the default is us-east-1.
-
-    To deserialize the message from json:
-
-        sqs.message_format: json
-
-    It's also possible to specify key, keyid and region via a profile:
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
-
 :depends: boto
+
+Configuration
+=============
+
+This engine can be run on the master or on a minion.
+
+Example Config:
+
+.. code-block:: yaml
+
+    sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
+    sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    sqs.message_format: json
+
+Explicit sqs credentials are accepted but this engine can also utilize
+IAM roles assigned to the instance through Instance Profiles. Dynamic
+credentials are then automatically obtained from AWS API and no further
+configuration is necessary. More Information available at::
+
+   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+
+If IAM roles are not (or for ``boto`` version < 2.5.1) used you need to
+specify them either in a pillar or in the config file of the master or
+minion, as appropriate:
+
+To deserialize the message from json:
+
+.. code-block:: yaml
+
+    sqs.message_format: json
+
+It's also possible to specify key, keyid and region via a profile:
+
+.. code-block:: yaml
+
+    sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
+    sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+A region may also be specified in the configuration:
+
+.. code-block:: yaml
+
+    sqs.region: us-east-1
+
+If a region is not specified, the default is us-east-1.
+
+It's also possible to specify key, keyid and region via a profile:
+
+.. code-block:: yaml
+
+    myprofile:
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
+
+Additionally you can define cross account sqs:
+
+.. code-block:: yaml
+
+    engines:
+      - sqs_events:
+          queue: prod
+          owner_acct_id: 111111111111
+
 '''
 
 # Import python libs
@@ -107,9 +131,24 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     return conn
 
 
-def start(queue, profile=None, tag='salt/engine/sqs'):
+def _process_queue(q, q_name, fire_master, tag='salt/engine/sqs', owner_acct_id=None, message_format=None):
+    if not q:
+        log.warning('failure connecting to queue: {0}, '
+                    'waiting 10 seconds.'.format(':'.join([_f for _f in (str(owner_acct_id), q_name) if _f])))
+        time.sleep(10)
+    else:
+        msgs = q.get_messages(wait_time_seconds=20)
+        for msg in msgs:
+            if message_format == "json":
+                fire_master(tag=tag, data={'message': json.loads(msg.get_body())})
+            else:
+                fire_master(tag=tag, data={'message': msg.get_body()})
+            msg.delete()
+
+
+def start(queue, profile=None, tag='salt/engine/sqs', owner_acct_id=None):
     '''
-    Listen to events and write them to a log file
+    Listen to sqs and fire message on event bus
     '''
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
@@ -117,31 +156,13 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
             __opts__['sock_dir'],
             listen=False).fire_event
     else:
-        fire_master = None
+        fire_master = __salt__['event.send']
 
     message_format = __opts__.get('sqs.message_format', None)
 
-    def fire(tag, msg):
-        if fire_master:
-            fire_master(msg, tag)
-        else:
-            __salt__['event.send'](tag, msg)
-
     sqs = _get_sqs_conn(profile)
-    q = sqs.get_queue(queue)
-
+    q = None
     while True:
         if not q:
-            log.warning('failure connecting to queue: {0}, '
-                        'waiting 10 seconds.'.format(queue))
-            time.sleep(10)
-            q = sqs.get_queue(queue)
-            if not q:
-                continue
-        msgs = q.get_messages(wait_time_seconds=20)
-        for msg in msgs:
-            if message_format == "json":
-                fire(tag, {'message': json.loads(msg.get_body())})
-            else:
-                fire(tag, {'message': msg.get_body()})
-            msg.delete()
+            q = sqs.get_queue(queue, owner_acct_id=owner_acct_id)
+        _process_queue(q, queue, fire_master, tag=tag, owner_acct_id=owner_acct_id, message_format=message_format)

@@ -29,7 +29,7 @@ Example Provider Configuration
     my-gce-config:
       # The Google Cloud Platform Project ID
       project: "my-project-id"
-      # The Service ACcount client ID
+      # The Service Account client ID
       service_account_email_address: 1234567890@developer.gserviceaccount.com
       # The location of the private key (PEM format)
       service_account_private_key: /home/erjohnso/PRIVKEY.pem
@@ -79,7 +79,6 @@ import salt.ext.six as six
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import http
-from salt import syspaths
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -171,10 +170,14 @@ def get_conn():
     driver = get_driver(Provider.GCE)
     provider = get_configured_provider()
     project = config.get_cloud_config_value('project', provider, __opts__)
-    email = config.get_cloud_config_value('service_account_email_address',
-            provider, __opts__)
-    private_key = config.get_cloud_config_value('service_account_private_key',
-            provider, __opts__)
+    email = config.get_cloud_config_value(
+        'service_account_email_address',
+        provider,
+        __opts__)
+    private_key = config.get_cloud_config_value(
+        'service_account_private_key',
+        provider,
+        __opts__)
     gce = driver(email, private_key, project=project)
     gce.connection.user_agent_append('{0}/{1}'.format(_UA_PRODUCT,
                                                       _UA_VERSION))
@@ -278,7 +281,7 @@ def show_instance(vm_name, call=None):
         )
     conn = get_conn()
     node = _expand_node(conn.ex_get_node(vm_name))
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     return node
 
 
@@ -551,27 +554,29 @@ def create_network(kwargs=None, call=None):
     cidr = kwargs['cidr']
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create network',
         'salt/cloud/net/creating',
-        {
+        args={
             'name': name,
             'cidr': cidr,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     network = conn.ex_create_network(name, cidr)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created network',
         'salt/cloud/net/created',
-        {
+        args={
             'name': name,
             'cidr': cidr,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(network)
@@ -601,13 +606,14 @@ def delete_network(kwargs=None, call=None):
     name = kwargs['name']
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete network',
         'salt/cloud/net/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -624,13 +630,14 @@ def delete_network(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted network',
         'salt/cloud/net/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -701,15 +708,16 @@ def create_fwrule(kwargs=None, call=None):
         dst_tags = dst_tags.split(',')
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create firewall',
         'salt/cloud/firewall/creating',
-        {
+        args={
             'name': name,
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -721,15 +729,16 @@ def create_fwrule(kwargs=None, call=None):
         target_tags=dst_tags
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created firewall',
         'salt/cloud/firewall/created',
-        {
+        args={
             'name': name,
             'network': network_name,
             'allow': kwargs['allow'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(fwrule)
@@ -759,13 +768,14 @@ def delete_fwrule(kwargs=None, call=None):
     name = kwargs['name']
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete firewall',
         'salt/cloud/firewall/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -782,13 +792,14 @@ def delete_fwrule(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted firewall',
         'salt/cloud/firewall/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -850,11 +861,11 @@ def create_hc(kwargs=None, call=None):
 
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create health_check',
         'salt/cloud/healthcheck/creating',
-        {
+        args={
             'name': name,
             'host': host,
             'path': path,
@@ -864,6 +875,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -873,11 +885,11 @@ def create_hc(kwargs=None, call=None):
         healthy_threshold=healthy_threshold
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created health_check',
         'salt/cloud/healthcheck/created',
-        {
+        args={
             'name': name,
             'host': host,
             'path': path,
@@ -887,6 +899,7 @@ def create_hc(kwargs=None, call=None):
             'unhealthy_threshold': unhealthy_threshold,
             'healthy_threshold': healthy_threshold,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(hc)
@@ -916,13 +929,14 @@ def delete_hc(kwargs=None, call=None):
     name = kwargs['name']
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete health_check',
         'salt/cloud/healthcheck/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -939,13 +953,14 @@ def delete_hc(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted health_check',
         'salt/cloud/healthcheck/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1007,21 +1022,23 @@ def create_address(kwargs=None, call=None):
 
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create address',
         'salt/cloud/address/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     addy = conn.ex_create_address(name, ex_region, ex_address)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created address',
         'salt/cloud/address/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1062,13 +1079,14 @@ def delete_address(kwargs=None, call=None):
 
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete address',
         'salt/cloud/address/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1085,13 +1103,14 @@ def delete_address(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted address',
         'salt/cloud/address/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1187,11 +1206,12 @@ def create_lb(kwargs=None, call=None):
     if ex_healthchecks:
         ex_healthchecks = ex_healthchecks.split(',')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1201,11 +1221,12 @@ def create_lb(kwargs=None, call=None):
         ex_address=ex_address
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_balancer(lb)
@@ -1235,13 +1256,14 @@ def delete_lb(kwargs=None, call=None):
     name = kwargs['name']
     lb_conn = get_lb_conn(get_conn())
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete load_balancer',
         'salt/cloud/loadbalancer/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1258,13 +1280,14 @@ def delete_lb(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted load_balancer',
         'salt/cloud/loadbalancer/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1326,21 +1349,23 @@ def attach_lb(kwargs=None, call=None):
     lb_conn = get_lb_conn(conn)
     lb = lb_conn.get_balancer(kwargs['name'])
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'attach load_balancer',
         'salt/cloud/loadbalancer/attaching',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     result = lb_conn.balancer_attach_compute_node(lb, node)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'attached load_balancer',
         'salt/cloud/loadbalancer/attached',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(result)
@@ -1391,21 +1416,23 @@ def detach_lb(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'detach load_balancer',
         'salt/cloud/loadbalancer/detaching',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     result = lb_conn.balancer_detach_member(lb, remove_member)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'detached load_balancer',
         'salt/cloud/loadbalancer/detached',
-        kwargs,
+        args=kwargs,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1435,13 +1462,14 @@ def delete_snapshot(kwargs=None, call=None):
     name = kwargs['name']
     conn = get_conn()
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete snapshot',
         'salt/cloud/snapshot/deleting',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1458,13 +1486,14 @@ def delete_snapshot(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted snapshot',
         'salt/cloud/snapshot/deleted',
-        {
+        args={
             'name': name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1495,15 +1524,16 @@ def delete_disk(kwargs=None, call=None):
 
     disk = conn.ex_get_volume(kwargs.get('disk_name'))
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete disk',
         'salt/cloud/disk/deleting',
-        {
+        args={
             'name': disk.name,
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1518,15 +1548,16 @@ def delete_disk(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'deleted disk',
         'salt/cloud/disk/deleted',
-        {
+        args={
             'name': disk.name,
             'location': disk.extra['zone'].name,
             'size': disk.size,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1535,9 +1566,10 @@ def delete_disk(kwargs=None, call=None):
 def create_disk(kwargs=None, call=None):
 
     '''
-    Create a new persistent disk. Must specify `disk_name` and `location`.
-    Can also specify an `image` or `snapshot` but if neither of those are
-    specified, a `size` (in GB) is required.
+    Create a new persistent disk. Must specify `disk_name` and `location`,
+    and optionally can specify 'disk_type' as pd-standard or pd-ssd, which
+    defaults to pd-standard. Can also specify an `image` or `snapshot` but
+    if neither of those are specified, a `size` (in GB) is required.
 
     CLI Example:
 
@@ -1558,6 +1590,7 @@ def create_disk(kwargs=None, call=None):
     location = kwargs.get('location', None)
     size = kwargs.get('size', None)
     snapshot = kwargs.get('snapshot', None)
+    disk_type = kwargs.get('type', 'pd-standard')
 
     if location is None:
         log.error(
@@ -1582,33 +1615,35 @@ def create_disk(kwargs=None, call=None):
     location = conn.ex_get_zone(kwargs['location'])
     use_existing = True
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create disk',
         'salt/cloud/disk/creating',
-        {
+        args={
             'name': name,
             'location': location.name,
             'image': image,
             'snapshot': snapshot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     disk = conn.create_volume(
-        size, name, location, snapshot, image, use_existing
+        size, name, location, snapshot, image, use_existing, disk_type
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created disk',
         'salt/cloud/disk/created',
-        {
+        args={
             'name': name,
             'location': location.name,
             'image': image,
             'snapshot': snapshot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_disk(disk)
@@ -1657,27 +1692,29 @@ def create_snapshot(kwargs=None, call=None):
         )
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create snapshot',
         'salt/cloud/snapshot/creating',
-        {
+        args={
             'name': name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     snapshot = conn.create_volume_snapshot(disk, name)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created snapshot',
         'salt/cloud/snapshot/created',
-        {
+        args={
             'name': name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return _expand_item(snapshot)
@@ -1761,27 +1798,29 @@ def detach_disk(name=None, kwargs=None, call=None):
     node = conn.ex_get_node(node_name)
     disk = conn.ex_get_volume(disk_name)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'detach disk',
         'salt/cloud/disk/detaching',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     result = conn.detach_volume(disk, node)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'detached disk',
         'salt/cloud/disk/detached',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1832,31 +1871,33 @@ def attach_disk(name=None, kwargs=None, call=None):
     node = conn.ex_get_node(node_name)
     disk = conn.ex_get_volume(disk_name)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'attach disk',
         'salt/cloud/disk/attaching',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
             'mode': mode,
             'boot': boot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'attached disk',
         'salt/cloud/disk/attached',
-        {
+        args={
             'name': node_name,
             'disk_name': disk_name,
             'mode': mode,
             'boot': boot,
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     return result
@@ -1876,10 +1917,120 @@ def reboot(vm_name, call=None):
         raise SaltCloudSystemExit(
             'The reboot action must be called with -a or --action.'
         )
+
     conn = get_conn()
-    return conn.reboot_node(
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'reboot instance',
+        'salt/cloud/{0}/rebooting'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.reboot_node(
         conn.ex_get_node(vm_name)
     )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'reboot instance',
+        'salt/cloud/{0}/rebooted'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
+
+
+def start(vm_name, call=None):
+    '''
+    Call GCE 'start on the instance.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start myinstance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'start instance',
+        'salt/cloud/{0}/starting'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.ex_start_node(
+        conn.ex_get_node(vm_name)
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'start instance',
+        'salt/cloud/{0}/started'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
+
+
+def stop(vm_name, call=None):
+    '''
+    Call GCE 'stop' on the instance.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop myinstance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'stop instance',
+        'salt/cloud/{0}/stopping'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    result = conn.ex_stop_node(
+        conn.ex_get_node(vm_name)
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'stop instance',
+        'salt/cloud/{0}/stopped'.format(vm_name),
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    return result
 
 
 def destroy(vm_name, call=None):
@@ -1915,11 +2066,12 @@ def destroy(vm_name, call=None):
             'Could not find instance {0}.'.format(vm_name)
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete instance',
         'salt/cloud/{0}/deleting'.format(vm_name),
-        {'name': vm_name},
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1952,11 +2104,12 @@ def destroy(vm_name, call=None):
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
         )
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'delete instance',
         'salt/cloud/{0}/deleted'.format(vm_name),
-        {'name': vm_name},
+        args={'name': vm_name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1965,11 +2118,12 @@ def destroy(vm_name, call=None):
             'delete_boot_pd is enabled for the instance profile, '
             'attempting to delete disk'
             )
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'delete disk',
             'salt/cloud/disk/deleting',
-            {'name': vm_name},
+            args={'name': vm_name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         try:
@@ -1986,18 +2140,62 @@ def destroy(vm_name, call=None):
                 ),
                 exc_info_on_loglevel=logging.DEBUG
             )
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'deleted disk',
             'salt/cloud/disk/deleted',
-            {'name': vm_name},
+            args={'name': vm_name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(vm_name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](vm_name, __active_provider_name__.split(':')[0], __opts__)
 
     return inst_deleted
+
+
+def create_attach_volumes(name, kwargs, call=None):
+    '''
+    Create and attach multiple volumes to a node. The 'volumes' and 'node'
+    arguments are required, where 'node' is a libcloud node, and 'volumes'
+    is a list of maps, where each map contains:
+
+    'size': The size of the new disk in GB. Required.
+    'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
+    'image': An image to use for this new disk. Optional.
+    'snapshot': A snapshot to use for this new disk. Optional.
+
+    Volumes are attached in the order in which they are given, thus on a new
+    node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
+
+    .. versionadded:: Nitrogen
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    volumes = kwargs['volumes']
+    node = kwargs['node']
+    node_data = _expand_node(node)
+    letter = ord('a') - 1
+
+    for idx, volume in enumerate(volumes):
+        volume_name = '{0}-sd{1}'.format(name, chr(letter + 2 + idx))
+
+        volume_dict = {
+          'disk_name': volume_name,
+          'location': node_data['extra']['zone']['name'],
+          'size': volume['size'],
+          'type': volume['type'],
+          'image': volume['image'],
+          'snapshot': volume['snapshot']
+        }
+
+        create_disk(volume_dict, 'function')
+        attach_disk(name, volume_dict, 'action')
 
 
 def request_instance(vm_):
@@ -2076,15 +2274,16 @@ def request_instance(vm_):
     )
     log.debug('Create instance kwargs {0}'.format(str(kwargs)))
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create instance',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2100,6 +2299,30 @@ def request_instance(vm_):
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
+
+    volumes = config.get_cloud_config_value(
+        'volumes', vm_, __opts__, search_global=True
+    )
+
+    if volumes:
+        __utils__['cloud.fire_event'](
+            'event',
+            'attaching volumes',
+            'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
+            args={'volumes': volumes},
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport']
+        )
+
+        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        create_attach_volumes(
+            vm_['name'],
+            {
+                'volumes': volumes,
+                'node': node_data
+            },
+            call='action'
+        )
 
     try:
         node_dict = show_instance(node_data['name'], 'action')
@@ -2130,7 +2353,7 @@ def create(vm_=None, call=None):
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
     vm_['key_filename'] = ssh_key
-    salt.utils.cloud.bootstrap(vm_, __opts__)
+    __utils__['cloud.bootstrap'](vm_, __opts__)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.trace(
@@ -2139,15 +2362,16 @@ def create(vm_=None, call=None):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2170,7 +2394,7 @@ def update_pricing(kwargs=None, call=None):
     price_json = http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
@@ -2206,7 +2430,7 @@ def show_pricing(kwargs=None, call=None):
 
     size = 'CP-COMPUTEENGINE-VMIMAGE-{0}'.format(profile['size'].upper())
     pricefile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'gce-pricing.p'
+        __opts__['cachedir'], 'gce-pricing.p'
     )
     if not os.path.exists(pricefile):
         update_pricing()

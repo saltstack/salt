@@ -53,14 +53,14 @@ class SaltStackVersion(object):
     and also supports version comparison.
     '''
 
-    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'rc', 'noc', 'sha')
+    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'pre_type', 'pre_num', 'noc', 'sha')
 
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
         r'\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
-        r'(?:rc(?P<rc>[\d]{1}))?'
+        r'(?:(?P<pre_type>rc|a|b|alpha|beta)(?P<pre_num>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
     git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
@@ -204,7 +204,8 @@ class SaltStackVersion(object):
                  minor,
                  bugfix=0,
                  mbugfix=0,
-                 rc=0,              # pylint: disable=C0103
+                 pre_type=None,
+                 pre_num=None,
                  noc=0,
                  sha=None):
 
@@ -224,10 +225,12 @@ class SaltStackVersion(object):
         elif isinstance(mbugfix, string_types):
             mbugfix = int(mbugfix)
 
-        if rc is None:
-            rc = 0
-        elif isinstance(rc, string_types):
-            rc = int(rc)
+        if pre_type is None:
+            pre_type = ''
+        if pre_num is None:
+            pre_num = 0
+        elif isinstance(pre_num, string_types):
+            pre_num = int(pre_num)
 
         if noc is None:
             noc = 0
@@ -240,7 +243,8 @@ class SaltStackVersion(object):
         self.minor = minor
         self.bugfix = bugfix
         self.mbugfix = mbugfix
-        self.rc = rc  # pylint: disable=C0103
+        self.pre_type = pre_type
+        self.pre_num = pre_num
         self.name = self.VNAMES.get((major, minor), None)
         self.noc = noc
         self.sha = sha
@@ -249,8 +253,8 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        s = version_string.decode() if isinstance(version_string, bytes) else version_string
-        match = cls.git_describe_regex.match(s)
+        vstr = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(vstr)
         if not match:
             raise ValueError(
                 'Unable to parse version string: \'{0}\''.format(version_string)
@@ -275,6 +279,16 @@ class SaltStackVersion(object):
             ]
         )
 
+    @classmethod
+    def next_release(cls):
+        return cls.from_name(
+            cls.VNAMES[
+                min([version_info for version_info in
+                     cls.VNAMES if
+                     version_info > cls.from_last_named_version().info])
+            ]
+        )
+
     @property
     def sse(self):
         # Higher than 0.17, lower than first date based
@@ -291,12 +305,23 @@ class SaltStackVersion(object):
 
     @property
     def rc_info(self):
+        import salt.utils
+        salt.utils.warn_until(
+            'Oxygen',
+            'Please stop using the \'rc_info\' attribute and instead use '
+            '\'pre_info\'. \'rc_info\' will be supported until Salt {version}.'
+        )
+        return self.pre_info
+
+    @property
+    def pre_info(self):
         return (
             self.major,
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc
+            self.pre_type,
+            self.pre_num
         )
 
     @property
@@ -306,7 +331,8 @@ class SaltStackVersion(object):
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc,
+            self.pre_type,
+            self.pre_num,
             self.noc
         )
 
@@ -317,7 +343,8 @@ class SaltStackVersion(object):
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc,
+            self.pre_type,
+            self.pre_num,
             self.noc,
             self.sha
         )
@@ -331,8 +358,8 @@ class SaltStackVersion(object):
         )
         if self.mbugfix:
             version_string += '.{0}'.format(self.mbugfix)
-        if self.rc:
-            version_string += 'rc{0}'.format(self.rc)
+        if self.pre_type:
+            version_string += '{0}{1}'.format(self.pre_type, self.pre_num)
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
@@ -371,20 +398,21 @@ class SaltStackVersion(object):
                     )
                 )
 
-        if (self.rc and other.rc) or (not self.rc and not other.rc):
-            # Both have rc information, regular compare is ok
+        if (self.pre_type and other.pre_type) or (not self.pre_type and not other.pre_type):
+            # Both either have or don't have pre-release information, regular compare is ok
             return method(self.noc_info, other.noc_info)
 
-        # RC's are always lower versions than non RC's
-        if self.rc > 0 and other.rc <= 0:
-            noc_info = list(self.noc_info)
-            noc_info[3] = -1
-            return method(tuple(noc_info), other.noc_info)
-
-        if self.rc <= 0 and other.rc > 0:
+        if self.pre_type and not other.pre_type:
+            # We have pre-release information, the other side doesn't
             other_noc_info = list(other.noc_info)
-            other_noc_info[3] = -1
+            other_noc_info[4] = 'zzzzz'
             return method(self.noc_info, tuple(other_noc_info))
+
+        if not self.pre_type and other.pre_type:
+            # The other side has pre-release informatio, we don't
+            noc_info = list(self.noc_info)
+            noc_info[4] = 'zzzzz'
+            return method(tuple(noc_info), other.noc_info)
 
     def __lt__(self, other):
         return self.__compare__(other, lambda _self, _other: _self < _other)
@@ -415,8 +443,8 @@ class SaltStackVersion(object):
         ])
         if self.mbugfix:
             parts.append('minor-bugfix={0}'.format(self.mbugfix))
-        if self.rc:
-            parts.append('rc={0}'.format(self.rc))
+        if self.pre_type:
+            parts.append('{0}={1}'.format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
             noc = 'n/a'
@@ -654,7 +682,7 @@ def versions_report(include_salt_cloud=False):
     for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
         info.append('{0}:'.format(ver_type))
         # List dependencies in alphabetical, case insensitive order
-        for name in sorted(ver_info[ver_type], cmp=lambda x, y: cmp(x.lower(), y.lower())):
+        for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
                              ver_info[ver_type][name] or 'Not Installed',
                              pad=padding)

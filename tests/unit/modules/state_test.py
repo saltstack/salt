@@ -67,7 +67,7 @@ class MockState(object):
             return list
 
         @staticmethod
-        def call_high(data):
+        def call_high(data, orchestration_jid=None):
             '''
                 Mock call_high method
             '''
@@ -216,7 +216,7 @@ class MockState(object):
 
         @staticmethod
         def call_highstate(exclude, cache, cache_name, force=None,
-                           whitelist=None):
+                           whitelist=None, orchestration_jid=None):
             '''
                 Mock call_highstate method
             '''

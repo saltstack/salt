@@ -37,6 +37,8 @@ Backwards-incompatible Changes
   fileserver under ``salt://_runners``, ``salt://_output``, etc. and sync them
   using the functions in the new :mod:`saltutil runner
   <salt.runners.saltutil>`.
+- The :py:func:`pkg.check_db <salt.modules.yumpkg.check_db>` function has been
+  removed for yum/dnf.
 
 
 Core Changes
@@ -126,7 +128,8 @@ Package Support
 
 - Ubuntu Xenial: Packages for Ubuntu Xenial (16.04) are available for 2016.3.0 and
   onwards. See `repo.saltstack.com`_ for more information. Note that Xenial comes
-  with Debian's packaged version of Salt 2015.8.8.
+  with Debian's packaged version of Salt 2015.8.8 and official `repo.saltstack.com`_
+  packages are available for 2015.8 releases beginning with Salt 2015.8.11.
 
 .. _`repo.saltstack.com`: https://repo.saltstack.com/#ubuntu
 

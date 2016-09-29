@@ -99,20 +99,18 @@ def hosts_remove(hostsfile='/etc/hosts', entries=None):
         hosts = fp_.read()
 
     host_list = entries.split(',')
-    out_file = salt.utils.fopen(hostsfile, 'w')
-    for line in hosts.splitlines():
-        if not line or line.strip().startswith('#'):
-            out_file.write('{0}\n'.format(line))
-            continue
-        comps = line.split()
-        for host in host_list:
-            if host in comps[1:]:
-                comps.remove(host)
-        if len(comps) > 1:
-            out_file.write(' '.join(comps))
-            out_file.write('\n')
-
-    out_file.close()
+    with salt.utils.fopen(hostsfile, 'w') as out_file:
+        for line in hosts.splitlines():
+            if not line or line.strip().startswith('#'):
+                out_file.write('{0}\n'.format(line))
+                continue
+            comps = line.split()
+            for host in host_list:
+                if host in comps[1:]:
+                    comps.remove(host)
+            if len(comps) > 1:
+                out_file.write(' '.join(comps))
+                out_file.write('\n')
 
 
 def parse_zone(zonefile=None, zone=None):

@@ -11,7 +11,6 @@ group, mode, and data
 from __future__ import absolute_import, print_function
 
 # Import python libs
-import contextlib  # For < 2.7 compat
 import datetime
 import difflib
 import errno
@@ -47,10 +46,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.atomicfile
 import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
-import salt.utils.atomicfile
+import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
 
@@ -1499,7 +1499,8 @@ def line(path, content, match=None, mode=None, location=None,
     if before is None and after is None and not match:
         match = content
 
-    body = salt.utils.fopen(path, mode='r').read()
+    with salt.utils.fopen(path, mode='r') as fp_:
+        body = fp_.read()
     body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
@@ -1640,7 +1641,9 @@ def line(path, content, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').read().splitlines(), body.splitlines()))
+            with salt.utils.fopen(path, 'r') as fp_:
+                path_content = fp_.read().splitlines()
+            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines()))
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -2021,6 +2024,7 @@ def blockreplace(path,
         backup='.bak',
         dry_run=False,
         show_changes=True,
+        append_newline=False,
         ):
     '''
     .. versionadded:: 2014.1.0
@@ -2074,6 +2078,12 @@ def blockreplace(path,
     show_changes
         Output a unified diff of the old file and the new file. If ``False``,
         return a boolean if any changes were made.
+
+    append_newline:
+        Append a newline to the content block. For more information see:
+        https://github.com/saltstack/salt/issues/33686
+
+        .. versionadded:: 2016.3.4
 
     CLI Example:
 
@@ -2164,7 +2174,10 @@ def blockreplace(path,
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
             new_file.insert(0, marker_end + '\n')
-            new_file.insert(0, content)
+            if append_newline is True:
+                new_file.insert(0, content + '\n')
+            else:
+                new_file.insert(0, content)
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
@@ -2174,7 +2187,10 @@ def blockreplace(path,
                     new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
-            new_file.append(content)
+            if append_newline is True:
+                new_file.append(content + '\n')
+            else:
+                new_file.append(content)
             new_file.append(marker_end + '\n')
             done = True
         else:
@@ -2187,15 +2203,22 @@ def blockreplace(path,
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
-            # backup old content
-            if backup is not False:
-                shutil.copy2(path, '{0}{1}'.format(path, backup))
-
             # backup file attrs
             perms = {}
             perms['user'] = get_user(path)
             perms['group'] = get_group(path)
             perms['mode'] = salt.utils.normalize_mode(get_mode(path))
+
+            # backup old content
+            if backup is not False:
+                backup_path = '{0}{1}'.format(path, backup)
+                shutil.copy2(path, backup_path)
+                # copy2 does not preserve ownership
+                check_perms(backup_path,
+                        None,
+                        perms['user'],
+                        perms['group'],
+                        perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2406,32 +2429,6 @@ def contains_regex(path, regex, lchar=''):
             return False
     except (IOError, OSError):
         return False
-
-
-def contains_regex_multiline(path, regex):
-    '''
-    .. deprecated:: 0.17.0
-       Use :func:`search` instead.
-
-    Return True if the given regular expression matches anything in the text
-    of a given file
-
-    Traverses multiple lines at a time, via the salt BufferedReader (reads in
-    chunks)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.contains_regex_multiline /etc/crontab '^maint'
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
-        "file.search(path, regex, multiline=True)"
-    )
-
-    search(path, regex, multiline=True)
 
 
 def contains_glob(path, glob_expr):
@@ -3515,13 +3512,21 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        if urlparsed_source.scheme == 'salt':
+        parsed_scheme = urlparsed_source.scheme
+        parsed_path = os.path.join(
+                urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+
+        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            parsed_path = ':'.join([parsed_scheme, parsed_path])
+            parsed_scheme = 'file'
+
+        if parsed_scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and urlparsed_source.scheme == 'file':
-            source_sum = _get_local_file_source_sum(urlparsed_source.path)
-        elif not source_hash and source.startswith('/'):
+        elif not source_hash and parsed_scheme == 'file':
+            source_sum = _get_local_file_source_sum(parsed_path)
+        elif not source_hash and source.startswith(os.sep):
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
@@ -3571,7 +3576,7 @@ def get_managed(
                     )
                     return '', {}, msg
 
-    if source and (template or urlparsed_source.scheme in remote_protos):
+    if source and (template or parsed_scheme in remote_protos):
         # Check if we have the template or remote file cached
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
@@ -4045,10 +4050,9 @@ def check_file_meta(
                     if bdiff:
                         changes['diff'] = bdiff
                     else:
-                        with contextlib.nested(
-                                salt.utils.fopen(sfn, 'r'),
-                                salt.utils.fopen(name, 'r')) as (src, name_):
+                        with salt.utils.fopen(sfn, 'r') as src:
                             slines = src.readlines()
+                        with salt.utils.fopen(name, 'r') as name_:
                             nlines = name_.readlines()
                         changes['diff'] = \
                             ''.join(difflib.unified_diff(nlines, slines))
@@ -4058,13 +4062,14 @@ def check_file_meta(
     if contents is not None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
-        with salt.utils.fopen(tmp, 'wb') as tmp_:
+        if salt.utils.is_windows():
+            contents = os.linesep.join(contents.splitlines())
+        with salt.utils.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
-        with contextlib.nested(
-                salt.utils.fopen(tmp, 'r'),
-                salt.utils.fopen(name, 'r')) as (src, name_):
+        with salt.utils.fopen(tmp, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(name, 'r') as name_:
             nlines = name_.readlines()
         __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
@@ -4116,10 +4121,9 @@ def get_diff(
 
     sfn = __salt__['cp.cache_file'](masterfile, saltenv)
     if sfn:
-        with contextlib.nested(salt.utils.fopen(sfn, 'r'),
-                               salt.utils.fopen(minionfile, 'r')) \
-                as (src, name_):
+        with salt.utils.fopen(sfn, 'r') as src:
             slines = src.readlines()
+        with salt.utils.fopen(minionfile, 'r') as name_:
             nlines = name_.readlines()
         if ''.join(nlines) != ''.join(slines):
             bdiff = _binary_replace(minionfile, sfn)
@@ -4305,10 +4309,9 @@ def manage_file(name,
                 if bdiff:
                     ret['changes']['diff'] = bdiff
                 else:
-                    with contextlib.nested(
-                            salt.utils.fopen(sfn, 'r'),
-                            salt.utils.fopen(real_name, 'r')) as (src, name_):
+                    with salt.utils.fopen(sfn, 'r') as src:
                         slines = src.readlines()
+                    with salt.utils.fopen(real_name, 'r') as name_:
                         nlines = name_.readlines()
 
                     sndiff = ''.join(difflib.unified_diff(nlines, slines))
@@ -4335,10 +4338,9 @@ def manage_file(name,
                 tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
-            with contextlib.nested(
-                    salt.utils.fopen(tmp, 'r'),
-                    salt.utils.fopen(real_name, 'r')) as (src, name_):
+            with salt.utils.fopen(tmp, 'r') as src:
                 slines = src.readlines()
+            with salt.utils.fopen(real_name, 'r') as name_:
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
 
@@ -4575,6 +4577,8 @@ def mkdir(dir_path,
         # to follow the principal of least surprise method.
         makedirs_perms(directory, user, group, mode)
 
+    return True
+
 
 def makedirs_(path,
               user=None,
@@ -4622,7 +4626,14 @@ def makedirs_(path,
             break
 
         directories_to_create.append(dirname)
+        current_dirname = dirname
         dirname = os.path.dirname(dirname)
+
+        if current_dirname == dirname:
+            raise SaltInvocationError(
+                'Recursive creation for path \'{0}\' would result in an '
+                'infinite loop. Please use an absolute path.'.format(dirname)
+            )
 
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
@@ -5235,17 +5246,16 @@ def grep(path,
     split_opts = []
     for opt in opts:
         try:
-            opt = salt.utils.shlex_split(opt)
+            split = salt.utils.shlex_split(opt)
         except AttributeError:
-            opt = salt.utils.shlex_split(str(opt))
-        if len(opt) > 1:
-            salt.utils.warn_until(
-                'Carbon',
-                'Additional command line options for file.grep should be '
-                'passed one at a time, please do not pass more than one in a '
-                'single argument.'
+            split = salt.utils.shlex_split(str(opt))
+        if len(split) > 1:
+            raise SaltInvocationError(
+                'Passing multiple command line arguments in a single string '
+                'is not supported, please pass the following arguments '
+                'separately: {0}'.format(opt)
             )
-        split_opts.extend(opt)
+        split_opts.extend(split)
 
     cmd = ['grep'] + split_opts + [pattern, path]
     try:

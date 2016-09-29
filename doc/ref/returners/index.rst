@@ -344,12 +344,13 @@ External Job Cache functions using the ``ret`` execution module.
 Event Returners
 ===============
 
-For maximimum visibility into the history of events across a Salt
-infrastructure, all events seen by a salt master may be logged to a returner.
+For maximum visibility into the history of events across a Salt
+infrastructure, all events seen by a salt master may be logged to one or
+more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to returner which should be designated as the handler for event
-returns.
+master config to the returner(s) which should be designated as the handler 
+for event returns.
 
 .. note::
     Not all returners support event returns. Verify a returner has an
@@ -358,7 +359,7 @@ returns.
 .. note::
     On larger installations, many hundreds of events may be generated on a
     busy master every second. Be certain to closely monitor the storage of
-    a given returner as Salt can easily overwhealm an underpowered server
+    a given returner as Salt can easily overwhelm an underpowered server
     with thousands of returns.
 
 Full List of Returners

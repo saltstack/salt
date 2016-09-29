@@ -15,8 +15,8 @@ file or for the minion via config or pillar)
         kwargs:
           test: True
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour)
+This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
+(every hour).
 
 .. code-block:: yaml
 
@@ -30,8 +30,8 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
           test: True
         splay: 15
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) splaying the time between 0 and 15 seconds
+This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
+(every hour) splaying the time between 0 and 15 seconds.
 
 .. code-block:: yaml
 
@@ -47,13 +47,14 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
           start: 10
           end: 15
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) splaying the time between 10 and 15 seconds
+This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
+(every hour) splaying the time between 10 and 15 seconds.
 
 .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
-the python dateutil library.
+the Python ``dateutil`` library. This requires the Python ``dateutil`` library
+to be installed.
 
 .. code-block:: yaml
 
@@ -66,7 +67,7 @@ the python dateutil library.
           test: True
         when: 5:00pm
 
-This will schedule the command: state.sls httpd test=True at 5:00pm minion
+This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM minion
 localtime.
 
 .. code-block:: yaml
@@ -79,15 +80,69 @@ localtime.
         kwargs:
           test: True
         when:
-            - Monday 5:00pm
-            - Tuesday 3:00pm
-            - Wednesday 5:00pm
-            - Thursday 3:00pm
-            - Friday 5:00pm
+          - Monday 5:00pm
+          - Tuesday 3:00pm
+          - Wednesday 5:00pm
+          - Thursday 3:00pm
+          - Friday 5:00pm
 
-This will schedule a job to run once on the specified date. The default date
-format is ISO 8601 but can be overridden by also specifying the ``once_fmt``
-option.
+This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM on
+Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        range:
+          start: 8:00am
+          end: 5:00pm
+
+This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
+(every hour) between the hours of 8:00 AM and 5:00 PM. The range parameter must
+be a dictionary with the date strings using the ``dateutil`` format.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        range:
+          invert: True
+          start: 8:00am
+          end: 5:00pm
+
+Using the invert option for range, this will schedule the command
+``state.sls httpd test=True`` every 3600 seconds (every hour) until the current
+time is between the hours of 8:00 AM and 5:00 PM. The range parameter must be
+a dictionary with the date strings using the ``dateutil`` format.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: pkg.install
+        kwargs:
+          pkgs: [{'bar': '>1.2.3'}]
+          refresh: true
+        once: '2016-01-07T14:30:00'
+
+This will schedule the function ``pkg.install`` to be executed once at the
+specified time. The schedule entry ``job1`` will not be removed after the job
+completes, therefore use ``schedule.delete`` to manually remove it afterwards.
+
+The default date format is ISO 8601 but can be overridden by also specifying the
+``once_fmt`` option, like this:
 
 .. code-block:: yaml
 
@@ -97,67 +152,21 @@ option.
         once: 2015-04-22T20:21:00
         once_fmt: '%Y-%m-%dT%H:%M:%S'
 
-This will schedule the command: state.sls httpd test=True at 5pm on Monday,
-Wednesday and Friday, and 3pm on Tuesday and Thursday.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-            start: 8:00am
-            end: 5:00pm
-
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) between the hours of 8am and 5pm.  The range parameter must be a
-dictionary with the date strings using the dateutil format.
-
 .. versionadded:: 2014.7.0
 
-.. code-block:: yaml
+The scheduler also supports ensuring that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long-running
+and could step on each other or pile up in case of infrastructure outage.
 
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-            invert: True
-            start: 8:00am
-            end: 5:00pm
-
-Using the invert option for range, this will schedule the command: state.sls
-httpd test=True every 3600 seconds (every hour) until the current time is
-between the hours of 8am and 5pm.  The range parameter must be a dictionary
-with the date strings using the dateutil format.
-
-By default any job scheduled based on the startup time of the minion will run
-the scheduled job when the minion starts up.  Sometimes this is not the desired
-situation.  Using the 'run_on_start' parameter set to False will cause the
-scheduler to skip this first run and wait until the next scheduled run.
-
-.. versionadded:: 2015.5.0
+The default for ``maxrunning`` is 1.
 
 .. code-block:: yaml
 
     schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        run_on_start: False
-        args:
-          - httpd
-        kwargs:
-          test: True
+      long_running_job:
+        function: big_file_transfer
+        jid_include: True
+        maxrunning: 1
 
 .. versionadded:: 2014.7.0
 
@@ -173,9 +182,60 @@ scheduler to skip this first run and wait until the next scheduled run.
           test: True
 
 The scheduler also supports scheduling jobs using a cron like format.
-This requires the python-croniter library.
+This requires the Python ``croniter`` library.
 
-    ... versionadded:: 2015.8.0
+.. versionadded:: 2015.5.0
+
+By default, data about jobs runs from the Salt scheduler is returned to the
+master. Setting the ``return_job`` parameter to False will prevent the data
+from being sent back to the Salt master.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: scheduled_job_function
+        return_job: False
+
+.. versionadded:: 2015.5.0
+
+It can be useful to include specific data to differentiate a job from other
+jobs. Using the metadata parameter special values can be associated with
+a scheduled job. These values are not used in the execution of the job,
+but can be used to search for specific jobs later if combined with the
+``return_job`` parameter. The metadata parameter must be specified as a
+dictionary, othewise it will be ignored.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: scheduled_job_function
+        metadata:
+          foo: bar
+
+.. versionadded:: 2015.5.0
+
+By default any job scheduled based on the startup time of the minion will run
+the scheduled job when the minion starts up. Sometimes this is not the desired
+situation. Using the ``run_on_start`` parameter set to ``False`` will cause the
+scheduler to skip this first run and wait until the next scheduled run:
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        run_on_start: False
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+.. versionadded:: 2015.8.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -188,12 +248,14 @@ This requires the python-croniter library.
           test: True
 
 Using the until argument, the Salt scheduler allows you to specify
-an end time for a scheduled job.  If this argument is specified, jobs
-will not run once the specified time has passed.  Time should be specified
-in a format support by the dateutil library.
-This requires the python-dateutil library.
+an end time for a scheduled job. If this argument is specified, jobs
+will not run once the specified time has passed. Time should be specified
+in a format supported by the ``dateutil`` library.
+This requires the Python ``dateutil`` library to be installed.
 
-    ... versionadded:: 2015.8.0
+.. versionadded:: 2015.8.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -207,9 +269,9 @@ This requires the python-dateutil library.
 
 Using the after argument, the Salt scheduler allows you to specify
 an start time for a scheduled job.  If this argument is specified, jobs
-will not run until the specified time has passed.  Time should be specified
-in a format support by the dateutil library.
-This requires the python-dateutil library.
+will not run until the specified time has passed. Time should be specified
+in a format supported by the ``dateutil`` library.
+This requires the Python ``dateutil`` library to be installed.
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -269,6 +331,7 @@ import threading
 import logging
 import errno
 import random
+import yaml
 
 # Import Salt libs
 import salt.config
@@ -287,7 +350,6 @@ from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
 
 # Import 3rd-party libs
-import yaml
 import salt.ext.six as six
 
 # pylint: disable=import-error
@@ -355,6 +417,9 @@ class Schedule(object):
             for prefix in cleanup:
                 self.delete_job_prefix(prefix)
 
+    def __getnewargs__(self):
+        return self.opts, self.functions, self.returners, self.intervals, None
+
     def option(self, opt):
         '''
         Return the schedule data structure
@@ -387,7 +452,7 @@ class Schedule(object):
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
-                        yaml.dump({'schedule': self.opts['schedule']})
+                        yaml.dump({'schedule': self.option('schedule')})
                     )
                 )
         except (IOError, OSError):
@@ -400,9 +465,9 @@ class Schedule(object):
         '''
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
-            if name in self.opts['schedule']:
-                del self.opts['schedule'][name]
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            if name in schedule:
+                del schedule[name]
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
@@ -429,10 +494,10 @@ class Schedule(object):
         '''
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
-            for job in list(self.opts['schedule'].keys()):
+            schedule = self.option('schedule')
+            for job in list(schedule.keys()):
                 if job.startswith(name):
-                    del self.opts['schedule'][job]
-            schedule = self.opts['schedule']
+                    del schedule[job]
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
@@ -477,17 +542,18 @@ class Schedule(object):
 
         new_job = next(six.iterkeys(data))
 
-        if new_job in self.opts['schedule']:
+        schedule = self.option('schedule')
+        if new_job in schedule:
             log.info('Updating job settings for scheduled '
                      'job: {0}'.format(new_job))
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
 
-        self.opts['schedule'].update(data)
+        schedule.update(data)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_add_complete')
 
         if persist:
@@ -501,8 +567,8 @@ class Schedule(object):
             self.opts['pillar']['schedule'][name]['enabled'] = True
             schedule = self.opts['pillar']['schedule']
         else:
-            self.opts['schedule'][name]['enabled'] = True
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            schedule[name]['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -522,8 +588,8 @@ class Schedule(object):
             self.opts['pillar']['schedule'][name]['enabled'] = False
             schedule = self.opts['pillar']['schedule']
         else:
-            self.opts['schedule'][name]['enabled'] = False
-            schedule = self.opts['schedule']
+            schedule = self.option('schedule')
+            schedule[name]['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -544,9 +610,9 @@ class Schedule(object):
                 self.delete_job(name, persist, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
-            if name in self.opts['schedule']:
+            if name in self.option('schedule'):
                 self.delete_job(name, persist, where=where)
-            self.opts['schedule'][name] = schedule
+            self.option('schedule')[name] = schedule
 
         if persist:
             self.persist()
@@ -555,7 +621,7 @@ class Schedule(object):
         '''
         Run a schedule job now
         '''
-        schedule = self.opts['schedule']
+        schedule = self.option('schedule')
         if 'schedule' in self.opts['pillar']:
             schedule.update(self.opts['pillar']['schedule'])
         data = schedule[name]
@@ -602,22 +668,24 @@ class Schedule(object):
         '''
         Enable the scheduler.
         '''
-        self.opts['schedule']['enabled'] = True
+        schedule = self.option('schedule')
+        schedule['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
     def disable_schedule(self):
         '''
         Disable the scheduler.
         '''
-        self.opts['schedule']['enabled'] = False
+        schedule = self.option('schedule')
+        schedule['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
@@ -640,9 +708,9 @@ class Schedule(object):
             if 'schedule' in self.opts['pillar']:
                 schedule.update(self.opts['pillar']['schedule'])
         elif where == 'opts':
-            schedule.update(self.opts['schedule'])
+            schedule.update(self.option('schedule'))
         else:
-            schedule.update(self.opts['schedule'])
+            schedule.update(self.option('schedule'))
             if 'schedule' in self.opts['pillar']:
                 schedule.update(self.opts['pillar']['schedule'])
 
@@ -896,7 +964,7 @@ class Schedule(object):
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil.'
+                    log.error('Missing python-dateutil. '
                               'Ignoring until.')
                 else:
                     until__ = dateutil_parser.parse(data['until'])
@@ -909,7 +977,7 @@ class Schedule(object):
 
             if 'after' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil.'
+                    log.error('Missing python-dateutil. '
                               'Ignoring after.')
                 else:
                     after__ = dateutil_parser.parse(data['after'])
@@ -931,7 +999,7 @@ class Schedule(object):
 
             if any(i <= schedule_keys for i in invalid_sched_combos):
                 log.error('Unable to use "{0}" options together. Ignoring.'
-                        .format('", "'.join(scheduling_elements)))
+                          .format('", "'.join(scheduling_elements)))
                 continue
 
             invalid_time_combos = []
@@ -942,8 +1010,8 @@ class Schedule(object):
 
             if any(set(x) <= schedule_keys for x in invalid_time_combos):
                 log.error('Unable to use "{0}" with "{1}" options. Ignoring'
-                        .format('", "'.join(time_elements),
-                            '", "'.join(scheduling_elements)))
+                          .format('", "'.join(time_elements),
+                                  '", "'.join(scheduling_elements)))
                 continue
 
             if True in [True for item in time_elements if item in data]:
@@ -970,8 +1038,8 @@ class Schedule(object):
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil.'
-                              'Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil. '
+                              'Ignoring job {0}.'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
@@ -981,7 +1049,7 @@ class Schedule(object):
                                 i in self.opts['pillar']['whens']):
                             if not isinstance(self.opts['pillar']['whens'],
                                               dict):
-                                log.error('Pillar item "whens" must be dict.'
+                                log.error('Pillar item "whens" must be dict. '
                                           'Ignoring')
                                 continue
                             __when = self.opts['pillar']['whens'][i]
@@ -1007,7 +1075,7 @@ class Schedule(object):
                             try:
                                 when__ = dateutil_parser.parse(i)
                             except ValueError:
-                                log.error('Invalid date string {0}.'
+                                log.error('Invalid date string {0}. '
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
                         when = int(time.mktime(when__.timetuple()))
@@ -1026,8 +1094,8 @@ class Schedule(object):
                             data['_when'] = when
                         seconds = when - now
 
-                        # scheduled time is in the past
-                        if seconds < 0:
+                        # scheduled time is in the past and the run was not triggered before
+                        if seconds < 0 and not data.get('_when_run', False):
                             continue
 
                         if '_when_run' not in data:
@@ -1079,8 +1147,8 @@ class Schedule(object):
                     now = int(time.time())
                     seconds = when - now
 
-                    # scheduled time is in the past
-                    if seconds < 0:
+                    # scheduled time is in the past and the run was not triggered before
+                    if seconds < 0 and not data.get('_when_run', False):
                         continue
 
                     if '_when_run' not in data:
@@ -1136,26 +1204,17 @@ class Schedule(object):
                         else:
                             data['_seconds'] = 0
 
-            if job in self.intervals:
-                if 'when' in data:
-                    if seconds == 0:
-                        if data['_when_run']:
-                            data['_when_run'] = False
-                            run = True
-                elif 'cron' in data:
-                    if seconds == 1:
-                        run = True
-                else:
-                    if now - self.intervals[job] >= seconds:
-                        run = True
+            if 'when' in data:
+                # scheduled time is now or in the past, and the run was triggered before
+                if seconds <= 0 and data['_when_run']:
+                    data['_when_run'] = False
+                    run = True
+            elif 'cron' in data:
+                if seconds == 1:
+                    run = True
             else:
-                if 'when' in data:
-                    if seconds == 0:
-                        if data['_when_run']:
-                            data['_when_run'] = False
-                            run = True
-                elif 'cron' in data:
-                    if seconds == 1:
+                if job in self.intervals:
+                    if now - self.intervals[job] >= seconds:
                         run = True
                 else:
                     # If run_on_start is True, the job will run when the Salt

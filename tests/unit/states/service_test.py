@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import contextlib
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -70,69 +69,34 @@ class ServiceTestCase(TestCase):
             self.assertDictEqual(service.running("salt"), ret[0])
 
         with patch.object(service, '_available', tmock):
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': False}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled': tmock, 'service.status': tmock}
-                )
-            ):
-                self.assertDictEqual(service.running("salt"), ret[1])
+            with patch.dict(service.__opts__, {'test': False}):
+                with patch.dict(service.__salt__, {'service.enabled': tmock,
+                                                   'service.status': tmock}):
+                    self.assertDictEqual(service.running("salt"), ret[1])
 
-                # service was enabled and running, no changes
                 mock = MagicMock(return_value={'changes': 'saltstack'})
-                with contextlib.nested(
-                    patch.dict(service.__opts__, {'test': False}),
-                    patch.dict(
-                        service.__salt__,
-                        {'service.enabled':
-                         MagicMock(side_effect=[False, True]),
-                         'service.status': tmock}
-                    ),
-                    patch.object(service, '_enable', mock)
-                ):
-                    self.assertDictEqual(service.running("salt", True), ret[2])
+                with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[False, True]),
+                                                   'service.status': tmock}):
+                    with patch.object(service, '_enable', mock):
+                        self.assertDictEqual(service.running("salt", True), ret[2])
 
-                with contextlib.nested(
-                    patch.dict(service.__opts__, {'test': False}),
-                    patch.dict(
-                        service.__salt__,
-                        {'service.enabled':
-                         MagicMock(side_effect=[True, False]),
-                         'service.status': tmock}
-                    ),
-                    patch.object(service, '_disable', mock)
-                ):
-                    self.assertDictEqual(service.running("salt", False),
-                                         ret[2])
+                with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[True, False]),
+                                                   'service.status': tmock}):
+                    with patch.object(service, '_disable', mock):
+                        self.assertDictEqual(service.running("salt", False), ret[2])
 
-                with patch.dict(service.__opts__, {'test': True}):
+                with patch.dict(service.__salt__, {'service.status': MagicMock(side_effect=[False, True]),
+                                                   'service.enabled': MagicMock(side_effect=[False, True]),
+                                                   'service.start': MagicMock(return_value="stack")}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.running("salt", True), ret[4])
+
+            with patch.dict(service.__opts__, {'test': True}):
+                with patch.dict(service.__salt__, {'service.status': tmock}):
                     self.assertDictEqual(service.running("salt"), ret[5])
 
-                with contextlib.nested(
-                    patch.dict(
-                        service.__salt__,
-                        {'service.status': fmock}
-                    ),
-                    patch.dict(service.__opts__, {'test': True})
-                ):
+                with patch.dict(service.__salt__, {'service.status': fmock}):
                     self.assertDictEqual(service.running("salt"), ret[3])
-
-                with contextlib.nested(
-                    patch.dict(service.__opts__, {'test': False}),
-                    patch.dict(
-                        service.__salt__, {
-                            'service.status':
-                            MagicMock(side_effect=[False, True]),
-                            'service.enabled':
-                            MagicMock(side_effect=[False, True]),
-                            'service.start':
-                            MagicMock(return_value="stack")}),
-                    patch.object(
-                        service, '_enable',
-                        MagicMock(return_value={'changes': 'saltstack'}))
-                ):
-                    self.assertDictEqual(service.running("salt", True), ret[4])
 
     def test_dead(self):
         '''
@@ -166,66 +130,36 @@ class ServiceTestCase(TestCase):
 
         with patch.object(service, '_available', tmock):
             mock = MagicMock(return_value={'changes': 'saltstack'})
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': True}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled': MagicMock(return_value=False),
-                     'service.stop': MagicMock(return_value=True),
-                     'service.status': MagicMock(return_value=False)}),
-                patch.object(service, '_enable', mock)
-            ):
-                self.assertDictEqual(service.dead("salt", True), ret[5])
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': False}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled': MagicMock(return_value=False),
-                     'service.stop': MagicMock(return_value=True),
-                     'service.status': MagicMock(return_value=False)}),
-                patch.object(service, '_enable', mock)
-            ):
-                self.assertDictEqual(service.dead("salt", True), ret[1])
+            with patch.dict(service.__opts__, {'test': True}):
+                with patch.dict(service.__salt__, {'service.enabled': fmock,
+                                                   'service.stop': tmock,
+                                                   'service.status': fmock}):
+                    with patch.object(service, '_enable', mock):
+                        self.assertDictEqual(service.dead("salt", True), ret[5])
 
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': True}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled': MagicMock(return_value=True),
-                     'service.status': MagicMock(return_value=True)}),
-            ):
-                self.assertDictEqual(service.dead("salt"), ret[2])
+                with patch.dict(service.__salt__, {'service.enabled': tmock,
+                                                   'service.status': tmock}):
+                    self.assertDictEqual(service.dead("salt"), ret[2])
 
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': False}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled':
-                     MagicMock(side_effect=[True, True, False]),
-                     'service.status':
-                     MagicMock(side_effect=[True, True, False]),
-                     'service.stop': MagicMock(return_value="stack")}),
-                patch.object(
-                    service, '_enable',
-                    MagicMock(return_value={'changes': 'saltstack'}))
-            ):
-                self.assertDictEqual(service.dead("salt", True), ret[3])
+            with patch.dict(service.__opts__, {'test': False}):
+                with patch.dict(service.__salt__, {'service.enabled': fmock,
+                                                   'service.stop': tmock,
+                                                   'service.status': fmock}):
+                    with patch.object(service, '_enable', mock):
+                        self.assertDictEqual(service.dead("salt", True), ret[1])
 
-            # test an initd which a wrong status (True even if dead)
-            with contextlib.nested(
-                patch.dict(service.__opts__, {'test': False}),
-                patch.dict(
-                    service.__salt__,
-                    {'service.enabled':
-                     MagicMock(side_effect=[False, False, False]),
-                     'service.status':
-                     MagicMock(side_effect=[True, True, True]),
-                     'service.stop': MagicMock(return_value="stack")}),
-                patch.object(
-                    service, '_disable',
-                    MagicMock(return_value={}))
-            ):
-                self.assertDictEqual(service.dead("salt", False), ret[4])
+                with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[True, True, False]),
+                                                   'service.status': MagicMock(side_effect=[True, True, False]),
+                                                   'service.stop': MagicMock(return_value="stack")}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.dead("salt", True), ret[3])
+
+                # test an initd which a wrong status (True even if dead)
+                with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[False, False, False]),
+                                                   'service.status': MagicMock(side_effect=[True, True, True]),
+                                                   'service.stop': MagicMock(return_value="stack")}):
+                    with patch.object(service, '_disable', MagicMock(return_value={})):
+                        self.assertDictEqual(service.dead("salt", False), ret[4])
 
     def test_enabled(self):
         '''
@@ -255,7 +189,7 @@ class ServiceTestCase(TestCase):
                 'comment': 'Service is already stopped', 'name': 'salt',
                 'result': True},
                {'changes': {},
-                'comment': 'sfun must be set to either "running" or "dead"',
+                'comment': 'Unable to trigger watch for service.stack',
                 'name': 'salt', 'result': False},
                {'changes': {},
                 'comment': 'Service is set to be started', 'name': 'salt',

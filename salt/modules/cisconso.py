@@ -9,8 +9,8 @@ for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.
 '''
 from __future__ import absolute_import
 
-import six
 import salt.utils
+import salt.ext.six as six
 
 __proxyenabled__ = ['cisconso']
 __virtualname__ = 'cisconso'

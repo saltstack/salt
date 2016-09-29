@@ -39,6 +39,9 @@ def present(dbname, name,
     name
         The name of the schema to manage
 
+    owner
+        The database user that will be the owner of the schema
+
     db_user
         database username if different from config or default
 
@@ -99,7 +102,7 @@ def absent(dbname, name,
            db_user=None, db_password=None,
            db_host=None, db_port=None):
     '''
-    Ensure that the named schema is absent
+    Ensure that the named schema is absent.
 
     dbname
         The database's name will work on

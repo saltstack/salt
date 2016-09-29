@@ -35,4 +35,3 @@ Full list of Salt Cloud modules
     softlayer_hw
     virtualbox
     vmware
-    vsphere

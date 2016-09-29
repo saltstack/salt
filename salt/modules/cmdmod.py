@@ -20,6 +20,7 @@ import time
 import traceback
 import fnmatch
 import base64
+import re
 
 # Import salt libs
 import salt.utils
@@ -29,7 +30,7 @@ import salt.ext.six as six
 from salt.utils import vt
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Only available on POSIX systems, nonfatal on windows
@@ -169,7 +170,7 @@ def _check_loglevel(level='info', quiet=False):
             .format(
                 level,
                 ', '.join(
-                    sorted(LOG_LEVELS, key=LOG_LEVELS.get, reverse=True)
+                    sorted(LOG_LEVELS, reverse=True)
                 )
             )
         )
@@ -220,6 +221,8 @@ def _check_avail(cmd):
     '''
     Check to see if the given command can be run
     '''
+    if isinstance(cmd, list):
+        cmd = ' '.join(cmd)
     bret = True
     wret = False
     if __salt__['config.get']('cmd_blacklist_glob'):
@@ -342,6 +345,31 @@ def _run(cmd,
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
+    def _get_stripped(cmd):
+        # Return stripped command string copies to improve logging.
+        if isinstance(cmd, list):
+            return [x.strip() if isinstance(x, str) else x for x in cmd]
+        elif isinstance(cmd, str):
+            return cmd.strip()
+        else:
+            return cmd
+
+    if _check_loglevel(output_loglevel) is not None:
+        # Always log the shell commands at INFO unless quiet logging is
+        # requested. The command output is what will be controlled by the
+        # 'loglevel' parameter.
+        msg = (
+            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+                '\'' if not isinstance(cmd, list) else '',
+                _get_stripped(cmd),
+                'as user \'{0}\' '.format(runas) if runas else '',
+                cwd,
+                '. Executing command in the background, no output will be '
+                'logged.' if bg else ''
+            )
+        )
+        log.info(log_callback(msg))
+
     if runas and salt.utils.is_windows():
         if not password:
             msg = 'password is a required argument for runas on Windows'
@@ -389,9 +417,14 @@ def _run(cmd,
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code)[0]
-            import itertools
-            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            if six.PY2:
+                import itertools
+                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            elif six.PY3:
+                if isinstance(env_encoded, str):
+                    env_encoded = env_encoded.encode(__salt_system_encoding__)
+                env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
@@ -406,21 +439,6 @@ def _run(cmd,
                     runas
                 )
             )
-
-    if _check_loglevel(output_loglevel) is not None:
-        # Always log the shell commands at INFO unless quiet logging is
-        # requested. The command output is what will be controlled by the
-        # 'loglevel' parameter.
-        msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
-                '\'' if not isinstance(cmd, list) else '',
-                cmd,
-                'as user \'{0}\' '.format(runas) if runas else '',
-                cwd,
-                ' in the background, no output will be logged' if bg else ''
-            )
-        )
-        log.info(log_callback(msg))
 
     if reset_system_locale is True:
         if not salt.utils.is_windows():
@@ -719,6 +737,7 @@ def run(cmd,
         saltenv='base',
         use_vt=False,
         bg=False,
+        password=None,
         encoded_cmd=False,
         **kwargs):
     r'''
@@ -739,8 +758,8 @@ def run(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -890,6 +909,7 @@ def run(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                bg=bg,
+               password=password,
                encoded_cmd=encoded_cmd,
                **kwargs)
 
@@ -930,6 +950,7 @@ def shell(cmd,
         saltenv='base',
         use_vt=False,
         bg=False,
+        password=None,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -948,15 +969,16 @@ def shell(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
     :param int shell: Shell to execute under. Defaults to the system default
       shell.
 
-    :param bool bg: If True, run command in background and do not await or deliver it's results
+    :param bool bg: If True, run command in background and do not await or
+      deliver its results
 
     :param list env: A list of environment variables to be set prior to
       execution.
@@ -1095,6 +1117,7 @@ def shell(cmd,
                use_vt=use_vt,
                python_shell=python_shell,
                bg=bg,
+               password=password,
                **kwargs)
 
 
@@ -1116,6 +1139,7 @@ def run_stdout(cmd,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
+               password=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1132,8 +1156,8 @@ def run_stdout(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1252,6 +1276,7 @@ def run_stdout(cmd,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt,
+               password=password,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1295,6 +1320,7 @@ def run_stderr(cmd,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
+               password=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1311,8 +1337,8 @@ def run_stderr(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1432,6 +1458,7 @@ def run_stderr(cmd,
                ignore_retcode=ignore_retcode,
                use_vt=use_vt,
                saltenv=saltenv,
+               password=password,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1476,6 +1503,7 @@ def run_all(cmd,
             saltenv='base',
             use_vt=False,
             redirect_stderr=False,
+            password=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1492,8 +1520,8 @@ def run_all(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1623,6 +1651,7 @@ def run_all(cmd,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt,
+               password=password,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1665,6 +1694,7 @@ def retcode(cmd,
             ignore_retcode=False,
             saltenv='base',
             use_vt=False,
+            password=None,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -1681,8 +1711,8 @@ def retcode(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -1804,6 +1834,7 @@ def retcode(cmd,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt,
+               password=password,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1841,6 +1872,7 @@ def _retcode_quiet(cmd,
                    ignore_retcode=False,
                    saltenv='base',
                    use_vt=False,
+                   password=None,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -1863,6 +1895,7 @@ def _retcode_quiet(cmd,
                    ignore_retcode=ignore_retcode,
                    saltenv=saltenv,
                    use_vt=use_vt,
+                   password=password,
                    **kwargs)
 
 
@@ -1884,6 +1917,7 @@ def script(source,
            saltenv='base',
            use_vt=False,
            bg=False,
+           password=None,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1912,8 +1946,8 @@ def script(source,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2070,6 +2104,7 @@ def script(source,
                saltenv=saltenv,
                use_vt=use_vt,
                bg=bg,
+               password=password,
                **kwargs)
     _cleanup_tempfile(path)
     return ret
@@ -2091,6 +2126,7 @@ def script_retcode(source,
                    output_loglevel='debug',
                    log_callback=None,
                    use_vt=False,
+                   password=None,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2123,8 +2159,8 @@ def script_retcode(source,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2239,6 +2275,7 @@ def script_retcode(source,
                   output_loglevel=output_loglevel,
                   log_callback=log_callback,
                   use_vt=use_vt,
+                  password=password,
                   **kwargs)['retcode']
 
 
@@ -2386,10 +2423,10 @@ def run_chroot(root,
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
     within a chroot, with dev and proc mounted in the chroot
 
-    root:
+    root
         Path to the root of the jail to use.
 
-    cmd:
+    cmd
         The command to run. ex: 'ls -lart /home'
 
     cwd
@@ -2607,6 +2644,151 @@ def shells():
     return ret
 
 
+def shell_info(shell):
+    '''
+    Provides information about a shell or languages often use #!
+    The values returned are dependant on the shell or languages all return the
+    ``installed``, ``path``, ``version``, ``version_major`` and
+    ``version_major_minor`` e.g. 5.0 or 6-3.
+    The shell must be within the exeuctable search path.
+
+    :param str shell: Name of the shell.
+    Support are bash, cmd, perl, php, powershell, python, ruby and zsh
+    :return: Properies of the shell specifically its and other information if
+    available.
+    :rtype: dict
+
+    .. code-block:: cfg
+        {'version': '<version string>',
+         'version_major': '<version string',
+         'version_minor': '<version string>',
+         'path': '<full path to binary>',
+         'installed': <True, False or None>,
+         '<attribute>': '<attribute value>'}
+
+    ``installed`` is always returned, if None or False also returns error and
+     may also return stdout for diagnostics.
+
+    .. versionadded:: 2016.9.0
+
+    CLI Example::
+    .. code-block:: bash
+        salt '*' cmd.shell bash
+        salt '*' cmd.shell powershell
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    '''
+    regex_shells = {
+        'bash': [r'version ([-\w.]+)', 'bash', '--version'],
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'zsh': [r'^zsh ([\d.]+)', 'zsh', '--version'],
+        'tcsh': [r'^tcsh ([\d.]+)', 'tcsh', '--version'],
+        'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
+        'powershell': [r'PSVersion\s+([\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'perl': [r'^([\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
+        'python': [r'^Python ([\d.]+)', 'python', '-V'],
+        'ruby': [r'^ruby ([\d.]+)', 'ruby', '-v'],
+        'php': [r'^PHP ([\d.]+)', 'php', '-v']
+    }
+    # Ensure ret['installed'] always as a value of True, False or None (not sure)
+    ret = {}
+    ret['installed'] = None
+    if salt.utils.is_windows() and shell == 'powershell':
+        pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
+        pw_keys.sort(key=int)
+        if len(pw_keys) == 0:
+            return {
+                'error': 'Unable to locate \'powershell\' Reason: Cannot be found in registry.',
+                'installed': False,
+                'version': None
+            }
+        for reg_ver in pw_keys:
+            install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver), 'Install')
+            if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
+                details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
+                ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
+                ret['installed'] = True
+                ret['path'] = which('powershell.exe')
+                for attribute in details:
+                    if attribute['vname'].lower() == '(default)':
+                        continue
+                    elif attribute['vname'].lower() == 'powershellversion':
+                        ret['psversion'] = attribute['vdata']
+                        ret['version'] = attribute['vdata']
+                    elif attribute['vname'].lower() == 'runtimeversion':
+                        ret['crlversion'] = attribute['vdata']
+                        if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
+                            ret['crlversion'] = ret['crlversion'][1::]
+                    elif attribute['vname'].lower() == 'pscompatibleversion':
+                        # reg attribute does not end in s, the powershell attibute does
+                        ret['pscompatibleversions'] = attribute['vdata']
+                    else:
+                        # keys are lower case as python is case sensitive the registry is not
+                        ret[attribute['vname'].lower()] = attribute['vdata']
+    else:
+        if shell not in regex_shells:
+            return {
+                'error': 'Salt does not know how to get the version number for {0}'.format(shell),
+                'installed': None
+            }
+        shell_data = regex_shells[shell]
+        pattern = shell_data.pop(0)
+        # We need to make sure HOME set, so shells work correctly
+        # salt-call will general have home set, the salt-minion service may not
+        # We need to assume ports of unix shells to windows will look after themselves
+        # in setting HOME as they do it in many different ways
+        newenv = os.environ
+        if ('HOME' not in newenv) and (not salt.utils.is_windows()):
+            newenv['HOME'] = os.path.expanduser('~')
+            log.debug('HOME environment set to {0}'.format(newenv['HOME']))
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(
+                shell_data,
+                stdin=None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                env=newenv
+                )
+        except (OSError, IOError) as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: {1}'.format(' '.join(shell_data), exc),
+                'installed': False,
+                'version': None
+            }
+        try:
+            proc.run()
+        except TimedProcTimeoutError as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: Timed out.'.format(' '.join(shell_data)),
+                'installed': False,
+                'version': None
+            }
+
+        ret['installed'] = True
+        ret['path'] = which(shell_data[0])
+        pattern_result = re.search(pattern, proc.stdout, flags=re.IGNORECASE)
+        # only set version if we find it, so code later on can deal with it
+        if pattern_result:
+            ret['version'] = pattern_result.group(1)
+
+    if 'version' not in ret:
+        ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(shell)
+        ret['version'] = None
+        ret['stdout'] = proc.stdout  # include stdout so they can see the issue
+        log.error(ret['error'])
+    else:
+        major_result = re.match('(\\d+)', ret['version'])
+        if major_result:
+            ret['version_major'] = major_result.group(1)
+            major_minor_result = re.match('(\\d+[-.]\\d+)', ret['version'])
+            if major_minor_result:
+                ret['version_major_minor'] = major_minor_result.group(1)
+
+    return ret
+
+
 def powershell(cmd,
         cwd=None,
         stdin=None,
@@ -2624,6 +2806,7 @@ def powershell(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
+        password=None,
         encode_cmd=False,
         **kwargs):
     '''
@@ -2652,8 +2835,8 @@ def powershell(cmd,
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
 
-    :param str password: Windows only. Pass a password if you specify runas.
-      This parameter will be ignored for other OS's
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -2780,6 +2963,7 @@ def powershell(cmd,
                    saltenv=saltenv,
                    use_vt=use_vt,
                    python_shell=python_shell,
+                   password=password,
                    encoded_cmd=encoded_cmd,
                    **kwargs)
 
@@ -2803,7 +2987,9 @@ def run_bg(cmd,
         output_loglevel='debug',
         log_callback=None,
         reset_system_locale=True,
+        ignore_retcode=False,
         saltenv='base',
+        password=None,
         **kwargs):
     r'''
     .. versionadded: 2016.3.0
@@ -2824,6 +3010,11 @@ def run_bg(cmd,
 
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
+
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
+
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2950,10 +3141,10 @@ def run_bg(cmd,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               # ignore_retcode=ignore_retcode,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
+               password=password,
                **kwargs
-               # password=kwargs.get('password', None),
                )
 
     return {

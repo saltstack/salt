@@ -164,18 +164,25 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
 
     MUST inherit from dict to serialize through msgpack correctly
     '''
-    def __init__(self, d, pre_keys):  # pylint: disable=W0231
+
+    def __init__(self, d, pre_keys, override_name=None):  # pylint: disable=W0231
         self.__dict = d
         if isinstance(pre_keys, six.string_types):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
+        if override_name:
+            self.__class__.__module__ = 'salt'
+            self.__class__.__name__ = override_name
 
     def _dict(self):
         r = self.__dict
         for k in self.pre_keys:
             r = r[k]
         return r
+
+    def __repr__(self):
+        return repr(self._dict())
 
     def __setitem__(self, key, val):
         self._dict()[key] = val

@@ -48,7 +48,7 @@ def __virtual__():
     return __virtualname__
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Print the output data in JSON
     '''
@@ -73,6 +73,10 @@ def output(data):
                 indent = None
 
         return json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)
+
+    except UnicodeDecodeError as exc:
+        log.error('Unable to serialize output to json')
+        return json.dumps({'error': 'Unable to serialize output to json', 'message': str(exc)})
 
     except TypeError:
         log.debug('An error occurred while outputting JSON', exc_info=True)

@@ -49,15 +49,6 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
-    if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
-            )
-        kwargs.pop('env')
-
     __pillar__.update(kwargs.get('pillar', {}))
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -154,7 +145,9 @@ def low(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    err = st_.verify_data(data)
+    for chunk in chunks:
+        chunk['__id__'] = chunk['name'] if not chunk.get('__id__') else chunk['__id__']
+    err = st_.state.verify_data(data)
     if err:
         return err
     file_refs = salt.client.ssh.state.lowstate_file_refs(
@@ -223,7 +216,7 @@ def high(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    chunks = st_.state.compile_high_data(high)
+    chunks = st_.state.compile_high_data(data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -325,6 +318,7 @@ def highstate(test=None, **kwargs):
     # Check for errors
     for chunk in chunks:
         if not isinstance(chunk, dict):
+            __context__['retcode'] = 1
             return chunks
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
@@ -492,15 +486,6 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
-            )
-        kwargs.pop('env')
-
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -528,10 +513,12 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
     return high_data
 
 
-def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+def show_low_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     Display the low state data from a specific sls or list of sls files on the
-    master
+    master.
+
+    .. versionadded:: 2016.3.2
 
     CLI Example:
 
@@ -541,14 +528,6 @@ def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
 
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):

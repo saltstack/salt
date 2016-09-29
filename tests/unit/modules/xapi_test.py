@@ -100,46 +100,6 @@ class XapiTestCase(TestCase):
 
                 self.assertDictEqual(xapi.vm_state(), {})
 
-    def test_node_info(self):
-        '''
-            Test to return a dict with information about this node
-        '''
-        ret = {'cc_compile_by': 'stack',
-               'cc_compile_date': 'stack',
-               'cc_compile_domain': 'stack',
-               'cc_compiler': 'stack',
-               'cores_per_sockets': 'stack',
-               'cpuarch': 'stack',
-               'cpucores': 'stack',
-               'cpufeatures': 'salt',
-               'cpumhz': 5,
-               'cputhreads': 'stack',
-               'free_cpus': 0,
-               'free_memory': 0,
-               'phymemory': 0,
-               'platform_params': 'stack',
-               'xen_caps': 's t a c k',
-               'xen_changeset': 'stack',
-               'xen_commandline': 'stack',
-               'xen_extra': 'stack',
-               'xen_major': 'stack',
-               'xen_minor': 'stack',
-               'xen_pagesize': 'stack',
-               'xen_scheduler': 'stack',
-               'xend_config_format': 'stack'
-               }
-        with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            mock = MagicMock(return_value={"features": "salt", "speed": 5,
-                                           "host_CPUs": "salt",
-                                           "cpu_pool": "salt"})
-            with patch.object(xapi, "_get_record", mock):
-                mock = MagicMock(return_value={"memory_free": 1024,
-                                               "memory_total": 1024})
-                with patch.object(xapi, "_get_metrics_record", mock):
-                    mock = MagicMock(return_value="stack")
-                    with patch.object(xapi, "_get_val", mock):
-                        self.assertDictEqual(xapi.node_info(), ret)
-
     def test_get_nics(self):
         '''
             Test to return info about the network interfaces of a named vm

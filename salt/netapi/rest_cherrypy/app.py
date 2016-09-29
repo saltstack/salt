@@ -136,7 +136,8 @@ Authentication
 Authentication is performed by passing a session token with each request.
 Tokens are generated via the :py:class:`Login` URL.
 
-The token may be sent in one of two ways:
+The token may be sent in one of two ways: as a custom header or as a session
+cookie. The latter is far more convenient for clients that support cookies.
 
 * Include a custom header named :mailheader:`X-Auth-Token`.
 
@@ -213,54 +214,204 @@ The token may be sent in one of two ways:
 Usage
 -----
 
-Commands are sent to a running Salt master via this module by sending HTTP
-requests to the URLs detailed below.
+This interface directly exposes Salt's :ref:`Python API <python-api>`.
+Everything possible at the CLI is possible through the Python API. Commands are
+executed on the Salt Master.
 
-.. admonition:: Content negotiation
+The root URL (``/``) is RPC-like in that it accepts instructions in the request
+body for what Salt functions to execute, and the response contains the result
+of those function calls.
 
-    This REST interface is flexible in what data formats it will accept as well
-    as what formats it will return (e.g., JSON, YAML, x-www-form-urlencoded).
+For example:
 
-    * Specify the format of data in the request body by including the
-      :mailheader:`Content-Type` header.
-    * Specify the desired data format for the response body with the
-      :mailheader:`Accept` header.
+.. code-block:: text
 
-Data sent in :http:method:`post` and :http:method:`put` requests  must be in
-the format of a list of lowstate dictionaries. This allows multiple commands to
-be executed in a single HTTP request. The order of commands in the request
-corresponds to the return for each command in the response.
+    % curl -sSi https://localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '[{
+            "client": "local",
+            "tgt": "*",
+            "fun": "test.ping"
+        }]'
+    HTTP/1.1 200 OK
+    Content-Type: application/json
+    [...snip...]
 
-Lowstate, broadly, is a dictionary of values that are mapped to a function
-call. This pattern is used pervasively throughout Salt. The functions called
-from netapi modules are described in :ref:`Client Interfaces <netapi-clients>`.
+    {"return": [{"jerry": true}]}
 
-The following example (in JSON format) causes Salt to execute two commands, a
-command sent to minions as well as a runner function on the master::
+The request body must be an array of commands. Use this workflow to build a
+command:
 
-    [{
-        "client": "local",
-        "tgt": "*",
-        "fun": "test.fib",
-        "arg": ["10"]
-    },
+1.  Choose a client interface.
+2.  Choose a function.
+3.  Fill out the remaining parameters needed for the chosen client.
+
+The ``client`` field is a reference to the main Python classes used in Salt's
+Python API. Read the full :ref:`client interfaces <netapi-clients>`
+documentation, but in short:
+
+* "local" uses :py:class:`LocalClient <salt.client.LocalClient>` which sends
+  commands to Minions. Equivalent to the ``salt`` CLI command.
+* "runner" uses :py:class:`RunnerClient <salt.runner.RunnerClient>` which
+  invokes runner modules on the Master. Equivalent to the ``salt-run`` CLI
+  command.
+* "wheel" uses :py:class:`WheelClient <salt.wheel.WheelClient>` which invokes
+  wheel modules on the Master. Wheel modules do not have a direct CLI
+  equivalent but they typically manage Master-side resources such as state
+  files, pillar files, the Salt config files, and the :py:mod:`key wheel module
+  <salt.wheel.key>` exposes similar functionality as the ``salt-key`` CLI
+  command.
+
+Most clients have variants like synchronous or asyncronous execution as well as
+others like batch execution. See the :ref:`full list of client interfaces
+<netapi-clients>`.
+
+Each client requires different arguments and sometimes has different syntax.
+For example, ``LocalClient`` requires the ``tgt`` argument because it forwards
+the command to Minions and the other client interfaces do not. ``LocalClient``
+also takes ``arg`` (array) and ``kwarg`` (dictionary) arguments because these
+values are sent to the Minions and used to execute the requested function
+there. ``RunnerClient`` and ``WheelClient`` are executed directly on the Master
+and thus do not need or accept those arguments.
+
+Read the method signatures in the client documentation linked above, but
+hopefully an example will help illustrate the concept. This example causes Salt
+to execute two functions -- the :py:func:`test.arg execution function
+<salt.modules.test.arg>` using ``LocalClient`` and the :py:func:`test.arg
+runner function <salt.runners.test.arg>` using ``RunnerClient``; note the
+different structure for each command. The results for both are combined and
+returned as one response.
+
+.. code-block:: text
+
+    % curl -b ~/cookies.txt -sSi localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '
+    [
+        {
+            "client": "local",
+            "tgt": "*",
+            "fun": "test.arg",
+            "arg": ["positional arg one", "positional arg two"],
+            "kwarg": {
+                "keyword arg one": "Hello from a minion",
+                "keyword arg two": "Hello again from a minion"
+            }
+        },
+        {
+            "client": "runner",
+            "fun": "test.arg",
+            "keyword arg one": "Hello from a master",
+            "keyword arg two": "Runners do not support positional args"
+        }
+    ]
+    '
+    HTTP/1.1 200 OK
+    [...snip...]
     {
-        "client": "runner",
-        "fun": "jobs.lookup_jid",
-        "jid": "20130603122505459265"
-    }]
+      "return": [
+        {
+          "jerry": {
+            "args": [
+              "positional arg one",
+              "positional arg two"
+            ],
+            "kwargs": {
+              "keyword arg one": "Hello from a minion",
+              "keyword arg two": "Hello again from a minion",
+              [...snip...]
+            }
+          },
+          [...snip; other minion returns here...]
+        },
+        {
+          "args": [],
+          "kwargs": {
+            "keyword arg two": "Runners do not support positional args",
+            "keyword arg one": "Hello from a master"
+          }
+        }
+      ]
+    }
 
-.. admonition:: x-www-form-urlencoded
+One more example, this time with more commonly used functions:
 
-    Sending JSON or YAML in the request body is simple and most flexible,
-    however sending data in urlencoded format is also supported with the
-    caveats below. It is the default format for HTML forms, many JavaScript
-    libraries, and the :command:`curl` command.
+.. code-block:: text
 
-    For example, the equivalent to running ``salt '*' test.ping`` is sending
-    ``fun=test.ping&arg&client=local&tgt=*`` in the HTTP request body.
+    curl -b /tmp/cookies.txt -sSi localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '
+    [
+        {
+            "client": "local",
+            "tgt": "*",
+            "fun": "state.sls",
+            "kwarg": {
+                "mods": "apache",
+                "pillar": {
+                    "lookup": {
+                        "wwwdir": "/srv/httpd/htdocs"
+                    }
+                }
+            }
+        },
+        {
+            "client": "runner",
+            "fun": "cloud.create",
+            "provider": "my-ec2-provider",
+            "instances": "my-centos-6",
+            "image": "ami-1624987f",
+            "delvol_on_destroy", true
+        }
+    ]
+    '
+    HTTP/1.1 200 OK
+    [...snip...]
+    {
+      "return": [
+        {
+          "jerry": {
+            "pkg_|-install_apache_|-httpd_|-installed": {
+                [...snip full state return here...]
+            }
+          }
+          [...snip other minion returns here...]
+        },
+        {
+            [...snip full salt-cloud output here...]
+        }
+      ]
+    }
 
-    Caveats:
+Content negotiation
+-------------------
+
+This REST interface is flexible in what data formats it will accept as well
+as what formats it will return (e.g., JSON, YAML, urlencoded).
+
+* Specify the format of data in the request body by including the
+  :mailheader:`Content-Type` header.
+* Specify the desired data format for the response body with the
+  :mailheader:`Accept` header.
+
+We recommend the JSON format for most HTTP requests. urlencoded data is simple
+and cannot express complex data structures -- and that is often required for
+some Salt commands, such as starting a state run that uses Pillar data. Salt's
+CLI tool can reformat strings passed in at the CLI into complex data
+structures, and that behavior also works via salt-api, but that can be brittle
+and since salt-api can accept JSON it is best just to send JSON.
+
+Here is an example of sending urlencoded data:
+
+.. code-block:: bash
+
+    curl -sSik https://localhost:8000 \\
+        -b ~/cookies.txt \\
+        -d client=runner \\
+        -d fun='jobs.lookup_jid' \\
+        -d jid='20150129182456704682'
+
+.. admonition:: urlencoded data caveats
 
     * Only a single command may be sent per HTTP request.
     * Repeating the ``arg`` parameter multiple times will cause those
@@ -268,9 +419,23 @@ command sent to minions as well as a runner function on the master::
 
       Note, some popular frameworks and languages (notably jQuery, PHP, and
       Ruby on Rails) will automatically append empty brackets onto repeated
-      parameters. E.g., ``arg=one``, ``arg=two`` will be sent as ``arg[]=one``,
-      ``arg[]=two``. This is not supported; send JSON or YAML instead.
+      query string parameters. E.g., ``?foo[]=fooone&foo[]=footwo``. This is
+      **not** supported; send ``?foo=fooone&foo=footwo`` instead, or send JSON
+      or YAML.
 
+    A note about ``curl``
+
+    The ``-d`` flag to curl does *not* automatically urlencode data which can
+    affect passwords and other data that contains characters that must be
+    encoded. Use the ``--data-urlencode`` flag instead. E.g.:
+
+    .. code-block:: bash
+
+        curl -ksi http://localhost:8000/login \\
+        -H "Accept: application/json" \\
+        -d username='myapiuser' \\
+        --data-urlencode password='1234+' \\
+        -d eauth='pam'
 
 .. |req_token| replace:: a session token from :py:class:`~Login`.
 .. |req_accept| replace:: the desired response format.
@@ -283,21 +448,6 @@ command sent to minions as well as a runner function on the master::
 .. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
-
-A Note About Curl
-=================
-
-When sending passwords and data that might need to be urlencoded, you must set
-the ``-d`` flag to indicate the content type, and the ``--data-urlencode`` flag
-to urlencode the input.
-
-.. code-block:: bash
-
-    curl -ksi http://localhost:8000/login \\
-    -H "Accept: application/json" \\
-    -d username='myapiuser' \\
-    --data-urlencode password='1234+' \\
-    -d eauth='pam'
 
 '''
 # We need a custom pylintrc here...
@@ -598,7 +748,12 @@ def hypermedia_handler(*args, **kwargs):
     # Transform the output from the handler into the requested output format
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
-    return out(ret)
+    try:
+        return out(ret)
+    except Exception:
+        msg = 'Could not serialize the return data from Salt.'
+        logger.debug(msg, exc_info=True)
+        raise cherrypy.HTTPError(500, msg)
 
 
 def hypermedia_out():
@@ -745,7 +900,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if data and not isinstance(data, list):
+    if data and isinstance(data, collections.Mapping):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -910,11 +1065,10 @@ class LowDataAdapter(object):
         .. code-block:: bash
 
             curl -sSik https://localhost:8000 \\
-                    -H "Accept: application/x-yaml" \\
-                    -H "X-Auth-Token: d40d1e1e<...snip...>" \\
-                    -d client=local \\
-                    -d tgt='*' \\
-                    -d fun='test.ping' \\
+                -b ~/cookies.txt \\
+                -H "Accept: application/x-yaml" \\
+                -H "Content-type: application/json" \\
+                -d '[{"client": "local", "tgt": "*", "fun": "test.ping"}]'
 
         .. code-block:: http
 
@@ -922,10 +1076,9 @@ class LowDataAdapter(object):
             Host: localhost:8000
             Accept: application/x-yaml
             X-Auth-Token: d40d1e1e
-            Content-Length: 36
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            fun=test.ping&client=local&tgt=*
+            [{"client": "local", "tgt": "*", "fun": "test.ping"}]
 
         **Example response:**
 
@@ -938,55 +1091,10 @@ class LowDataAdapter(object):
 
             return:
             - ms-0: true
-                ms-1: true
-                ms-2: true
-                ms-3: true
-                ms-4: true
-
-        **Other examples**:
-
-        .. code-block:: bash
-
-            # Sending multiple positional args with urlencoded:
-            curl -sSik https://localhost:8000 \\
-                    -d client=local \\
-                    -d tgt='*' \\
-                    -d fun='cmd.run' \\
-                    -d arg='du -sh .' \\
-                    -d arg='/path/to/dir'
-
-            # Sending positional args and Keyword args with JSON:
-            echo '[
-                {
-                    "client": "local",
-                    "tgt": "*",
-                    "fun": "cmd.run",
-                    "arg": [
-                        "du -sh .",
-                        "/path/to/dir"
-                    ],
-                    "kwarg": {
-                        "shell": "/bin/sh",
-                        "template": "jinja"
-                    }
-                }
-            ]' | curl -sSik https://localhost:8000 \\
-                    -H 'Content-type: application/json' \\
-                    -d@-
-
-            # Calling runner functions:
-            curl -sSik https://localhost:8000 \\
-                    -d client=runner \\
-                    -d fun='jobs.lookup_jid' \\
-                    -d jid='20150129182456704682' \\
-                    -d outputter=highstate
-
-            # Calling wheel functions:
-            curl -sSik https://localhost:8000 \\
-                    -d client=wheel \\
-                    -d fun='key.gen_accept' \\
-                    -d id_=dave \\
-                    -d keysize=4096
+              ms-1: true
+              ms-2: true
+              ms-3: true
+              ms-4: true
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -1076,17 +1184,16 @@ class Minions(LowDataAdapter):
         .. code-block:: bash
 
             curl -sSi localhost:8000/minions \\
+                -b ~/cookies.txt \\
                 -H "Accept: application/x-yaml" \\
-                -d tgt='*' \\
-                -d fun='status.diskusage'
+                -d '[{"tgt": "*", "fun": "status.diskusage"}]'
 
         .. code-block:: http
 
             POST /minions HTTP/1.1
             Host: localhost:8000
             Accept: application/x-yaml
-            Content-Length: 26
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
             tgt=*&fun=status.diskusage
 
@@ -1210,16 +1317,9 @@ class Jobs(LowDataAdapter):
         '''
         lowstate = [{
             'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'fun': 'jobs.list_job' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-
-        if jid:
-            lowstate.append({
-                'client': 'runner',
-                'fun': 'jobs.list_job',
-                'jid': jid,
-            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
@@ -1227,12 +1327,18 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            job_ret, job_info = job_ret_info
-            ret['info'] = [job_info]
+            ret['info'] = [job_ret_info[0]]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
-            job_ret = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
-        ret['return'] = [job_ret]
         return ret
 
 
@@ -1502,20 +1608,25 @@ class Login(LowDataAdapter):
         .. code-block:: bash
 
             curl -si localhost:8000/login \\
-                    -H "Accept: application/json" \\
-                    -d username='saltuser' \\
-                    -d password='saltpass' \\
-                    -d eauth='pam'
+                -c ~/cookies.txt \\
+                -H "Accept: application/json" \\
+                -H "Content-type: application/json" \\
+                -d '{
+                    "username": "saltuser",
+                    "password": "saltuser",
+                    "eauth": "auto"
+                }'
 
         .. code-block:: http
 
             POST / HTTP/1.1
             Host: localhost:8000
             Content-Length: 42
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
             Accept: application/json
 
-            username=saltuser&password=saltpass&eauth=pam
+            {"username": "saltuser", "password": "saltuser", "eauth": "auto"}
+
 
         **Example response:**
 
@@ -1577,7 +1688,7 @@ class Login(LowDataAdapter):
             perms = eauth.get(token['name'], [])
             perms.extend(eauth.get('*', []))
 
-            if 'groups' in token and token['groups'] is not False:
+            if 'groups' in token and token['groups']:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
@@ -1585,13 +1696,12 @@ class Login(LowDataAdapter):
                     perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
-                raise ValueError("Eauth permission list not found.")
-        except (AttributeError, IndexError, KeyError, ValueError):
+                logger.debug("Eauth permission list not found.")
+        except Exception:
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
-            raise cherrypy.HTTPError(500,
-                'Configuration for external_auth could not be read.')
+            perms = None
 
         return {'return': [{
             'token': cherrypy.session.id,
@@ -1599,7 +1709,7 @@ class Login(LowDataAdapter):
             'start': token['start'],
             'user': token['name'],
             'eauth': token['eauth'],
-            'perms': perms,
+            'perms': perms or {},
         }]}
 
 
@@ -1657,12 +1767,15 @@ class Run(LowDataAdapter):
 
             curl -sS localhost:8000/run \\
                 -H 'Accept: application/x-yaml' \\
-                -d client='local' \\
-                -d tgt='*' \\
-                -d fun='test.ping' \\
-                -d username='saltdev' \\
-                -d password='saltdev' \\
-                -d eauth='pam'
+                -H 'Content-type: application/json' \\
+                -d '[{
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "test.ping",
+                    "username": "saltdev",
+                    "password": "saltdev",
+                    "eauth": "auto"
+                }]'
 
         .. code-block:: http
 
@@ -1670,9 +1783,9 @@ class Run(LowDataAdapter):
             Host: localhost:8000
             Accept: application/x-yaml
             Content-Length: 75
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
+            [{"client": "local", "tgt": "*", "fun": "test.ping", "username": "saltdev", "password": "saltdev", "eauth": "auto"}]
 
         **Example response:**
 
@@ -1684,17 +1797,19 @@ class Run(LowDataAdapter):
 
             return:
             - ms-0: true
-                ms-1: true
-                ms-2: true
-                ms-3: true
-                ms-4: true
+              ms-1: true
+              ms-2: true
+              ms-3: true
+              ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh subsystem.
+        The /run enpoint can also be used to issue commands using the salt-ssh
+        subsystem.
 
-        When using salt-ssh, eauth credentials should not be supplied. Instad, authentication
-        should be handled by the SSH layer itself. The use of the salt-ssh client does not
-        require a salt master to be running. Instead, only a roster file must be present
-        in the salt configuration directory.
+        When using salt-ssh, eauth credentials should not be supplied. Instad,
+        authentication should be handled by the SSH layer itself. The use of
+        the salt-ssh client does not require a salt master to be running.
+        Instead, only a roster file must be present in the salt configuration
+        directory.
 
         All SSH client requests are synchronous.
 
@@ -2207,16 +2322,18 @@ class Webhook(object):
 
         .. code-block:: bash
 
-            curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+            curl -sS localhost:8000/hook \\
+                -H 'Content-type: application/json' \\
+                -d '{"foo": "Foo!", "bar": "Bar!"}'
 
         .. code-block:: http
 
             POST /hook HTTP/1.1
             Host: localhost:8000
             Content-Length: 16
-            Content-Type: application/x-www-form-urlencoded
+            Content-Type: application/json
 
-            foo=Foo&bar=Bar!
+            {"foo": "Foo!", "bar": "Bar!"}
 
         **Example response**:
 

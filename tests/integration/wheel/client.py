@@ -35,6 +35,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         low = {
             'client': 'wheel',
             'fun': 'key.list_all',
+            'print_event': False
         }
         low.update(self.eauth_creds)
 
@@ -60,12 +61,14 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
             'client': 'wheel',
             'fun': 'key.list_all',
             'token': token['token'],
+            'print_event': False,
         })
 
     def test_cmd_sync(self):
         low = {
             'client': 'wheel',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -74,7 +77,8 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
     def test_cmd_async(self):
         low = {
             'client': 'wheel_async',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -84,6 +88,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         low = {
             'fun': 'key.finger',
             'match': '*',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -96,6 +101,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
             'password': 'willrockyou',
             'eauth': 'auto',
             'fun': 'key.list_all',
+            'print_event': False,
         }
 
         self.wheel.cmd_sync(low)

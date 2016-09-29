@@ -354,7 +354,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
             while True:
                 try:
                     event = yield self.application.event_listener.get_event(self)
-                    self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
+                    self.write_message(json.dumps(event))
                 except Exception as err:
                     logger.info('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
                     break

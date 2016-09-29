@@ -27,7 +27,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-openstack-config:
       # The OpenStack identity service url
-      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
+      # The OpenStack Identity Version (default: 2)
+      auth_version: 2
       # The OpenStack compute region
       compute_region: region-b.geo-1
       # The OpenStack compute service name
@@ -66,6 +68,22 @@ For in-house Openstack Essex installation, libcloud needs the service_type :
     identity_url: 'http://control.openstack.example.org:5000/v2.0/'
     compute_name : Compute Service
     service_type : compute
+
+To use identity v3 for authentication, specify the `domain` and `auth_version`
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      identity_url: 'http://control.openstack.example.org:5000/v3/auth/tokens'
+      auth_version: 3
+      compute_name : Compute Service
+      compute_region: East
+      service_type : compute
+      tenant: tenant
+      domain: testing
+      user: daniel
+      password: securepassword
+      driver: openstack
 
 
 Either a password or an API key must also be specified:
@@ -207,9 +225,9 @@ def __virtual__():
         return False
 
     salt.utils.warn_until(
-        'Carbon',
+        'Nitrogen',
         'This driver has been deprecated and will be removed in the '
-        'Carbon release of Salt. Please use the nova driver instead.'
+        'Nitrogen release of Salt. Please use the nova driver instead.'
     )
 
     return __virtualname__
@@ -259,6 +277,9 @@ def get_conn():
         'ex_tenant_name': config.get_cloud_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
+        'ex_domain_name': config.get_cloud_config_value(
+            'domain', vm_, __opts__, default='Default', search_global=False
+        ),
     }
 
     service_type = config.get_cloud_config_value('service_type',
@@ -291,7 +312,10 @@ def get_conn():
     )
 
     if password is not None:
-        authinfo['ex_force_auth_version'] = '2.0_password'
+        if config.get_cloud_config_value('auth_version', vm_, __opts__, search_global=False) == 3:
+            authinfo['ex_force_auth_version'] = '3.x_password'
+        else:
+            authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
         if password == 'USE_KEYRING':
             # retrieve password from system keyring
@@ -515,14 +539,19 @@ def request_instance(vm_=None, call=None):
     if config_drive is not None:
         kwargs['ex_config_drive'] = config_drive
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name,
-                    'profile': vm_['profile']}},
+        args={
+            'kwargs': {
+                'name': kwargs['name'],
+                'image': kwargs['image'].name,
+                'size': kwargs['size'].name,
+                'profile': vm_['profile'],
+            }
+        },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -585,15 +614,16 @@ def create(vm_):
 
     vm_['key_filename'] = key_filename
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -774,7 +804,7 @@ def create(vm_):
 
     vm_['salt_host'] = salt_ip_address
     vm_['ssh_host'] = ip_address
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data.__dict__)
 
     if hasattr(data, 'extra') and 'password' in data.extra:
@@ -787,15 +817,16 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

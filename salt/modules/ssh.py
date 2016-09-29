@@ -20,6 +20,7 @@ import re
 import subprocess
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.files
 import salt.utils.decorators as decorators
@@ -31,6 +32,9 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 DEFAULT_SSH_PORT = 22
+
+if six.PY3:
+    import base64
 
 
 def __virtual__():
@@ -234,7 +238,10 @@ def _fingerprint(public_key):
     If the key is invalid (incorrect base64 string), return None
     '''
     try:
-        raw_key = public_key.decode('base64')
+        if six.PY2:
+            raw_key = public_key.decode('base64')
+        else:
+            raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
@@ -638,6 +645,15 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
+
+    # A 'valid key' to us pretty much means 'decodable as base64', which is
+    # the same filtering done when reading the authorized_keys file. Apply
+    # the same check to ensure we don't insert anything that will not
+    # subsequently be read)
+    key_is_valid = _fingerprint(key) is not None
+    if not key_is_valid:
+        return 'Invalid public key'
+
     status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
@@ -743,7 +759,6 @@ def get_known_host(user, hostname, config=None, port=None):
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
-                    hash_hostname=True,
                     hash_known_hosts=True,
                     timeout=5):
     '''
@@ -760,13 +775,6 @@ def recv_known_host(hostname,
         optional parameter, denoting the port of the remote host, which will be
         used in case, if the public key will be requested from it. By default
         the port 22 is used.
-
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
@@ -785,15 +793,6 @@ def recv_known_host(hostname,
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
-
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
     need_dash_t = ('CentOS-5',)
@@ -898,7 +897,6 @@ def set_known_host(user=None,
                    key=None,
                    port=None,
                    enc=None,
-                   hash_hostname=True,
                    config=None,
                    hash_known_hosts=True,
                    timeout=5):
@@ -932,13 +930,6 @@ def set_known_host(user=None,
         Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
         or ssh-dss
 
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
-
     config
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/known_hosts". If no user is specified,
@@ -965,14 +956,6 @@ def set_known_host(user=None,
     if not hostname:
         return {'status': 'error',
                 'error': 'hostname argument required'}
-
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
 
     if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
         return {'status': 'error',

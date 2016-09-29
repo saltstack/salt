@@ -5,6 +5,7 @@ Integration tests for the saltutil module.
 
 # Import Python libs
 from __future__ import absolute_import
+import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -20,22 +21,27 @@ class SaltUtilModuleTest(integration.ModuleCase):
     Testcase for the saltutil execution module
     '''
 
+    def setUp(self):
+        self.run_function('saltutil.refresh_pillar')
+
     # Tests for the wheel function
 
     def test_wheel_just_function(self):
         '''
         Tests using the saltutil.wheel function when passing only a function.
         '''
+        # Wait for the pillar refresh to kick in, so that grains are ready to go
+        time.sleep(3)
         ret = self.run_function('saltutil.wheel', ['minions.connected'])
-        self.assertIn('minion', ret)
-        self.assertIn('sub_minion', ret)
+        self.assertIn('minion', ret['return'])
+        self.assertIn('sub_minion', ret['return'])
 
     def test_wheel_with_arg(self):
         '''
         Tests using the saltutil.wheel function when passing a function and an arg.
         '''
         ret = self.run_function('saltutil.wheel', ['key.list', 'minion'])
-        self.assertEqual(ret, {})
+        self.assertEqual(ret['return'], {})
 
     def test_wheel_no_arg_raise_error(self):
         '''
@@ -51,8 +57,8 @@ class SaltUtilModuleTest(integration.ModuleCase):
         just need this for testing purposes.
         '''
         ret = self.run_function('saltutil.wheel', ['key.gen'], keysize=1024)
-        self.assertIn('pub', ret)
-        self.assertIn('priv', ret)
+        self.assertIn('pub', ret['return'])
+        self.assertIn('priv', ret['return'])
 
 
 if __name__ == '__main__':

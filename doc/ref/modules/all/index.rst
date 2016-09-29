@@ -236,7 +236,6 @@ execution modules
     nfs3
     nftables
     nginx
-    node
     nova
     npm
     nspawn

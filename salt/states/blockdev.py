@@ -40,12 +40,12 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load this module if the blockdev execution module is available
+    Only load this module if the disk execution module is available
     '''
-    if 'blockdev.tune' in __salt__:
+    if 'disk.tune' in __salt__:
         return __virtualname__
     return (False, ('Cannot load the {0} state module: '
-                    'blockdev execution module not found'.format(__virtualname__)))
+                    'disk execution module not found'.format(__virtualname__)))
 
 
 def tuned(name, **kwargs):
@@ -87,8 +87,8 @@ def tuned(name, **kwargs):
         ret['result'] = None
         return ret
     else:
-        current = __salt__['blockdev.dump'](name)
-        changes = __salt__['blockdev.tune'](name, **kwargs)
+        current = __salt__['disk.dump'](name)
+        changes = __salt__['disk.tune'](name, **kwargs)
         changeset = {}
         for key in kwargs:
             if key in kwarg_map:
@@ -159,8 +159,8 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
         ret['result'] = None
         return ret
 
-    __salt__['blockdev.format'](name, fs_type, force=force, **kwargs)
-    current_fs = __salt__['blockdev.fstype'](name)
+    __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
+    current_fs = __salt__['disk.fstype'](name)
 
     # Repeat lsblk check up to 10 times with 3s sleeping between each
     # to avoid lsblk failing although mkfs has succeeded

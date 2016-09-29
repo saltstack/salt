@@ -14,8 +14,6 @@ pidfile: minion.pid
 
 # module extension
 test.foo: baz
-hosts.file: /tmp/salt-tests-tmpdir/hosts
-aliases.file: /tmp/salt-tests-tmpdir/aliases
 integration.test: True
 
 # Grains addons
@@ -35,6 +33,32 @@ grains:
       - susan
       - ian
       - barbara
+  tokenv2:
+    keystone.endpoint: http://localhost:35357/v2.0
+    keystone.token: administrator
+  tokenv3:
+    keystone.endpoint: http://localhost:35357/v3
+    keystone.token: administrator
+  adminv2:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  demov2:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  adminv3:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+  demov3:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
 
 config_test:
   spam: eggs
@@ -45,3 +69,8 @@ mine_functions:
 # sdb env module
 osenv:
   driver: env
+
+# cmd blacklist
+cmd_blacklist_glob:
+  - 'bad_command *'
+  - 'second_bad_command *'

@@ -36,22 +36,37 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-profitbricks-profile:
       provider: my-profitbricks-config
-      # Name of a predefined instance size.
+      # Name of a predefined server size.
       size: Micro Instance
       # Name or UUID of the HDD image to use.
       image: <UUID>
-      # Size of the node disk in GB (overrides instance size).
+      # Size of the node disk in GB (overrides server size).
       disk_size: 40
       # Type of disk (HDD or SSD).
       disk_type: SSD
-      # Number of CPU cores to allocate to node (overrides instance size).
+      # Number of CPU cores to allocate to node (overrides server size).
       cores: 4
-      # Amount of RAM in multiples of 256 MB (overrides instance size).
+      # Amount of RAM in multiples of 256 MB (overrides server size).
       ram: 4096
-      # Assign the node to the specified public LAN.
+      # Assign the server to the specified public LAN.
       public_lan: <ID>
-      # Assign the node to the specified private LAN.
+      # Assign firewall rules to the network interface.
+      public_firewall_rules:
+        SSH:
+          protocol: TCP
+          port_range_start: 22
+          port_range_end: 22
+      # Assign the server to the specified private LAN.
       private_lan: <ID>
+      # Assign CPU family to server.
+      cpu_family: INTEL_XEON
+      # Assign additional volumes to the server.
+      volumes:
+        data-volume:
+          disk_size: 500
+        log-volume:
+          disk_size: 50
+          disk_type: SSD
 
 To use a private IP for connecting and bootstrapping node:
 
@@ -78,7 +93,6 @@ import time
 # Import salt libs
 import salt.utils
 import salt.config as config
-import salt.ext.six as six
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -92,8 +106,9 @@ import salt.utils.cloud
 
 try:
     from profitbricks.client import (
-        ProfitBricksService,
-        Server, NIC, Volume
+        ProfitBricksService, Server,
+        NIC, Volume, FirewallRule,
+        Datacenter, LoadBalancer, LAN
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -175,7 +190,8 @@ def avail_images(call=None):
     datacenter = get_datacenter(conn)
 
     for item in conn.list_images()['items']:
-        if item['properties']['location'] == datacenter['properties']['location']:
+        if (item['properties']['location'] ==
+           datacenter['properties']['location']):
             image = {'id': item['id']}
             image.update(item['properties'])
             ret[image['name']] = image
@@ -272,6 +288,58 @@ def get_datacenter_id():
     )
 
 
+def list_loadbalancers(call=None):
+    '''
+    Return a list of the loadbalancers that are on the provider
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-loadbalancers option'
+        )
+
+    ret = {}
+    conn = get_conn()
+    datacenter = get_datacenter(conn)
+
+    for item in conn.list_loadbalancers(datacenter['id'])['items']:
+        lb = {'id': item['id']}
+        lb.update(item['properties'])
+        ret[lb['name']] = lb
+
+    return ret
+
+
+def create_loadbalancer(call=None, kwargs=None):
+    '''
+    Creates a loadbalancer within the datacenter from the provider config.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_loadbalancer profitbricks name=mylb
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_address function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    conn = get_conn()
+    datacenter_id = get_datacenter_id()
+    loadbalancer = LoadBalancer(name=kwargs.get('name'),
+                                ip=kwargs.get('ip'),
+                                dhcp=kwargs.get('dhcp'))
+
+    response = conn.create_loadbalancer(datacenter_id, loadbalancer)
+    _wait_for_completion(conn, response, 60, 'loadbalancer')
+
+    return response
+
+
 def get_datacenter(conn):
     '''
     Return the datacenter from the config provider datacenter ID
@@ -287,6 +355,41 @@ def get_datacenter(conn):
             datacenter_id
         )
     )
+
+
+def create_datacenter(call=None, kwargs=None):
+    '''
+    Creates a virtual datacenter based on supplied parameters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_datacenter profitbricks name=mydatacenter location=us/las description="my description"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_address function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    if kwargs.get('name') is None:
+        raise SaltCloudExecutionFailure('The "name" parameter is required')
+
+    if kwargs.get('location') is None:
+        raise SaltCloudExecutionFailure('The "location" parameter is required')
+
+    conn = get_conn()
+    datacenter = Datacenter(name=kwargs['name'],
+                            location=kwargs['location'],
+                            description=kwargs.get('description'))
+
+    response = conn.create_datacenter(datacenter)
+    _wait_for_completion(conn, response, 60, 'create_datacenter')
+
+    return response
 
 
 def get_disk_type(vm_):
@@ -318,7 +421,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in six.iteritems(images):
+    for key, value in images.iteritems():
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -431,7 +534,8 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__,
+                                __opts__)
     return nodes[name]
 
 
@@ -445,12 +549,6 @@ def get_node(conn, name):
         if item['properties']['name'] == name:
             node = {'id': item['id']}
             node.update(item['properties'])
-            salt.utils.cloud.cache_node(
-                salt.utils.simple_types_filter(node),
-                __active_provider_name__,
-                __opts__
-            )
-
             return node
 
 
@@ -465,76 +563,52 @@ def ssh_interface(vm_):
     )
 
 
-def override_size(vm_):
+def _get_nics(vm_):
     '''
-    Apply any extra component overrides to VM from the cloud profile.
+    Create network interfaces on appropriate LANs as defined in cloud profile.
     '''
-    vm_size = get_size(vm_)
-
-    if 'cores' in vm_:
-        vm_size['cores'] = vm_['cores']
-
-    if 'ram' in vm_:
-        vm_size['ram'] = vm_['ram']
-
-    if 'disk_size' in vm_:
-        vm_size['disk'] = vm_['disk_size']
-
-    return vm_size
-
-
-def create_network_interfaces(conn, datacenter_id, server_id, vm_):
-    '''
-    Create network interface on appropriate LAN as defined in cloud profile.
-    '''
-    lans = {}
-
+    nics = []
     if 'public_lan' in vm_:
-        lans['public_lan'] = vm_['public_lan']
+        firewall_rules = []
+        # Set LAN to public if it already exists, otherwise create a new
+        # public LAN.
+        lan_id = set_public_lan(int(vm_['public_lan']))
+        if 'public_firewall_rules' in vm_:
+            firewall_rules = _get_firewall_rules(vm_['public_firewall_rules'])
+        nics.append(NIC(lan=lan_id,
+                        name='public',
+                        firewall_rules=firewall_rules))
 
     if 'private_lan' in vm_:
-        lans['private_lan'] = vm_['private_lan']
-
-    for lan, lan_id in six.iteritems(lans):
-        response = None
-        nic = NIC(lan=lan_id, name=lan.split('_')[0])
-        try:
-            response = conn.create_nic(datacenter_id=datacenter_id,
-                                       server_id=server_id,
-                                       nic=nic)
-            _wait_for_completion(conn, response, get_wait_timeout(vm_),
-                                 "create_nic")
-            log.info('Cloud VM {0} connected to LAN ID {1}'.format(
-                vm_['name'], lan_id)
-            )
-        except Exception as exc:
-            log.error(
-                'Error creating network interface on VM {0} connected to LAN '
-                '{1}\n\nThe following exception was thrown by the '
-                'profitbricks library when trying to run the initial '
-                'deployment: \n{2}'.format(
-                    vm_['name'], lan_id, exc.message
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-
-    return True
+        firewall_rules = []
+        if 'private_firewall_rules' in vm_:
+            firewall_rules = _get_firewall_rules(vm_['private_firewall_rules'])
+        nics.append(NIC(lan=int(vm_['private_lan']),
+                        name='private',
+                        firewall_rules=firewall_rules))
+    return nics
 
 
-def set_public_lan(conn, vm_):
+def set_public_lan(lan_id):
     '''
-    Enables public Internet access for the specified public_lan.
+    Enables public Internet access for the specified public_lan. If no public
+    LAN is available, then a new public LAN is created.
     '''
+    conn = get_conn()
     datacenter_id = get_datacenter_id()
 
-    if 'public_lan' in vm_:
-        lan_id = vm_['public_lan']
+    try:
         lan = conn.get_lan(datacenter_id=datacenter_id, lan_id=lan_id)
         if not lan['properties']['public']:
             conn.update_lan(datacenter_id=datacenter_id,
                             lan_id=lan_id,
                             public=True)
+        return lan['id']
+    except Exception:
+        lan = conn.create_lan(datacenter_id,
+                              LAN(public=True,
+                                  name='Public LAN'))
+        return lan['id']
 
 
 def get_public_keys(vm_):
@@ -584,46 +658,36 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
-                                                           __active_provider_name__ or 'profitbricks',
-                                                           vm_['profile']) is False:
+        if (vm_['profile'] and
+           config.is_profile_configured(__opts__,
+                                        (__active_provider_name__ or
+                                         'profitbricks'),
+                                        vm_['profile']) is False):
             return False
     except AttributeError:
         pass
 
+    data = None
     datacenter_id = get_datacenter_id()
     conn = get_conn()
-    data = None
 
-    # Apply component overrides to the size from the cloud profile config.
-    vm_size = override_size(vm_)
+    # Assemble list of network interfaces from the cloud profile config.
+    nics = _get_nics(vm_)
 
-    # Retrieve list of SSH public keys
-    ssh_keys = get_public_keys(vm_)
+    # Assemble list of volumes from the cloud profile config.
+    volumes = [_get_system_volume(vm_)]
+    if 'volumes' in vm_:
+        volumes.extend(_get_data_volumes(vm_))
 
-    # Fetch image and construct volume
-    image = get_image(vm_)
-    volume = Volume(
-        name='{0} Storage'.format(vm_['name']),
-        size=vm_size['disk'],
-        image=image['id'],
-        disk_type=get_disk_type(vm_),
-        ssh_keys=ssh_keys
-    )
-
-    # Construct server
-    server = Server(
-        name=vm_['name'],
-        ram=vm_size['ram'],
-        cores=vm_size['cores'],
-        create_volumes=[volume]
-    )
+    # Assembla the composite server object.
+    server = _get_server(vm_, volumes, nics)
 
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'name': vm_['name']},
+        args={'name': vm_['name']},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -633,7 +697,7 @@ def create(vm_):
                  exc_info_on_loglevel=logging.DEBUG)
 
         _wait_for_completion(conn, data, get_wait_timeout(vm_),
-                             "create_server")
+                             'create_server')
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on ProfitBricks\n\n'
@@ -645,8 +709,7 @@ def create(vm_):
         )
         return False
 
-    create_network_interfaces(conn, datacenter_id, data['id'], vm_)
-    set_public_lan(conn, vm_)
+    vm_['server_id'] = data['id']
 
     def __query_node_data(vm_, data):
         '''
@@ -707,9 +770,9 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM {0}'.format(vm_))
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
+        '{0} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -718,11 +781,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -761,7 +825,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -775,7 +840,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -854,6 +920,124 @@ def start(name, call=None):
     conn.start_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     return True
+
+
+def _override_size(vm_):
+    '''
+    Apply any extra component overrides to VM from the cloud profile.
+    '''
+    vm_size = get_size(vm_)
+
+    if 'cores' in vm_:
+        vm_size['cores'] = vm_['cores']
+
+    if 'ram' in vm_:
+        vm_size['ram'] = vm_['ram']
+
+    return vm_size
+
+
+def _get_server(vm_, volumes, nics):
+    '''
+    Construct server instance from cloud profile config
+    '''
+    # Apply component overrides to the size from the cloud profile config
+    vm_size = _override_size(vm_)
+
+    # Assign CPU family from the cloud profile config
+    cpu_family = config.get_cloud_config_value(
+        'cpu_family', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # Contruct server object
+    return Server(
+        name=vm_['name'],
+        ram=vm_size['ram'],
+        cores=vm_size['cores'],
+        cpu_family=cpu_family,
+        create_volumes=volumes,
+        nics=nics
+    )
+
+
+def _get_system_volume(vm_):
+    '''
+    Construct VM system volume list from cloud profile config
+    '''
+    # Retrieve list of SSH public keys
+    ssh_keys = get_public_keys(vm_)
+
+    # Override system volume size if 'disk_size' is defined in cloud profile
+    disk_size = get_size(vm_)['disk']
+    if 'disk_size' in vm_:
+        disk_size = vm_['disk_size']
+
+    # Construct the system volume
+    volume = Volume(
+        name='{0} Storage'.format(vm_['name']),
+        size=disk_size,
+        image=get_image(vm_)['id'],
+        disk_type=get_disk_type(vm_),
+        ssh_keys=ssh_keys
+    )
+
+    return volume
+
+
+def _get_data_volumes(vm_):
+    '''
+    Construct a list of optional data volumes from the cloud profile
+    '''
+    ret = []
+    volumes = vm_['volumes']
+    for key, value in volumes.iteritems():
+        # Verify the required 'disk_size' property is present in the cloud
+        # profile config
+        if 'disk_size' not in volumes[key].keys():
+            raise SaltCloudConfigError(
+                'The volume \'{0}\' is missing \'disk_size\''.format(key)
+            )
+        # Use 'HDD' if no 'disk_type' property is present in cloud profile
+        if 'disk_type' not in volumes[key].keys():
+            volumes[key]['disk_type'] = 'HDD'
+
+        # Construct volume object and assign to a list.
+        ret.append(Volume(
+            name=key,
+            size=volumes[key]['disk_size'],
+            disk_type=volumes[key]['disk_type'],
+            licence_type='OTHER'
+        ))
+
+    return ret
+
+
+def _get_firewall_rules(firewall_rules):
+    '''
+    Construct a list of optional firewall rules from the cloud profile.
+    '''
+    ret = []
+    for key, value in firewall_rules.iteritems():
+        # Verify the required 'protocol' property is present in the cloud
+        # profile config
+        if 'protocol' not in firewall_rules[key].keys():
+            raise SaltCloudConfigError(
+                'The firewall rule \'{0}\' is missing \'protocol\''.format(key)
+            )
+        ret.append(FirewallRule(
+            name=key,
+            protocol=firewall_rules[key].get('protocol', None),
+            source_mac=firewall_rules[key].get('source_mac', None),
+            source_ip=firewall_rules[key].get('source_ip', None),
+            target_ip=firewall_rules[key].get('target_ip', None),
+            port_range_start=firewall_rules[key].get('port_range_start', None),
+            port_range_end=firewall_rules[key].get('port_range_end', None),
+            icmp_type=firewall_rules[key].get('icmp_type', None),
+            icmp_code=firewall_rules[key].get('icmp_code', None)
+        ))
+
+    return ret
 
 
 def _wait_for_completion(conn, promise, wait_timeout, msg):

@@ -122,6 +122,41 @@ def _wait(jid):
         states = _prior_running_states(jid)
 
 
+def _snapper_pre(opts, jid):
+    '''
+    Create a snapper pre snapshot
+    '''
+    snapper_pre = None
+    try:
+        if not opts['test'] and __opts__.get('snapper_states'):
+            # Run the snapper pre snapshot
+            snapper_pre = __salt__['snapper.create_snapshot'](
+                    config=__opts__.get('snapper_states_config', 'root'),
+                    snapshot_type='pre',
+                    description='Salt State run for jid {0}'.format(jid),
+                    __pub_jid=jid)
+    except Exception:
+        log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
+    return snapper_pre
+
+
+def _snapper_post(opts, jid, pre_num):
+    '''
+    Create the post states snapshot
+    '''
+    try:
+        if not opts['test'] and __opts__.get('snapper_states') and pre_num:
+            # Run the snapper pre snapshot
+            __salt__['snapper.create_snapshot'](
+                    config=__opts__.get('snapper_states_config', 'root'),
+                    snapshot_type='post',
+                    pre_number=pre_num,
+                    description='Salt State run for jid {0}'.format(jid),
+                    __pub_jid=jid)
+    except Exception:
+        log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
+
+
 def orchestrate(mods,
                 saltenv='base',
                 test=None,
@@ -193,7 +228,11 @@ def _prior_running_states(jid):
     ret = []
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
-        if int(data['jid']) < int(jid):
+        try:
+            data_jid = int(data['jid'])
+        except ValueError:
+            continue
+        if data_jid < int(jid):
             ret.append(data)
     return ret
 
@@ -765,14 +804,16 @@ def highstate(test=None,
 
     st_.push_active()
     ret = {}
+    orchestration_jid = kwargs.get('orchestration_jid')
+    snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
                 cache_name=kwargs.get('cache_name', 'highstate'),
                 force=kwargs.get('force', False),
-                whitelist=kwargs.get('whitelist')
-                )
+                whitelist=kwargs.get('whitelist'),
+                orchestration_jid=orchestration_jid)
     finally:
         st_.pop_active()
 
@@ -785,6 +826,7 @@ def highstate(test=None,
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
+    _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     __opts__['test'] = orig_test
     return ret
 
@@ -950,7 +992,6 @@ def sls(mods,
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
-
     try:
         st_ = salt.state.HighState(opts,
                                    pillar,
@@ -966,12 +1007,13 @@ def sls(mods,
                                    pillar_enc=pillar_enc,
                                    mocked=kwargs.get('mock', False))
 
+    orchestration_jid = kwargs.get('orchestration_jid')
     umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with salt.utils.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
-                return st_.state.call_high(high_)
+                return st_.state.call_high(high_, orchestration_jid)
     os.umask(umask)
 
     if isinstance(mods, six.string_types):
@@ -993,7 +1035,8 @@ def sls(mods,
                 high_['__exclude__'].extend(exclude)
             else:
                 high_['__exclude__'] = exclude
-        ret = st_.state.call_high(high_)
+        snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
+        ret = st_.state.call_high(high_, orchestration_jid)
     finally:
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
@@ -1025,6 +1068,7 @@ def sls(mods,
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
         log.error(msg.format(cfn))
     os.umask(cumask)
+    _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
 
@@ -1072,20 +1116,23 @@ def top(topfn,
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     ret = {}
+    orchestration_jid = kwargs.get('orchestration_jid')
     if saltenv:
         st_.opts['state_top_saltenv'] = saltenv
     try:
+        snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
-                cache_name=kwargs.get('cache_name', 'highstate')
-                )
+                cache_name=kwargs.get('cache_name', 'highstate'),
+                orchestration_jid=orchestration_jid)
     finally:
         st_.pop_active()
 
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
+    _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     __opts__['test'] = orig_test
     return ret
 
@@ -1411,11 +1458,13 @@ def single(fun, name, test=None, queue=False, **kwargs):
         return err
 
     st_._mod_init(kwargs)
+    snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
+    _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     __opts__['test'] = orig_test
     return ret
 
@@ -1455,7 +1504,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.pkg /tmp/state_pkg.tgz
+        salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
     '''
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
@@ -1497,12 +1546,14 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar=pillar)
+    snapper_pre = _snapper_pre(popts, kwargs.get('__pub_jid', 'called localy'))
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
     except (IOError, OSError):
         pass
     _set_retcode(ret)
+    _snapper_post(popts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
     return ret
 
 

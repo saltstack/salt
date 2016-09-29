@@ -12,7 +12,6 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 import integration
-import salt.ext.six as six
 
 
 class BatchTest(integration.ShellCase):
@@ -24,47 +23,18 @@ class BatchTest(integration.ShellCase):
         '''
         Tests executing a simple batch command to help catch regressions
         '''
-        ret = ['',
-               "Executing run on ['sub_minion']",
-               '',
-               'sub_minion:',
-               'retcode:',
-               '    0',
-               '    batch testing',
-               '',
-               "Executing run on ['minion']",
-               '',
-               'minion:',
-               'retcode:',
-               '    0',
-               '    batch testing']
+        ret = 'Executing run on [\'sub_minion\']'
         cmd = self.run_salt('\'*\' test.echo \'batch testing\' -b 50%')
-        if six.PY3:
-            self.assertCountEqual(cmd, ret)
-        else:
-            self.assertListEqual(sorted(cmd), sorted(ret))
+        self.assertIn(ret, cmd)
 
     def test_batch_run_number(self):
         '''
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         '''
-        ret = ['',
-               "Executing run on ['sub_minion', 'minion']",
-               '',
-               'retcode:',
-               '    0',
-               'sub_minion:',
-               '    True',
-               'minion:',
-               '    True',
-               'retcode:',
-               '    0']
+        ret = "Executing run on ['sub_minion', 'minion']"
         cmd = self.run_salt('\'*\' test.ping --batch-size 2')
-        if six.PY3:
-            self.assertCountEqual(cmd, ret)
-        else:
-            self.assertListEqual(sorted(cmd), sorted(ret))
+        self.assertIn(ret, cmd)
 
     def test_batch_run_grains_targeting(self):
         '''
@@ -72,20 +42,8 @@ class BatchTest(integration.ShellCase):
         targeting.
         '''
         os_grain = ''
-        ret = ['',
-               "Executing run on ['sub_minion']",
-               '',
-               'retcode:',
-               '    0',
-               'sub_minion:',
-               '    True',
-               '',
-               "Executing run on ['minion']",
-               '',
-               'minion:',
-               '    True',
-               'retcode:',
-               '    0']
+        sub_min_ret = "Executing run on ['sub_minion']"
+        min_ret = "Executing run on ['minion']"
 
         for item in self.run_salt('minion grains.get os'):
             if item != 'minion':
@@ -93,10 +51,8 @@ class BatchTest(integration.ShellCase):
 
         os_grain = os_grain.strip()
         cmd = self.run_salt('-G \'os:{0}\' -b 25% test.ping'.format(os_grain))
-        if six.PY3:
-            self.assertCountEqual(cmd, ret)
-        else:
-            self.assertListEqual(sorted(cmd), sorted(ret))
+        self.assertIn(sub_min_ret, cmd)
+        self.assertIn(min_ret, cmd)
 
 
 if __name__ == '__main__':

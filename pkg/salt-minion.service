@@ -3,10 +3,9 @@ Description=The Salt Minion
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion
-KillMode=process
 
 [Install]
 WantedBy=multi-user.target

@@ -137,15 +137,6 @@ class MountTestCase(TestCase):
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(mount.rm_fstab('name', 'device'))
 
-        mock_fstab = MagicMock(return_value={'name': 'name'})
-        with patch.dict(mount.__grains__, {'kernel': ''}):
-            with patch.object(mount, 'fstab', mock_fstab):
-                with patch('salt.utils.fopen', mock_open()) as m_open:
-                    helper_open = m_open()
-                    helper_open.write.assertRaises(CommandExecutionError,
-                                                   mount.rm_fstab,
-                                                   config=None)
-
     def test_set_fstab(self):
         '''
         Tests to verify that this mount is represented in the fstab,

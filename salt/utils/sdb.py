@@ -21,17 +21,18 @@ def sdb_get(uri, opts):
     if not uri.startswith('sdb://'):
         return uri
 
-    comps = uri.replace('sdb://', '').split('/', 1)
+    sdlen = len('sdb://')
+    indx = uri.find('/', sdlen)
 
-    if len(comps) < 2:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return uri
 
-    profile = opts.get(comps[0], {})
+    profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
         return uri
 
     fun = '{0}.get'.format(profile['driver'])
-    query = comps[1]
+    query = uri[indx+1:]
 
     loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, profile=profile)
@@ -49,17 +50,18 @@ def sdb_set(uri, value, opts):
     if not uri.startswith('sdb://'):
         return False
 
-    comps = uri.replace('sdb://', '').split('/', 1)
+    sdlen = len('sdb://')
+    indx = uri.find('/', sdlen)
 
-    if len(comps) < 2:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return False
 
-    profile = opts.get(comps[0], {})
+    profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
         return False
 
     fun = '{0}.set'.format(profile['driver'])
-    query = comps[1]
+    query = uri[indx+1:]
 
     loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, value, profile=profile)
@@ -77,17 +79,18 @@ def sdb_delete(uri, opts):
     if not uri.startswith('sdb://'):
         return False
 
-    comps = uri.replace('sdb://', '').split('/', 1)
+    sdlen = len('sdb://')
+    indx = uri.find('/', sdlen)
 
-    if len(comps) < 2:
+    if (indx == -1) or len(uri[(indx+1):]) == 0:
         return False
 
-    profile = opts.get(comps[0], {})
+    profile = opts.get(uri[sdlen:indx], {})
     if 'driver' not in profile:
         return False
 
     fun = '{0}.delete'.format(profile['driver'])
-    query = comps[1]
+    query = uri[indx+1:]
 
     loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, profile=profile)

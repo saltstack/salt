@@ -30,7 +30,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.utils.process import clean_proc
-from salt.utils import event
+from salt.utils import event, to_bytes
 
 # Import 3rd-+arty libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -116,7 +116,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5(opts['id']).hexdigest()[:10]
+        id_hash = hashlib.sha256(to_bytes(opts['id'])).hexdigest()[:10]
         me = event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
@@ -143,7 +143,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_no_id(self):
         me = event.MinionEvent(dict(sock_dir=SOCK_DIR), listen=False)
-        id_hash = hashlib.md5('').hexdigest()[:10]
+        id_hash = hashlib.sha256(to_bytes('')).hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             '{0}'.format(

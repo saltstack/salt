@@ -165,8 +165,8 @@ class Registry(object):  # pylint: disable=R0903
         }
 
         self.registry_32 = {
-            True: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_32KEY,
-            False: _winreg.KEY_ALL_ACCESS,
+            True: _winreg.KEY_READ | _winreg.KEY_WOW64_32KEY,
+            False: _winreg.KEY_READ,
             }
 
     def __getattr__(self, k):
@@ -212,6 +212,14 @@ def _key_exists(hive, key, use_32bit_registry=False):
 def broadcast_change():
     '''
     Refresh the windows environment.
+
+    Returns (bool): True if successful, otherwise False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.broadcast_change
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
     _, res = SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
@@ -358,51 +366,6 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         if handle:
             handle.Close()
     return values
-
-
-def read_key(hkey, path, key=None, use_32bit_registry=False):
-    '''
-    .. important::
-        The name of this function is misleading and will be changed to reflect
-        proper usage in the Carbon release of Salt. The path option will be removed
-        and the key will be the actual key. See the following issue:
-
-        https://github.com/saltstack/salt/issues/25618
-
-        In order to not break existing state files this function will call the
-        read_value function if a key is passed. Key will be passed as the value
-        name. If key is not passed, this function will return the default value for
-        the key.
-
-        In the Carbon release this function will be removed in favor of read_value.
-
-    Read registry key value
-
-    Returns the first unnamed value (Default) as a string.
-    Returns none if first unnamed value is empty.
-    Returns False if key not found.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
-    '''
-
-    if key:  # This if statement will be removed in Carbon
-        salt.utils.warn_until(
-            'Carbon',
-            'Use reg.read_value to read a registry value. This functionality '
-            'will be removed in Salt Carbon'
-            )
-        return read_value(hive=hkey,
-                          key=path,
-                          vname=key,
-                          use_32bit_registry=use_32bit_registry)
-
-    return read_value(hive=hkey,
-                      key=path,
-                      use_32bit_registry=use_32bit_registry)
 
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
@@ -613,7 +576,7 @@ def set_value(hive,
     registry = Registry()
     hkey = registry.hkeys[local_hive]
     vtype_value = registry.vtype[local_vtype]
-    access_mask = registry.registry_32[use_32bit_registry]
+    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
     else:
@@ -674,7 +637,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     registry = Registry()
     hkey = registry.hkeys[local_hive]
     key_path = local_key
-    access_mask = registry.registry_32[use_32bit_registry]
+    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
 
     if not _key_exists(local_hive, local_key, use_32bit_registry):
         return False
@@ -771,7 +734,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
     registry = Registry()
     hkey = registry.hkeys[local_hive]
-    access_mask = registry.registry_32[use_32bit_registry]
+    access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
 
     try:
         handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)

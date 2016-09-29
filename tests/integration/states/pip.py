@@ -9,6 +9,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import pwd
 import glob
@@ -91,7 +92,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             os.makedirs(ographite)
         except OSError as err:
-            if err.errno == 13:
+            if err.errno == errno.EACCES:
                 # Permission denied
                 self.skipTest(
                     'You don\'t have the required permissions to run this test'
@@ -100,10 +101,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(ographite):
                 shutil.rmtree(ographite)
 
-        venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'pip-installed-weird-install'
-        )
+        venv_dir = os.path.join(integration.TMP, 'pip-installed-weird-install')
         try:
+            # We may be able to remove this, I had to add it because the custom
+            # modules from the test suite weren't available in the jinja
+            # context when running the call to state.sls that comes after.
+            self.run_function('saltutil.sync_modules')
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
             ret = self.run_function(
@@ -115,16 +118,17 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # some of the state return parts
             for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
-                if ret[key]['comment'] == 'Created new virtualenv':
+                if ret[key]['name'] != 'carbon':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
                     'There was no error installing package \'carbon\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
+                break
+            else:
+                raise Exception('Expected state did not run')
         finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
             if os.path.isdir('/opt/graphite'):
                 shutil.rmtree('/opt/graphite')
 
@@ -361,7 +365,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # previously installed
             ret = self.run_function(
                 'pip.install', ['pip==6.0'], upgrade=True,
-                ignore_installed=True,
                 bin_env=venv_dir
             )
             try:
@@ -375,7 +378,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 6.0 installed
+            # Let's make sure we have pip 6.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
                 {'pip': '6.0'}

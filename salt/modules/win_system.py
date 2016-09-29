@@ -22,6 +22,7 @@ try:
     import win32api
     import win32con
     import pywintypes
+    import ctypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -30,6 +31,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.locales
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -263,7 +265,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     if only_on_pending_reboot and not get_pending_reboot():
         return True
 
-    if message:
+    if message and not isinstance(message, str):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -301,6 +303,12 @@ def shutdown_abort():
 
     :return: True if successful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.shutdown_abort
     '''
     try:
         win32api.AbortSystemShutdown('127.0.0.1')
@@ -320,6 +328,12 @@ def lock():
 
     :return: True if successful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.lock
     '''
     return windll.user32.LockWorkStation()
 
@@ -341,7 +355,7 @@ def set_computer_name(name):
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
-    if name:
+    if name and six.PY2:
         name = name.decode('utf-8')
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
@@ -419,10 +433,11 @@ def set_computer_desc(desc=None):
     system_info = win32net.NetServerGetInfo(None, 101)
 
     # If desc is passed, decode it for unicode
-    if desc:
-        system_info['comment'] = desc.decode('utf-8')
-    else:
+    if desc is None:
         return False
+    if not isinstance(desc, str):
+        desc = desc.decode('utf-8')
+    system_info['comment'] = desc
 
     # Apply new settings
     try:
@@ -449,6 +464,12 @@ def get_system_info():
         Returns a Dictionary containing information about the system to include
         name, description, version, etc...
     :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_info
     '''
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
@@ -503,7 +524,7 @@ def get_computer_desc():
         salt 'minion-id' system.get_computer_desc
     '''
     desc = get_system_info()['description']
-    return desc if desc else False
+    return False if desc is None else desc
 
 
 get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
@@ -524,9 +545,9 @@ def get_hostname():
 
         salt 'minion-id' system.get_hostname
     '''
-    cmd = 'wmic computersystem get name'
+    cmd = 'wmic nicconfig get dnshostname'
     ret = __salt__['cmd.run'](cmd=cmd)
-    _, hostname = ret.split("\n")
+    _, _, hostname = ret.split("\n")
     return hostname
 
 
@@ -782,6 +803,12 @@ def get_domain_workgroup():
     :return: The name of the domain or workgroup
     :rtype: str
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_domain_workgroup
+
     '''
     pythoncom.CoInitialize()
     conn = wmi.WMI()
@@ -792,14 +819,50 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
+def _try_parse_datetime(time_str, fmts):
+    '''
+    Attempts to parse the input time_str as a date.
+
+    :param str time_str: A string representing the time
+    :param list fmts: A list of date format strings
+
+    :return: Returns a datetime object if parsed properly. Otherwise None
+    :rtype datetime
+    '''
+    result = None
+    for fmt in fmts:
+        try:
+            result = datetime.strptime(time_str, fmt)
+            break
+        except ValueError:
+            pass
+    return result
+
+
 def get_system_time():
     '''
     Get the system time.
 
-    :return: Returns the system time in HH:MM AM/PM format.
+    :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_system_time
     '''
-    return datetime.strftime(datetime.now(), "%I:%M %p")
+    now = win32api.GetLocalTime()
+    meridian = 'AM'
+    hours = int(now[4])
+    if hours == 12:
+        meridian = 'PM'
+    elif hours == 0:
+        hours = 12
+    elif hours > 12:
+        hours = hours - 12
+        meridian = 'PM'
+    return '{0:02d}:{1:02d}:{2:02d} {3}'.format(hours, now[5], now[6], meridian)
 
 
 def set_system_time(newtime):
@@ -815,14 +878,23 @@ def set_system_time(newtime):
 
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_system_time 12:01
     '''
     # Get date/time object from newtime
-    dt_obj = salt.utils.date_cast(newtime)
+    fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']
+    dt_obj = _try_parse_datetime(newtime, fmts)
+    if dt_obj is None:
+        return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(hours=int(dt_obj.strftime('%H')),
-                                minutes=int(dt_obj.strftime('%M')),
-                                seconds=int(dt_obj.strftime('%S')))
+    return set_system_date_time(hours=dt_obj.hour,
+                                minutes=dt_obj.minute,
+                                seconds=dt_obj.second)
 
 
 def set_system_date_time(years=None,
@@ -878,17 +950,29 @@ def set_system_date_time(years=None,
     if seconds is None:
         seconds = date_time[6]
 
-    # Create the time tuple to be passed to SetLocalTime, including day_of_week
-    time_tuple = (years, months, days, hours, minutes, seconds, 0)
-
     try:
-        win32api.SetLocalTime(time_tuple)
-    except win32api.error as exc:
-        (number, context, message) = exc
+        class SYSTEMTIME(ctypes.Structure):
+            _fields_ = [
+                ('wYear', ctypes.c_int16),
+                ('wMonth', ctypes.c_int16),
+                ('wDayOfWeek', ctypes.c_int16),
+                ('wDay', ctypes.c_int16),
+                ('wHour', ctypes.c_int16),
+                ('wMinute', ctypes.c_int16),
+                ('wSecond', ctypes.c_int16),
+                ('wMilliseconds', ctypes.c_int16)]
+        system_time = SYSTEMTIME()
+        system_time.wYear = int(years)
+        system_time.wMonth = int(months)
+        system_time.wDay = int(days)
+        system_time.wHour = int(hours)
+        system_time.wMinute = int(minutes)
+        system_time.wSecond = int(seconds)
+        system_time_ptr = ctypes.pointer(system_time)
+        succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
+        return succeeded is not 0
+    except OSError:
         log.error('Failed to set local time')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
         return False
 
     return True
@@ -907,7 +991,8 @@ def get_system_date():
 
         salt '*' system.get_system_date
     '''
-    return datetime.strftime(datetime.now(), "%a %m/%d/%Y")
+    now = win32api.GetLocalTime()
+    return '{0:02d}/{1:02d}/{2:04d}'.format(now[1], now[3], now[0])
 
 
 def set_system_date(newdate):
@@ -929,13 +1014,17 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
+    fmts = ['%Y-%m-%d', '%m-%d-%Y', '%m-%d-%y',
+            '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d']
     # Get date/time object from newdate
-    dt_obj = salt.utils.date_cast(newdate)
+    dt_obj = _try_parse_datetime(newdate, fmts)
+    if dt_obj is None:
+        return False
 
     # Set time using set_system_date_time()
-    return set_system_date_time(years=int(dt_obj.strftime('%Y')),
-                                months=int(dt_obj.strftime('%m')),
-                                days=int(dt_obj.strftime('%d')))
+    return set_system_date_time(years=dt_obj.year,
+                                months=dt_obj.month,
+                                days=dt_obj.day)
 
 
 def start_time_service():

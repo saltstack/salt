@@ -288,9 +288,9 @@ def _get_pkg_info(*packages):
     if call['retcode']:
         raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
 
-    for pkg_info in [elm for elm in re.split(r"----*", call['stdout']) if elm.strip()]:
+    for pkg_info in [elm for elm in re.split(r"------", call['stdout']) if elm.strip()]:
         pkg_data = {}
-        pkg_info, pkg_descr = re.split(r"====*", pkg_info)
+        pkg_info, pkg_descr = re.split(r"======", pkg_info)
         for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
             key, value = pkg_info_line.split(":", 1)
             if value:
@@ -315,9 +315,10 @@ def _get_pkg_license(pkg):
     licenses = set()
     cpr = "/usr/share/doc/{0}/copyright".format(pkg)
     if os.path.exists(cpr):
-        for line in open(cpr).read().split(os.linesep):
-            if line.startswith("License:"):
-                licenses.add(line.split(":", 1)[1].strip())
+        with salt.utils.fopen(cpr) as fp_:
+            for line in fp_.read().split(os.linesep):
+                if line.startswith("License:"):
+                    licenses.add(line.split(":", 1)[1].strip())
 
     return ", ".join(sorted(licenses))
 
@@ -352,17 +353,18 @@ def _get_pkg_ds_avail():
     ret = dict()
     pkg_mrk = "Package:"
     pkg_name = "package"
-    for pkg_info in open(avail).read().split(pkg_mrk):
-        nfo = dict()
-        for line in (pkg_mrk + pkg_info).split(os.linesep):
-            line = line.split(": ", 1)
-            if len(line) != 2:
-                continue
-            key, value = line
-            if value.strip():
-                nfo[key.lower()] = value
-        if nfo.get(pkg_name):
-            ret[nfo[pkg_name]] = nfo
+    with salt.utils.fopen(avail) as fp_:
+        for pkg_info in fp_.read().split(pkg_mrk):
+            nfo = dict()
+            for line in (pkg_mrk + pkg_info).split(os.linesep):
+                line = line.split(": ", 1)
+                if len(line) != 2:
+                    continue
+                key, value = line
+                if value.strip():
+                    nfo[key.lower()] = value
+            if nfo.get(pkg_name):
+                ret[nfo[pkg_name]] = nfo
 
     return ret
 

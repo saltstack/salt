@@ -16,10 +16,12 @@ import hashlib
 import logging
 
 # Import salt libs
-import salt.crypt
+import salt.cache
 import salt.client
-import salt.exceptions
+import salt.crypt
 import salt.daemons.masterapi
+import salt.exceptions
+import salt.minion
 import salt.utils
 import salt.utils.event
 import salt.utils.kinds
@@ -49,414 +51,236 @@ class KeyCLI(object):
     '''
     Manage key CLI operations
     '''
+    CLI_KEY_MAP = {'list': 'list_status',
+                   'delete': 'delete_key',
+                   'gen_signature': 'gen_keys_signature',
+                   'print': 'key_str',
+                   }
+
     def __init__(self, opts):
         self.opts = opts
+        self.client = salt.wheel.WheelClient(opts)
         if self.opts['transport'] in ('zeromq', 'tcp'):
-            self.key = Key(opts)
+            self.key = Key
         else:
-            self.key = RaetKey(opts)
+            self.key = RaetKey
+        # instantiate the key object for masterless mode
+        if not opts.get('eauth'):
+            self.key = self.key(opts)
+        self.auth = None
 
-    def list_status(self, status):
-        '''
-        Print out the keys under a named status
-
-        :param str status: A string indicating which set of keys to return
-        '''
-        keys = self.key.list_keys()
-        if status.startswith('acc'):
-            salt.output.display_output(
-                {self.key.ACC: keys[self.key.ACC]},
-                'key',
-                self.opts
-            )
-        elif status.startswith(('pre', 'un')):
-            salt.output.display_output(
-                {self.key.PEND: keys[self.key.PEND]},
-                'key',
-                self.opts
-            )
-        elif status.startswith('rej'):
-            salt.output.display_output(
-                {self.key.REJ: keys[self.key.REJ]},
-                'key',
-                self.opts
-            )
-        elif status.startswith('den'):
-            if self.key.DEN:
-                salt.output.display_output(
-                    {self.key.DEN: keys[self.key.DEN]},
-                    'key',
-                    self.opts
-                )
-        elif status.startswith('all'):
-            self.list_all()
-
-    def list_all(self):
-        '''
-        Print out all keys
-        '''
-        salt.output.display_output(
-                self.key.list_keys(),
-                'key',
-                self.opts)
-
-    def accept(self, match, include_rejected=False, include_denied=False):
-        '''
-        Accept the keys matched
-
-        :param str match: A string to match against. i.e. 'web*'
-        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
-        :param bool include_denied: Whether or not to accept a matched key that was formerly denied
-        '''
-        def _print_accepted(matches, after_match):
-            if self.key.ACC in after_match:
-                accepted = sorted(
-                    set(after_match[self.key.ACC]).difference(
-                        set(matches.get(self.key.ACC, []))
-                    )
-                )
-                for key in accepted:
-                    print('Key for minion {0} accepted.'.format(key))
-
-        matches = self.key.name_match(match)
-        keys = {}
-        if self.key.PEND in matches:
-            keys[self.key.PEND] = matches[self.key.PEND]
-        if include_rejected and bool(matches.get(self.key.REJ)):
-            keys[self.key.REJ] = matches[self.key.REJ]
-        if include_denied and bool(matches.get(self.key.DEN)):
-            keys[self.key.DEN] = matches[self.key.DEN]
-        if not keys:
-            msg = (
-                'The key glob \'{0}\' does not match any unaccepted{1} keys.'
-                .format(match, (('', ' or denied'),
-                                (' or rejected', ', rejected or denied')
-                               )[include_rejected][include_denied])
-            )
-            print(msg)
-            raise salt.exceptions.SaltSystemExit(code=1)
-        if not self.opts.get('yes', False):
-            print('The following keys are going to be accepted:')
-            salt.output.display_output(
-                    keys,
-                    'key',
-                    self.opts)
-            try:
-                veri = input('Proceed? [n/Y] ')
-            except KeyboardInterrupt:
-                raise SystemExit("\nExiting on CTRL-c")
-            if not veri or veri.lower().startswith('y'):
-                _print_accepted(
-                    matches,
-                    self.key.accept(
-                        match_dict=keys,
-                        include_rejected=include_rejected,
-                        include_denied=include_denied
-                    )
-                )
-        else:
-            print('The following keys are going to be accepted:')
-            salt.output.display_output(
-                    keys,
-                    'key',
-                    self.opts)
-            _print_accepted(
-                matches,
-                self.key.accept(
-                    match_dict=keys,
-                    include_rejected=include_rejected,
-                    include_denied=include_denied
-                )
-            )
-
-    def accept_all(self, include_rejected=False, include_denied=False):
-        '''
-        Accept all keys
-
-        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
-        :param bool include_denied: Whether or not to accept a matched key that was formerly denied
-        '''
-        self.accept('*', include_rejected=include_rejected, include_denied=include_denied)
-
-    def delete(self, match):
-        '''
-        Delete the matched keys
-
-        :param str match: A string to match against. i.e. 'web*'
-        '''
-        def _print_deleted(matches, after_match):
-            deleted = []
-            for keydir in (self.key.ACC, self.key.PEND, self.key.REJ):
-                deleted.extend(list(
-                    set(matches.get(keydir, [])).difference(
-                        set(after_match.get(keydir, []))
-                    )
-                ))
-            for key in sorted(deleted):
-                print('Key for minion {0} deleted.'.format(key))
-
-        matches = self.key.name_match(match)
-        if not matches:
-            print(
-                'The key glob \'{0}\' does not match any accepted, unaccepted '
-                'or rejected keys.'.format(match)
-            )
-            raise salt.exceptions.SaltSystemExit(code=1)
-        if not self.opts.get('yes', False):
-            print('The following keys are going to be deleted:')
-            salt.output.display_output(
-                    matches,
-                    'key',
-                    self.opts)
-            try:
-                veri = input('Proceed? [N/y] ')
-            except KeyboardInterrupt:
-                raise SystemExit("\nExiting on CTRL-c")
-            if veri.lower().startswith('y'):
-                _print_deleted(
-                    matches,
-                    self.key.delete_key(match_dict=matches, revoke_auth=True)
-                )
-        else:
-            print('Deleting the following keys:')
-            salt.output.display_output(
-                    matches,
-                    'key',
-                    self.opts)
-            _print_deleted(
-                matches,
-                self.key.delete_key(match_dict=matches)
-            )
-
-    def delete_all(self):
-        '''
-        Delete all keys
-        '''
-        self.delete('*')
-
-    def reject(self, match, include_accepted=False, include_denied=False):
-        '''
-        Reject the matched keys
-
-        :param str match: A string to match against. i.e. 'web*'
-        :param bool include_accepted: Whether or not to reject a matched key
-        that was formerly accepted
-        :param bool include_denied: Whether or not to reject a matched key
-        that was formerly denied
-        '''
-        def _print_rejected(matches, after_match):
-            if self.key.REJ in after_match:
-                rejected = sorted(
-                    set(after_match[self.key.REJ]).difference(
-                        set(matches.get(self.key.REJ, []))
-                    )
-                )
-                for key in rejected:
-                    print('Key for minion {0} rejected.'.format(key))
-
-        matches = self.key.name_match(match)
-        keys = {}
-        if self.key.PEND in matches:
-            keys[self.key.PEND] = matches[self.key.PEND]
-        if include_accepted and bool(matches.get(self.key.ACC)):
-            keys[self.key.ACC] = matches[self.key.ACC]
-        if include_denied and bool(matches.get(self.key.DEN)):
-            keys[self.key.DEN] = matches[self.key.DEN]
-        if not keys:
-            msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(
-                match,
-                (('unaccepted', 'unaccepted or denied'),
-                 ('accepted or unaccepted', 'accepted, unaccepted or denied')
-                )[include_accepted][include_denied]
-            )
-            print(msg)
-            return
-        if not self.opts.get('yes', False):
-            print('The following keys are going to be rejected:')
-            salt.output.display_output(
-                    keys,
-                    'key',
-                    self.opts)
-            veri = input('Proceed? [n/Y] ')
-            if veri.lower().startswith('n'):
-                return
-        _print_rejected(
-            matches,
-            self.key.reject(
-                match_dict=matches,
-                include_accepted=include_accepted,
-                include_denied=include_denied
-            )
-        )
-
-    def reject_all(self, include_accepted=False, include_denied=False):
-        '''
-        Reject all keys
-
-        :param bool include_accepted: Whether or not to reject a matched key that was formerly accepted
-        :param bool include_denied: Whether or not to reject a matched key that was formerly denied
-        '''
-        self.reject('*', include_accepted=include_accepted, include_denied=include_denied)
-
-    def print_key(self, match):
-        '''
-        Print out a single key
-
-        :param str match: A string to match against. i.e. 'web*'
-        '''
-        matches = self.key.key_str(match)
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
-
-    def print_all(self):
-        '''
-        Print out all managed keys
-        '''
-        self.print_key('*')
-
-    def finger(self, match):
-        '''
-        Print out the fingerprints for the matched keys
-
-        :param str match: A string to match against. i.e. 'web*'
-        '''
-        matches = self.key.finger(match)
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
-
-    def finger_all(self):
-        '''
-        Print out all fingerprints
-        '''
-        matches = self.key.finger('*')
-        salt.output.display_output(
-                matches,
-                'key',
-                self.opts)
-
-    def prep_signature(self):
-        '''
-        Searches for usable keys to create the
-        master public-key signature
-        '''
-        self.privkey = None
-        self.pubkey = None
-
-        # check given pub-key
-        if self.opts['pub']:
-            if not os.path.isfile(self.opts['pub']):
-                print('Public-key {0} does not exist'.format(self.opts['pub']))
-                return
-            self.pubkey = self.opts['pub']
-
-        # default to master.pub
-        else:
-            mpub = self.opts['pki_dir'] + '/' + 'master.pub'
-            if os.path.isfile(mpub):
-                self.pubkey = mpub
-
-        # check given priv-key
-        if self.opts['priv']:
-            if not os.path.isfile(self.opts['priv']):
-                print('Private-key {0} does not exist'.format(self.opts['priv']))
-                return
-            self.privkey = self.opts['priv']
-
-        # default to master_sign.pem
-        else:
-            mpriv = self.opts['pki_dir'] + '/' + 'master_sign.pem'
-            if os.path.isfile(mpriv):
-                self.privkey = mpriv
-
-        if not self.privkey:
-            if self.opts['auto_create']:
-                print('Generating new signing key-pair {0}.* in {1}'
-                      ''.format(self.opts['master_sign_key_name'],
-                                self.opts['pki_dir']))
-                salt.crypt.gen_keys(self.opts['pki_dir'],
-                                    self.opts['master_sign_key_name'],
-                                    self.opts['keysize'],
-                                    self.opts.get('user'))
-
-                self.privkey = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
+    def _update_opts(self):
+        # get the key command
+        for cmd in ('gen_keys',
+                    'gen_signature',
+                    'list',
+                    'list_all',
+                    'print',
+                    'print_all',
+                    'accept',
+                    'accept_all',
+                    'reject',
+                    'reject_all',
+                    'delete',
+                    'delete_all',
+                    'finger',
+                    'finger_all',
+                    'list_all'):  # last is default
+            if self.opts[cmd]:
+                break
+        # set match if needed
+        if not cmd.startswith('gen_'):
+            if cmd == 'list_all':
+                self.opts['match'] = 'all'
+            elif cmd.endswith('_all'):
+                self.opts['match'] = '*'
             else:
-                print('No usable private-key found')
-                return
+                self.opts['match'] = self.opts[cmd]
+            if cmd.startswith('accept'):
+                self.opts['include_rejected'] = self.opts['include_all'] or self.opts['include_rejected']
+                self.opts['include_accepted'] = False
+            elif cmd.startswith('reject'):
+                self.opts['include_accepted'] = self.opts['include_all'] or self.opts['include_accepted']
+                self.opts['include_rejected'] = False
+        elif cmd == 'gen_keys':
+            self.opts['keydir'] = self.opts['gen_keys_dir']
+            self.opts['keyname'] = self.opts['gen_keys']
+        # match is set to opts, now we can forget about *_all commands
+        self.opts['fun'] = cmd.replace('_all', '')
 
-        if not self.pubkey:
-            print('No usable public-key found')
+    def _init_auth(self):
+        if self.auth:
             return
 
-        print('Using public-key {0}'.format(self.pubkey))
-        print('Using private-key {0}'.format(self.privkey))
+        low = {}
+        skip_perm_errors = self.opts['eauth'] != ''
 
-        if self.opts['signature_path']:
-            if not os.path.isdir(self.opts['signature_path']):
-                print('target directory {0} does not exist'
-                      ''.format(self.opts['signature_path']))
+        if self.opts['eauth']:
+            if 'token' in self.opts:
+                try:
+                    with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                        low['key'] = fp_.readline()
+                except IOError:
+                    low['token'] = self.opts['token']
+            #
+            # If using eauth and a token hasn't already been loaded into
+            # low, prompt the user to enter auth credentials
+            if 'token' not in low and 'key' not in low and self.opts['eauth']:
+                # This is expensive. Don't do it unless we need to.
+                resolver = salt.auth.Resolver(self.opts)
+                res = resolver.cli(self.opts['eauth'])
+                if self.opts['mktoken'] and res:
+                    tok = resolver.token_cli(
+                            self.opts['eauth'],
+                            res
+                            )
+                    if tok:
+                        low['token'] = tok.get('token', '')
+                if not res:
+                    log.error('Authentication failed')
+                    return {}
+                low.update(res)
+                low['eauth'] = self.opts['eauth']
         else:
-            self.opts['signature_path'] = self.opts['pki_dir']
+            low['user'] = salt.utils.get_specific_user()
+            low['key'] = salt.utils.get_master_key(low['user'], self.opts, skip_perm_errors)
 
-        sign_path = self.opts['signature_path'] + '/' + self.opts['master_pubkey_signature']
+        self.auth = low
 
-        self.key.gen_signature(self.privkey,
-                               self.pubkey,
-                               sign_path)
+    def _get_args_kwargs(self, fun, args=None):
+        if args is None:
+            argspec = salt.utils.args.get_function_argspec(fun)
+            args = []
+            if argspec.args:
+                for arg in argspec.args:
+                    args.append(self.opts.get(arg))
+        args, kwargs = salt.minion.load_args_and_kwargs(
+            fun,
+            args,
+            self.opts,
+        )
+        return args, kwargs
+
+    def _run_cmd(self, cmd, args=None):
+        if not self.opts.get('eauth'):
+            cmd = self.CLI_KEY_MAP.get(cmd, cmd)
+            fun = getattr(self.key, cmd)
+            args, kwargs = self._get_args_kwargs(fun, args)
+            ret = fun(*args, **kwargs)
+            if (isinstance(ret, dict) and 'local' in ret and
+                        cmd not in ('finger', 'finger_all')):
+                ret.pop('local', None)
+            return ret
+
+        fstr = 'key.{0}'.format(cmd)
+        fun = self.client.functions[fstr]
+        args, kwargs = self._get_args_kwargs(fun, args)
+
+        low = {
+                'fun': fstr,
+                'arg': args,
+                'kwarg': kwargs,
+                }
+
+        self._init_auth()
+        low.update(self.auth)
+
+        # Execute the key request!
+        ret = self.client.cmd_sync(low)
+
+        ret = ret['data']['return']
+        if (isinstance(ret, dict) and 'local' in ret and
+                cmd not in ('finger', 'finger_all')):
+            ret.pop('local', None)
+
+        return ret
+
+    def _filter_ret(self, cmd, ret):
+        if cmd.startswith('delete'):
+            return ret
+
+        keys = {}
+        if self.key.PEND in ret:
+            keys[self.key.PEND] = ret[self.key.PEND]
+        if self.opts['include_accepted'] and bool(ret.get(self.key.ACC)):
+            keys[self.key.ACC] = ret[self.key.ACC]
+        if self.opts['include_rejected'] and bool(ret.get(self.key.REJ)):
+            keys[self.key.REJ] = ret[self.key.REJ]
+        if self.opts['include_denied'] and bool(ret.get(self.key.DEN)):
+            keys[self.key.DEN] = ret[self.key.DEN]
+        return keys
+
+    def _print_no_match(self, cmd, match):
+        statuses = ['unaccepted']
+        if self.opts['include_accepted']:
+            statuses.append('accepted')
+        if self.opts['include_rejected']:
+            statuses.append('rejected')
+        if self.opts['include_denied']:
+            statuses.append('denied')
+        if len(statuses) == 1:
+            stat_str = statuses[0]
+        else:
+            stat_str = '{0} or {1}'.format(', '.join(statuses[:-1]), statuses[-1])
+        msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(match, stat_str)
+        print(msg)
 
     def run(self):
         '''
         Run the logic for saltkey
         '''
-        if self.opts['gen_keys']:
-            self.key.gen_keys()
-            return
-        elif self.opts['gen_signature']:
-            self.prep_signature()
-            return
-        if self.opts['list']:
-            self.list_status(self.opts['list'])
-        elif self.opts['list_all']:
-            self.list_all()
-        elif self.opts['print']:
-            self.print_key(self.opts['print'])
-        elif self.opts['print_all']:
-            self.print_all()
-        elif self.opts['accept']:
-            self.accept(
-                self.opts['accept'],
-                include_rejected=self.opts['include_all'] or self.opts['include_rejected'],
-                include_denied=self.opts['include_denied']
-            )
-        elif self.opts['accept_all']:
-            self.accept_all(
-                include_rejected=self.opts['include_all'] or self.opts['include_rejected'],
-                include_denied=self.opts['include_denied']
-            )
-        elif self.opts['reject']:
-            self.reject(
-                self.opts['reject'],
-                include_accepted=self.opts['include_all'] or self.opts['include_accepted'],
-                include_denied=self.opts['include_denied']
-            )
-        elif self.opts['reject_all']:
-            self.reject_all(
-                include_accepted=self.opts['include_all'] or self.opts['include_accepted'],
-                include_denied=self.opts['include_denied']
-            )
-        elif self.opts['delete']:
-            self.delete(self.opts['delete'])
-        elif self.opts['delete_all']:
-            self.delete_all()
-        elif self.opts['finger']:
-            self.finger(self.opts['finger'])
-        elif self.opts['finger_all']:
-            self.finger_all()
-        else:
-            self.list_all()
+        self._update_opts()
+        cmd = self.opts['fun']
+
+        veri = None
+        ret = None
+        try:
+            if cmd in ('accept', 'reject', 'delete'):
+                ret = self._run_cmd('name_match')
+                if not isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                    return ret
+                ret = self._filter_ret(cmd, ret)
+                if not ret:
+                    self._print_no_match(cmd, self.opts['match'])
+                    return
+                print('The following keys are going to be {0}ed:'.format(cmd))
+                salt.output.display_output(ret, 'key', opts=self.opts)
+
+                if not self.opts.get('yes', False):
+                    try:
+                        if cmd.startswith('delete'):
+                            veri = input('Proceed? [N/y] ')
+                            if not veri:
+                                veri = 'n'
+                        else:
+                            veri = input('Proceed? [n/Y] ')
+                            if not veri:
+                                veri = 'y'
+                    except KeyboardInterrupt:
+                        raise SystemExit("\nExiting on CTRL-c")
+                # accept/reject/delete the same keys we're printed to the user
+                self.opts['match_dict'] = ret
+                self.opts.pop('match', None)
+                list_ret = ret
+
+            if veri is None or veri.lower().startswith('y'):
+                ret = self._run_cmd(cmd)
+                if cmd in ('accept', 'reject', 'delete'):
+                    if cmd == 'delete':
+                        ret = list_ret
+                    for minions in ret.values():
+                        for minion in minions:
+                            print('Key for minion {0} {1}ed.'.format(minion, cmd))
+                elif isinstance(ret, dict):
+                    salt.output.display_output(ret, 'key', opts=self.opts)
+                else:
+                    salt.output.display_output({'return': ret}, 'key', opts=self.opts)
+        except salt.exceptions.SaltException as exc:
+            ret = '{0}'.format(exc)
+            if not self.opts.get('quiet', False):
+                salt.output.display_output(ret, 'nested', self.opts)
+        return ret
 
 
 class MultiKeyCLI(KeyCLI):
@@ -593,6 +417,62 @@ class Key(object):
                                         pubkey,
                                         sig_path)
 
+    def gen_keys_signature(self, priv, pub, signature_path, auto_create=False, keysize=None):
+        '''
+        Generate master public-key-signature
+        '''
+        # check given pub-key
+        if pub:
+            if not os.path.isfile(pub):
+                return 'Public-key {0} does not exist'.format(pub)
+        # default to master.pub
+        else:
+            mpub = self.opts['pki_dir'] + '/' + 'master.pub'
+            if os.path.isfile(mpub):
+                pub = mpub
+
+        # check given priv-key
+        if priv:
+            if not os.path.isfile(priv):
+                return 'Private-key {0} does not exist'.format(priv)
+        # default to master_sign.pem
+        else:
+            mpriv = self.opts['pki_dir'] + '/' + 'master_sign.pem'
+            if os.path.isfile(mpriv):
+                priv = mpriv
+
+        if not priv:
+            if auto_create:
+                log.debug('Generating new signing key-pair {0}.* in {1}'
+                      ''.format(self.opts['master_sign_key_name'],
+                                self.opts['pki_dir']))
+                salt.crypt.gen_keys(self.opts['pki_dir'],
+                                    self.opts['master_sign_key_name'],
+                                    keysize or self.opts['keysize'],
+                                    self.opts.get('user'))
+
+                priv = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
+            else:
+                return 'No usable private-key found'
+
+        if not pub:
+            return 'No usable public-key found'
+
+        log.debug('Using public-key {0}'.format(pub))
+        log.debug('Using private-key {0}'.format(priv))
+
+        if signature_path:
+            if not os.path.isdir(signature_path):
+                log.debug('target directory {0} does not exist'
+                      ''.format(signature_path))
+        else:
+            signature_path = self.opts['pki_dir']
+
+        sign_path = signature_path + '/' + self.opts['master_pubkey_signature']
+
+        skey = get_key(self.opts)
+        return skey.gen_signature(priv, pub, sign_path)
+
     def check_minion_cache(self, preserve_minions=None):
         '''
         Check the minion cache to make sure that old minion data is cleared
@@ -602,17 +482,22 @@ class Key(object):
         '''
         if preserve_minions is None:
             preserve_minions = []
-        m_cache = os.path.join(self.opts['cachedir'], self.ACC)
-        if not os.path.isdir(m_cache):
-            return
         keys = self.list_keys()
         minions = []
         for key, val in six.iteritems(keys):
             minions.extend(val)
         if not self.opts.get('preserve_minion_cache', False) or not preserve_minions:
-            for minion in os.listdir(m_cache):
-                if minion not in minions and minion not in preserve_minions:
-                    shutil.rmtree(os.path.join(m_cache, minion))
+            m_cache = os.path.join(self.opts['cachedir'], self.ACC)
+            if os.path.isdir(m_cache):
+                for minion in os.listdir(m_cache):
+                    if minion not in minions and minion not in preserve_minions:
+                        shutil.rmtree(os.path.join(m_cache, minion))
+            cache = salt.cache.Cache(self.opts)
+            clist = cache.list(self.ACC)
+            if clist:
+                for minion in cache.list(self.ACC):
+                    if minion not in minions and minion not in preserve_minions:
+                        cache.flush('{0}/{1}'.format(self.ACC, minion))
 
     def check_master(self):
         '''
@@ -692,14 +577,13 @@ class Key(object):
         # We have to differentiate between RaetKey._check_minions_directories
         # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
         # havd an additional 'denied' state.
-        if self.opts['transport'] in ('zeromq', 'tcp'):
-            key_dirs = self._check_minions_directories()
-        else:
-            key_dirs = self._check_minions_directories()
+        key_dirs = self._check_minions_directories()
 
         ret = {}
 
         for dir_ in key_dirs:
+            if dir_ is None:
+                continue
             ret[os.path.basename(dir_)] = []
             try:
                 for fn_ in salt.utils.isorted(os.listdir(dir_)):
@@ -743,7 +627,7 @@ class Key(object):
                 if not fn_.startswith('.'):
                     if os.path.isfile(os.path.join(rej, fn_)):
                         ret[os.path.basename(rej)].append(fn_)
-        elif match.startswith('den'):
+        elif match.startswith('den') and den is not None:
             ret[os.path.basename(den)] = []
             for fn_ in salt.utils.isorted(os.listdir(den)):
                 if not fn_.startswith('.'):
@@ -1064,7 +948,7 @@ class RaetKey(Key):
         accepted = os.path.join(self.opts['pki_dir'], self.ACC)
         pre = os.path.join(self.opts['pki_dir'], self.PEND)
         rejected = os.path.join(self.opts['pki_dir'], self.REJ)
-        return accepted, pre, rejected
+        return accepted, pre, rejected, None
 
     def check_minion_cache(self, preserve_minions=False):
         '''
@@ -1080,6 +964,12 @@ class RaetKey(Key):
             for minion in os.listdir(m_cache):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
+            cache = salt.cache.Cache(self.opts)
+            clist = cache.list(self.ACC)
+            if clist:
+                for minion in cache.list(self.ACC):
+                    if minion not in minions and minion not in preserve_minions:
+                        cache.flush('{0}/{1}'.format(self.ACC, minion))
 
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
@@ -1151,7 +1041,7 @@ class RaetKey(Key):
         If the key has been accepted return "accepted"
         if the key should be rejected, return "rejected"
         '''
-        acc, pre, rej = self._check_minions_directories()  # pylint: disable=W0632
+        acc, pre, rej, _ = self._check_minions_directories()  # pylint: disable=W0632
         acc_path = os.path.join(acc, minion_id)
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)

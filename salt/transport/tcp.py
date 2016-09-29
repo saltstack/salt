@@ -483,20 +483,22 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
-            self.message_client = SaltMessageClient(
-                self.opts,
-                self.opts['master_ip'],
-                int(self.auth.creds['publish_port']),
-                io_loop=self.io_loop,
-                connect_callback=self.connect_callback,
-                disconnect_callback=self.disconnect_callback)
-            yield self.message_client.connect()  # wait for the client to be connected
-            self.connected = True
+            if self.auth.authenticated:
+                self.message_client = SaltMessageClient(
+                    self.opts,
+                    self.opts['master_ip'],
+                    int(self.auth.creds['publish_port']),
+                    io_loop=self.io_loop,
+                    connect_callback=self.connect_callback,
+                    disconnect_callback=self.disconnect_callback)
+                yield self.message_client.connect()  # wait for the client to be connected
+                self.connected = True
         # TODO: better exception handling...
         except KeyboardInterrupt:
             raise
-        except:
-            raise SaltClientError('Unable to sign_in to master')  # TODO: better error message
+        except Exception as exc:
+            if '-|RETRY|-' not in exc:
+                raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
         '''
@@ -751,6 +753,7 @@ class SaltMessageClient(object):
     '''
     def __init__(self, opts, host, port, io_loop=None, resolver=None,
                  connect_callback=None, disconnect_callback=None):
+        self.opts = opts
         self.host = host
         self.port = port
         self.connect_callback = connect_callback
@@ -880,7 +883,11 @@ class SaltMessageClient(object):
                 yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
-                raise SaltClientError
+                if 'detect_mode' in self.opts:
+                    log.info('There was an error trying to use TCP transport; '
+                             'attempting to fallback to another transport')
+                else:
+                    raise SaltClientError
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
                 for future in six.itervalues(self.send_future_map):
@@ -975,6 +982,9 @@ class SaltMessageClient(object):
             future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message_id] = future
+
+        if self.opts.get('detect_mode') is True:
+            timeout = 1
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message_id)

@@ -81,7 +81,7 @@ def _do_http(opts, profile='default'):
         raise Exception('missing url in profile {0}'.format(profile))
 
     if user and passwd:
-        auth = _auth(url, realm, user, passwd)
+        auth = _auth(url=url, realm=realm, user=user, passwd=passwd)
         _install_opener(auth)
 
     url += '?{0}'.format(_urlencode(opts))

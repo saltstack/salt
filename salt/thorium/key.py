@@ -27,8 +27,9 @@ def timeout(name, delete=0, reject=0):
     given action to the timed out key. This example will remove keys to
     minions that have not checked in for 300 seconds (5 minutes)
 
-    USAGE::
-    code-block:: yaml
+    USAGE:
+
+    .. code-block:: yaml
 
         statreg:
           status.reg

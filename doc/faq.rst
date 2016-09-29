@@ -14,10 +14,10 @@ open and proprietary projects.
 
 To expand on this a little:
 
-There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because 
+There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because
 
 1. It is a standalone product that anyone is free to use.
-2. It is developed in the open with contributions accepted from the community for the good of the project. 
+2. It is developed in the open with contributions accepted from the community for the good of the project.
 3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
 4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
 5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
@@ -147,13 +147,20 @@ should be opened on our tracker_, with the following information:
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to Minions when :mod:`state.apply
-<salt.modules.state.apply_>`, :mod:`saltutil.sync_modules
-<salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
-<salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to Minions when :mod:`state.apply <salt.modules.state.apply_>`,
+Custom modules are synced to Minions when 
+:mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
+or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+Custom modules are also synced by :mod:`state.apply` when run without
+any arguments.
+
+
+Similarly, custom states are synced to Minions
+when :mod:`state.apply <salt.modules.state.apply_>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+
+Custom states are also synced by :mod:`state.apply<salt.modules.state.apply_>`
+when run without any arguments.
 
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
 documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more

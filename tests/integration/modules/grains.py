@@ -74,8 +74,11 @@ class TestModulesGrains(integration.ModuleCase):
             'virtual',
         )
         lsgrains = self.run_function('grains.ls')
-        for grain_name in check_for:
-            self.assertTrue(grain_name in lsgrains)
+        os = self.run_function('grains.get', ['os'])
+        for grain in check_for:
+            if os == 'Windows' and grain in ['cpu_flags', 'gid', 'groupname', 'uid']:
+                continue
+            self.assertTrue(grain in lsgrains)
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment can\'t keep up with salt refresh')
@@ -118,6 +121,10 @@ class TestModulesGrains(integration.ModuleCase):
             if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
                 self.assertEqual(get_grain, '')
                 continue
+            if os == 'Windows' and grain in ['osmajorrelease']:
+                self.assertEqual(get_grain, '')
+                continue
+
             self.assertTrue(get_grain)
 
     def test_get_grains_int(self):
@@ -126,13 +133,17 @@ class TestModulesGrains(integration.ModuleCase):
         are returned as integers
         '''
         grains = ['num_cpus', 'mem_total', 'num_gpus', 'uid']
+        os = self.run_function('grains.get', ['os'])
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
+            if os == 'Windows' and grain in ['uid']:
+                self.assertEqual(get_grain, '')
+                continue
+            self.assertIsInstance(
+                get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
-            self.assertIsInstance(get_grain, int,
-                                  msg='grain: {0} is not an int or empty'.format(grain))
 
-
+@destructiveTest
 class GrainsAppendTestCase(integration.ModuleCase):
     '''
     Tests written specifically for the grains.append function.
@@ -140,13 +151,11 @@ class GrainsAppendTestCase(integration.ModuleCase):
     GRAIN_KEY = 'salttesting-grain-key'
     GRAIN_VAL = 'my-grain-val'
 
-    @destructiveTest
     def tearDown(self):
         test_grain = self.run_function('grains.get', [self.GRAIN_KEY])
         if test_grain and test_grain == [self.GRAIN_VAL]:
             self.run_function('grains.remove', [self.GRAIN_KEY, self.GRAIN_VAL])
 
-    @destructiveTest
     def test_grains_append(self):
         '''
         Tests the return of a simple grains.append call.
@@ -154,7 +163,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
-    @destructiveTest
     def test_grains_append_val_already_present(self):
         '''
         Tests the return of a grains.append call when the value is already present in the grains list.
@@ -168,7 +176,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
         self.assertEqual(messaging, ret)
 
-    @destructiveTest
     def test_grains_append_val_is_list(self):
         '''
         Tests the return of a grains.append call when val is passed in as a list.
@@ -177,7 +184,6 @@ class GrainsAppendTestCase(integration.ModuleCase):
         ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
 
-    @destructiveTest
     def test_grains_append_call_twice(self):
         '''
         Tests the return of a grains.append call when the value is already present

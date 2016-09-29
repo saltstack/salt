@@ -111,7 +111,7 @@ TAGS = {
 
 def get_event(
         node, sock_dir=None, transport='zeromq',
-        opts=None, listen=True, io_loop=None):
+        opts=None, listen=True, io_loop=None, keep_loop=False):
     '''
     Return an event object suitable for the named transport
 
@@ -124,8 +124,8 @@ def get_event(
     # TODO: AIO core is separate from transport
     if transport in ('zeromq', 'tcp'):
         if node == 'master':
-            return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop)
-        return SaltEvent(node, sock_dir, opts, listen=listen, io_loop=io_loop)
+            return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop)
+        return SaltEvent(node, sock_dir, opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop)
     elif transport == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RAETEvent(node,
@@ -139,13 +139,34 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None):
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
-    if opts['transport'] in ('zeromq', 'tcp'):
+    if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
             opts=opts, sock_dir=sock_dir, listen=listen
         )
+
+
+def fire_args(opts, jid, tag_data, prefix=''):
+    '''
+    Fire an event containing the arguments passed to an orchestration job
+    '''
+    try:
+        tag_suffix = [jid, 'args']
+    except NameError:
+        pass
+    else:
+        try:
+            _event = get_master_event(opts, opts['sock_dir'], listen=False)
+            tag = tagify(tag_suffix, prefix)
+            _event.fire_event(tag_data, tag=tag)
+        except Exception as exc:
+            # Don't let a problem here hold up the rest of the orchestration
+            log.warning(
+                'Failed to fire args event %s with data %s: %s',
+                tag, tag_data, exc
+            )
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -176,14 +197,19 @@ class SaltEvent(object):
     '''
     def __init__(
             self, node, sock_dir=None,
-            opts=None, listen=True, io_loop=None):
+            opts=None, listen=True, io_loop=None, keep_loop=False):
         '''
         :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
                                set_event_handler() API. Otherwise, operation
                                will be synchronous.
+        :param Bool keep_loop: Pass a boolean to determine if we want to keep
+                               the io loop or destroy it when the event handle
+                               is destroyed. This is useful when using event
+                               loops from within third party async code
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
+        self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
@@ -666,7 +692,7 @@ class SaltEvent(object):
             is_msgpacked=True,
             use_bin_type=six.PY3
         )
-        log.debug('Sending event - data = {0}'.format(data))
+        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
         if six.PY2:
             event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         else:
@@ -706,7 +732,7 @@ class SaltEvent(object):
             self.subscriber.close()
         if self.pusher is not None:
             self.pusher.close()
-        if self._run_io_loop_sync:
+        if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
     def fire_ret_load(self, load):
@@ -752,7 +778,7 @@ class SaltEvent(object):
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async(event_handler)
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
@@ -769,9 +795,20 @@ class MasterEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, sock_dir, opts=None, listen=True, io_loop=None):
+    def __init__(
+            self,
+            sock_dir,
+            opts=None,
+            listen=True,
+            io_loop=None,
+            keep_loop=False):
         super(MasterEvent, self).__init__(
-            'master', sock_dir, opts, listen=listen, io_loop=io_loop)
+            'master',
+            sock_dir,
+            opts,
+            listen=listen,
+            io_loop=io_loop,
+            keep_loop=keep_loop)
 
 
 class LocalClientEvent(MasterEvent):
@@ -793,9 +830,9 @@ class NamespacedEvent(object):
         self.print_func = print_func
 
     def fire_event(self, data, tag):
+        self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
-        self.event.fire_event(data, tagify(tag, base=self.base))
 
 
 class MinionEvent(SaltEvent):
@@ -1033,6 +1070,10 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if hasattr(self, 'io_loop'):
             self.io_loop.close()
 
+    def _handle_signals(self, signum, sigframe):
+        self.close()
+        super(EventPublisher, self)._handle_signals(signum, sigframe)
+
     def __del__(self):
         self.close()
 
@@ -1077,24 +1118,37 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         super(EventReturn, self)._handle_signals(signum, sigframe)
 
     def flush_events(self):
-        event_return = '{0}.event_return'.format(
-            self.opts['event_return']
-        )
+        if isinstance(self.opts['event_return'], list):
+            # Multiple event returners
+            for r in self.opts['event_return']:
+                log.debug('Calling event returner {0}, one of many.'.format(r))
+                event_return = '{0}.event_return'.format(r)
+                self._flush_event_single(event_return)
+        else:
+            # Only a single event returner
+            log.debug('Calling event returner {0}, only one '
+                      'configured.'.format(self.opts['event_return']))
+            event_return = '{0}.event_return'.format(
+                self.opts['event_return']
+                )
+            self._flush_event_single(event_return)
+        del self.event_queue[:]
+
+    def _flush_event_single(self, event_return):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
                 log.error('Could not store events - returner \'{0}\' raised '
-                    'exception: {1}'.format(self.opts['event_return'], exc))
+                          'exception: {1}'.format(event_return, exc))
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
                     log.debug('Event data that caused an exception: {0}'.format(
                         self.event_queue))
-            del self.event_queue[:]
         else:
             log.error('Could not store return for event(s) - returner '
-                      '\'%s\' not found.', self.opts['event_return'])
+                      '\'%s\' not found.', event_return)
 
     def run(self):
         '''

@@ -95,7 +95,22 @@ def _get_all_packages(mirror=DEFAULT_MIRROR,
 def check_valid_package(package,
                         cyg_arch='x86_64',
                         mirrors=None):
-    """Check if the package is valid on the given mirrors."""
+    '''
+    Check if the package is valid on the given mirrors.
+
+    Args:
+        package: The name of the package
+        cyg_arch: The cygwin architecture
+        mirrors: any mirrors to check
+
+    Returns (bool): True if Valid, otherwise False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cyg.check_valid_package <package name>
+    '''
     if mirrors is None:
         mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
 

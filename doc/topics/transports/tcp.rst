@@ -2,10 +2,16 @@
 TCP Transport
 =============
 
-The "tcp" transport is an implementation of Salt's channels using raw tcp sockets.
+The tcp transport is an implementation of Salt's channels using raw tcp sockets.
 Since this isn't using a pre-defined messaging library we will describe the wire
 protocol, message semantics, etc. in this document.
 
+The tcp transport is enabled by changing the :conf_minion:`transport` setting
+to ``tcp`` on each Salt minion and Salt master.
+
+.. code-block:: yaml
+
+   transport: tcp
 
 Wire Protocol
 =============

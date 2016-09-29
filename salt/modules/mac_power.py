@@ -281,7 +281,7 @@ def set_wake_on_modem(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonmodem {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_wake_on_modem() == state
+    return salt.utils.mac_utils.validate_enabled(get_wake_on_modem()) == state
 
 
 def get_wake_on_network():
@@ -324,7 +324,8 @@ def set_wake_on_network(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonnetworkaccess {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_wake_on_network() == state
+    return salt.utils.mac_utils.validate_enabled(
+            get_wake_on_network()) == state
 
 
 def get_restart_power_failure():
@@ -367,7 +368,8 @@ def set_restart_power_failure(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setrestartpowerfailure {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_restart_power_failure() == state
+    return salt.utils.mac_utils.validate_enabled(
+            get_restart_power_failure()) == state
 
 
 def get_restart_freeze():
@@ -412,7 +414,7 @@ def set_restart_freeze(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setrestartfreeze {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_restart_freeze() == state
+    return salt.utils.mac_utils.validate_enabled(get_restart_freeze()) == state
 
 
 def get_sleep_on_power_button():
@@ -433,7 +435,7 @@ def get_sleep_on_power_button():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getallowpowerbuttontosleepcomputer')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)) == 'on'
+            salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_sleep_on_power_button(enabled):
@@ -456,4 +458,5 @@ def set_sleep_on_power_button(enabled):
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setallowpowerbuttontosleepcomputer {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_sleep_on_power_button() == state
+    return salt.utils.mac_utils.validate_enabled(
+            get_sleep_on_power_button()) == state

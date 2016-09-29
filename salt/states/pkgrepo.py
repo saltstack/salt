@@ -91,8 +91,6 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-import salt.utils
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -281,6 +279,13 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
+    if 'enabled' in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
+
     repo = name
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
@@ -308,13 +313,9 @@ def managed(name, ppa=None, **kwargs):
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    if kwargs.pop('enabled', None):
-        kwargs['disabled'] = False
-        salt.utils.warn_until(
-            'Carbon',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
+    # Replace 'enabled' from kwargs with 'disabled'
+    enabled = kwargs.pop('enabled', True)
+    kwargs['disabled'] = not salt.utils.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -394,7 +395,8 @@ def managed(name, ppa=None, **kwargs):
 
     # empty file before configure
     if kwargs.get('clean_file', False):
-        salt.utils.fopen(kwargs['file'], 'w').close()
+        with salt.utils.fopen(kwargs['file'], 'w'):
+            pass
 
     try:
         if __grains__['os_family'] == 'Debian':

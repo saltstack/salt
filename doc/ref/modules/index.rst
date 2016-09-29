@@ -11,14 +11,15 @@ Modules Are Easy to Write!
 
 Writing Salt execution modules is straightforward.
 
-A Salt execution module is a Python or `Cython`_ module
-placed in a directory called ``_modules/``
-within the :conf_master:`file_roots` as specified by the master config file. By
-default this is ``/srv/salt/_modules`` on Linux systems.
+A Salt execution module is a Python or `Cython`_ module placed in a directory
+called ``_modules/`` at the root of the Salt fileserver. When using the default
+fileserver backend (i.e. :py:mod:`roots <salt.fileserver.roots`), unless
+environments are otherwise defined in the :conf_master:`file_roots` config
+option, the ``_modules/`` directory would be located in ``/srv/salt/_modules``
+on most systems.
 
-
-Modules placed in ``_modules/`` will be synced to the minions when any of the following
-Salt functions are called:
+Modules placed in ``_modules/`` will be synced to the minions when any of the
+following Salt functions are called:
 
 * :mod:`state.apply <salt.modules.state.apply_>`
 * :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
@@ -40,23 +41,28 @@ starts, so only the ``*.pyx`` file is required.
 
 Zip Archives as Modules
 =======================
-Python 2.3 and higher allows developers to directly import zip archives containing Python code.
-By setting :conf_minion:`enable_zip_modules` to ``True`` in the minion config, the Salt loader
-will be able to import ``.zip`` files in this fashion.  This allows Salt module developers to
-package dependencies with their modules for ease of deployment, isolation, etc.
 
-For a user, Zip Archive modules behave just like other modules.  When executing a function from a
-module provided as the file ``my_module.zip``, a user would call a function within that module
-as ``my_module.<function>``.
+Python 2.3 and higher allows developers to directly import zip archives
+containing Python code. By setting :conf_minion:`enable_zip_modules` to
+``True`` in the minion config, the Salt loader will be able to import ``.zip``
+files in this fashion. This allows Salt module developers to package
+dependencies with their modules for ease of deployment, isolation, etc.
+
+For a user, Zip Archive modules behave just like other modules.  When executing
+a function from a module provided as the file ``my_module.zip``, a user would
+call a function within that module as ``my_module.<function>``.
 
 Creating a Zip Archive Module
 -----------------------------
-A Zip Archive module is structured similarly to a simple `Python package`_.  The ``.zip`` file contains
-a single directory with the same name as the module.  The module code traditionally in ``<module_name>.py``
-goes in ``<module_name>/__init__.py``.  The dependency packages are subdirectories of ``<module_name>/``.
 
-Here is an example directory structure for the ``lumberjack`` module, which has two library dependencies
-(``sleep`` and ``work``) to be included.
+A Zip Archive module is structured similarly to a simple `Python package`_.
+The ``.zip`` file contains a single directory with the same name as the module.
+The module code traditionally in ``<module_name>.py`` goes in
+``<module_name>/__init__.py``.  The dependency packages are subdirectories of
+``<module_name>/``.
+
+Here is an example directory structure for the ``lumberjack`` module, which has
+two library dependencies (``sleep`` and ``work``) to be included.
 
 .. code-block:: bash
 
@@ -69,7 +75,8 @@ Here is an example directory structure for the ``lumberjack`` module, which has 
     lumberjack/work:
     __init__.py
 
-The contents of ``lumberjack/__init__.py`` show how to import and use these included libraries.
+The contents of ``lumberjack/__init__.py`` show how to import and use these
+included libraries.
 
 .. code-block:: python
 
@@ -105,7 +112,8 @@ Then, create the zip:
      --------                   -------
           512                   6 files
 
-Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lumberjack.zip`` like any other module.
+Once placed in :conf_master:`file_roots`, Salt users can distribute and use
+``lumberjack.zip`` like any other module.
 
 .. code-block:: bash
 
@@ -123,17 +131,18 @@ Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lu
 Cross Calling Execution Modules
 ===============================
 
-All of the Salt execution modules are available to each other and modules can call
-functions available in other execution modules.
+All of the Salt execution modules are available to each other and modules can
+call functions available in other execution modules.
 
 The variable ``__salt__`` is packed into the modules after they are loaded into
 the Salt minion.
 
 The ``__salt__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
-containing all of the Salt functions. Dictionary keys are strings representing the
-names of the modules and the values are the functions themselves.
+containing all of the Salt functions. Dictionary keys are strings representing
+the names of the modules and the values are the functions themselves.
 
-Salt modules can be cross-called by accessing the value in the ``__salt__`` dict:
+Salt modules can be cross-called by accessing the value in the ``__salt__``
+dict:
 
 .. code-block:: python
 
@@ -155,8 +164,9 @@ using the :ref:`salt runner <salt_salt_runner>`.
 Preloaded Execution Module Data
 ===============================
 
-When interacting with execution modules often it is nice to be able to read information
-dynamically about the minion or to load in configuration parameters for a module.
+When interacting with execution modules often it is nice to be able to read
+information dynamically about the minion or to load in configuration parameters
+for a module.
 
 Salt allows for different types of data to be loaded into the modules by the
 minion.
@@ -168,16 +178,17 @@ The values detected by the Salt Grains on the minion are available in a
 :ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
 from within callable objects in the Python modules.
 
-To see the contents of the grains dictionary for a given system in your deployment
-run the :func:`grains.items` function:
+To see the contents of the grains dictionary for a given system in your
+deployment run the :func:`grains.items` function:
 
 .. code-block:: bash
 
     salt 'hostname' grains.items --output=pprint
 
-Any value in a grains dictionary can be accessed as any other Python dictionary. For
-example, the grain representing the minion ID is stored in the ``id`` key and from
-an execution module, the value would be stored in ``__grains__['id']``.
+Any value in a grains dictionary can be accessed as any other Python
+dictionary. For example, the grain representing the minion ID is stored in the
+``id`` key and from an execution module, the value would be stored in
+``__grains__['id']``.
 
 
 Module Configuration
@@ -188,24 +199,39 @@ configuration information from the  minion configuration file to be passed to
 execution modules.
 
 Since the minion configuration file is a YAML document, arbitrary configuration
-data can be passed in the minion config that is read by the modules. It is therefore
-**strongly** recommended that the values passed in the configuration file match
-the module name. A value intended for the ``test`` execution module should be named
-``test.<value>``.
+data can be passed in the minion config that is read by the modules. It is
+therefore **strongly** recommended that the values passed in the configuration
+file match the module name. A value intended for the ``test`` execution module
+should be named ``test.<value>``.
 
-The test execution module contains usage of the module configuration and the default
-configuration file for the minion contains the information and format used to
-pass data to the modules. :mod:`salt.modules.test`, :file:`conf/minion`.
+The test execution module contains usage of the module configuration and the
+default configuration file for the minion contains the information and format
+used to pass data to the modules. :mod:`salt.modules.test`,
+:file:`conf/minion`.
 
-Printout Configuration
-======================
+Strings and Unicode
+===================
 
-Since execution module functions can return different data, and the way the data is
-printed can greatly change the presentation, Salt has a printout configuration.
+An execution  module author should always assume that strings fed to the module
+have already decoded from strings into Unicode. In Python 2, these will
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
+from a state to other Salt sub-systems, should pass Unicode (or bytes if passing binary data). In the
+rare event that a state needs to write directly to disk, Unicode should be
+encoded to a string immediately before writing to disk. An author may use
+``__salt_system_encoding__`` to learn what the encoding type of the system is.
+For example, `'my_string'.encode(__salt_system_encoding__')`.
 
-When writing a module the ``__outputter__`` dictionary can be declared in the module.
-The ``__outputter__`` dictionary contains a mapping of function name to Salt
-Outputter.
+
+Outputter Configuration
+=======================
+
+Since execution module functions can return different data, and the way the
+data is printed can greatly change the presentation, Salt allows for a specific
+outputter to be set on a function-by-function basis.
+
+This is done be declaring an ``__outputter__`` dictionary in the global scope
+of the module.  The ``__outputter__`` dictionary contains a mapping of function
+names to Salt :ref:`outputters <all-salt.output>`.
 
 .. code-block:: python
 
@@ -213,8 +239,8 @@ Outputter.
         'run': 'txt'
     }
 
-This will ensure that the text outputter is used.
-
+This will ensure that the ``txt`` outputter is used to display output from the
+``run`` function.
 
 .. _virtual-modules:
 
@@ -227,10 +253,10 @@ loaded for a virtual name is selected based on the current platform or
 environment.
 
 For example, packages are managed across platforms using the ``pkg`` module.
-``pkg`` is a virtual module name that is
-an alias for the specific package manager module that is loaded on a specific
-system (for example, :mod:`yumpkg <salt.modules.yumpkg>` on RHEL/CentOS systems
-, and :mod:`aptpkg <salt.modules.aptpkg>` on Ubuntu).
+``pkg`` is a virtual module name that is an alias for the specific package
+manager module that is loaded on a specific system (for example, :mod:`yumpkg
+<salt.modules.yumpkg>` on RHEL/CentOS systems , and :mod:`aptpkg
+<salt.modules.aptpkg>` on Ubuntu).
 
 Virtual module names are set using the ``__virtual__`` function and the
 :ref:`virtual name <modules-virtual-name>`.
@@ -246,8 +272,9 @@ module is loaded using the current module name. If ``False`` is returned the
 module is not loaded. ``False`` lets the module perform system checks and
 prevent loading if dependencies are not met.
 
-Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
-unavailable as it will not have been packed into the module at this point in time.
+Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will
+be unavailable as it will not have been packed into the module at this point in
+time.
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by
@@ -344,7 +371,7 @@ in the minion config file:
       pkg: aptpkg
 
 The above example will force the minion to use the :py:mod:`systemd
-<salt.modules.systemd>` module to provide service mangement, and the
+<salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
 .. __: https://github.com/saltstack/salt/issues/new
@@ -382,16 +409,16 @@ similar to the following:
 Documentation
 =============
 
-Salt execution modules are documented. The :func:`sys.doc` function will return the
-documentation for all available modules:
+Salt execution modules are documented. The :func:`sys.doc` function will return
+the documentation for all available modules:
 
 .. code-block:: bash
 
     salt '*' sys.doc
 
-The ``sys.doc`` function simply prints out the docstrings found in the modules; when
-writing Salt execution modules, please follow the formatting conventions for docstrings as
-they appear in the other modules.
+The ``sys.doc`` function simply prints out the docstrings found in the modules;
+when writing Salt execution modules, please follow the formatting conventions
+for docstrings as they appear in the other modules.
 
 Adding Documentation to Salt Modules
 ------------------------------------
@@ -417,15 +444,15 @@ to the calling terminal.
 
 .. _`Python docstring`: http://docs.python.org/2/glossary.html#term-docstring
 
-Documentation added to execution modules in docstrings will automatically be added
-to the online web-based documentation.
+Documentation added to execution modules in docstrings will automatically be
+added to the online web-based documentation.
 
 
 Add Execution Module Metadata
 -----------------------------
 
-When writing a Python docstring for an execution module, add information about the module
-using the following field lists:
+When writing a Python docstring for an execution module, add information about
+the module using the following field lists:
 
 .. code-block:: text
 
@@ -462,12 +489,32 @@ logs. The following code snippet demonstrates writing log messages:
     log.warning('You Should Not Do That')
     log.error('It Is Busted')
 
+Aliasing Functions
+==================
+
+Sometimes one wishes to use a function name that would shadow a python built-in.
+A common example would be ``set()``. To support this, append an underscore to
+the function defintion, ``def set_():``, and use the ``__func_alias__`` feature
+to provide an alias to the function.
+
+``__func_alias__`` is a dictionary where each key is the name of a function in
+the module, and each value is a string representing the alias for that function.
+When calling an aliased function from a different execution module, state
+module, or from the cli, the alias name should be used.
+
+.. code-block:: python
+
+    __func_alias__ = {
+        'set_': 'set',
+        'list_': 'list',
+    }
+
 Private Functions
 =================
 
-In Salt, Python callable objects contained within an execution module are made available
-to the Salt minion for use. The only exception to this rule is a callable
-object with a name starting with an underscore ``_``.
+In Salt, Python callable objects contained within an execution module are made
+available to the Salt minion for use. The only exception to this rule is a
+callable object with a name starting with an underscore ``_``.
 
 Objects Loaded Into the Salt Minion
 -----------------------------------
@@ -487,28 +534,25 @@ Objects NOT Loaded into the Salt Minion
 
     cheese = {} # Not a callable Python object
 
-.. note::
-
-    Some callable names also end with an underscore ``_``, to avoid keyword clashes
-    with Python keywords.  When using execution modules, or state modules, with these
-    in them the trailing underscore should be omitted.
-
 Useful Decorators for Modules
 =============================
 
 Depends Decorator
 -----------------
-When writing execution modules there are many times where some of the module will
-work on all hosts but some functions have an external dependency, such as a service
-that needs to be installed or a binary that needs to be present on the system.
 
-Instead of trying to wrap much of the code in large try/except blocks, a decorator can
-be used.
+When writing execution modules there are many times where some of the module
+will work on all hosts but some functions have an external dependency, such as
+a service that needs to be installed or a binary that needs to be present on
+the system.
 
-If the dependencies passed to the decorator don't exist, then the salt minion will remove
-those functions from the module on that host.
+Instead of trying to wrap much of the code in large try/except blocks, a
+decorator can be used.
 
-If a "fallback_function" is defined, it will replace the function instead of removing it
+If the dependencies passed to the decorator don't exist, then the salt minion
+will remove those functions from the module on that host.
+
+If a ``fallback_function`` is defined, it will replace the function instead of
+removing it
 
 .. code-block:: python
 
@@ -546,7 +590,8 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         '''
         return True
 
-In addition to global dependencies the depends decorator also supports raw booleans.
+In addition to global dependencies the depends decorator also supports raw
+booleans.
 
 .. code-block:: python
 

@@ -238,7 +238,7 @@ The directory to store the pki authentication keys.
 
 Directory for custom modules. This directory can contain subdirectories for
 each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, etc. This path is appended to
+``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
 :conf_master:`root_dir`.
 
 .. code-block:: yaml
@@ -355,8 +355,8 @@ Set the default outputter used by the salt command.
 
 Default: None
 
-# Set the default output file used by the salt command. Default is to output
-# to the CLI and not to a file. Functions the same way as the "--out-file"
+Set the default output file used by the salt command. Default is to output
+to the CLI and not to a file. Functions the same way as the "--out-file"
 CLI option, only sets this to a single file for all salt commands.
 
 .. code-block:: yaml
@@ -492,8 +492,9 @@ local job cache on the master.
 
 Default: ``''``
 
-Specify the returner to use to log events. A returner may have installation and
-configuration requirements. Read the returner's documentation.
+Specify the returner(s) to use to log events. Each returner may have
+installation and configuration requirements. Read the returner's
+documentation.
 
 .. note::
 
@@ -502,7 +503,9 @@ configuration requirements. Read the returner's documentation.
 
 .. code-block:: yaml
 
-    event_return: cassandra_cql
+    event_return:
+      - syslog
+      - splunk
 
 .. conf_master:: event_return_queue
 
@@ -1263,6 +1266,20 @@ or just post what changes are going to be made.
 
     test: False
 
+.. conf_master:: runner_returns
+
+``runner_returns``
+------------------
+
+Default: ``False``
+
+If set to ``True``, runner jobs will be saved to job cache (defined by
+:conf_master:`master_job_cache`).
+
+.. code-block:: yaml
+
+    runner_returns: True
+
 Master File Server Settings
 ===========================
 
@@ -1345,6 +1362,36 @@ is impacted.
 .. code-block:: yaml
 
     fileserver_limit_traversal: False
+
+.. conf_master:: fileserver_list_cache_time
+
+``fileserver_list_cache_time``
+------------------------------
+
+.. versionadded:: 2014.1.0
+.. versionchanged:: Carbon
+    The default was changed from ``30`` seconds to ``20``.
+
+Default: ``20``
+
+Salt caches the list of files/symlinks/directories for each fileserver backend
+and environment as they are requested, to guard against a performance
+bottleneck at scale when many minions all ask the fileserver which files are
+available simultaneously. This configuration parameter allows for the max age
+of that cache to be altered.
+
+Set this value to ``0`` to disable use of this cache altogether, but keep in
+mind that this may increase the CPU load on the master when running a highstate
+on a large number of minions.
+
+.. note::
+    Rather than altering this configuration parameter, it may be advisable to
+    use the :mod:`fileserver.clear_list_cache
+    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+
+.. code-block:: yaml
+
+    fileserver_list_cache_time: 5
 
 .. conf_master:: hash_type
 
@@ -2268,9 +2315,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_whitelist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 .. conf_master:: minionfs_blacklist
 
@@ -2294,9 +2341,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_blacklist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 
 .. _pillar-configuration:
@@ -2411,6 +2458,19 @@ pillar_roots_override_ext_pillar option and will be removed in future releases.
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. conf_master:: pillar_raise_on_missing
+
+``pillar_raise_on_missing``
+---------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``False``
+
+Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
+attempt to retrieve a named value from pillar fails. When this option is set
+to ``False``, the failed attempt returns an empty string.
 
 .. _git-pillar-config-opts:
 
@@ -2729,7 +2789,11 @@ Pillar Merging Options
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows you to configure merging
-strategy between different sources. It accepts 4 values:
+strategy between different sources. It accepts 5 values:
+
+* ``none``:
+.. versionadded:: 2016.3.4
+  It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
 
 * ``recurse``:
 

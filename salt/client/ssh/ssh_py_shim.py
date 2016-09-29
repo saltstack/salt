@@ -65,9 +65,14 @@ def need_deployment():
     # If SUDOing then also give the super user group write permissions
     sudo_gid = os.environ.get('SUDO_GID')
     if sudo_gid:
-        os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
-        stt = os.stat(OPTIONS.saltdir)
-        os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+        try:
+            os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
+            stt = os.stat(OPTIONS.saltdir)
+            os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+        except OSError:
+            sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
+                    'and is not root, be certain the user is in the same group\nas the login user')
+            sys.exit(1)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
@@ -131,11 +136,7 @@ def main(argv):  # pylint: disable=W0613
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
-            sys.stderr.write('{0}\n'.format(OPTIONS.checksum))
-            sys.stderr.write('{0}\n'.format(get_hash(thin_path, OPTIONS.hashfunc)))
-            os.unlink(thin_path)
-            sys.stderr.write('WARNING: checksum mismatch for "{0}"\n'.format(thin_path))
-            sys.exit(EX_THIN_CHECKSUM)
+            need_deployment()
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
@@ -230,7 +231,7 @@ def main(argv):  # pylint: disable=W0613
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:
-        os.execv(sys.executable, salt_argv)
+        subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)
 

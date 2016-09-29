@@ -17,6 +17,7 @@ import salt.log
 import salt.crypt
 import salt.transport.frame
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils import immutabletypes
 
 # Import third party libs
 import salt.ext.six as six
@@ -143,6 +144,7 @@ class Serial(object):
                          'This often happens when trying to read a file not in binary mode'
                          'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
             log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
+            gc.collect()
             raise
         finally:
             gc.enable()
@@ -234,11 +236,25 @@ class Serial(object):
                 else:
                     return obj
 
+            def immutable_encoder(obj):
+                log.debug('IMMUTABLE OBJ: {0}'.format(obj))
+                if isinstance(obj, immutabletypes.ImmutableDict):
+                    return dict(obj)
+                if isinstance(obj, immutabletypes.ImmutableList):
+                    return list(obj)
+                if isinstance(obj, immutabletypes.ImmutableSet):
+                    return set(obj)
+
             if "datetime.datetime" in str(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
                 else:
                     return msgpack.dumps(datetime_encoder(msg))
+            elif "Immutable" in str(e):
+                if msgpack.version >= (0, 4, 0):
+                    return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
+                else:
+                    return msgpack.dumps(msg, default=immutable_encoder)
 
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's

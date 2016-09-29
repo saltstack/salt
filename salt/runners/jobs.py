@@ -30,7 +30,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def active(outputter=None, display_progress=False):
+def active(display_progress=False):
     '''
     Return a report on all actively running jobs from a job id centric
     perspective
@@ -73,23 +73,13 @@ def active(outputter=None, display_progress=False):
             if minion not in ret[jid]['Returned']:
                 ret[jid]['Returned'].append(minion)
 
-    if outputter:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'outputter\' argument to the jobs.active runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': ret}
-    else:
-        return ret
+    return ret
 
 
 def lookup_jid(jid,
                ext_source=None,
                returned=True,
                missing=False,
-               outputter=None,
                display_progress=False):
     '''
     Return the printout from a previously executed job
@@ -155,23 +145,14 @@ def lookup_jid(jid,
         for minion_id in (x for x in targeted_minions if x not in returns):
             ret[minion_id] = 'Minion did not return'
 
-    # Once we remove the outputter argument in a couple releases, we still
-    # need to check to see if the 'out' key is present and use it to specify
+    # We need to check to see if the 'out' key is present and use it to specify
     # the correct outputter, so we get highstate output for highstate runs.
-    if outputter is None:
-        try:
-            # Check if the return data has an 'out' key. We'll use that as the
-            # outputter in the absence of one being passed on the CLI.
-            outputter = data[next(iter(data))].get('out')
-        except (StopIteration, AttributeError):
-            outputter = None
-    else:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'outputter\' argument to the jobs.lookup_jid runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
+    try:
+        # Check if the return data has an 'out' key. We'll use that as the
+        # outputter in the absence of one being passed on the CLI.
+        outputter = data[next(iter(data))].get('out')
+    except (StopIteration, AttributeError):
+        outputter = None
 
     if outputter:
         return {'outputter': outputter, 'data': ret}
@@ -179,7 +160,7 @@ def lookup_jid(jid,
         return ret
 
 
-def list_job(jid, ext_source=None, outputter=None, display_progress=False):
+def list_job(jid, ext_source=None, display_progress=False):
     '''
     List a specific job given by its jid
 
@@ -222,16 +203,7 @@ def list_job(jid, ext_source=None, outputter=None, display_progress=False):
         if endtime:
             ret['EndTime'] = endtime
 
-    if outputter:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'outputter\' argument to the jobs.list_job runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': ret}
-    else:
-        return ret
+    return ret
 
 
 def list_jobs(ext_source=None,
@@ -443,7 +415,7 @@ def list_jobs_filter(count,
         return ret
 
 
-def print_job(jid, ext_source=None, outputter=None):
+def print_job(jid, ext_source=None):
     '''
     Print a specific job's detail given by it's jid, including the return data.
 
@@ -480,16 +452,7 @@ def print_job(jid, ext_source=None, outputter=None):
         if endtime:
             ret[jid]['EndTime'] = endtime
 
-    if outputter:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'outputter\' argument to the jobs.print_job runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': ret}
-    else:
-        return ret
+    return ret
 
 
 def exit_success(jid, ext_source=None):
@@ -507,14 +470,19 @@ def exit_success(jid, ext_source=None):
     '''
     ret = dict()
 
-    data = lookup_jid(
+    data = list_job(
         jid,
         ext_source=ext_source
     )
 
-    for minion in data:
-        if "retcode" in data[minion]:
-            ret[minion] = True if not data[minion]['retcode'] else False
+    minions = data['Minions']
+    result = data['Result']
+
+    for minion in minions:
+        if minion in result and 'return' in result[minion]:
+            ret[minion] = True if result[minion]['return'] else False
+        else:
+            ret[minion] = False
 
     return ret
 
@@ -549,7 +517,7 @@ def last_run(ext_source=None,
                           function, target, display_progress)
     if _all_jobs:
         last_job = sorted(_all_jobs)[-1]
-        return print_job(last_job, ext_source, outputter)
+        return print_job(last_job, ext_source)
     else:
         return False
 

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import contextlib
 import logging
 import os
+import string
 import shutil
 import ftplib
 from tornado.httputil import parse_response_start_line, HTTPInputError
@@ -28,7 +29,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
-import salt.utils.s3
 import salt.ext.six as six
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
@@ -83,6 +83,7 @@ class Client(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.utils = salt.loader.utils(self.opts)
         self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
@@ -244,7 +245,7 @@ class Client(object):
             if cachedir is None:
                 cachedir = self.opts['cachedir']
             elif not os.path.isabs(cachedir):
-                cachedir = os.path.join(self.opts['cachdir'], cachedir)
+                cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
@@ -461,16 +462,23 @@ class Client(object):
         Get a single file from a URL.
         '''
         url_data = urlparse(url)
+        url_scheme = url_data.scheme
+        url_path = os.path.join(
+                url_data.netloc, url_data.path).rstrip(os.sep)
 
-        if url_data.scheme in ('file', ''):
+        if url_scheme and url_scheme.lower() in string.ascii_lowercase:
+            url_path = ':'.join((url_scheme, url_path))
+            url_scheme = 'file'
+
+        if url_scheme in ('file', ''):
             # Local filesystem
-            if not os.path.isabs(url_data.path):
+            if not os.path.isabs(url_path):
                 raise CommandExecutionError(
-                    'Path \'{0}\' is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_path)
                 )
-            return url_data.path
+            return url_path
 
-        if url_data.scheme == 'salt':
+        if url_scheme == 'salt':
             return self.get_file(
                 url, dest, makedirs, saltenv, cachedir=cachedir)
         if dest:
@@ -496,17 +504,17 @@ class Client(object):
                         return self.opts['pillar']['s3'][key]
                     except (KeyError, TypeError):
                         return default
-                salt.utils.s3.query(method='GET',
-                                    bucket=url_data.netloc,
-                                    path=url_data.path[1:],
-                                    return_bin=False,
-                                    local_file=dest,
-                                    action=None,
-                                    key=s3_opt('key'),
-                                    keyid=s3_opt('keyid'),
-                                    service_url=s3_opt('service_url'),
-                                    verify_ssl=s3_opt('verify_ssl', True),
-                                    location=s3_opt('location'))
+                self.utils['s3.query'](method='GET',
+                                       bucket=url_data.netloc,
+                                       path=url_data.path[1:],
+                                       return_bin=False,
+                                       local_file=dest,
+                                       action=None,
+                                       key=s3_opt('key'),
+                                       keyid=s3_opt('keyid'),
+                                       service_url=s3_opt('service_url'),
+                                       verify_ssl=s3_opt('verify_ssl', True),
+                                       location=s3_opt('location'))
                 return dest
             except Exception as exc:
                 raise MinionError(
@@ -589,6 +597,8 @@ class Client(object):
                         result.append(chunk)
             else:
                 dest_tmp = "{0}.part".format(dest)
+                # We need an open filehandle to use in the on_chunk callback,
+                # that's why we're not using a with clause here.
                 destfp = salt.utils.fopen(dest_tmp, 'wb')
 
                 def on_chunk(chunk):
@@ -699,12 +709,17 @@ class Client(object):
         elif not os.path.isabs(cachedir):
             cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
+        if url_data.query is not None:
+            file_name = '-'.join([url_data.path, url_data.query])
+        else:
+            file_name = url_data.path
+
         return salt.utils.path_join(
             cachedir,
             'extrn_files',
             saltenv,
             netloc,
-            url_data.path
+            file_name
         )
 
 
@@ -783,6 +798,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
                     ret.append(sdecode(relpath))
@@ -801,6 +818,8 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(sdecode(os.path.relpath(root, path)))
         return ret
@@ -889,7 +908,7 @@ class LocalClient(Client):
         hash_type = self.opts.get('hash_type', 'md5')
         ret['hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
         ret['hash_type'] = hash_type
-        return ret
+        return ret, fnd_stat
 
     def list_env(self, saltenv='base'):
         '''
@@ -1008,7 +1027,7 @@ class RemoteClient(Client):
                     self.hash_and_stat_file(dest2check, saltenv)
                 try:
                     mode_local = stat_local[0]
-                except IndexError:
+                except (IndexError, TypeError):
                     mode_local = None
             else:
                 hash_local = self.hash_file(dest2check, saltenv)
@@ -1079,6 +1098,8 @@ class RemoteClient(Client):
                     os.makedirs(destdir)
                 else:
                     return False
+            # We need an open filehandle here, that's why we're not using a
+            # with clause:
             fn_ = salt.utils.fopen(dest, 'wb+')
         else:
             log.debug('No dest file found')
@@ -1134,6 +1155,8 @@ class RemoteClient(Client):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:
                     data = data['data']
+                if six.PY3 and isinstance(data, str):
+                    data = data.encode()
                 fn_.write(data)
             except (TypeError, KeyError) as exc:
                 try:
@@ -1274,7 +1297,10 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_find'}
         fnd = self.channel.send(load)
-        stat_result = fnd.get('stat')
+        try:
+            stat_result = fnd.get('stat')
+        except AttributeError:
+            stat_result = None
         return hash_result, stat_result
 
     def list_env(self, saltenv='base'):

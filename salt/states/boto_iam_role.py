@@ -266,7 +266,7 @@ def _role_present(
             if updated:
                 msg = 'Assume role policy document updated.'
                 ret['comment'] = '{0} {1}'.format(ret['comment'], msg)
-                ret['changes']['old'] = {'policy_document': policy_document}
+                ret['changes']['old'] = {'policy_document': role['assume_role_policy_document']}
                 ret['changes']['new'] = {'policy_document': _policy_document}
             else:
                 ret['result'] = False

@@ -32,6 +32,7 @@ try:
     import boto
     import boto3
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -42,6 +43,7 @@ except ImportError:
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
+required_botocore_version = '1.4.41'
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +63,8 @@ def _has_required_boto():
     if not HAS_BOTO:
         return False
     elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+        return False
+    elif LooseVersion(found_botocore_version) < LooseVersion(required_botocore_version):
         return False
     else:
         return True
@@ -102,7 +106,44 @@ if _has_required_boto():
                       ruleDisabled=True)
     principal = 'arn:aws:iot:us-east-1:1234:cert/21fc104aaaf6043f5756c1b57bda84ea8395904c43f28517799b19e4c42514'
 
+    thing_type_name = 'test_thing_type'
+    thing_type_desc = 'test_thing_type_desc'
+    thing_type_attr_1 = 'test_thing_type_search_attr_1'
+    thing_type_ret = dict(
+        thingTypeName=thing_type_name,
+        thingTypeProperties=dict(
+            thingTypeDescription=thing_type_desc,
+            searchableAttributes=[thing_type_attr_1],
+        ),
+        thingTypeMetadata=dict(
+            deprecated=False,
+            creationDate='2010-08-01 15:54:49.699000+00:00'
+        )
+    )
+    deprecated_thing_type_ret = dict(
+        thingTypeName=thing_type_name,
+        thingTypeProperties=dict(
+            thingTypeDescription=thing_type_desc,
+            searchableAttributes=[thing_type_attr_1],
+        ),
+        thingTypeMetadata=dict(
+            deprecated=True,
+            creationDate='2010-08-01 15:54:49.699000+00:00',
+            deprecationDate='2010-08-02 15:54:49.699000+00:00'
+        )
+    )
+    thing_type_arn = 'test_thing_type_arn'
+    create_thing_type_ret = dict(
+        thingTypeName=thing_type_name,
+        thingTypeArn=thing_type_arn
+    )
 
+
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto3_version))
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTStateTestCaseBase(TestCase):
     conn = None
 
@@ -123,11 +164,92 @@ class BotoIoTStateTestCaseBase(TestCase):
         session_instance.client.return_value = self.conn
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
+    '''
+    TestCase for salt.modules.boto_iot state.module
+    '''
+
+    def test_present_when_thing_type_does_not_exist(self):
+        '''
+        tests present on a thing type that does not exist.
+        '''
+        self.conn.describe_thing_type.side_effect = [not_found_error, thing_type_ret]
+        self.conn.create_thing_type.return_value = create_thing_type_ret
+        result = salt_states['boto_iot.thing_type_present'](
+            'thing type present',
+            thingTypeName=thing_type_name,
+            thingTypeDescription=thing_type_desc,
+            searchableAttributesList=[thing_type_attr_1],
+            **conn_parameters
+        )
+        self.assertTrue(result['result'])
+        self.assertEqual(result['changes']['new']['thing_type']['thingTypeName'],
+                         thing_type_name)
+
+    def test_present_when_thing_type_exists(self):
+        self.conn.describe_thing_type.return_value = thing_type_ret
+        result = salt_states['boto_iot.thing_type_present'](
+            'thing type present',
+            thingTypeName=thing_type_name,
+            thingTypeDescription=thing_type_desc,
+            searchableAttributesList=[thing_type_attr_1],
+            **conn_parameters
+        )
+        self.assertTrue(result['result'])
+        self.assertEqual(result['changes'], {})
+        self.conn.create_thing_type.assert_not_called()
+
+    def test_present_with_failure(self):
+        self.conn.describe_thing_type.side_effect = [not_found_error, thing_type_ret]
+        self.conn.create_thing_type.side_effect = ClientError(error_content, 'create_thing_type')
+        result = salt_states['boto_iot.thing_type_present'](
+            'thing type present',
+            thingTypeName=thing_type_name,
+            thingTypeDescription=thing_type_desc,
+            searchableAttributesList=[thing_type_attr_1],
+            **conn_parameters
+        )
+        self.assertFalse(result['result'])
+        self.assertTrue('An error occurred' in result['comment'])
+
+    def test_absent_when_thing_type_does_not_exist(self):
+        '''
+        Tests absent on a thing type does not exist
+        '''
+        self.conn.describe_thing_type.side_effect = not_found_error
+        result = salt_states['boto_iot.thing_type_absent']('test', 'mythingtype', **conn_parameters)
+        self.assertTrue(result['result'])
+        self.assertEqual(result['changes'], {})
+
+    def test_absent_when_thing_type_exists(self):
+        '''
+        Tests absent on a thing type
+        '''
+        self.conn.describe_thing_type.return_value = deprecated_thing_type_ret
+        result = salt_states['boto_iot.thing_type_absent']('test', thing_type_name, **conn_parameters)
+        self.assertTrue(result['result'])
+        self.assertEqual(result['changes']['new']['thing_type'], None)
+        self.conn.deprecate_thing_type.assert_not_called()
+
+    def test_absent_with_deprecate_failure(self):
+        self.conn.describe_thing_type.return_value = thing_type_ret
+        self.conn.deprecate_thing_type.side_effect = ClientError(error_content, 'deprecate_thing_type')
+        result = salt_states['boto_iot.thing_type_absent']('test', thing_type_name, **conn_parameters)
+        self.assertFalse(result['result'])
+        self.assertTrue('An error occurred' in result['comment'])
+        self.assertTrue('deprecate_thing_type' in result['comment'])
+        self.conn.delete_thing_type.assert_not_called()
+
+    def test_absent_with_delete_failure(self):
+        self.conn.describe_thing_type.return_value = deprecated_thing_type_ret
+        self.conn.delete_thing_type.side_effect = ClientError(error_content, 'delete_thing_type')
+        result = salt_states['boto_iot.thing_type_absent']('test', thing_type_name, **conn_parameters)
+        self.assertFalse(result['result'])
+        self.assertTrue('An error occurred' in result['comment'])
+        self.assertTrue('delete_thing_type' in result['comment'])
+        self.conn.deprecate_thing_type.assert_not_called()
+
+
 class BotoIoTPolicyTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot state.module
@@ -252,8 +374,10 @@ class BotoIoTPolicyTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
+                                       ' or equal to version {0}.  The botocore'
+                                       ' module must be greater than or equal to'
+                                       ' version {1}.'
+        .format(required_boto3_version, required_botocore_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTopicRuleTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
     '''

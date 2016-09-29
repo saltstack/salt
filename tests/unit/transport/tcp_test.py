@@ -41,6 +41,8 @@ class BaseTCPReqCase(TestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'tcp',
@@ -68,6 +70,8 @@ class BaseTCPReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.io_loop.stop()
         cls.server_thread.join()
         cls.process_manager.kill_children()

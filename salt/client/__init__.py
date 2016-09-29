@@ -22,11 +22,13 @@ The data structure needs to be:
 from __future__ import absolute_import, print_function
 import os
 import time
+import random
 import logging
 from datetime import datetime
 
 # Import salt libs
 import salt.config
+import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
@@ -113,6 +115,15 @@ class LocalClient(object):
     running as. (Unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution).
 
+    ..note::
+
+        The LocalClient uses a Tornado IOLoop, this can create issues when
+        using the LocalClient inside an existing IOLoop. If creating the
+        LocalClient in partnership with another IOLoop either create the
+        IOLoop before creating the LocalClient, or when creating the IOLoop
+        use ioloop.current() which will return the ioloop created by
+        LocalClient.
+
     .. code-block:: python
 
         import salt.client
@@ -123,7 +134,7 @@ class LocalClient(object):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None, skip_perm_errors=False,
-                 io_loop=None):
+                 io_loop=None, keep_loop=False):
         '''
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
@@ -152,7 +163,8 @@ class LocalClient(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False,
-                io_loop=io_loop)
+                io_loop=io_loop,
+                keep_loop=keep_loop)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -377,13 +389,15 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minion_ret = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
+        minions = minion_ret.keys()
+        random.shuffle(minions)
         f_tgt = []
-        for minion, ret in six.iteritems(group):
+        for minion in minions:
+            if fun in minion_ret[minion]:
+                f_tgt.append(minion)
             if len(f_tgt) >= sub:
                 break
-            if fun in ret:
-                f_tgt.append(minion)
         func = self.cmd
         if cli:
             func = self.cmd_cli
@@ -933,6 +947,8 @@ class LocalClient(object):
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     if 'retcode' in raw['data']:
                         ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
+                    if 'jid' in raw['data']:
+                        ret[raw['data']['id']]['jid'] = raw['data']['jid']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
@@ -965,7 +981,7 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
@@ -983,7 +999,14 @@ class LocalClient(object):
                 # if there are no more events, lets stop waiting for the jinfo
                 if raw is None:
                     break
-
+                try:
+                    if raw['data']['retcode'] > 0:
+                        log.error('saltutil returning errors on minion {0}'.format(raw['data']['id']))
+                        minions.remove(raw['data']['id'])
+                        break
+                except KeyError as exc:
+                    # This is a safe pass. We're just using the try/except to avoid having to deep-check for keys
+                    log.debug('Passing on saltutil error. This may be an error in saltclient. {0}'.format(exc))
                 # Keep track of the jid events to unsubscribe from later
                 open_jids.add(jinfo['jid'])
 
@@ -1162,7 +1185,7 @@ class LocalClient(object):
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         except Exception as exc:
             raise SaltClientError('Could not examine master job cache. '
-                                  'Error occured in {0} returner. '
+                                  'Error occurred in {0} returner. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'],
                                                                   exc))
         for minion in data:
@@ -1307,7 +1330,11 @@ class LocalClient(object):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    if connected_minions and id_ not in connected_minions:
+                    if self.opts['minion_data_cache'] \
+                            and salt.cache.Cache(self.opts).contains('minions/{0}'.format(id_), 'data') \
+                            and connected_minions \
+                            and id_ not in connected_minions:
+
                         yield {id_: {'out': 'no_return',
                                      'ret': 'Minion did not return. [Not connected]'}}
                     else:
@@ -1482,10 +1509,6 @@ class LocalClient(object):
                                                  master_uri=master_uri)
 
         try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(

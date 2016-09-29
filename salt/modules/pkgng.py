@@ -65,7 +65,7 @@ def __virtual__():
         return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and __grains__['osmajorrelease'] == 9:
+    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
@@ -288,6 +288,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
     jail = kwargs.get('jail')
     chroot = kwargs.get('chroot')
+    refresh = kwargs.get('refresh')
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
@@ -305,6 +306,8 @@ def latest_version(*names, **kwargs):
             cmd = _pkg(jail, chroot, root) + ['search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
+        if not salt.utils.is_true(refresh):
+            cmd.append('-U')
         cmd.append(name)
 
         pkgver = _get_version(
@@ -1062,6 +1065,14 @@ def upgrade(*names, **kwargs):
     Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
     omitted, the operation is executed on all packages.
 
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -1125,11 +1136,6 @@ def upgrade(*names, **kwargs):
 
             salt '*' pkg.upgrade <package name> dryrun=True
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     jail = kwargs.pop('jail', None)
     chroot = kwargs.pop('chroot', None)
     root = kwargs.pop('root', None)
@@ -1155,20 +1161,19 @@ def upgrade(*names, **kwargs):
     cmd.extend(names)
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 

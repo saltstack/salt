@@ -8,6 +8,7 @@ This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstaley.com>
 
 Dependencies
 ~~~~~~~~~~~~
@@ -79,18 +80,25 @@ import logging
 import time
 
 # Import Salt Libs
-from salt.exceptions import SaltSystemExit
+import salt.exceptions
 import salt.modules.cmdmod
 import salt.utils
 
 
 # Import Third Party Libs
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect
+    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
+
+try:
+    import gssapi
+    import base64
+    HAS_GSSAPI = True
+except ImportError:
+    HAS_GSSAPI = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
@@ -158,7 +166,129 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     return ret
 
 
-def get_service_instance(host, username, password, protocol=None, port=None):
+def _get_service_instance(host, username, password, protocol,
+                          port, mechanism, principal, domain):
+    '''
+    Internal method to authenticate with a vCenter server or ESX/ESXi host
+    and return the service instance object.
+    '''
+    log.trace('Retrieving new service instance')
+    token = None
+    if mechanism == 'userpass':
+        if username is None:
+            raise salt.exceptions.CommandExecutionError(
+                'Login mechanism userpass was specified but the mandatory '
+                'parameter \'username\' is missing')
+        if password is None:
+            raise salt.exceptions.CommandExecutionError(
+                'Login mechanism userpass was specified but the mandatory '
+                'parameter \'password\' is missing')
+    elif mechanism == 'sspi':
+        if principal is not None and domain is not None:
+            try:
+                token = get_gssapi_token(principal, host, domain)
+            except Exception as exc:
+                raise salt.exceptions.VMwareConnectionError(str(exc))
+        else:
+            err_msg = 'Login mechanism \'{0}\' was specified but the' \
+                      ' mandatory parameters are missing'.format(mechanism)
+            raise salt.exceptions.CommandExecutionError(err_msg)
+    else:
+        raise salt.exceptions.CommandExecutionError(
+            'Unsupported mechanism: \'{0}\''.format(mechanism))
+    try:
+        log.trace('Connecting using the \'{0}\' mechanism, with username '
+                  '\'{1}\''.format(mechanism, username))
+        service_instance = SmartConnect(
+            host=host,
+            user=username,
+            pwd=password,
+            protocol=protocol,
+            port=port,
+            b64token=token,
+            mechanism=mechanism)
+    except TypeError as exc:
+        if 'unexpected keyword argument' in exc.message:
+            log.error('Initial connect to the VMware endpoint failed with {0}'.format(exc.message))
+            log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
+            log.error('We recommend updating to that version or later.')
+            raise
+    except Exception as exc:
+
+        default_msg = 'Could not connect to host \'{0}\'. ' \
+                      'Please check the debug log for more information.'.format(host)
+
+        try:
+            if (isinstance(exc, vim.fault.HostConnectFault) and
+                '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
+               '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
+
+                import ssl
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port,
+                    sslContext=ssl._create_unverified_context(),
+                    b64token=token,
+                    mechanism=mechanism)
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.trace(exc)
+                raise salt.exceptions.VMwareConnectionError(err_msg)
+        except Exception as exc:
+            if 'certificate verify failed' in str(exc):
+                import ssl
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                try:
+                    service_instance = SmartConnect(
+                        host=host,
+                        user=username,
+                        pwd=password,
+                        protocol=protocol,
+                        port=port,
+                        sslContext=context,
+                        b64token=token,
+                        mechanism=mechanism
+                    )
+                except Exception as exc:
+                    err_msg = exc.msg if hasattr(exc, 'msg') else str(exc)
+                    log.trace(err_msg)
+                    raise salt.exceptions.VMwareConnectionError(
+                        'Could not connect to host \'{0}\': '
+                        '{1}'.format(host, err_msg))
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.trace(exc)
+                raise salt.exceptions.VMwareConnectionError(err_msg)
+    atexit.register(Disconnect, service_instance)
+    return service_instance
+
+
+def get_datastore_ref(si, datastore_name):
+    '''
+    Get a reference to a VMware datastore for the purposes of adding/removing disks
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    datastore_name
+        Name of the datastore
+
+    '''
+    inventory = get_inventory(si)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.Datastore], True)
+    for item in container.view:
+        if item.name == datastore_name:
+            return item
+    return None
+
+
+def get_service_instance(host, username=None, password=None, protocol=None,
+                         port=None, mechanism='userpass', principal=None,
+                         domain=None):
     '''
     Authenticate with a vCenter server or ESX/ESXi host and return the service instance object.
 
@@ -167,9 +297,11 @@ def get_service_instance(host, username, password, protocol=None, port=None):
 
     username
         The username used to login to the vCenter server or ESX/ESXi host.
+        Required if mechanism is ``userpass``
 
     password
         The password used to login to the vCenter server or ESX/ESXi host.
+        Required if mechanism is ``userpass``
 
     protocol
         Optionally set to alternate protocol if the vCenter server or ESX/ESXi host is not
@@ -178,7 +310,18 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the vCenter server or ESX/ESXi host is not
         using the default port. Default port is ``443``.
+
+    mechanism
+        pyVmomi connection mechanism. Can either be ``userpass`` or ``sspi``.
+        Default mechanism is ``userpass``.
+
+    principal
+        Kerberos service principal. Required if mechanism is ``sspi``
+
+    domain
+        Kerberos user domain. Required if mechanism is ``sspi``
     '''
+
     if protocol is None:
         protocol = 'https'
     if port is None:
@@ -186,72 +329,64 @@ def get_service_instance(host, username, password, protocol=None, port=None):
 
     service_instance = GetSi()
     if service_instance:
-        if service_instance._GetStub().host == ':'.join([host, str(port)]):
+        stub = GetStub()
+        if salt.utils.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
+            # Proxies will fork and mess up the cached service instance.
+            # If this is a proxy or we are connecting to a different host
+            # invalidate the service instance to avoid a potential memory leak
+            # and reconnect
+            Disconnect(service_instance)
+            service_instance = None
+        else:
             return service_instance
-        Disconnect(service_instance)
 
+    if not service_instance:
+        service_instance = _get_service_instance(host,
+                                                 username,
+                                                 password,
+                                                 protocol,
+                                                 port,
+                                                 mechanism,
+                                                 principal,
+                                                 domain)
+
+    # Test if data can actually be retrieved or connection has gone stale
+    log.trace('Checking connection is still authenticated')
     try:
-        service_instance = SmartConnect(
-            host=host,
-            user=username,
-            pwd=password,
-            protocol=protocol,
-            port=port
-        )
-    except Exception as exc:
-        default_msg = 'Could not connect to host \'{0}\'. ' \
-                      'Please check the debug log for more information.'.format(host)
-        try:
-            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
-                import ssl
-                default_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port
-                )
-                ssl._create_default_https_context = default_context
-            elif (isinstance(exc, vim.fault.HostConnectFault) and 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in exc.msg) or 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in str(exc):
-                import ssl
-                default_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port
-                )
-                ssl._create_default_https_context = default_context
-            else:
-                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-                log.debug(exc)
-                raise SaltSystemExit(err_msg)
-
-        except Exception as exc:
-            if 'certificate verify failed' in str(exc):
-                import ssl
-                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-                context.verify_mode = ssl.CERT_NONE
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port,
-                    sslContext=context
-                )
-            else:
-                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-                log.debug(exc)
-                raise SaltSystemExit(err_msg)
-
-    atexit.register(Disconnect, service_instance)
+        service_instance.CurrentTime()
+    except vim.fault.NotAuthenticated:
+        log.trace('Session no longer authenticating. Reconnecting')
+        Disconnect(service_instance)
+        service_instance = _get_service_instance(host,
+                                                 username,
+                                                 password,
+                                                 protocol,
+                                                 port,
+                                                 mechanism,
+                                                 principal,
+                                                 domain)
 
     return service_instance
+
+
+def is_connection_to_a_vcenter(service_instance):
+    '''
+    Function that returns True if the connection is made to a vCenter Server and
+    False if the connection is made to an ESXi host
+
+    service_instance
+        The Service Instance from which to obtain managed object references.
+    '''
+    api_type = service_instance.content.about.apiType
+    log.trace('api_type = {0}'.format(api_type))
+    if api_type == 'VirtualCenter':
+        return True
+    elif api_type == 'HostAgent':
+        return False
+    else:
+        raise salt.exceptions.VMwareApiError(
+            'Unexpected api type \'{0}\' . Supported types: '
+            '\'VirtualCenter/HostAgent\''.format(api_type))
 
 
 def _get_dvs(service_instance, dvs_name):
@@ -323,6 +458,40 @@ def _get_dvs_uplink_portgroup(dvs, portgroup_name):
             return portgroup
 
     return None
+
+
+def get_gssapi_token(principal, host, domain):
+    '''
+    Get the gssapi token for Kerberos connection
+
+    principal
+       The service principal
+    host
+       Host url where we would like to authenticate
+    domain
+       Kerberos user domain
+    '''
+
+    if not HAS_GSSAPI:
+        raise ImportError('The gssapi library is not imported.')
+
+    service = '{0}/{1}@{2}'.format(principal, host, domain)
+    log.debug('Retrieving gsspi token for service {0}'.format(service))
+    service_name = gssapi.Name(service, gssapi.C_NT_USER_NAME)
+    ctx = gssapi.InitContext(service_name)
+    in_token = None
+    while not ctx.established:
+        out_token = ctx.step(in_token)
+        if out_token:
+            encoded_token = base64.b64encode(out_token)
+            return encoded_token
+        if ctx.established:
+            break
+        if not in_token:
+            raise salt.exceptions.CommandExecutionError(
+                'Can\'t receive token, no response from server')
+    raise salt.exceptions.CommandExecutionError(
+        'Context established, but didn\'t receive token')
 
 
 def get_hardware_grains(service_instance):
@@ -401,7 +570,25 @@ def get_inventory(service_instance):
     return service_instance.RetrieveContent()
 
 
-def get_content(service_instance, obj_type, property_list=None, container_ref=None):
+def get_root_folder(service_instance):
+    '''
+    Returns the root folder of a vCenter.
+
+    service_instance
+        The Service Instance Object for which to obtain the root folder.
+    '''
+    try:
+        log.trace('Retrieving root folder')
+        return service_instance.RetrieveContent().rootFolder
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
+def get_content(service_instance, obj_type, property_list=None,
+                container_ref=None, traversal_spec=None,
+                local_properties=False):
     '''
     Returns the content of the specified type of object for a Service Instance.
 
@@ -421,22 +608,37 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
         An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
         ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
         rootFolder.
+
+    traversal_spec
+        An optional TraversalSpec to be used instead of the standard
+        ``Traverse All`` spec.
+
+    local_properties
+        Flag specifying whether the properties to be retrieved are local to the
+        container. If that is the case, the traversal spec needs to be None.
     '''
     # Start at the rootFolder if container starting point not specified
     if not container_ref:
         container_ref = service_instance.content.rootFolder
 
-    # Create an object view
-    obj_view = service_instance.content.viewManager.CreateContainerView(
-        container_ref, [obj_type], True)
-
-    # Create traversal spec to determine the path for collection
-    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
-        name='traverseEntities',
-        path='view',
-        skip=False,
-        type=vim.view.ContainerView
-    )
+    # By default, the object reference used as the starting poing for the filter
+    # is the container_ref passed in the function
+    obj_ref = container_ref
+    local_traversal_spec = False
+    if not traversal_spec and not local_properties:
+        local_traversal_spec = True
+        # We don't have a specific traversal spec override so we are going to
+        # get everything using a container view
+        obj_ref = service_instance.content.viewManager.CreateContainerView(
+            container_ref, [obj_type], True)
+        # Create 'Traverse All' traversal spec to determine the path for
+        # collection
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='traverseEntities',
+            path='view',
+            skip=False,
+            type=vim.view.ContainerView
+        )
 
     # Create property spec to determine properties to be retrieved
     property_spec = vmodl.query.PropertyCollector.PropertySpec(
@@ -447,9 +649,9 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
 
     # Create object spec to navigate content
     obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
-        obj=obj_view,
-        skip=True,
-        selectSet=[traversal_spec]
+        obj=obj_ref,
+        skip=True if not local_properties else False,
+        selectSet=[traversal_spec] if not local_properties else None
     )
 
     # Create a filter spec and specify object, property spec in it
@@ -463,7 +665,8 @@ def get_content(service_instance, obj_type, property_list=None, container_ref=No
     content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
 
     # Destroy the object view
-    obj_view.Destroy()
+    if local_traversal_spec:
+        obj_ref.Destroy()
 
     return content
 
@@ -499,7 +702,9 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     return None
 
 
-def get_mors_with_properties(service_instance, object_type, property_list=None, container_ref=None):
+def get_mors_with_properties(service_instance, object_type, property_list=None,
+                             container_ref=None, traversal_spec=None,
+                             local_properties=False):
     '''
     Returns a list containing properties and managed object references for the managed object.
 
@@ -516,18 +721,30 @@ def get_mors_with_properties(service_instance, object_type, property_list=None, 
         An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
         ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
         rootFolder.
+
+    traversal_spec
+        An optional TraversalSpec to be used instead of the standard
+        ``Traverse All`` spec
+
+    local_properties
+        Flag specigying whether the properties to be retrieved are local to the
+        container. If that is the case, the traversal spec needs to be None.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type, property_list=property_list, container_ref=container_ref)
+    content = get_content(service_instance, object_type,
+                          property_list=property_list,
+                          container_ref=container_ref,
+                          traversal_spec=traversal_spec,
+                          local_properties=local_properties)
 
     object_list = []
     for obj in content:
         properties = {}
         for prop in obj.propSet:
             properties[prop.name] = prop.val
-            properties['object'] = obj.obj
+        properties['object'] = obj.obj
         object_list.append(properties)
-
+    log.trace('Retrieved {0} objects'.format(len(object_list)))
     return object_list
 
 
@@ -560,7 +777,7 @@ def list_objects(service_instance, vim_object, properties=None):
     object_type
         The type of content for which to obtain information.
 
-    property_list
+    properties
         An optional list of object properties used to return reference results.
         If not provided, defaults to ``name``.
     '''
@@ -582,6 +799,27 @@ def list_datacenters(service_instance):
         The Service Instance Object from which to obtain datacenters.
     '''
     return list_objects(service_instance, vim.Datacenter)
+
+
+def get_datacenter(service_instance, datacenter_name):
+    '''
+    Returns a vim.Datacenter managed object.
+
+    service_instance
+        The Service Instance Object from which to obtain datacenter.
+
+    datacenter_name
+        The datacenter name
+    '''
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.Datacenter,
+                                      property_list=['name'])
+            if i['name'] == datacenter_name]
+    if not items:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Datacenter \'{0}\' was not found'.format(datacenter_name))
+    return items[0]
 
 
 def list_clusters(service_instance):
@@ -702,33 +940,60 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         The task to wait for.
 
     instance_name
-        The name of the ESXi host, vCenter Server, or Virtual Machine that the task is being run on.
+        The name of the ESXi host, vCenter Server, or Virtual Machine that
+        the task is being run on.
 
     task_type
         The type of task being performed. Useful information for debugging purposes.
 
     sleep_seconds
-        The number of seconds to wait before querying the task again. Defaults to ``1`` second.
+        The number of seconds to wait before querying the task again.
+        Defaults to ``1`` second.
 
     log_level
-        The level at which to log task information. Default is ``debug``, but ``info`` is also supported.
+        The level at which to log task information. Default is ``debug``,
+        but ``info`` is also supported.
     '''
     time_counter = 0
     start_time = time.time()
-    while task.info.state == 'running' or task.info.state == 'queued':
+    log.trace('task = {0}, task_type = {1}'.format(task,
+                                                   task.__class__.__name__))
+    try:
+        task_info = task.info
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    while task_info.state == 'running' or task_info.state == 'queued':
         if time_counter % sleep_seconds == 0:
-            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(instance_name, task_type, time_counter)
+            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(
+                instance_name, task_type, time_counter)
             if log_level == 'info':
                 log.info(msg)
             else:
                 log.debug(msg)
         time.sleep(1.0 - ((time.time() - start_time) % 1.0))
         time_counter += 1
-    if task.info.state == 'success':
-        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(instance_name, task_type, time_counter)
+        try:
+            task_info = task.info
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    if task_info.state == 'success':
+        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(
+            instance_name, task_type, time_counter)
         if log_level == 'info':
             log.info(msg)
         else:
             log.debug(msg)
+        # task is in a successful state
+        return task_info.result
     else:
-        raise Exception(task.info.error)
+        # task is in an error state
+        try:
+            raise task_info.error
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.fault.SystemError as exc:
+            raise salt.exceptions.VMwareSystemError(exc.msg)

@@ -57,6 +57,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import boto
+    import boto.ec2  # pylint: enable=unused-import
     # connection settings were added in 2.33.0
     required_boto_version = '2.33.0'
     if (_LooseVersion(boto.__version__) <
@@ -64,7 +65,6 @@ try:
         msg = 'boto_elb requires boto {0}.'.format(required_boto_version)
         logging.debug(msg)
         raise ImportError()
-    import boto.ec2
     from boto.ec2.elb import HealthCheck
     from boto.ec2.elb.attributes import AccessLogAttribute
     from boto.ec2.elb.attributes import ConnectionDrainingAttribute

@@ -9,6 +9,7 @@ Manage DACLs on Windows
 from __future__ import absolute_import
 import os
 import logging
+import re
 
 # TODO: Figure out the exceptions that could be raised and properly catch
 #       them instead of a bare except that catches any exception at all
@@ -38,7 +39,7 @@ __virtualname__ = 'win_dacl'
 
 class daclConstants(object):
     '''
-    dacl constants used throughout the module
+    DACL constants used throughout the module
     '''
     # Definition in ntsecuritycon is incorrect (does not match winnt.h). The version
     # in ntsecuritycon has the extra bits 0x200 enabled.
@@ -306,14 +307,34 @@ def _getUserSid(user):
     if user is None, sid will also be None
     '''
     ret = {}
-    try:
-        sid = win32security.LookupAccountName('', user)[0] if user else None
-        ret['result'] = True
-        ret['sid'] = sid
-    except Exception as e:
-        ret['result'] = False
-        ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
-            user, e)
+
+    sid_pattern = r'^S-1(-\d+){1,}$'
+
+    if user and re.match(sid_pattern, user, re.I):
+        try:
+            sid = win32security.GetBinarySid(user)
+        except Exception as e:
+            ret['result'] = False
+            ret['comment'] = 'Unable to obtain the binary security identifier for {0}.  The exception was {1}.'.format(
+                user, e)
+        else:
+            try:
+                win32security.LookupAccountSid('', sid)
+                ret['result'] = True
+                ret['sid'] = sid
+            except Exception as e:
+                ret['result'] = False
+                ret['comment'] = 'Unable to lookup the account for the security identifier {0}.  The exception was {1}.'.format(
+                    user, e)
+    else:
+        try:
+            sid = win32security.LookupAccountName('', user)[0] if user else None
+            ret['result'] = True
+            ret['sid'] = sid
+        except Exception as e:
+            ret['result'] = False
+            ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
+                user, e)
     return ret
 
 
@@ -328,7 +349,7 @@ def __virtual__():
 
 def _get_dacl(path, objectType):
     '''
-    gets the dacl of a path
+    Gets the DACL of a path
     '''
     try:
         dacl = win32security.GetNamedSecurityInfo(
@@ -341,14 +362,26 @@ def _get_dacl(path, objectType):
 
 def get(path, objectType, user=None):
     '''
-    Get the acl of an object. Will filter by user if one is provided.
+    Get the ACL of an object. Will filter by user if one is provided.
+
+    Args:
+        path: The path to the object
+        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
+        user: A user name to filter by
+
+    Returns (dict): A dictionary containing the ACL
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' win_dacl.get c:\temp directory
     '''
     ret = {'Path': path,
            'ACLs': []}
 
     sidRet = _getUserSid(user)
-    if not sidRet['result']:
-        return sidRet
+
     if path and objectType:
         dc = daclConstants()
         objectTypeBit = dc.getObjectTypeBit(objectType)
@@ -609,7 +642,18 @@ def enable_inheritance(path, objectType, clear=False):
     '''
     enable/disable inheritance on an object
 
-    clear = True will remove non-Inherited ACEs from the ACL
+    Args:
+        path: The path to the object
+        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
+        clear: True will remove non-Inherited ACEs from the ACL
+
+    Returns (dict): A dictionary containing the results
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' win_dacl.enable_inheritance c:\temp directory
     '''
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -620,9 +664,20 @@ def enable_inheritance(path, objectType, clear=False):
 
 def disable_inheritance(path, objectType, copy=True):
     '''
-    disable inheritance on an object
+    Disable inheritance on an object
 
-    copy = True will copy the Inerhited ACEs to the DACL before disabling inheritance
+    Args:
+        path: The path to the object
+        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
+        copy: True will copy the Inherited ACEs to the DACL before disabling inheritance
+
+    Returns (dict): A dictionary containing the results
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' win_dacl.disable_inheritance c:\temp directory
     '''
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -633,11 +688,20 @@ def disable_inheritance(path, objectType, copy=True):
 
 def check_inheritance(path, objectType, user=None):
     '''
-    check a specified path to verify if inheritance is enabled
-    returns 'Inheritance' of True/False
+    Check a specified path to verify if inheritance is enabled
 
-    path: path of the registry key or file system object to check
-    user: if provided, will consider only the ACEs for that user
+    Args:
+        path: path of the registry key or file system object to check
+        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
+        user: if provided, will consider only the ACEs for that user
+
+    Returns (bool): 'Inheritance' of True/False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' win_dacl.check_inheritance c:\temp directory <username>
     '''
 
     ret = {'result': False,
@@ -645,8 +709,6 @@ def check_inheritance(path, objectType, user=None):
            'comment': ''}
 
     sidRet = _getUserSid(user)
-    if not sidRet['result']:
-        return sidRet
 
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -665,23 +727,32 @@ def check_inheritance(path, objectType, user=None):
         if (ace[0][1] & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
             if not sidRet['sid'] or ace[2] == sidRet['sid']:
                 ret['Inheritance'] = True
-                return ret
+                break
+
     ret['result'] = True
     return ret
 
 
 def check_ace(path, objectType, user, permission=None, acetype=None, propagation=None, exactPermissionMatch=False):
     '''
-    checks a path to verify the ACE (access control entry) specified exists
-    returns 'Exists' true if the ACE exists, false if it does not
+    Checks a path to verify the ACE (access control entry) specified exists
 
-    path:  path to the file/reg key
-    user:  user that the ACL is for
-    permission:  permission to test for (READ, FULLCONTROl, etc)
-    acetype:  the type of ACE (ALLOW or DENY)
-    propagation:  the propagation type of the ACE (FILES, FOLDERS, KEY, KEY&SUBKEYS, SUBKEYS, etc)
-    exactPermissionMatch:  the ACL must match exactly, IE if READ is specified, the user must have READ exactly and not FULLCONTROL (which also has the READ permission obviously)
+    Args:
+        path:  path to the file/reg key
+        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
+        user:  user that the ACL is for
+        permission:  permission to test for (READ, FULLCONTROL, etc)
+        acetype:  the type of ACE (ALLOW or DENY)
+        propagation:  the propagation type of the ACE (FILES, FOLDERS, KEY, KEY&SUBKEYS, SUBKEYS, etc)
+        exactPermissionMatch:  the ACL must match exactly, IE if READ is specified, the user must have READ exactly and not FULLCONTROL (which also has the READ permission obviously)
 
+    Returns (dict): 'Exists' true if the ACE exists, false if it does not
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' win_dacl.check_ace c:\temp directory <username> fullcontrol
     '''
     ret = {'result': False,
            'Exists': False,

@@ -76,7 +76,7 @@ def _check_for_unit_changes(name):
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     '''
-    contextkey = 'systemd._check_for_unit_changes'
+    contextkey = 'systemd._check_for_unit_changes.{0}'.format(name)
     if contextkey not in __context__:
         if _untracked_custom_unit_found(name) or _unit_file_changed(name):
             systemctl_reload()
@@ -241,12 +241,17 @@ def _runlevel():
     return ret
 
 
-def _systemctl_cmd(action, name=None):
+def _systemctl_cmd(action, name=None, systemd_scope=False):
     '''
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
     '''
-    ret = ['systemctl']
+    ret = []
+    if systemd_scope \
+            and salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        ret.extend(['systemd-run', '--scope'])
+    ret.append('systemctl')
     if isinstance(action, six.string_types):
         action = shlex.split(action)
     ret.extend(action)
@@ -548,6 +553,16 @@ def missing(name):
 def unmask(name):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 
     Unmask the specified service with systemd
 
@@ -564,7 +579,7 @@ def unmask(name):
         return True
 
     cmd = 'unmask --runtime' if 'runtime' in mask_status else 'unmask'
-    out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name),
+    out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name, systemd_scope=True),
                                   python_shell=False,
                                   redirect_stderr=True)
 
@@ -577,6 +592,16 @@ def unmask(name):
 def mask(name, runtime=False):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 
     Mask the specified service with systemd
 
@@ -594,7 +619,7 @@ def mask(name, runtime=False):
     _check_for_unit_changes(name)
 
     cmd = 'mask --runtime' if runtime else 'mask'
-    out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name),
+    out = __salt__['cmd.run_all'](_systemctl_cmd(cmd, name, systemd_scope=True),
                                   python_shell=False,
                                   redirect_stderr=True)
 
@@ -636,6 +661,17 @@ def masked(name):
 
 def start(name):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Start the specified service with systemd
 
     CLI Example:
@@ -646,12 +682,24 @@ def start(name):
     '''
     _check_for_unit_changes(name)
     unmask(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('start', name),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('start', name, systemd_scope=True),
+        python_shell=False) == 0
 
 
 def stop(name):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Stop the specified service with systemd
 
     CLI Example:
@@ -661,12 +709,24 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     _check_for_unit_changes(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('stop', name),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('stop', name, systemd_scope=True),
+        python_shell=False) == 0
 
 
 def restart(name):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Restart the specified service with systemd
 
     CLI Example:
@@ -677,12 +737,24 @@ def restart(name):
     '''
     _check_for_unit_changes(name)
     unmask(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('restart', name),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('restart', name, systemd_scope=True),
+        python_shell=False) == 0
 
 
 def reload_(name):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Reload the specified service with systemd
 
     CLI Example:
@@ -693,12 +765,24 @@ def reload_(name):
     '''
     _check_for_unit_changes(name)
     unmask(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('reload', name),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('reload', name, systemd_scope=True),
+        python_shell=False) == 0
 
 
 def force_reload(name):
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     .. versionadded:: 0.12.0
 
     Force-reload the specified service with systemd
@@ -711,8 +795,9 @@ def force_reload(name):
     '''
     _check_for_unit_changes(name)
     unmask(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('force-reload', name, systemd_scope=True),
+        python_shell=False) == 0
 
 
 # The unused sig argument is required to maintain consistency with the API
@@ -738,6 +823,17 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 # established by Salt's service management states.
 def enable(name, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Enable the named service to start when the system boots
 
     CLI Example:
@@ -749,23 +845,39 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
     _check_for_unit_changes(name)
     unmask(name)
     if name in _get_sysv_services():
+        cmd = []
+        if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+            cmd.extend(['systemd-run', '--scope'])
         service_exec = _get_service_exec()
         if service_exec.endswith('/update-rc.d'):
-            cmd = [service_exec, '-f', name, 'defaults', '99']
+            cmd.extend([service_exec, '-f', name, 'defaults', '99'])
         elif service_exec.endswith('/chkconfig'):
-            cmd = [service_exec, name, 'on']
+            cmd.extend([service_exec, name, 'on'])
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0
-    return __salt__['cmd.retcode'](_systemctl_cmd('enable', name),
-                                   python_shell=False,
-                                   ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('enable', name, systemd_scope=True),
+        python_shell=False,
+        ignore_retcode=True) == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API
 # established by Salt's service management states.
 def disable(name, **kwargs):  # pylint: disable=unused-argument
     '''
+    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+        On minions running systemd>=205, `systemd-run(1)`_ is now used to
+        isolate commands run by this function from the ``salt-minion`` daemon's
+        control group. This is done to avoid a race condition in cases where
+        the ``salt-minion`` service is restarted while a service is being
+        modified. If desired, usage of `systemd-run(1)`_ can be suppressed by
+        setting a :mod:`config option <salt.modules.config.get>` called
+        ``systemd.scope``, with a value of ``False`` (no quotes).
+
+    .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
+
     Disable the named service to not start when the system boots
 
     CLI Example:
@@ -776,17 +888,22 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
     '''
     _check_for_unit_changes(name)
     if name in _get_sysv_services():
+        cmd = []
+        if salt.utils.systemd.has_scope(__context__) \
+                and __salt__['config.get']('systemd.scope', True):
+            cmd.extend(['systemd-run', '--scope'])
         service_exec = _get_service_exec()
         if service_exec.endswith('/update-rc.d'):
-            cmd = [service_exec, '-f', name, 'remove']
+            cmd.extend([service_exec, '-f', name, 'remove'])
         elif service_exec.endswith('/chkconfig'):
-            cmd = [service_exec, name, 'off']
+            cmd.extend([service_exec, name, 'off'])
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0
-    return __salt__['cmd.retcode'](_systemctl_cmd('disable', name),
-                                   python_shell=False,
-                                   ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](
+        _systemctl_cmd('disable', name, systemd_scope=True),
+        python_shell=False,
+        ignore_recode=True) == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API

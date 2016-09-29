@@ -46,7 +46,8 @@ def cache_jobs(opts, jid, ret):
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
-    salt.utils.fopen(fn_, 'w+b').write(serial.dumps(ret))
+    with salt.utils.fopen(fn_, 'w+b') as fp_:
+        fp_.write(serial.dumps(ret))
 
 
 def _read_proc_file(path, opts):

@@ -10,6 +10,7 @@ import logging
 import weakref
 import traceback
 import collections
+import copy as pycopy
 
 # Import Salt libs
 import salt.exceptions
@@ -167,7 +168,7 @@ class SyncClientMixin(object):
 
         return ret['data']['return']
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
         Execute a function
 
@@ -227,7 +228,7 @@ class SyncClientMixin(object):
         low = {'fun': fun,
                'arg': args,
                'kwarg': kwargs}
-        return self.low(fun, low)
+        return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
     def mminion(self):
@@ -235,7 +236,7 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low):
+    def low(self, fun, low, print_event=True, full_return=False):
         '''
         Check for deprecated usage and allow until Salt Oxygen.
         '''
@@ -250,17 +251,39 @@ class SyncClientMixin(object):
         if msg:
             salt.utils.warn_until('Oxygen', ' '.join(msg))
 
-        return self._low(fun, low)
+        return self._low(fun, low, print_event=print_event, full_return=full_return)
 
-    def _low(self, fun, low):
+    @property
+    def store_job(self):
+        '''
+        Helper that allows us to turn off storing jobs for different classes
+        that may incorporate this mixin.
+        '''
+        try:
+            class_name = self.__class__.__name__.lower()
+        except AttributeError:
+            log.warning(
+                'Unable to determine class name',
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return True
+
+        try:
+            return self.opts['{0}_returns'.format(class_name)]
+        except KeyError:
+            # No such option, assume this isn't one we care about gating and
+            # just return True.
+            return True
+
+    def _low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
             required:
                 - fun: the name of the function to run
             optional:
-                - args: a list of args to pass to fun
-                - kwargs: kwargs for fun
+                - arg: a list of args to pass to fun
+                - kwarg: kwargs for fun
                 - __user__: user who is running the command
                 - __jid__: jid to run under
                 - __tag__: tag to run under
@@ -275,7 +298,7 @@ class SyncClientMixin(object):
         data = {'fun': '{0}.{1}'.format(self.client, fun),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
-                }
+               }
 
         event = salt.utils.event.get_event(
                 'master',
@@ -284,13 +307,21 @@ class SyncClientMixin(object):
                 opts=self.opts,
                 listen=False)
 
+        if print_event:
+            print_func = self.print_async_event \
+                if hasattr(self, 'print_async_event') \
+                else None
+        else:
+            # Suppress printing of return event (this keeps us from printing
+            # runner/wheel output during orchestration).
+            print_func = None
+
         namespaced_event = salt.utils.event.NamespacedEvent(
             event,
             tag,
-            print_func=self.print_async_event
-                       if hasattr(self, 'print_async_event')
-                       else None
+            print_func=print_func
         )
+
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
@@ -301,16 +332,15 @@ class SyncClientMixin(object):
                         '__jid_event__': weakref.proxy(namespaced_event),
                         }
 
-        func_globals['__jid_event__'].fire_event(data, 'new')
-
         try:
-            salt.utils.lazy.verify_fun(self.functions, fun)
+            self_functions = pycopy.copy(self.functions)
+            salt.utils.lazy.verify_fun(self_functions, fun)
 
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
 
-            for mod_name in six.iterkeys(self.functions):
+            for mod_name in six.iterkeys(self_functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
@@ -338,6 +368,7 @@ class SyncClientMixin(object):
                 args = f_call.get('args', ())
             else:
                 args = low['arg']
+
             if 'kwarg' not in low:
                 if f_call is None:
                     f_call = salt.utils.format_call(
@@ -351,11 +382,19 @@ class SyncClientMixin(object):
                 # kwargs using the old mechanism
                 if kwargs:
                     salt.utils.warn_until(
-                        'Carbon',
+                        'Nitrogen',
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:
                 kwargs = low['kwarg']
+
+            # Update the event data with loaded args and kwargs
+            data['fun_args'] = args + ([kwargs] if kwargs else [])
+            func_globals['__jid_event__'].fire_event(data, 'new')
+
+            # Update the event data with loaded args and kwargs
+            data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
+            func_globals['__jid_event__'].fire_event(data, 'new')
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
@@ -366,32 +405,37 @@ class SyncClientMixin(object):
                 data['return'] = str(ex)
             else:
                 data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                                self.client,
-                                fun,
-                                traceback.format_exc(),
-                                )
+                    self.client,
+                    fun,
+                    traceback.format_exc(),
+                    )
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
-        try:
-            salt.utils.job.store_job(
-                self.opts,
-                {'id': self.opts['id'],
-                 'tgt': self.opts['id'],
-                 'jid': data['jid'],
-                 'return': data,
-                 },
-                event=None,
-                mminion=self.mminion,
-                )
-        except salt.exceptions.SaltCacheError:
-            log.error('Could not store job cache info. Job details for this run may be unavailable.')
+
+        if self.store_job:
+            try:
+                salt.utils.job.store_job(
+                    self.opts,
+                    {
+                        'id': self.opts['id'],
+                        'tgt': self.opts['id'],
+                        'jid': data['jid'],
+                        'return': data,
+                    },
+                    event=None,
+                    mminion=self.mminion,
+                    )
+            except salt.exceptions.SaltCacheError:
+                log.error('Could not store job cache info. '
+                          'Job details for this run may be unavailable.')
+
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         log.info('Runner completed: {0}'.format(data['jid']))
         del event
         del namespaced_event
-        return data['return']
+        return data if full_return else data['return']
 
     def get_docs(self, arg=None):
         '''
@@ -421,7 +465,7 @@ class AsyncClientMixin(object):
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
         '''
-        if daemonize:
+        if daemonize and not salt.utils.is_windows():
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
@@ -435,7 +479,7 @@ class AsyncClientMixin(object):
         low['__user__'] = user
         low['__tag__'] = tag
 
-        return self.low(fun, low)
+        return self.low(fun, low, full_return=False)
 
     def cmd_async(self, low):
         '''
@@ -463,12 +507,12 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN'):
+    def async(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        async_pub = self._gen_async_pub()
+        async_pub = pub if pub is not None else self._gen_async_pub()
 
         proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,

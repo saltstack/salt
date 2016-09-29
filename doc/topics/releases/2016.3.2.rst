@@ -18,13 +18,87 @@ Changes for v2016.3.1..2016.3.2
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-07-21T15:35:16Z*
+*Generated at: 2016-07-27T15:47:45Z*
 
 Statistics:
 
-- Total Merges: **173**
+- Total Merges: **198**
 
 Changes:
+
+- **PR** `#34946`_: (*anlutro*) Fix virtualenv behavior when requirements files are in subdirectories
+
+- **PR** `#34957`_: (*sjmh*) Don't fall through to checking auth entries
+
+- **PR** `#34971`_: (*cachedout*) Increase timeout for grains test
+
+- **PR** `#34951`_: (*vutny*) Fix `#34873`_
+
+- **PR** `#34935`_: (*rallytime*) Avoid UnboundLocalError in beacons module
+
+- **PR** `#34956`_: (*cachedout*) Increase all run_script timeouts to 30s
+
+- **PR** `#34933`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
+
+- **PR** `#34916`_: (*cachedout*) Master performance improvement
+
+- **PR** `#34911`_: (*cachedout*) Backport `#34906`_
+
+- **PR** `#34906`_: (*cachedout*) Set timeout for run_salt in test suite
+
+- **PR** `#34898`_: (*hrumph*) Stop multiple refreshes during call to pkg.list_upgrades
+
+- **PR** `#34915`_: (*abednarik*) Update service_rh provider to exclude XenServer >= 7.
+
+- **PR** `#34926`_: (*rallytime*) Lint `#34923`_
+
+- **PR** `#34923`_: (*eliasp*) Handle exception when no Slack API key was provided
+
+- **PR** `#34910`_: (*cachedout*) Fix grains error on proxy minions
+
+- **PR** `#34864`_: (*jmacfar*) Check for version in list of installed versions
+
+- **PR** `#34902`_: (*rallytime*) Back-port `#34878`_ to 2016.3
+
+- **PR** `#34878`_: (*abednarik*) Add VirtuozzoLinux is yumpkg enable list.
+
+- **PR** `#34901`_: (*rallytime*) Add VirtuozzoLinux to the list of enabled distros for rpm.py
+
+- **PR** `#34900`_: (*rallytime*) Add VirtuozzoLinux to enabled platforms list in rh_service.py
+
+- **PR** `#34887`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
+
+- **PR** `#34869`_: (*terminalmage*) Fail git.latest states with uncommitted changes when force_reset=False
+
+- **PR** `#34862`_: (*thatch45*) Fix salt-ssh cacheing issue
+
+- **PR** `#34859`_: (*cachedout*) Fix wheel test
+
+- **PR** `#34632`_: (*eliasp*) Try to create the log directory when not present yet
+
+- **PR** `#34854`_: (*rallytime*) Remove string_types import from state compiler
+
+- **PR** `#34865`_: (*thatch45*) This needs discussion, since this breaks SUSE
+
+- **PR** `#34858`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
+
+- **PR** `#34847`_: (*cachedout*) Add an option to skip the verification of client_acl users
+
+- **PR** `#34833`_: (*rallytime*) Back-port `#28521`_ to 2015.8
+
+- **PR** `#34828`_: (*thatch45*) Fix `#34648`_
+
+- **PR** `#34827`_: (*thatch45*) fix beacon list to include all beacons being processed
+
+- **PR** `#34823`_: (*rallytime*) Back-port `#25276`_ to 2015.8
+
+- **PR** `#34822`_: (*thatch45*) Fix salt-ssh state.high and state.low
+
+- **PR** `#28521`_: (*gongled*) SPM: packaging doesn't work in Python 2.6. Fixed.
+
+- **PR** `#25276`_: (*jacobhammons*) copy spm.1 man page during setup
+
+- **PR** `#34852`_: (*rallytime*) Skip GCE unit tests - causes test suite to hang
 
 - **PR** `#34844`_: (*vutny*) Fix getting total available memory without `psutil` installed
 
@@ -604,7 +678,7 @@ Changes:
 
 - **PR** `#33961`_: (*jacobhammons*) 2016.3.0 known issues update
 
-- **PR** `#33908`_: (*ticosax*) [boto_lambda] handle ommitted Permissions parameter
+- **PR** `#33908`_: (*ticosax*) [boto_lambda] handle omitted Permissions parameter
 
 - **PR** `#33896`_: (*DmitryKuzmenko*) Don't deep copy context dict values.
 
@@ -620,6 +694,63 @@ Changes:
 
 - **PR** `#29153`_: (*DmitryKuzmenko*) ACL limit args
 
+.. _`#25213`: https://github.com/saltstack/salt/issues/25213
+.. _`#25276`: https://github.com/saltstack/salt/pull/25276
+.. _`#26171`: https://github.com/saltstack/salt/issues/26171
+.. _`#27783`: https://github.com/saltstack/salt/issues/27783
+.. _`#28521`: https://github.com/saltstack/salt/pull/28521
+.. _`#33620`: https://github.com/saltstack/salt/issues/33620
+.. _`#34632`: https://github.com/saltstack/salt/pull/34632
+.. _`#34648`: https://github.com/saltstack/salt/issues/34648
+.. _`#34691`: https://github.com/saltstack/salt/issues/34691
+.. _`#34725`: https://github.com/saltstack/salt/issues/34725
+.. _`#34760`: https://github.com/saltstack/salt/issues/34760
+.. _`#34796`: https://github.com/saltstack/salt/issues/34796
+.. _`#34798`: https://github.com/saltstack/salt/issues/34798
+.. _`#34816`: https://github.com/saltstack/salt/issues/34816
+.. _`#34822`: https://github.com/saltstack/salt/pull/34822
+.. _`#34823`: https://github.com/saltstack/salt/pull/34823
+.. _`#34827`: https://github.com/saltstack/salt/pull/34827
+.. _`#34828`: https://github.com/saltstack/salt/pull/34828
+.. _`#34833`: https://github.com/saltstack/salt/pull/34833
+.. _`#34847`: https://github.com/saltstack/salt/pull/34847
+.. _`#34852`: https://github.com/saltstack/salt/pull/34852
+.. _`#34854`: https://github.com/saltstack/salt/pull/34854
+.. _`#34858`: https://github.com/saltstack/salt/pull/34858
+.. _`#34859`: https://github.com/saltstack/salt/pull/34859
+.. _`#34862`: https://github.com/saltstack/salt/pull/34862
+.. _`#34864`: https://github.com/saltstack/salt/pull/34864
+.. _`#34865`: https://github.com/saltstack/salt/pull/34865
+.. _`#34869`: https://github.com/saltstack/salt/pull/34869
+.. _`#34873`: https://github.com/saltstack/salt/issues/34873
+.. _`#34878`: https://github.com/saltstack/salt/pull/34878
+.. _`#34887`: https://github.com/saltstack/salt/pull/34887
+.. _`#34890`: https://github.com/saltstack/salt/issues/34890
+.. _`#34893`: https://github.com/saltstack/salt/issues/34893
+.. _`#34894`: https://github.com/saltstack/salt/pull/34894
+.. _`#34898`: https://github.com/saltstack/salt/pull/34898
+.. _`#34900`: https://github.com/saltstack/salt/pull/34900
+.. _`#34901`: https://github.com/saltstack/salt/pull/34901
+.. _`#34902`: https://github.com/saltstack/salt/pull/34902
+.. _`#34906`: https://github.com/saltstack/salt/pull/34906
+.. _`#34908`: https://github.com/saltstack/salt/issues/34908
+.. _`#34910`: https://github.com/saltstack/salt/pull/34910
+.. _`#34911`: https://github.com/saltstack/salt/pull/34911
+.. _`#34915`: https://github.com/saltstack/salt/pull/34915
+.. _`#34916`: https://github.com/saltstack/salt/pull/34916
+.. _`#34923`: https://github.com/saltstack/salt/pull/34923
+.. _`#34926`: https://github.com/saltstack/salt/pull/34926
+.. _`#34933`: https://github.com/saltstack/salt/pull/34933
+.. _`#34935`: https://github.com/saltstack/salt/pull/34935
+.. _`#34946`: https://github.com/saltstack/salt/pull/34946
+.. _`#34951`: https://github.com/saltstack/salt/pull/34951
+.. _`#34956`: https://github.com/saltstack/salt/pull/34956
+.. _`#34957`: https://github.com/saltstack/salt/pull/34957
+.. _`#34971`: https://github.com/saltstack/salt/pull/34971
+.. _`bp-25276`: https://github.com/saltstack/salt/pull/25276
+.. _`bp-28521`: https://github.com/saltstack/salt/pull/28521
+.. _`fix-34890`: https://github.com/saltstack/salt/issues/34890
+.. _`fix-34893`: https://github.com/saltstack/salt/issues/34893
 .. _`#10206`: https://github.com/saltstack/salt/issues/10206
 .. _`#10480`: https://github.com/saltstack/salt/issues/10480
 .. _`#12470`: https://github.com/saltstack/salt/issues/12470

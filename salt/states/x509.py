@@ -4,6 +4,8 @@ Manage X509 Certificates
 
 .. versionadded:: 2015.8.0
 
+:depends: M2Crypto
+
 This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
@@ -220,7 +222,7 @@ def private_key_managed(name,
         whenever a new certificiate is generated.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion.
+        When replacing an existing file, backup the old file on the minion.
         Default is False.
 
     verbose:
@@ -524,7 +526,7 @@ def crl_managed(name,
         Include expired certificates in the CRL. Default is ``False``.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion. Default is False.
+        When replacing an existing file, backup the old file on the minion. Default is False.
 
     Example:
 
@@ -625,10 +627,11 @@ def pem_managed(name,
 
     new = __salt__['x509.get_pem_entry'](text=text)
 
-    if os.path.isfile(name):
-        current = salt.utils.fopen(name).read()
-    else:
-        current = '{0} does not exist.'.format(name)
+    try:
+        with salt.utils.fopen(name) as fp_:
+            current = fp_.read()
+    except (OSError, IOError):
+        current = '{0} does not exist or is unreadable'.format(name)
 
     if new == current:
         ret['result'] = True

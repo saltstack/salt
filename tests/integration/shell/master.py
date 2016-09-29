@@ -20,6 +20,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
 import salt.utils
 
@@ -70,10 +71,6 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
                     pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
@@ -86,7 +83,7 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
 
         master = testprogram.TestDaemonSaltMaster(
             name='unknown_user',
-            config={'user': 'unknown'},
+            configs={'master': {'map': {'user': 'some_unknown_user_xyz'}}},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
@@ -99,9 +96,13 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_NOUSER',
             message='unknown user not on system',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
-        # master.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -123,9 +124,13 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_USAGE',
             message='unknown argument',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
-        # master.shutdown() should be unnecessary since the start-up should fail
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -146,7 +151,8 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
         self.assert_exit_status(
             status, 'EX_OK',
             message='correct usage',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         master.shutdown()
 

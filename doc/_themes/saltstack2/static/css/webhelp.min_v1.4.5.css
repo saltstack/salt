@@ -416,6 +416,7 @@ div.admonition p.admonition-title{font-weight:700;color:#3465a4}
 div.warning{border-color:#940000}
 div.warning p.admonition-title{color:#940000}
 div.viewcode-block:target{background-color:#f4debf;border-top:1px solid #ac9;border-bottom:1px solid #ac9}
+.footer p{text-align:left;color:#777;font-size:13px;margin:0}
 .lit-docs{list-style-type:none;margin:0}
 .lit-item{padding-bottom:2em}
 .lit-annotation,.lit-content{display:inline-block;vertical-align:top}

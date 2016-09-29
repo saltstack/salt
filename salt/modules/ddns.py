@@ -76,7 +76,7 @@ def _get_keyring(keyfile):
 
 
 def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
-             timeout=5, **kwargs):
+             timeout=5, port=53, **kwargs):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
@@ -86,7 +86,7 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
 
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
     '''
-    res = update(zone, name, ttl, 'A', ip, nameserver, timeout, replace,
+    res = update(zone, name, ttl, 'A', ip, nameserver, timeout, replace, port,
                  **kwargs)
     if res is False:
         return False
@@ -102,13 +102,14 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
         ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, timeout,
-                     replace, **kwargs)
+                     replace, port, **kwargs)
         if ptr:
             return True
     return res
 
 
-def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs):
+def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, port=53,
+                **kwargs):
     '''
     Delete the forward and reverse records for a host.
 
@@ -122,13 +123,14 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs):
     '''
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, 'A')
-    answer = dns.query.udp(request, nameserver, timeout)
+    answer = dns.query.udp(request, nameserver, timeout, port)
     try:
         ips = [i.address for i in answer.answer[0].items]
     except IndexError:
         ips = []
 
-    res = delete(zone, name, nameserver=nameserver, timeout=timeout, **kwargs)
+    res = delete(zone, name, nameserver=nameserver, timeout=timeout, port=port,
+                 **kwargs)
 
     fqdn = fqdn + '.'
     for ip in ips:
@@ -142,14 +144,14 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, **kwargs):
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
             ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
-                         timeout=timeout, **kwargs)
+                         timeout=timeout, port=port, **kwargs)
         if ptr:
             res = True
     return res
 
 
-def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1',
-           timeout=5, replace=False, **kwargs):
+def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
+           replace=False, port=53, **kwargs):
     '''
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
@@ -165,7 +167,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1',
     name = str(name)
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
-    answer = dns.query.udp(request, nameserver, timeout)
+    answer = dns.query.udp(request, nameserver, timeout, port)
 
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
@@ -189,14 +191,16 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1',
         dns_update.replace(name, ttl, rdata)
     elif not is_exist:
         dns_update.add(name, ttl, rdata)
-    answer = dns.query.udp(dns_update, nameserver, timeout)
+    else:
+        return None
+    answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
         return False
     return True
 
 
 def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
-           timeout=5, **kwargs):
+           timeout=5, port=53, **kwargs):
     '''
     Delete a DNS record.
 
@@ -210,7 +214,7 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
     fqdn = '{0}.{1}'.format(name, zone)
     request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
 
-    answer = dns.query.udp(request, nameserver, timeout)
+    answer = dns.query.udp(request, nameserver, timeout, port)
     if not answer.answer:
         return None
 
@@ -232,7 +236,7 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
     else:
         dns_update.delete(name)
 
-    answer = dns.query.udp(dns_update, nameserver, timeout)
+    answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
         return False
     return True

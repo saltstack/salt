@@ -27,7 +27,6 @@ import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
-from salt.utils.decorators import with_deprecated
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
@@ -132,10 +131,16 @@ def custom():
     return ret
 
 
-@with_deprecated(globals(), "Boron")
 def uptime():
     '''
     Return the uptime for this system.
+
+    .. versionchanged:: 2015.8.9
+        The uptime function was changed to return a dictionary of easy-to-read
+        key/value pairs containing uptime information, instead of the output
+        from a ``cmd.run`` call.
+    .. versionchanged:: carbon
+        Fall back to output of `uptime` when /proc/uptime is not available.
 
     CLI Example:
 
@@ -145,7 +150,12 @@ def uptime():
     '''
     ut_path = "/proc/uptime"
     if not os.path.exists(ut_path):
-        raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+        if __grains__['kernel'] == 'Linux':
+            raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+        elif not salt.utils.which('uptime'):
+            raise CommandExecutionError("No uptime binary available.")
+        else:
+            return __salt__['cmd.run']('uptime')
 
     ut_ret = {
         'seconds': int(float(open(ut_path).read().strip().split()[0]))
@@ -161,34 +171,6 @@ def uptime():
     ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
 
     return ut_ret
-
-
-def _uptime(human_readable=True):
-    '''
-    Return the uptime for this minion
-
-    human_readable: True
-        If ``True`` return the output provided by the system.  If ``False``
-        return the output in seconds.
-
-        .. versionadded:: 2015.8.4
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' status.uptime
-    '''
-    if human_readable:
-        return __salt__['cmd.run']('uptime')
-    else:
-        if os.path.exists('/proc/uptime'):
-            out = __salt__['cmd.run']('cat /proc/uptime').split()
-            if len(out):
-                return out[0]
-            else:
-                return 'unexpected format in /proc/uptime'
-        return 'cannot find /proc/uptime'
 
 
 def loadavg():
@@ -221,32 +203,34 @@ def cpustats():
         '''
         linux specific implementation of cpustats
         '''
-        procf = '/proc/stat'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split()
-            if comps[0] == 'cpu':
-                ret[comps[0]] = {'idle': _number(comps[4]),
-                                 'iowait': _number(comps[5]),
-                                 'irq': _number(comps[6]),
-                                 'nice': _number(comps[2]),
-                                 'softirq': _number(comps[7]),
-                                 'steal': _number(comps[8]),
-                                 'system': _number(comps[3]),
-                                 'user': _number(comps[1])}
-            elif comps[0] == 'intr':
-                ret[comps[0]] = {'total': _number(comps[1]),
-                                 'irqs': [_number(x) for x in comps[2:]]}
-            elif comps[0] == 'softirq':
-                ret[comps[0]] = {'total': _number(comps[1]),
-                                 'softirqs': [_number(x) for x in comps[2:]]}
-            else:
-                ret[comps[0]] = _number(comps[1])
+        try:
+            with salt.utils.fopen('/proc/stat', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split()
+                if comps[0] == 'cpu':
+                    ret[comps[0]] = {'idle': _number(comps[4]),
+                                     'iowait': _number(comps[5]),
+                                     'irq': _number(comps[6]),
+                                     'nice': _number(comps[2]),
+                                     'softirq': _number(comps[7]),
+                                     'steal': _number(comps[8]),
+                                     'system': _number(comps[3]),
+                                     'user': _number(comps[1])}
+                elif comps[0] == 'intr':
+                    ret[comps[0]] = {'total': _number(comps[1]),
+                                     'irqs': [_number(x) for x in comps[2:]]}
+                elif comps[0] == 'softirq':
+                    ret[comps[0]] = {'total': _number(comps[1]),
+                                     'softirqs': [_number(x) for x in comps[2:]]}
+                else:
+                    ret[comps[0]] = _number(comps[1])
         return ret
 
     def freebsd_cpustats():
@@ -309,21 +293,23 @@ def meminfo():
         '''
         linux specific implementation of meminfo
         '''
-        procf = '/proc/meminfo'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split()
-            comps[0] = comps[0].replace(':', '')
-            ret[comps[0]] = {
-                'value': comps[1],
-            }
-            if len(comps) > 2:
-                ret[comps[0]]['unit'] = comps[2]
+        try:
+            with salt.utils.fopen('/proc/meminfo', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split()
+                comps[0] = comps[0].replace(':', '')
+                ret[comps[0]] = {
+                    'value': comps[1],
+                }
+                if len(comps) > 2:
+                    ret[comps[0]]['unit'] = comps[2]
         return ret
 
     def freebsd_meminfo():
@@ -369,20 +355,22 @@ def cpuinfo():
         '''
         linux specific cpuinfo implementation
         '''
-        procf = '/proc/cpuinfo'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split(':')
-            comps[0] = comps[0].strip()
-            if comps[0] == 'flags':
-                ret[comps[0]] = comps[1].split()
-            else:
-                ret[comps[0]] = comps[1].strip()
+        try:
+            with salt.utils.fopen('/proc/cpuinfo', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split(':')
+                comps[0] = comps[0].strip()
+                if comps[0] == 'flags':
+                    ret[comps[0]] = comps[1].split()
+                else:
+                    ret[comps[0]] = comps[1].strip()
         return ret
 
     def bsd_cpuinfo():
@@ -493,29 +481,33 @@ def diskstats():
         '''
         linux specific implementation of diskstats
         '''
-        procf = '/proc/diskstats'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split()
-            ret[comps[2]] = {'major': _number(comps[0]),
-                             'minor': _number(comps[1]),
-                             'device': _number(comps[2]),
-                             'reads_issued': _number(comps[3]),
-                             'reads_merged': _number(comps[4]),
-                             'sectors_read': _number(comps[5]),
-                             'ms_spent_reading': _number(comps[6]),
-                             'writes_completed': _number(comps[7]),
-                             'writes_merged': _number(comps[8]),
-                             'sectors_written': _number(comps[9]),
-                             'ms_spent_writing': _number(comps[10]),
-                             'io_in_progress': _number(comps[11]),
-                             'ms_spent_in_io': _number(comps[12]),
-                             'weighted_ms_spent_in_io': _number(comps[13])}
+        try:
+            with salt.utils.fopen('/proc/diskstats', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split()
+                ret[comps[2]] = {
+                    'major': _number(comps[0]),
+                    'minor': _number(comps[1]),
+                    'device': _number(comps[2]),
+                    'reads_issued': _number(comps[3]),
+                    'reads_merged': _number(comps[4]),
+                    'sectors_read': _number(comps[5]),
+                    'ms_spent_reading': _number(comps[6]),
+                    'writes_completed': _number(comps[7]),
+                    'writes_merged': _number(comps[8]),
+                    'sectors_written': _number(comps[9]),
+                    'ms_spent_writing': _number(comps[10]),
+                    'io_in_progress': _number(comps[11]),
+                    'ms_spent_in_io': _number(comps[12]),
+                    'weighted_ms_spent_in_io': _number(comps[13])
+                }
         return ret
 
     def generic_diskstats():
@@ -584,10 +576,11 @@ def diskusage(*args):
         )
         # ifile source of data varies with OS, otherwise all the same
         if __grains__['kernel'] == 'Linux':
-            procf = '/proc/mounts'
-            if not os.path.isfile(procf):
+            try:
+                with salt.utils.fopen('/proc/mounts', 'r') as fp_:
+                    ifile = fp_.read().splitlines()
+            except OSError:
                 return {}
-            ifile = salt.utils.fopen(procf, 'r').readlines()
         elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
             ifile = __salt__['cmd.run']('mount -p').splitlines()
         else:
@@ -634,16 +627,18 @@ def vmstats():
         '''
         linux specific implementation of vmstats
         '''
-        procf = '/proc/vmstat'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split()
-            ret[comps[0]] = _number(comps[1])
+        try:
+            with salt.utils.fopen('/proc/vmstat', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split()
+                ret[comps[0]] = _number(comps[1])
         return ret
 
     def generic_vmstats():
@@ -699,28 +694,30 @@ def netstats():
         '''
         freebsd specific netstats implementation
         '''
-        procf = '/proc/net/netstat'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        headers = ['']
-        for line in stats:
-            if not line:
-                continue
-            comps = line.split()
-            if comps[0] == headers[0]:
-                index = len(headers) - 1
-                row = {}
-                for field in range(index):
-                    if field < 1:
-                        continue
-                    else:
-                        row[headers[field]] = _number(comps[field])
-                rowname = headers[0].replace(':', '')
-                ret[rowname] = row
-            else:
-                headers = comps
+        try:
+            with salt.utils.fopen('/proc/net/netstat', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            headers = ['']
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                comps = line.split()
+                if comps[0] == headers[0]:
+                    index = len(headers) - 1
+                    row = {}
+                    for field in range(index):
+                        if field < 1:
+                            continue
+                        else:
+                            row[headers[field]] = _number(comps[field])
+                    rowname = headers[0].replace(':', '')
+                    ret[rowname] = row
+                else:
+                    headers = comps
         return ret
 
     def freebsd_netstats():
@@ -786,38 +783,40 @@ def netdev():
         '''
         linux specific implementation of netdev
         '''
-        procf = '/proc/net/dev'
-        if not os.path.isfile(procf):
-            return {}
-        stats = salt.utils.fopen(procf, 'r').read().splitlines()
         ret = {}
-        for line in stats:
-            if not line:
-                continue
-            if line.find(':') < 0:
-                continue
-            comps = line.split()
-            # Fix lines like eth0:9999..'
-            comps[0] = line.split(':')[0].strip()
-            # Support lines both like eth0:999 and eth0: 9999
-            comps.insert(1, line.split(':')[1].strip().split()[0])
-            ret[comps[0]] = {'iface': comps[0],
-                             'rx_bytes': _number(comps[1]),
-                             'rx_compressed': _number(comps[7]),
-                             'rx_drop': _number(comps[4]),
-                             'rx_errs': _number(comps[3]),
-                             'rx_fifo': _number(comps[5]),
-                             'rx_frame': _number(comps[6]),
-                             'rx_multicast': _number(comps[8]),
-                             'rx_packets': _number(comps[2]),
-                             'tx_bytes': _number(comps[9]),
-                             'tx_carrier': _number(comps[15]),
-                             'tx_colls': _number(comps[14]),
-                             'tx_compressed': _number(comps[16]),
-                             'tx_drop': _number(comps[12]),
-                             'tx_errs': _number(comps[11]),
-                             'tx_fifo': _number(comps[13]),
-                             'tx_packets': _number(comps[10])}
+        try:
+            with salt.utils.fopen('/proc/net/dev', 'r') as fp_:
+                stats = fp_.read()
+        except IOError:
+            pass
+        else:
+            for line in stats.splitlines():
+                if not line:
+                    continue
+                if line.find(':') < 0:
+                    continue
+                comps = line.split()
+                # Fix lines like eth0:9999..'
+                comps[0] = line.split(':')[0].strip()
+                # Support lines both like eth0:999 and eth0: 9999
+                comps.insert(1, line.split(':')[1].strip().split()[0])
+                ret[comps[0]] = {'iface': comps[0],
+                                 'rx_bytes': _number(comps[1]),
+                                 'rx_compressed': _number(comps[7]),
+                                 'rx_drop': _number(comps[4]),
+                                 'rx_errs': _number(comps[3]),
+                                 'rx_fifo': _number(comps[5]),
+                                 'rx_frame': _number(comps[6]),
+                                 'rx_multicast': _number(comps[8]),
+                                 'rx_packets': _number(comps[2]),
+                                 'tx_bytes': _number(comps[9]),
+                                 'tx_carrier': _number(comps[15]),
+                                 'tx_colls': _number(comps[14]),
+                                 'tx_compressed': _number(comps[16]),
+                                 'tx_drop': _number(comps[12]),
+                                 'tx_errs': _number(comps[11]),
+                                 'tx_fifo': _number(comps[13]),
+                                 'tx_packets': _number(comps[10])}
         return ret
 
     def freebsd_netdev():
@@ -928,7 +927,7 @@ def all_status():
             'meminfo': meminfo(),
             'netdev': netdev(),
             'netstats': netstats(),
-            'uptime': uptime() if not __grains__['kernel'] == 'SunOS' else _uptime(),
+            'uptime': uptime(),
             'vmstats': vmstats(),
             'w': w()}
 
@@ -976,10 +975,11 @@ def version():
         '''
         linux specific implementation of version
         '''
-        procf = '/proc/version'
-        if not os.path.isfile(procf):
+        try:
+            with salt.utils.fopen('/proc/version', 'r') as fp_:
+                return fp_.read().strip()
+        except IOError:
             return {}
-        return salt.utils.fopen(procf, 'r').read().strip()
 
     # dict that returns a function that does the right thing per platform
     get_version = {
@@ -995,10 +995,10 @@ def master(master=None, connected=True):
     '''
     .. versionadded:: 2014.7.0
 
-    Fire an event if the minion gets disconnected from its master. This
-    function is meant to be run via a scheduled job from the minion. If
-    master_ip is an FQDN/Hostname, it must be resolvable to a valid IPv4
-    address.
+    Return the connection status with master. Fire an event if the
+    connection to master is not as expected. This function is meant to be
+    run via a scheduled job from the minion. If master_ip is an FQDN/Hostname,
+    it must be resolvable to a valid IPv4 address.
 
     CLI Example:
 
@@ -1023,22 +1023,23 @@ def master(master=None, connected=True):
             master_ip = tmp_ip
 
     ips = _remote_port_tcp(port)
+    master_connection_status = master_ip in ips
 
-    if connected:
-        if master_ip not in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_disconnected')
-    else:
-        if master_ip in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_connected')
+    if master_connection_status is not connected:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        if master_connection_status:
+            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+        else:
+            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+
+    return master_connection_status
 
 
 def ping_master(master):
     '''
     .. versionadded:: 2016.3.0
 
-    Sends ping request to the given master. Fires '__master_alive' event on success.
+    Sends ping request to the given master. Fires '__master_failback' event on success.
     Returns bool result.
 
     CLI Example:
@@ -1073,7 +1074,7 @@ def ping_master(master):
 
     if result:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, '__master_failback')
+        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
 

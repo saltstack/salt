@@ -45,6 +45,9 @@ When only using the OS X system's pip, install this way:
 
 Salt-Master Customizations
 ==========================
+.. note::
+    Salt master on OS X is not tested or supported by SaltStack. See `SaltStack Platform Support <https://saltstack.com/product-support-lifecycle/>`_ for more information.
+
 To run salt-master on OS X, sudo add this configuration option to the /etc/salt/master file:
 
 .. code-block:: bash

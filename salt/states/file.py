@@ -267,6 +267,7 @@ from datetime import datetime   # python3 problem in the making?
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
@@ -435,7 +436,7 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
+                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1117,6 +1118,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
             contents_newline=True,
@@ -1268,9 +1270,15 @@ def managed(name,
             incompatible with the ``contents`` options.
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     makedirs : False
         If set to ``True``, then the parent directories will be created to
@@ -1465,6 +1473,27 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_ext
+        provide extention for temp file created by check_cmd
+        useful for checkers dependant on config file extention
+        for example it should be useful for init-checkconf upstart config checker
+        by default it is empty
+        .. code-block:: yaml
+
+            /etc/init/test.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - tmp_ext: '.conf'
+                - contents:
+                  - 'description "Salt Minion"''
+                  - 'start on started mountall'
+                  - 'stop on shutdown'
+                  - 'respawn'
+                  - 'exec salt-minion'
+                - check_cmd: init-checkconf -f
+
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
@@ -1514,10 +1543,10 @@ def managed(name,
             '\'source\' cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
-    elif (mode or keep_mode) and contents_count > 0:
+    elif keep_mode and contents_count > 0:
         return _error(
             ret,
-            'Mode management cannot be used in combination with \'contents\', '
+            'Mode preservation cannot be used in combination with \'contents\', '
             '\'contents_pillar\', or \'contents_grains\''
         )
     elif contents_count > 1:
@@ -1693,29 +1722,29 @@ def managed(name,
         if not context:
             context = {}
         context['accumulator'] = accum_data[name]
-    if 'file.check_managed_changes' in __salt__:
-        ret['pchanges'] = __salt__['file.check_managed_changes'](
-            name,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            template,
-            context,
-            defaults,
-            __env__,
-            contents,
-            skip_verify,
-            keep_mode,
-            **kwargs
-        )
-    else:
-        ret['pchanges'] = {}
 
     try:
         if __opts__['test']:
-            if ret['pchanges']:
+            if 'file.check_managed_changes' in __salt__:
+                ret['pchanges'] = __salt__['file.check_managed_changes'](
+                    name,
+                    source,
+                    source_hash,
+                    user,
+                    group,
+                    mode,
+                    template,
+                    context,
+                    defaults,
+                    __env__,
+                    contents,
+                    skip_verify,
+                    keep_mode,
+                    **kwargs
+                )
+            if isinstance(ret['pchanges'], tuple):
+                ret['result'], ret['comment'] = ret['pchanges']
+            elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
                 if show_changes and 'diff' in ret['pchanges']:
@@ -1763,7 +1792,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()
+        tmp_filename = salt.utils.mkstemp()+tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2349,13 +2378,19 @@ def recurse(name,
             This option is **not** supported on Windows.
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file. Supported templates are:
-        `jinja`, `mako` and `wempy`.
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
 
-    .. note::
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
-        The template option is required when recursively applying templates.
+        .. note::
+
+            The template option is required when recursively applying templates.
 
     context
         Overrides default context variables passed to the template.
@@ -2519,8 +2554,7 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         if not __opts__['test']:
-            __salt__['file.makedirs_perms'](
-                name, user, group, int(str(dir_mode), 8) if dir_mode else None)
+            __salt__['file.makedirs_perms'](name, user, group, dir_mode)
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
@@ -2588,7 +2622,7 @@ def recurse(name,
                 merge_ret(path, _ret)
                 return
             else:
-                os.remove(path)
+                __salt__['file.remove'](path)
                 _ret['changes'] = {'diff': 'Replaced file with a directory'}
                 merge_ret(path, _ret)
 
@@ -2833,7 +2867,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     def get_file_time_from_strptime(f):
         try:
             ts = datetime.strptime(f, strptime_format)
-            ts_epoch = (ts - beginning_of_unix_time).total_seconds()
+            ts_epoch = salt.utils.total_seconds(ts - beginning_of_unix_time)
             return (ts, ts_epoch)
         except ValueError:
             # Files which don't match the pattern are not relevant files.
@@ -3373,9 +3407,15 @@ def blockreplace(
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
 
     template
-        If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        The named templating engine will be used to render the downloaded file.
+        Defaults to ``jinja``. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     context
         Overrides default context variables passed to the template.
@@ -3827,9 +3867,16 @@ def append(name,
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
-    template : ``jinja``
-        The named templating engine will be used to render the appended-to
-        file. Defaults to jinja.
+    template
+        The named templating engine will be used to render the appended-to file.
+        Defaults to ``jinja``. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
 
     sources
         A list of source files to append. If the files are hosted on an HTTP or
@@ -3946,8 +3993,7 @@ def append(name,
     text = _validate_str_list(text)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
-        slines = [item.rstrip() for item in slines]
+        slines = fp_.read().splitlines()
 
     append_lines = []
     try:
@@ -3995,8 +4041,7 @@ def append(name,
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
     with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
-        nlines = [item.rstrip(os.linesep) for item in nlines]
+        nlines = fp_.read().splitlines()
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -4906,6 +4951,11 @@ def serialize(name,
 
     name = os.path.expanduser(name)
 
+    default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
+                              'json.serialize': {'indent': 2,
+                                       'separators': (',', ': '),
+                                       'sort_keys': True}
+                              }
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -4965,15 +5015,13 @@ def serialize(name,
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
-                merged_data = existing_data.copy()
-                merged_data.update(dataset)
+                merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
                 if existing_data == merged_data:
                     ret['result'] = True
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-
-    contents = __serializers__[serializer_name](dataset)
+    contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
 
     contents += '\n'
 

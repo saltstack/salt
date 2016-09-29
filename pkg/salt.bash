@@ -8,7 +8,6 @@
 # TODO: --compound[tab] -- how?
 # TODO: use history to extract some words, esp. if ${cur} is empty
 # TODO: TEST EVERYTHING a lot
-# TODO: cache results of some functions?  where? how long?
 # TODO: is it ok to use '--timeout 2' ?
 
 
@@ -16,7 +15,7 @@ _salt_get_grains(){
     if [ "$1" = 'local' ] ; then
         salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --hide-timeout --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
@@ -24,12 +23,25 @@ _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
         salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt '*' --timeout 2 --hide-timeout --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
+_salt_get_keys(){
+    for type in $*; do
+      # remove header from data:
+      salt-key --no-color -l $type | tail -n+2
+    done
+}
 
 _salt(){
+    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:='~/.cache/salt-comp-cache_functions'}
+    local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:='last hour'}
+
+    if [ ! -d "$(dirname ${_salt_cache_functions})" ]; then
+        mkdir -p "$(dirname ${_salt_cache_functions})"
+    fi
+
     local cur prev opts _salt_grains _salt_coms pprev ppprev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -86,11 +98,11 @@ _salt(){
         return 0
         ;;
      salt)
-        COMPREPLY=($(compgen -W "\'*\' ${opts} `salt-key --no-color -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "\'*\' ${opts} $(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -E|--pcre)
-        COMPREPLY=($(compgen -W "`salt-key --no-color -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -G|--grain|--grain-pcre)
@@ -116,7 +128,23 @@ _salt(){
      ;;
     esac
 
-    _salt_coms="$(salt '*' --timeout 2 --out=txt -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
+    # Regenerate cache if timed out
+    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
+        # salt: get all functions on all minions
+        # sed: remove all array overhead and convert to newline separated list
+        # sort: chop out doubled entries, so overhead is minimal later during actual completion
+        salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
+          | sort -u \
+          > "${_salt_cache_functions}"
+    fi
+
+    # filter results, to only print the part to next dot (or end of function)
+    _salt_coms="$(sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u)"
+
+    # If there are still dots in the suggestion, do not append space
+    grep "^${cur}.*\." "${_salt_cache_functions}" &>/dev/null && compopt -o nospace
+
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
 
@@ -158,15 +186,15 @@ _saltkey(){
 
     case "${prev}" in
      -a|--accept)
-        COMPREPLY=($(compgen -W "$(salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys un rej)" -- ${cur}))
         return 0
       ;;
      -r|--reject)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
         return 0
         ;;
      -d|--delete)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc un rej)" -- ${cur}))
         return 0
         ;;
      -c|--config)
@@ -185,7 +213,7 @@ _saltkey(){
         return 0
         ;;
      -p|--print)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(_salt_get_keys acc un rej)" -- ${cur}))
         return 0
      ;;
      -l|--list)
@@ -280,7 +308,7 @@ _saltcp(){
 
     case ${prev} in
  	salt-cp)
-	    COMPREPLY=($(compgen -W "${opts} `salt-key -l acc --no-color`" -- ${cur}))
+	    COMPREPLY=($(compgen -W "${opts} $(_salt_get_keys acc)" -- ${cur}))
 	    return 0
 	;;
         -t|--timeout)
@@ -289,7 +317,7 @@ _saltcp(){
 	    return 0
         ;;
 	-E|--pcre)
-            COMPREPLY=($(compgen -W "`salt-key -l acc --no-color`" -- ${cur}))
+            COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
             return 0
 	;;
 	-L|--list)
@@ -297,7 +325,7 @@ _saltcp(){
 	    prefpart="${cur%,*},"
 	    postpart=${cur##*,}
 	    filt="^\($(echo ${cur}| sed 's:,:\\|:g')\)$"
-            helper=($(salt-key -l acc --no-color | grep -v "${filt}" | sed "s/^/${prefpart}/"))
+            helper=($(_salt_get_keys acc | grep -v "${filt}" | sed "s/^/${prefpart}/"))
 	    COMPREPLY=($(compgen -W "${helper[*]}" -- ${cur}))
 
 	    return 0

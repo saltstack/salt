@@ -220,7 +220,6 @@ def installed(name,
               pkgs=None,
               pip_bin=None,
               requirements=None,
-              env=None,
               bin_env=None,
               use_wheel=False,
               no_use_wheel=False,
@@ -251,7 +250,6 @@ def installed(name,
               user=None,
               no_chown=False,
               cwd=None,
-              activate=False,
               pre_releases=False,
               cert=None,
               allow_all_external=False,
@@ -374,14 +372,6 @@ def installed(name,
     cwd
         Current working directory to run pip from
 
-    activate
-        Activates the virtual environment, if given via bin_env,
-        before running install.
-
-        .. deprecated:: 2014.7.2
-            If `bin_env` is given, pip will already be sourced from that
-            virtualenv, making `activate` effectively a noop.
-
     pre_releases
         Include pre-releases in the available versions
 
@@ -459,9 +449,6 @@ def installed(name,
     pip_bin : None
         Deprecated, use ``bin_env``
 
-    env : None
-        Deprecated, use ``bin_env``
-
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
 
@@ -524,8 +511,6 @@ def installed(name,
 
     if pip_bin and not bin_env:
         bin_env = pip_bin
-    elif env and not bin_env:
-        bin_env = env
 
     # If pkgs is present, ignore name
     if pkgs:
@@ -709,7 +694,6 @@ def installed(name,
         user=user,
         no_chown=no_chown,
         cwd=cwd,
-        activate=activate,
         pre_releases=pre_releases,
         cert=cert,
         allow_all_external=allow_all_external,

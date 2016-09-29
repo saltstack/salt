@@ -10,9 +10,8 @@ to the correct service manager
     <module-provider-override>`.
 '''
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -31,6 +30,8 @@ def __virtual__():
     Only work on systems which default to OpenRC
     '''
     if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+        return __virtualname__
+    if __grains__['os'] == 'Alpine':
         return __virtualname__
     return (False, 'The gentoo_service execution module cannot be loaded: '
             'only available on Gentoo/Open-RC systems.')

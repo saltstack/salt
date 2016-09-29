@@ -19,6 +19,13 @@ Module to provide Postgres compatibility to salt.
 
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
+
+:note: When installing postgres from the official postgres repos, on certain
+    linux distributions, either the psql or the initdb binary is *not*
+    automatically placed on the path. Add a configuration to the location
+    of the postgres bin's path to the relevant minion for this module::
+
+        postgres.pg_bin: '/usr/pgsql-9.5/bin/'
 '''
 
 # This pylint error is popping up where there are no colons?
@@ -103,13 +110,31 @@ _PRIVILEGE_TYPE_MAP = {
 
 def __virtual__():
     '''
-    Only load this module if the psql bin exists
+    Only load this module if the psql and initdb bin exist
     '''
-    if all((salt.utils.which('psql'), HAS_CSV)):
-        return True
-    return (False, 'The postgres execution module failed to load: '
-        'either the psql or initdb binary are not in the path or '
-        'the csv library is not available')
+    utils = ['psql', 'initdb']
+    if not HAS_CSV:
+        return False
+    for util in utils:
+        if not salt.utils.which(util):
+            if not _find_pg_binary(util):
+                return (False, '{0} was not found'.format(util))
+    return True
+
+
+def _find_pg_binary(util):
+    '''
+    ... versionadded::  2016.3.2
+
+    Helper function to locate various psql related binaries
+    '''
+    pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
+    util_bin = salt.utils.which(util)
+    if not util_bin:
+        if pg_bin_dir:
+            return os.path.join(pg_bin_dir, util)
+    else:
+        return util_bin
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -182,9 +207,9 @@ def _run_initdb(name,
 
     if user is None:
         user = runas
-
+    _INITDB_BIN = _find_pg_binary('initdb')
     cmd = [
-        salt.utils.which('initdb'),
+        _INITDB_BIN,
         '--pgdata={0}'.format(name),
         '--username={0}'.format(user),
         '--auth={0}'.format(auth),
@@ -302,8 +327,8 @@ def _psql_cmd(*args, **kwargs):
         kwargs.get('port'),
         kwargs.get('maintenance_db'),
         kwargs.get('password'))
-
-    cmd = [salt.utils.which('psql'),
+    _PSQL_BIN = _find_pg_binary('psql')
+    cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
            '--no-password']  # It is never acceptable to issue a password prompt.
@@ -667,7 +692,7 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
         owner_query = 'OWNER "{0}"'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
-        optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
+        optionstext = ['{0} = {1}'.format(k, v) for k, v in six.iteritems(options)]
         options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
     query = 'CREATE TABLESPACE "{0}" {1} LOCATION \'{2}\' {3}'.format(name,
@@ -2875,22 +2900,31 @@ def privileges_grant(name,
     _grants = ','.join(_privs)
 
     if object_type in ['table', 'sequence']:
-        on_part = '{0}.{1}'.format(prepend, object_name)
+        on_part = '{0}."{1}"'.format(prepend, object_name)
     else:
-        on_part = object_name
+        on_part = '"{0}"'.format(object_name)
 
     if grant_option:
         if object_type == 'group':
-            query = 'GRANT {0} TO {1} WITH ADMIN OPTION'.format(
+            query = 'GRANT {0} TO "{1}" WITH ADMIN OPTION'.format(
                 object_name, name)
+        elif (object_type in ('table', 'sequence') and
+                object_name.upper() == 'ALL'):
+            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO ' \
+                    '"{3}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name)
         else:
-            query = 'GRANT {0} ON {1} {2} TO {3} WITH GRANT OPTION'.format(
+            query = 'GRANT {0} ON {1} {2} TO "{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), on_part, name)
     else:
         if object_type == 'group':
-            query = 'GRANT {0} TO {1}'.format(object_name, name)
+            query = 'GRANT {0} TO "{1}"'.format(object_name, name)
+        elif (object_type in ('table', 'sequence') and
+                object_name.upper() == 'ALL'):
+            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO "{3}"'.format(
+                _grants, object_type.upper(), prepend, name)
         else:
-            query = 'GRANT {0} ON {1} {2} TO {3}'.format(
+            query = 'GRANT {0} ON {1} {2} TO "{3}"'.format(
                 _grants, object_type.upper(), on_part, name)
 
     ret = _psql_prepare_and_run(['-c', query],
@@ -3053,10 +3087,6 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
-    if salt.utils.which('initdb') is None:
-        log.error('initdb not found in path')
-        return False
-
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False

@@ -34,10 +34,16 @@ class VirtKey(object):
         Accept the provided key
         '''
         try:
-            expiry = int(salt.utils.fopen(self.path, 'r').read())
-        except IOError:
-            log.error('Request to sign key for minion "{0}" on hyper "{1}" denied: '
-                        'no authorization'.format(self.id, self.hyper))
+            with salt.utils.fopen(self.path, 'r') as fp_:
+                expiry = int(fp_.read())
+        except (OSError, IOError):
+            log.error(
+                'Request to sign key for minion \'%s\' on hyper \'%s\' '
+                'denied: no authorization', self.id, self.hyper
+            )
+            return False
+        except ValueError:
+            log.error('Invalid expiry data in %s', self.path)
             return False
 
         # Limit acceptance window to 10 minutes

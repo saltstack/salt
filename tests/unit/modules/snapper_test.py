@@ -6,19 +6,26 @@ Unit tests for the Snapper module
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 '''
 
+# Import Python libs
 from __future__ import absolute_import
+import sys
 
-from salttesting import TestCase
+# Import Salt Testing libs
+from salttesting import TestCase, skipIf
 from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
     MagicMock,
     patch,
     mock_open,
 )
-
-from salt.exceptions import CommandExecutionError
 from salttesting.helpers import ensure_in_syspath
+
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 from salt.modules import snapper
 
 # Globals
@@ -123,6 +130,13 @@ MODULE_RET = {
                     "@@ -0,0 +1 @@\n"
                     "+another foobar",
         },
+        '/tmp/foo26': {
+            'comment': 'text file created',
+            'diff': "--- /.snapshots/55/snapshot/tmp/foo2 \n"
+                    "+++ /tmp/foo2 \n"
+                    "@@ -1,0 +1,1 @@\n"
+                    "+another foobar",
+        },
         '/tmp/foo3': {
             'comment': 'binary file changed',
             'old_sha256_digest': 'e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b',
@@ -132,6 +146,7 @@ MODULE_RET = {
 }
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase):
     def setUp(self):
         self.dbus_mock = MagicMock()
@@ -220,10 +235,16 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper.snapper.GetComparison', MagicMock())
     @patch('salt.modules.snapper.snapper.GetFiles', MagicMock(return_value=DBUS_RET['GetFiles']))
     def test_status(self):
-        self.assertItemsEqual(snapper.status(), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
-        self.assertItemsEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
+        if six.PY3:
+            self.assertCountEqual(snapper.status(), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
+            self.assertCountEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
+        else:
+            self.assertItemsEqual(snapper.status(), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_pre="42", num_post=43), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_pre=42), MODULE_RET['GETFILES'])
+            self.assertItemsEqual(snapper.status(num_post=43), MODULE_RET['GETFILES'])
 
     @patch('salt.modules.snapper.status', MagicMock(return_value=MODULE_RET['GETFILES']))
     def test_changed_files(self):
@@ -268,7 +289,10 @@ class SnapperTestCase(TestCase):
     @patch('os.path.isfile', MagicMock(side_effect=[False, True]))
     @patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']))
     def test_diff_text_file(self):
-        self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
+        if sys.version_info < (2, 7):
+            self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
+        else:
+            self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
 
     @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(55, 0)))
     @patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(
@@ -278,6 +302,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True]))
     @patch('os.path.isdir', MagicMock(return_value=False))
+    @skipIf(sys.version_info < (2, 7), 'Python 2.7 required to compare diff properly')
     def test_diff_text_files(self):
         fopen_effect = [
             mock_open(read_data=FILE_CONTENT["/tmp/foo"]['pre']).return_value,

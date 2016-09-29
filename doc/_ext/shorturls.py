@@ -15,7 +15,7 @@ def write_urls_index(app, exc):
     inventory = os.path.join(app.builder.outdir, 'objects.inv')
     objects = sphinx.ext.intersphinx.fetch_inventory(app, DOCS_URL, inventory)
 
-    with open(os.path.join(app.builder.outdir, 'shorturls.json'), 'wb') as f:
+    with open(os.path.join(app.builder.outdir, 'shorturls.json'), 'w') as f:
         json.dump(objects, f)
 
 def setup(app):

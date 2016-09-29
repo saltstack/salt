@@ -182,7 +182,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
     if source is not None:
         src = '-Source {0}'.format(source)
 
-    cmd = '{0} -Name {1} {2} {3} {4} {5}' \
+    cmd = '{0} -Name {1} {2} {3} {4} {5} ' \
           '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue'.format(command,
                                                    _cmd_quote(feature),

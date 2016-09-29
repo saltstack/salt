@@ -60,10 +60,16 @@ import salt.version
 import salt.utils
 import salt.utils.process
 import salt.log.setup as salt_log_setup
+from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
+
+try:
+    from shlex import quote as _quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote
 
 try:
     import salt.master
@@ -75,6 +81,7 @@ except ImportError:
 import yaml
 import msgpack
 import salt.ext.six as six
+from salt.ext.six.moves import cStringIO
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
@@ -84,14 +91,109 @@ except ImportError:
 if salt.utils.is_windows():
     import win32api
 
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
 from tornado import gen
 from tornado import ioloop
 
+try:
+    from salttesting.helpers import terminate_process_pid
+except ImportError:
+    # Once the latest salt-testing works against salt's develop branch
+    # uncomment the following 2 lines and delete the function defined
+    # in this except
+    #print('Please upgrade your version of salt-testing')
+    #sys.exit(1)
+
+    import psutil
+
+    def terminate_process_pid(pid, only_children=False):
+        children = []
+        process = None
+
+        # Let's begin the shutdown routines
+        if sys.platform.startswith('win'):
+            sigint = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
+            sigint_name = 'CTRL_BREAK_EVENT'
+        else:
+            sigint = signal.SIGINT
+            sigint_name = 'SIGINT'
+
+        try:
+            process = psutil.Process(pid)
+            if hasattr(process, 'children'):
+                children = process.children(recursive=True)
+        except psutil.NoSuchProcess:
+            log.info('No process with the PID %s was found running', pid)
+
+        if process and only_children is False:
+            try:
+                cmdline = process.cmdline()
+            except psutil.AccessDenied:
+                # OSX denies us access to the above information
+                cmdline = None
+            if not cmdline:
+                try:
+                    cmdline = process.as_dict()
+                except psutil.NoSuchProcess as exc:
+                    log.debug('No such process found. Stacktrace: {0}'.format(exc))
+            log.info('Sending %s to process: %s', sigint_name, cmdline)
+            process.send_signal(sigint)
+            try:
+                process.wait(timeout=10)
+            except psutil.TimeoutExpired:
+                pass
+
+            if psutil.pid_exists(pid):
+                log.info('Terminating process: %s', cmdline)
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except psutil.TimeoutExpired:
+                    pass
+
+            if psutil.pid_exists(pid):
+                log.warning('Killing process: %s', cmdline)
+                process.kill()
+
+            if psutil.pid_exists(pid):
+                log.warning('Process left behind which we were unable to kill: %s', cmdline)
+        if children:
+            # Lets log and kill any child processes which salt left behind
+            def kill_children(_children, terminate=False, kill=False):
+                for child in _children[:][::-1]:  # Iterate over a reversed copy of the list
+                    try:
+                        if not kill and child.status() == psutil.STATUS_ZOMBIE:
+                            # Zombie processes will exit once child processes also exit
+                            continue
+                        cmdline = child.cmdline()
+                        if not cmdline:
+                            cmdline = child.as_dict()
+                        if kill:
+                            log.warning('Killing child process left behind: %s', cmdline)
+                            child.kill()
+                        elif terminate:
+                            log.warning('Terminating child process left behind: %s', cmdline)
+                            child.terminate()
+                        else:
+                            log.warning('Sending %s to child process left behind: %s', sigint_name, cmdline)
+                            child.send_signal(sigint)
+                        if not psutil.pid_exists(child.pid):
+                            _children.remove(child)
+                    except psutil.NoSuchProcess:
+                        _children.remove(child)
+
+            kill_children(children)
+
+            if children:
+                try:
+                    psutil.wait_procs(children, timeout=10, callback=lambda proc: kill_children(children, terminate=True))
+                except psutil.AccessDenied:
+                    kill_children(children, terminate=True)
+
+            if children:
+                try:
+                    psutil.wait_procs(children, timeout=5, callback=lambda proc: kill_children(children, kill=True))
+                except psutil.AccessDenied:
+                    kill_children(children, kill=True)
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
@@ -174,7 +276,18 @@ def get_unused_localhost_port():
         usock.close()
         return port
 
+    DARWIN = True if sys.platform.startswith('darwin') else False
+    BSD = True if 'bsd' in sys.platform else False
+
+    if DARWIN and port in _RUNTESTS_PORTS:
+        port = get_unused_localhost_port()
+        usock.close()
+        return port
+
     _RUNTESTS_PORTS[port] = usock
+
+    if DARWIN or BSD:
+        usock.close()
 
     return port
 
@@ -438,90 +551,19 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
         except (SystemExit, KeyboardInterrupt):
             pass
 
-        # Let's begin the shutdown routines
-        if not sys.platform.startswith('win'):
-            if terminal.poll() is None:
-                try:
-                    log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                    terminal.send_signal(signal.SIGINT)
-                except OSError as exc:
-                    if exc.errno not in (errno.ESRCH, errno.EACCES):
-                        raise
-                timeout = 15
-                log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
-                        timeout,
-                         self.display_name,
-                         self.__class__.__name__)
-                while timeout > 0:
-                    if terminal.poll() is not None:
-                        break
-                    timeout -= 0.0125
-                    time.sleep(0.0125)
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGTERM to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.send_signal(signal.SIGTERM)
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-            timeout = 15
-            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGTERM',
-                    timeout,
-                     self.display_name,
-                     self.__class__.__name__)
-            while timeout > 0:
-                if terminal.poll() is not None:
-                    break
-                timeout -= 0.0125
-                time.sleep(0.0125)
-        if terminal.poll() is None:
-            try:
-                log.info('Sending SIGKILL to %s %s DAEMON', self.display_name, self.__class__.__name__)
-                terminal.kill()
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-        # Let's close the terminal now that we're done with it
-        try:
-            terminal.terminate()
-        except OSError as exc:
-            if exc.errno not in (errno.ESRCH, errno.EACCES):
-                raise
-        terminal.communicate()
+        terminate_process_pid(terminal.pid)
+#        terminal.communicate()
 
     def terminate(self):
         '''
         Terminate the started daemon
         '''
         log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
-        if HAS_PSUTIL:
-            try:
-                parent = psutil.Process(self._process.pid)
-                children = parent.children(recursive=True)
-            except psutil.NoSuchProcess:
-                children = []
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
-        self._process.terminate()
-
-        if HAS_PSUTIL:
-            # Lets log and kill any child processes which salt left behind
-            for child in children[:]:
-                try:
-                    if sys.platform.startswith('win'):
-                        child.kill()
-                    else:
-                        child.send_signal(signal.SIGKILL)
-                    log.info('Salt left behind the following child process: %s', child.as_dict())
-                    try:
-                        child.wait(timeout=5)
-                    except psutil.TimeoutExpired:
-                        child.kill()
-                except psutil.NoSuchProcess:
-                    children.remove(child)
-            if children:
-                psutil.wait_procs(children, timeout=5)
+        terminate_process_pid(self._process.pid)
+#        self._process.join()
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
@@ -558,8 +600,18 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                     if conn == 0:
                         log.debug('Port %s is connectable!', port)
                         check_ports.remove(port)
-                        sock.shutdown(socket.SHUT_RDWR)
-                        sock.close()
+                        try:
+                            sock.shutdown(socket.SHUT_RDWR)
+                            sock.close()
+                        except socket.error as exc:
+                            if not sys.platform.startswith('darwin'):
+                                raise
+                            try:
+                                if exc.errno != errno.ENOTCONN:
+                                    raise
+                            except AttributeError:
+                                # This is not OSX !?
+                                pass
                     del sock
                 elif isinstance(port, str):
                     joined = self.run_run('manage.joined', config_dir=self.config_dir)
@@ -604,8 +656,9 @@ class SaltMaster(SaltDaemonScriptBase):
     def get_check_ports(self):
         #return set([self.config['runtests_conn_check_port']])
         return set([self.config['ret_port'],
-                    self.config['publish_port'],
-                    self.config['runtests_conn_check_port']])
+                    self.config['publish_port']])
+        # Disabled along with Pytest config until fixed.
+#                    self.config['runtests_conn_check_port']])
 
     def get_script_args(self):
         #return ['-l', 'debug']
@@ -789,7 +842,12 @@ class TestDaemon(object):
         '''
         Generate keys and start an ssh daemon on an alternate port
         '''
-        print(' * Initializing SSH subsystem')
+        sys.stdout.write(
+            ' * {LIGHT_GREEN}Starting {0} ... {ENDC}'.format(
+                'SSH server',
+                **self.colors
+            )
+        )
         keygen = salt.utils.which('ssh-keygen')
         sshd = salt.utils.which('sshd')
 
@@ -941,6 +999,11 @@ class TestDaemon(object):
             with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
                 roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
                 roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        sys.stdout.write(
+            ' {LIGHT_GREEN}STARTED!\n{ENDC}'.format(
+                **self.colors
+            )
+        )
 
     @classmethod
     def config(cls, role):
@@ -1018,6 +1081,8 @@ class TestDaemon(object):
         minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
@@ -1026,6 +1091,8 @@ class TestDaemon(object):
         sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
+        sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
@@ -1100,22 +1167,7 @@ class TestDaemon(object):
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
 
-        master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        syndic_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-        syndic_master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
-
         for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
-            if 'engines' not in conf:
-                conf['engines'] = []
-            conf['engines'].append({'salt_runtests': {}})
-
-            if 'engines_dirs' not in conf:
-                conf['engines_dirs'] = []
-
-            conf['engines_dirs'].insert(0, ENGINES_DIR)
-
             if 'log_handlers_dirs' not in conf:
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
@@ -1141,9 +1193,8 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
-                yaml.dump(computed_config, default_flow_style=False)
-            )
+            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
+                fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         salt.utils.fopen(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(sub_minion_computed_config, default_flow_style=False)
@@ -1599,6 +1650,9 @@ class SaltMinionEventAssertsMixIn(object):
         cls.fetch_proc.start()
         return object.__new__(cls)
 
+    def __exit__(self, *args, **kwargs):
+        self.fetch_proc.join()
+
     @staticmethod
     def _fetch(q):
         '''
@@ -1662,6 +1716,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     '''
     Execute a module function
     '''
+
+    def runTest(self):
+        '''
+        TODO remove after salt-testing PR #74 is merged and deployed
+        '''
+        try:
+            super(ModuleCase, self).runTest()
+        except AttributeError:
+            log.error('ModuleCase runTest() could not execute. Requires at least v2016.8.3 of '
+                    'salt-testing package')
 
     def minion_run(self, _function, *args, **kw):
         '''
@@ -1798,19 +1862,19 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=30):  # pylint: disable=W0221
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=25):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
-        arg_str = '-W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
         '''
@@ -1820,23 +1884,41 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
                                                   arg_str,
                                                   timeout=timeout,
                                                   async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
-    def run_run_plus(self, fun, options='', *arg, **kwargs):
+    def run_run_plus(self, fun, *arg, **kwargs):
         '''
-        Execute Salt run and the salt run function and return the data from
-        each in a dict
+        Execute the runner function and return the return data and output in a dict
         '''
-        ret = {}
-        ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
-        )
+        ret = {'fun': fun}
+        from_scratch = bool(kwargs.pop('__reload_config', False))
+        # Have to create an empty dict and then update it, as the result from
+        # self.get_config() is an ImmutableDict which cannot be updated.
         opts = {}
-        opts.update(self.get_config('master'))
-        opts.update({'doc': False, 'fun': fun, 'arg': arg})
+        opts.update(self.get_config('client_config', from_scratch=from_scratch))
+        opts_arg = list(arg)
+        if kwargs:
+            opts_arg.append({'__kwarg__': True})
+            opts_arg[-1].update(kwargs)
+        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
-            ret['fun'] = runner.run()
+            ret['return'] = runner.run()
+            try:
+                ret['jid'] = runner.jid
+            except AttributeError:
+                ret['jid'] = None
+
+        # Compile output
+        # TODO: Support outputters other than nested
+        opts['color'] = False
+        opts['output_file'] = cStringIO()
+        try:
+            salt.output.display_output(ret['return'], opts=opts)
+            ret['out'] = opts['output_file'].getvalue().splitlines()
+        finally:
+            opts['output_file'].close()
+
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
@@ -1848,7 +1930,8 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
             'salt-key',
             arg_str,
             catch_stderr=catch_stderr,
-            with_retcode=with_retcode
+            with_retcode=with_retcode,
+            timeout=30
         )
 
     def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
@@ -1856,14 +1939,14 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-call.
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
@@ -1942,8 +2025,11 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=25, **kwargs):
-        ret = self.run_ssh(self._arg_str(function, arg))
+    def run_function(self, function, arg=(), timeout=90, **kwargs):
+        '''
+        We use a 90s timeout here, which some slower systems do end up needing
+        '''
+        ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
         try:
             return json.loads(ret)['localhost']
         except Exception:

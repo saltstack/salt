@@ -97,6 +97,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
         headers['x-amz-server-side-encryption'] = 'aws:kms'
         headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 
+    if not location:
+        location = __utils__['aws.get_location']()
+
     data = ''
     payload_hash = None
     if method == 'PUT':
@@ -137,6 +140,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                           data=data,
                                           verify=verify_ssl,
                                           stream=True)
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
         response = result.content
     elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,

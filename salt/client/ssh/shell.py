@@ -63,6 +63,7 @@ class Shell(object):
             tty=False,
             mods=None,
             identities_only=False,
+            sudo_user=None,
             remote_port_forwards=None):
         self.opts = opts
         self.host = host

@@ -12,7 +12,13 @@ of a configuration profile.
 
 from __future__ import absolute_import
 from datetime import datetime
-import pwd
+
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 # Import salt libs
 import salt.utils
@@ -30,7 +36,10 @@ def __virtual__():
     if not salt.utils.is_darwin():
         return False, 'Not Darwin'
 
-    return __virtualname__
+    if HAS_PWD:
+        return __virtualname__
+    else:
+        return (False, 'The pwd module failed to load.')
 
 
 def _get_account_policy(name):

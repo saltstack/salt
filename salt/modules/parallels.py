@@ -1,8 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Parallels Desktop VMs with prlctl
+Manage Parallels Desktop VMs with ``prlctl`` and ``prlsrvctl``.  Only some of
+the prlctl commands implemented so far.  Of those that have been implemented,
+not all of the options may have been provided yet.  For a complete reference,
+see the `Parallels Desktop Reference Guide
+<http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
-http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf
+What has not been implemented yet can be accessed through ``parallels.prlctl``
+and ``parallels.prlsrvctl`` (note the preceeding double dash ``--`` as
+necessary):
+
+.. code-block::
+
+    salt '*' parallels.prlctl installtools macvm runas=macdev
+    salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
+    salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
 
 .. versionadded:: 2016.3.0
 '''
@@ -36,7 +48,9 @@ def __virtual__():
     Load this module if prlctl is available
     '''
     if not salt.utils.which('prlctl'):
-        return (False, 'Cannot load prlctl module: prlctl utility not available')
+        return (False, 'prlctl utility not available')
+    if not salt.utils.which('prlsrvctl'):
+        return (False, 'prlsrvctl utility not available')
     return __virtualname__
 
 
@@ -73,7 +87,39 @@ def _find_guids(guid_string):
     for found_guid in re.finditer(GUID_REGEX, guid_string):
         if found_guid.groups():
             guids.append(found_guid.group(0).strip('{}'))
-    return set(sorted(guids))
+    return sorted(list(set(guids)))
+
+
+def prlsrvctl(sub_cmd, args=None, runas=None):
+    '''
+    Execute a prlsrvctl command
+
+    .. versionadded:: Carbon
+
+    :param str sub_cmd:
+        prlsrvctl subcommand to execute
+
+    :param str args:
+        The arguments supplied to ``prlsrvctl <sub_cmd>``
+
+    :param str runas:
+        The user that the prlsrvctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.prlsrvctl info runas=macdev
+        salt '*' parallels.prlsrvctl usb list runas=macdev
+        salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
+    '''
+    # Construct command
+    cmd = ['prlsrvctl', sub_cmd]
+    if args:
+        cmd.extend(_normalize_args(args))
+
+    # Execute command and return output
+    return __salt__['cmd.run'](cmd, runas=runas)
 
 
 def prlctl(sub_cmd, args=None, runas=None):
@@ -95,6 +141,7 @@ def prlctl(sub_cmd, args=None, runas=None):
 
         salt '*' parallels.prlctl user list runas=macdev
         salt '*' parallels.prlctl exec 'macvm uname' runas=macdev
+        salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
     '''
     # Construct command
     cmd = ['prlctl', sub_cmd]
@@ -105,32 +152,41 @@ def prlctl(sub_cmd, args=None, runas=None):
     return __salt__['cmd.run'](cmd, runas=runas)
 
 
-def list_vms(name=None, info=False, all=False, args=None, runas=None):
+def list_vms(name=None, info=False, all=False, args=None, runas=None, template=False):
     '''
     List information about the VMs
 
     :param str name:
-        Name/ID of VM to list; implies ``info=True``
+        Name/ID of VM to list
+
+        .. versionchanged:: Carbon
+
+            No longer implies ``info=True``
 
     :param str info:
         List extra information
 
     :param bool all:
-        Also list non-running VMs
+        List all non-template VMs
 
     :param tuple args:
-        Additional arguments given to ``prctl list``.  This argument is
-        mutually exclusive with the other arguments
+        Additional arguments given to ``prctl list``
 
     :param str runas:
         The user that the prlctl command will be run as
+
+    :param bool template:
+        List the available virtual machine templates.  The real virtual
+        machines will not be included in the output
+
+        .. versionadded:: Carbon
 
     Example:
 
     .. code-block:: bash
 
         salt '*' parallels.list_vms runas=macdev
-        salt '*' parallels.list_vms name=macvm runas=macdev
+        salt '*' parallels.list_vms name=macvm info=True runas=macdev
         salt '*' parallels.list_vms info=True runas=macdev
         salt '*' parallels.list_vms ' -o uuid,status' all=True runas=macdev
     '''
@@ -141,15 +197,98 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None):
         args = _normalize_args(args)
 
     if name:
-        args.extend(['--info', name])
-    elif info:
+        args.extend([name])
+    if info:
         args.append('--info')
-
     if all:
         args.append('--all')
+    if template:
+        args.append('--template')
 
     # Execute command and return output
     return prlctl('list', args, runas=runas)
+
+
+def clone(name, new_name, linked=False, template=False, runas=None):
+    '''
+    Clone a VM
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM to clone
+
+    :param str new_name:
+        Name of the new VM
+
+    :param bool linked:
+        Create a linked virtual machine.
+
+    :param bool template:
+        Create a virtual machine template instead of a real virtual machine.
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.clone macvm macvm_new runas=macdev
+        salt '*' parallels.clone macvm macvm_templ template=True runas=macdev
+    '''
+    args = [_sdecode(name), '--name', _sdecode(new_name)]
+    if linked:
+        args.append('--linked')
+    if template:
+        args.append('--template')
+    return prlctl('clone', args, runas=runas)
+
+
+def delete(name, runas=None):
+    '''
+    Delete a VM
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM to clone
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
+    '''
+    return prlctl('delete', _sdecode(name), runas=runas)
+
+
+def exists(name, runas=None):
+    '''
+    Query whether a VM exists
+
+    .. versionadded:: Carbon
+
+    :param str name:
+        Name/ID of VM
+
+    :param str runas:
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.exists macvm runas=macdev
+    '''
+    vm_info = list_vms(name, info=True, runas=runas).splitlines()
+    for info_line in vm_info:
+        if 'Name: {0}'.format(name) in info_line:
+            return True
+    return False
 
 
 def start(name, runas=None):
@@ -340,7 +479,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
         data = yaml.safe_load(info)
     except yaml.YAMLError as err:
         log.warning(
-            'Could not interpret snapshot data returned from parallels deskop: '
+            'Could not interpret snapshot data returned from prlctl: '
             '{0}'.format(err)
         )
         data = {}
@@ -353,7 +492,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
             snap_name = ''
     else:
         log.warning(
-            u'Could not interpret snapshot data returned from parallels deskop: '
+            u'Could not interpret snapshot data returned from prlctl: '
             u'data is not formed as a dictionary: {0}'.format(data)
         )
         snap_name = ''
@@ -425,12 +564,18 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
         return named_ids
 
 
-def _validate_snap_name(name, snap_name, runas=None):
+def _validate_snap_name(name, snap_name, strict=True, runas=None):
     '''
     Validate snapshot name and convert to snapshot ID
 
+    :param str name:
+        Name/ID of VM whose snapshot name is being validated
+
     :param str snap_name:
         Name/ID of snapshot
+
+    :param bool strict:
+        Raise an exception if multiple snapshot IDs are found
 
     :param str runas:
         The user that the prlctl command will be run as
@@ -441,7 +586,7 @@ def _validate_snap_name(name, snap_name, runas=None):
     if re.match(GUID_REGEX, snap_name):
         return snap_name.strip('{}')
     else:
-        return snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+        return snapshot_name_to_id(name, snap_name, strict=strict, runas=runas)
 
 
 def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
@@ -545,7 +690,7 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     return prlctl('snapshot', args, runas=runas)
 
 
-def delete_snapshot(name, snap_name, runas=None):
+def delete_snapshot(name, snap_name, runas=None, all=False):
     '''
     Delete a snapshot
 
@@ -563,21 +708,43 @@ def delete_snapshot(name, snap_name, runas=None):
     :param str runas:
         The user that the prlctl command will be run as
 
+    :param bool all:
+        Delete all snapshots having the name given
+
+        .. versionadded:: Carbon
+
     Example:
 
     .. code-block:: bash
 
         salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
+        salt '*' parallels.delete_snapshot macvm 'Snapshot for linked clone' all=True runas=macdev
     '''
+    # strict means raise an error if multiple snapshot IDs found for the name given
+    strict = not all
+
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _validate_snap_name(name, snap_name, runas=runas)
+    snap_ids = _validate_snap_name(name, snap_name, strict=strict, runas=runas)
+    if isinstance(snap_ids, six.string_types):
+        snap_ids = [snap_ids]
 
-    # Construct argument list
-    args = [name, '--id', snap_name]
+    # Delete snapshot(s)
+    ret = {}
+    for snap_id in snap_ids:
+        snap_id = snap_id.strip('{}')
+        # Construct argument list
+        args = [name, '--id', snap_id]
 
-    # Execute command and return output
-    return prlctl('snapshot-delete', args, runas=runas)
+        # Execute command
+        ret[snap_id] = prlctl('snapshot-delete', args, runas=runas)
+
+    # Return results
+    ret_keys = list(ret.keys())
+    if len(ret_keys) == 1:
+        return ret[ret_keys[0]]
+    else:
+        return ret
 
 
 def revert_snapshot(name, snap_name, runas=None):

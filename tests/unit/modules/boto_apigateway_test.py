@@ -24,6 +24,7 @@ from salt.modules import boto_apigateway
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
+    import botocore
     from botocore.exceptions import ClientError
     HAS_BOTO = True
 except ImportError:
@@ -37,6 +38,7 @@ from salt.ext.six.moves import range, zip
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
+required_botocore_version = '1.4.49'
 
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -91,6 +93,57 @@ api_create_resource_ret = {
             u'pathPart': u'api3',
             'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
+usage_plan1 = dict(
+    id='plan1_id',
+    name='plan1_name',
+    description='plan1_desc',
+    apiStages=[],
+    throttle=dict(
+        burstLimit=123,
+        rateLimit=123.0
+    ),
+    quota=dict(
+        limit=123,
+        offset=123,
+        period='DAY'
+    )
+)
+usage_plan2 = dict(
+    id='plan2_id',
+    name='plan2_name',
+    description='plan2_desc',
+    apiStages=[],
+    throttle=dict(
+        burstLimit=123,
+        rateLimit=123.0
+    ),
+    quota=dict(
+        limit=123,
+        offset=123,
+        period='DAY'
+    )
+)
+usage_plan1b = dict(
+    id='another_plan1_id',
+    name='plan1_name',
+    description='another_plan1_desc',
+    apiStages=[],
+    throttle=dict(
+        burstLimit=123,
+        rateLimit=123.0
+    ),
+    quota=dict(
+        limit=123,
+        offset=123,
+        period='DAY'
+    )
+)
+usage_plans_ret = dict(
+    items=[
+        usage_plan1, usage_plan2, usage_plan1b
+    ]
+)
+
 log = logging.getLogger(__name__)
 
 opts = salt.config.DEFAULT_MINION_OPTS
@@ -110,6 +163,18 @@ def _has_required_boto():
     if not HAS_BOTO:
         return False
     elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+        return False
+    else:
+        return True
+
+
+def _has_required_botocore():
+    '''
+    Returns True/False boolean depending on if botocore supports usage plan
+    '''
+    if not HAS_BOTO:
+        return False
+    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
         return False
     else:
         return True
@@ -154,9 +219,12 @@ class BotoApiGatewayTestCaseMixin(object):
 
 @skipIf(True, 'Skip these tests while investigating failures')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto3_version))
+@skipIf(_has_required_boto() is False,
+        'The boto3 module must be greater than'
+        ' or equal to version {0}'.format(required_boto3_version))
+@skipIf(_has_required_botocore() is False,
+        'The botocore module must be greater than'
+        ' or equal to version {0}'.format(required_botocore_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
@@ -1378,6 +1446,205 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                                    statusCode='200',
                                                                    **conn_parameters)
         self.assertTrue(result.get('error'))
+
+    def test_that_when_describing_usage_plans_and_an_exception_is_thrown_in_get_usage_plans(self):
+        '''
+        Tests True for existence of 'error'
+        '''
+        self.conn.get_usage_plans.side_effect = ClientError(error_content, 'get_usage_plans_exception')
+        result = boto_apigateway.describe_usage_plans(name='some plan', **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format('get_usage_plans_exception'))
+
+    def test_that_when_describing_usage_plans_and_plan_name_or_id_does_not_exist_that_results_have_empty_plans_list(self):
+        '''
+        Tests for plans equaling empty list
+        '''
+        self.conn.get_usage_plans.return_value = usage_plans_ret
+
+        result = boto_apigateway.describe_usage_plans(name='does not exist', **conn_parameters)
+        self.assertEqual(result.get('plans'), [])
+
+        result = boto_apigateway.describe_usage_plans(plan_id='does not exist', **conn_parameters)
+        self.assertEqual(result.get('plans'), [])
+
+        result = boto_apigateway.describe_usage_plans(name='does not exist', plan_id='does not exist', **conn_parameters)
+        self.assertEqual(result.get('plans'), [])
+
+        result = boto_apigateway.describe_usage_plans(name='plan1_name', plan_id='does not exist', **conn_parameters)
+        self.assertEqual(result.get('plans'), [])
+
+        result = boto_apigateway.describe_usage_plans(name='does not exist', plan_id='plan1_id', **conn_parameters)
+        self.assertEqual(result.get('plans'), [])
+
+    def test_that_when_describing_usage_plans_for_plans_that_exist_that_the_function_returns_all_matching_plans(self):
+        '''
+        Tests for plans filtering properly if they exist
+        '''
+        self.conn.get_usage_plans.return_value = usage_plans_ret
+
+        result = boto_apigateway.describe_usage_plans(name=usage_plan1['name'], **conn_parameters)
+        self.assertEqual(len(result.get('plans')), 2)
+        for plan in result['plans']:
+            self.assertTrue(plan in [usage_plan1, usage_plan1b])
+
+    def test_that_when_creating_or_updating_a_usage_plan_and_throttle_or_quota_failed_to_validate_that_an_error_is_returned(self):
+        '''
+        Tests for TypeError and ValueError in throttle and quota
+        '''
+        for throttle, quota in (([], None), (None, []), ('abc', None), (None, 'def')):
+            res = boto_apigateway.create_usage_plan('plan1_name', description=None, throttle=throttle, quota=quota, **conn_parameters)
+            self.assertNotEqual(None, res.get('error'))
+            res = boto_apigateway.update_usage_plan('plan1_id', throttle=throttle, quota=quota, **conn_parameters)
+            self.assertNotEqual(None, res.get('error'))
+
+        for quota in ({'limit': 123}, {'period': 123}, {'period': 'DAY'}):
+            res = boto_apigateway.create_usage_plan('plan1_name', description=None, throttle=None, quota=quota, **conn_parameters)
+            self.assertNotEqual(None, res.get('error'))
+            res = boto_apigateway.update_usage_plan('plan1_id', quota=quota, **conn_parameters)
+            self.assertNotEqual(None, res.get('error'))
+
+        self.conn.get_usage_plans.assert_not_called()
+        self.conn.create_usage_plan.assert_not_called()
+        self.conn.update_usage_plan.assert_not_called()
+
+    def test_that_when_creating_a_usage_plan_and_create_usage_plan_throws_an_exception_that_an_error_is_returned(self):
+        '''
+        tests for ClientError
+        '''
+        self.conn.create_usage_plan.side_effect = ClientError(error_content, 'create_usage_plan_exception')
+        result = boto_apigateway.create_usage_plan(name='some plan', **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format('create_usage_plan_exception'))
+
+    def test_that_create_usage_plan_succeeds(self):
+        '''
+        tests for success user plan creation
+        '''
+        res = 'unit test create_usage_plan succeeded'
+        self.conn.create_usage_plan.return_value = res
+        result = boto_apigateway.create_usage_plan(name='some plan', **conn_parameters)
+        self.assertEqual(result.get('created'), True)
+        self.assertEqual(result.get('result'), res)
+
+    def test_that_when_udpating_a_usage_plan_and_update_usage_plan_throws_an_exception_that_an_error_is_returned(self):
+        '''
+        tests for ClientError
+        '''
+        self.conn.update_usage_plan.side_effect = ClientError(error_content, 'update_usage_plan_exception')
+        result = boto_apigateway.update_usage_plan(plan_id='plan1_id', **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format('update_usage_plan_exception'))
+
+    def test_that_when_updating_a_usage_plan_and_if_throttle_and_quota_parameters_are_none_update_usage_plan_removes_throttle_and_quota(self):
+        '''
+        tests for throttle and quota removal
+        '''
+        ret = 'some success status'
+        self.conn.update_usage_plan.return_value = ret
+        result = boto_apigateway.update_usage_plan(plan_id='plan1_id', throttle=None, quota=None, **conn_parameters)
+        self.assertEqual(result.get('updated'), True)
+        self.assertEqual(result.get('result'), ret)
+        self.conn.update_usage_plan.assert_called_once()
+
+    def test_that_when_deleting_usage_plan_and_describe_usage_plans_had_error_that_the_same_error_is_returned(self):
+        '''
+        tests for error in describe_usage_plans returns error
+        '''
+        ret = 'get_usage_plans_exception'
+        self.conn.get_usage_plans.side_effect = ClientError(error_content, ret)
+        result = boto_apigateway.delete_usage_plan(plan_id='some plan id', **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format(ret))
+        self.conn.delete_usage_plan.assert_not_called()
+
+    def test_that_when_deleting_usage_plan_and_plan_exists_that_the_functions_returns_deleted_true(self):
+        self.conn.get_usage_plans.return_value = usage_plans_ret
+        ret = 'delete_usage_plan_retval'
+        self.conn.delete_usage_plan.return_value = ret
+        result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
+        self.assertEqual(result.get('deleted'), True)
+        self.assertEqual(result.get('usagePlanId'), 'plan1_id')
+        self.conn.delete_usage_plan.assert_called_once()
+
+    def test_that_when_deleting_usage_plan_and_plan_does_not_exist_that_the_functions_returns_deleted_true(self):
+        '''
+        tests for ClientError
+        '''
+        self.conn.get_usage_plans.return_value = dict(
+            items=[]
+        )
+        ret = 'delete_usage_plan_retval'
+        self.conn.delete_usage_plan.return_value = ret
+        result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
+        self.assertEqual(result.get('deleted'), True)
+        self.assertEqual(result.get('usagePlanId'), 'plan1_id')
+        self.conn.delete_usage_plan.assert_not_called()
+
+    def test_that_when_deleting_usage_plan_and_delete_usage_plan_throws_exception_that_an_error_is_returned(self):
+        '''
+        tests for ClientError
+        '''
+        self.conn.get_usage_plans.return_value = usage_plans_ret
+        error_msg = 'delete_usage_plan_exception'
+        self.conn.delete_usage_plan.side_effect = ClientError(error_content, error_msg)
+        result = boto_apigateway.delete_usage_plan(plan_id='plan1_id', **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format(error_msg))
+        self.conn.delete_usage_plan.assert_called_once()
+
+    def test_that_attach_or_detach_usage_plan_when_apis_is_empty_that_success_is_returned(self):
+        '''
+        tests for border cases when apis is empty list
+        '''
+        result = boto_apigateway.attach_usage_plan_to_apis(plan_id='plan1_id', apis=[], **conn_parameters)
+        self.assertEqual(result.get('success'), True)
+        self.assertEqual(result.get('result', 'no result?'), None)
+        self.conn.update_usage_plan.assert_not_called()
+
+        result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[], **conn_parameters)
+        self.assertEqual(result.get('success'), True)
+        self.assertEqual(result.get('result', 'no result?'), None)
+        self.conn.update_usage_plan.assert_not_called()
+
+    def test_that_attach_or_detach_usage_plan_when_api_does_not_contain_apiId_or_stage_that_an_error_is_returned(self):
+        '''
+        tests for invalid key in api object
+        '''
+        for api in ({'apiId': 'some Id'}, {'stage': 'some stage'}, {}):
+            result = boto_apigateway.attach_usage_plan_to_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+            self.assertNotEqual(result.get('error'), None)
+
+            result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+            self.assertNotEqual(result.get('error'), None)
+
+        self.conn.update_usage_plan.assert_not_called()
+
+    def test_that_attach_or_detach_usage_plan_and_update_usage_plan_throws_exception_that_an_error_is_returned(self):
+        '''
+        tests for ClientError
+        '''
+        api = {'apiId': 'some_id', 'stage': 'some_stage'}
+        error_msg = 'update_usage_plan_exception'
+        self.conn.update_usage_plan.side_effect = ClientError(error_content, error_msg)
+
+        result = boto_apigateway.attach_usage_plan_to_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format(error_msg))
+
+        result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format(error_msg))
+
+    def test_that_attach_or_detach_usage_plan_updated_successfully(self):
+        '''
+        tests for update_usage_plan called
+        '''
+        api = {'apiId': 'some_id', 'stage': 'some_stage'}
+        attach_ret = 'update_usage_plan_add_op_succeeded'
+        detach_ret = 'update_usage_plan_remove_op_succeeded'
+        self.conn.update_usage_plan.side_effect = [attach_ret, detach_ret]
+
+        result = boto_apigateway.attach_usage_plan_to_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+        self.assertEqual(result.get('success'), True)
+        self.assertEqual(result.get('result'), attach_ret)
+
+        result = boto_apigateway.detach_usage_plan_from_apis(plan_id='plan1_id', apis=[api], **conn_parameters)
+        self.assertEqual(result.get('success'), True)
+        self.assertEqual(result.get('result'), detach_ret)
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error

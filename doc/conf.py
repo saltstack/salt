@@ -15,31 +15,40 @@ from sphinx.directives import TocTree
 # pylint: disable=R0903
 class Mock(object):
     '''
-    Mock out specified imports
+    Mock out specified imports.
 
     This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
-    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    This Mock class can be configured to return a specific values at specific names, if required.
+
+    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, mapping=None, *args, **kwargs):
+        """
+        Mapping allows to bypass the Mock object, but actually assign
+        a specific value, expected by a specific attribute returned.
+        """
+        self.__mapping = mapping or {}
 
     __all__ = []
 
     def __call__(self, *args, **kwargs):
-        ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
         # if args and callable(args[-1]):
         #     functools.update_wrapper(ret, args[0])
-        return ret
+        return Mock(mapping=self.__mapping)
 
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
+    def __getattr__(self, name):
+        #__mapping = {'total': 0}
+        data = None
+        if name in self.__mapping:
+            data = self.__mapping.get(name)
+        elif name in ('__file__', '__path__'):
+            data = '/dev/null'
         else:
-            return Mock()
+            data = Mock(mapping=self.__mapping)
+        return data
 # pylint: enable=R0903
 
 MOCK_MODULES = [
@@ -56,10 +65,10 @@ MOCK_MODULES = [
     'Crypto.Signature',
     'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
-    'msgpack',
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
+    'yaml.parser',
     'yaml.scanner',
     'zmq',
     'zmq.eventloop',
@@ -98,6 +107,7 @@ MOCK_MODULES = [
     'tornado.stack_context',
     'tornado.web',
     'tornado.websocket',
+    'tornado.locks',
 
     'ws4py',
     'ws4py.server',
@@ -149,7 +159,11 @@ MOCK_MODULES = [
 ]
 
 for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
+    if mod_name == 'psutil':
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+    else:
+        mock = Mock()
+    sys.modules[mod_name] = mock
 
 def mock_decorator_with_params(*oargs, **okwargs):
     '''
@@ -210,17 +224,23 @@ intersphinx_mapping = {
 
 # -- General Configuration -----------------------------------------------------
 
+# Set a var if we're building docs for the live site or not
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
+
 project = 'Salt'
-copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2016.3.1'  # latest release
-previous_release = '2015.8.10'  # latest release from previous branch
+latest_release = '2016.3.3'  # latest release
+previous_release = '2015.8.12'  # latest release from previous branch
 previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
-today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+today = ''
+copyright = ''
+if on_saltstack:
+    today = "Generated on " + time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z") + "."
+    copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'develop'  # latest, previous, develop, next
@@ -324,9 +344,6 @@ html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
-# Set a var if we're building docs for the live site or not
-on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
-
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
     html_search_template = 'googlesearch.html'
@@ -373,6 +390,7 @@ html_context = {
     'search_cx': search_cx,
     'build_type': build_type,
     'today': today,
+    'copyright': copyright,
 }
 
 html_use_index = True

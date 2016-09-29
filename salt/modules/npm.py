@@ -129,36 +129,30 @@ def install(pkg=None,
     '''
     # Protect against injection
     if pkg:
-        pkg = _cmd_quote(pkg)
-    if pkgs:
-        pkg_list = []
-        for item in pkgs:
-            pkg_list.append(_cmd_quote(item))
-        pkgs = pkg_list
+        pkgs = [_cmd_quote(pkg)]
+    elif pkgs:
+        pkgs = [_cmd_quote(v) for v in pkgs]
+    else:
+        pkgs = []
     if registry:
         registry = _cmd_quote(registry)
 
-    cmd = ['npm', 'install']
+    cmd = ['npm', 'install', '--json']
     if silent:
         cmd.append('--silent')
-    cmd.append('--json')
 
-    if dir is None:
-        cmd.append(' --global')
+    if not dir:
+        cmd.append('--global')
 
     if registry:
-        cmd.append(' --registry="{0}"'.format(registry))
+        cmd.append('--registry="{0}"'.format(registry))
 
     if dry_run:
         cmd.append('--dry-run')
 
-    if pkg:
-        cmd.append(pkg)
-    elif pkgs:
-        cmd.extend(pkgs)
+    cmd.extend(pkgs)
 
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
@@ -176,30 +170,34 @@ def install(pkg=None,
     try:
         return json.loads(npm_output)
     except ValueError:
-        # Not JSON! Try to coax the json out of it!
         pass
 
+    json_npm_output = _extract_json(npm_output)
+    return json_npm_output or npm_output
+
+
+def _extract_json(npm_output):
     lines = npm_output.splitlines()
     log.error(lines)
 
-    while lines:
-        # Strip all lines until JSON output starts
-        while not lines[0].startswith('{') and not lines[0].startswith('['):
-            lines = lines[1:]
+    # Strip all lines until JSON output starts
+    while lines and not lines[0].startswith('{') and not lines[0].startswith('['):
+        lines = lines[1:]
+    while lines and not lines[-1].startswith('}') and not lines[-1].startswith(']'):
+        lines = lines[:-1]
+    # Mac OSX with fsevents includes the following line in the return
+    # when a new module is installed which is invalid JSON:
+    #     [fsevents] Success: "..."
+    while lines and lines[0].startswith('[fsevents]'):
+        lines = lines[1:]
+    try:
+        return json.loads(''.join(lines))
+    except ValueError:
+        pass
+    return None
 
-        try:
-            return json.loads(''.join(lines))
-        except ValueError:
-            lines = lines[1:]
 
-    # Still no JSON!! Return the stdout as a string
-    return npm_output
-
-
-def uninstall(pkg,
-              dir=None,
-              runas=None,
-              env=None):
+def uninstall(pkg, dir=None, runas=None, env=None):
     '''
     Uninstall an NPM package.
 
@@ -233,20 +231,18 @@ def uninstall(pkg,
     if pkg:
         pkg = _cmd_quote(pkg)
 
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = 'npm uninstall'
+    cmd = ['npm', 'uninstall', '"{0}"'.format(pkg)]
+    if not dir:
+        cmd.append('--global')
 
-    if dir is None:
-        cmd += ' --global'
-
-    cmd += ' "{0}"'.format(pkg)
+    cmd = ' '.join(cmd)
 
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
@@ -256,10 +252,7 @@ def uninstall(pkg,
     return True
 
 
-def list_(pkg=None,
-          dir=None,
-          runas=None,
-          env=None):
+def list_(pkg=None, dir=None, runas=None, env=None):
     '''
     List installed NPM packages.
 
@@ -292,33 +285,26 @@ def list_(pkg=None,
         salt '*' npm.list
 
     '''
-    # Protect against injection
-    if pkg:
-        pkg = _cmd_quote(pkg)
-
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = 'npm list --silent --json'
+    cmd = ['npm', 'list', '--json', '--silent']
 
-    if dir is None:
-        cmd += ' --global'
+    if not dir:
+        cmd.append('--global')
 
     if pkg:
-        cmd += ' "{0}"'.format(pkg)
+        # Protect against injection
+        pkg = _cmd_quote(pkg)
+        cmd.append('"{0}"'.format(pkg))
+    cmd = ' '.join(cmd)
 
     result = __salt__['cmd.run_all'](
-            cmd,
-            cwd=dir,
-            runas=runas,
-            env=env,
-            python_shell=True,
-            ignore_retcode=True)
+        cmd, cwd=dir, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
     # npm will return error code 1 for both no packages found and an actual
     # error. The only difference between the two cases are if stderr is empty
@@ -328,9 +314,7 @@ def list_(pkg=None,
     return json.loads(result['stdout']).get('dependencies', {})
 
 
-def cache_clean(path=None,
-                runas=None,
-                env=None):
+def cache_clean(path=None, runas=None, env=None):
     '''
     Clean cached NPM packages.
 
@@ -354,26 +338,20 @@ def cache_clean(path=None,
         salt '*' npm.cache_clean
 
     '''
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = ['npm', 'cache clean']
+    cmd = ['npm', 'cache', 'clean']
     if path:
         cmd.append(path)
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](
-            cmd,
-            cwd=None,
-            runas=runas,
-            env=env,
-            python_shell=True,
-            ignore_retcode=True)
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
     if result['retcode'] != 0:
         log.error(result['stderr'])
@@ -381,9 +359,7 @@ def cache_clean(path=None,
     return True
 
 
-def cache_list(path=None,
-               runas=None,
-               env=None):
+def cache_list(path=None, runas=None, env=None):
     '''
     List NPM cached packages.
 
@@ -407,26 +383,20 @@ def cache_list(path=None,
         salt '*' npm.cache_clean
 
     '''
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = ['npm', 'cache ls']
+    cmd = ['npm', 'cache', 'ls']
     if path:
         cmd.append(path)
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](
-            cmd,
-            cwd=None,
-            runas=runas,
-            env=env,
-            python_shell=True,
-            ignore_retcode=True)
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
     if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
@@ -434,8 +404,7 @@ def cache_list(path=None,
     return result['stdout']
 
 
-def cache_path(runas=None,
-               env=None):
+def cache_path(runas=None, env=None):
     '''
     List path of the NPM cache directory.
 
@@ -454,8 +423,7 @@ def cache_path(runas=None,
         salt '*' npm.cache_path
 
     '''
-    if env is None:
-        env = {}
+    env = env or {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
@@ -465,11 +433,6 @@ def cache_path(runas=None,
     cmd = 'npm config get cache'
 
     result = __salt__['cmd.run_all'](
-            cmd,
-            cwd=None,
-            runas=runas,
-            env=env,
-            python_shell=True,
-            ignore_retcode=True)
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
 
     return result.get('stdout') or result.get('stderr')

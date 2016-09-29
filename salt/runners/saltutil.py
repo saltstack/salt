@@ -43,6 +43,7 @@ def sync_all(saltenv='base'):
     ret['engines'] = sync_engines(saltenv=saltenv)
     ret['queues'] = sync_queues(saltenv=saltenv)
     ret['pillar'] = sync_pillar(saltenv=saltenv)
+    ret['utils'] = sync_utils(saltenv=saltenv)
     return ret
 
 
@@ -248,3 +249,22 @@ def sync_pillar(saltenv='base'):
         salt-run saltutil.sync_pillar
     '''
     return salt.utils.extmods.sync(__opts__, 'pillar', saltenv=saltenv)[0]
+
+
+def sync_utils(saltenv='base'):
+    '''
+    .. versionadded:: Carbon
+
+    Sync utils modules from ``salt://_utils`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_utils
+    '''
+    return salt.utils.extmods.sync(__opts__, 'utils', saltenv=saltenv)[0]

@@ -228,6 +228,10 @@ def remove_site(name):
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
+    .. note:
+
+        This will not remove the application pool used by the site.
+
     CLI Example:
 
     .. code-block:: bash

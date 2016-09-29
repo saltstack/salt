@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import logging
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
+import re
 
 # Import salt libs
 from salt.ext.six import string_types
@@ -427,6 +428,74 @@ def insert(objects, collection, user=None, password=None,
     except pymongo.errors.PyMongoError as err:
         log.error("Inserting objects %r failed with error %s", objects, err)
         return err
+
+
+def update_one(objects, collection, user=None, password=None, host=None, port=None, database='admin', authdb=None):
+    '''
+    Update an object into a collection
+    http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database>
+
+    '''
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    objects = str(objects)
+    objs = re.split(r'}\s+{', objects)
+
+    if len(objs) is not 2:
+        return "Your request does not contain a valid " + \
+        "'{_\"id\": \"my_id\"} {\"my_doc\": \"my_val\"}'"
+
+    objs[0] = objs[0] + '}'
+    objs[1] = '{' + objs[1]
+
+    document = []
+
+    for obj in objs:
+        try:
+            obj = _to_dict(obj)
+            document.append(obj)
+        except Exception as err:
+            return err
+
+    _id_field = document[0]
+    _update_doc = document[1]
+
+    # need a string to perform the test, so using objs[0]
+    test_f = find(collection,
+                  objs[0],
+                  user,
+                  password,
+                  host,
+                  port,
+                  database,
+                  authdb)
+    if not isinstance(test_f, list):
+        return 'The find result is not well formatted. An error appears; cannot update.'
+    elif len(test_f) < 1:
+        return 'Did not find any result. You should try an insert before.'
+    elif len(test_f) > 1:
+        return 'Too many results. Please try to be more specific.'
+    else:
+        try:
+            log.info("Updating %r into %s.%s", _id_field, database, collection)
+            mdb = pymongo.database.Database(conn, database)
+            col = getattr(mdb, collection)
+            ids = col.update_one(_id_field, {'$set': _update_doc})
+            nb_mod = ids.modified_count
+            return "{0} objects updated".format(nb_mod)
+        except pymongo.errors.PyMongoError as err:
+            log.error('Updating object {0} failed with error {1}'.format(objects, err))
+            return err
 
 
 def find(collection, query=None, user=None, password=None,

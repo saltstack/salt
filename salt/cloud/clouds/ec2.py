@@ -11,13 +11,10 @@ To use the EC2 cloud module, set up the cloud configuration at
 .. code-block:: yaml
 
     my-ec2-config:
-      # The EC2 API authentication id, set this and/or key to
-      # 'use-instance-role-credentials' to use the instance role credentials
-      # from the meta-data if running on an AWS instance
+      # EC2 API credentials: Access Key ID and Secret Access Key.
+      # Alternatively, to use IAM Instance Role credentials available via
+      # EC2 metadata set both id and key to 'use-instance-role-credentials'
       id: GKTADJGHEIQSXMKKRBJ08H
-      # The EC2 API authentication key, set this and/or id to
-      # 'use-instance-role-credentials' to use the instance role credentials
-      # from the meta-data if running on an AWS instance
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
       # The ssh keyname to use
       keyname: default
@@ -93,7 +90,6 @@ import decimal
 
 # Import Salt Libs
 import salt.utils
-from salt import syspaths
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -1904,11 +1900,12 @@ def request_instance(vm_=None, call=None):
             '\'del_all_vols_on_destroy\' should be a boolean value.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': params, 'location': location},
+        args={'kwargs': params, 'location': location},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -1983,10 +1980,11 @@ def request_instance(vm_=None, call=None):
                           'Nothing else we can do here.')
                 return False
 
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'waiting for spot instance',
             'salt/cloud/{0}/waiting_for_spot'.format(vm_['name']),
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2046,11 +2044,12 @@ def query_instance(vm_=None, call=None):
 
     instance_id = vm_['instance_id']
     location = vm_.get('location', get_location(vm_))
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'querying instance',
         'salt/cloud/{0}/querying'.format(vm_['name']),
-        {'instance_id': instance_id},
+        args={'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2152,11 +2151,12 @@ def query_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(str(exc))
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'instance queried',
             'salt/cloud/{0}/query_reactor'.format(vm_['name']),
-            {'data': data},
+            args={'data': data},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2190,11 +2190,12 @@ def wait_for_instance(
         'gateway', get_ssh_gateway_config(vm_)
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(vm_['name']),
-        {'ip_address': ip_address},
+        args={'ip_address': ip_address},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2369,11 +2370,12 @@ def wait_for_instance(
         )
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'ssh is available',
             'salt/cloud/{0}/ssh_ready_reactor'.format(vm_['name']),
-            {'ip_address': ip_address},
+            args={'ip_address': ip_address},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2441,18 +2443,19 @@ def create(vm_=None, call=None):
                 )
             )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    salt.utils.cloud.cachedir_index_add(
+    __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'ec2', vm_['driver']
     )
 
@@ -2473,7 +2476,12 @@ def create(vm_=None, call=None):
         vm_,
         __opts__,
         default_users=(
-            'ec2-user', 'ubuntu', 'fedora', 'admin', 'bitnami', 'root'
+            'ec2-user',  # Amazon Linux, Fedora, RHEL; FreeBSD
+            'centos',    # CentOS AMIs from AWS Marketplace
+            'ubuntu',    # Ubuntu
+            'admin',     # Debian GNU/Linux
+            'bitnami',   # BitNami AMIs
+            'root'       # Last resort, default user on RHEL 5, SUSE
         )
     )
 
@@ -2542,11 +2550,12 @@ def create(vm_=None, call=None):
 
     tags['Name'] = vm_['name']
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'setting tags',
         'salt/cloud/{0}/tagging'.format(vm_['name']),
-        {'tags': tags},
+        args={'tags': tags},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2611,11 +2620,12 @@ def create(vm_=None, call=None):
         'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
-        salt.utils.cloud.fire_event(
+        __utils__['cloud.fire_event'](
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            {'volumes': volumes},
+            args={'volumes': volumes},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
 
@@ -2650,7 +2660,7 @@ def create(vm_=None, call=None):
             ))
             return {}
 
-    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
+    for key, value in six.iteritems(__utils__['cloud.bootstrap'](vm_, __opts__)):
         ret.setdefault(key, value)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
@@ -2671,11 +2681,12 @@ def create(vm_=None, call=None):
     if ssm_document:
         event_data['ssm_document'] = ssm_document
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        event_data,
+        args=event_data,
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -2702,7 +2713,7 @@ def queue_instances(instances):
         node = _get_node(instance_id=instance_id)
         for name in node:
             if instance_id == node[name]['instanceId']:
-                salt.utils.cloud.cache_node(node[name],
+                __utils__['cloud.cache_node'](node[name],
                                             __active_provider_name__,
                                             __opts__)
 
@@ -3093,11 +3104,12 @@ def destroy(name, call=None):
         quiet=True
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name, 'instance_id': instance_id},
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -3155,18 +3167,19 @@ def destroy(name, call=None):
                            sigver='4')
         ret['spotInstance'] = result[0]
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name, 'instance_id': instance_id},
+        args={'name': name, 'instance_id': instance_id},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    salt.utils.cloud.cachedir_index_del(name)
+    __utils__['cloud.cachedir_index_del'](name)
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
 
     return ret
 
@@ -3254,7 +3267,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     node = _get_node(name=name, instance_id=instance_id)
     for name in node:
-        salt.utils.cloud.cache_node(node[name],
+        __utils__['cloud.cache_node'](node[name],
                                     __active_provider_name__,
                                     __opts__)
     return node
@@ -3317,6 +3330,7 @@ def list_nodes_full(location=None, call=None):
             get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
             if _vm_provider_driver(vm_)
         )
+
         # If there aren't any profiles defined for EC2, check
         # the provider config file, or use the default location.
         if not locations:
@@ -3422,7 +3436,7 @@ def _list_nodes_full(location=None):
 
     ret = _extract_instance_info(instances)
 
-    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
+    __utils__['cloud.cache_node_list'](ret, provider, __opts__)
     return ret
 
 
@@ -3848,6 +3862,14 @@ def register_image(kwargs=None, call=None):
     return r_data
 
 
+def volume_create(**kwargs):
+    '''
+    Wrapper around create_volume.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return create_volume(kwargs, 'function')
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
@@ -4064,6 +4086,14 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
                      opts=__opts__,
                      sigver='4')
     return data
+
+
+def volume_list(**kwargs):
+    '''
+    Wrapper around describe_volumes.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return describe_volumes(kwargs, 'function')
 
 
 def describe_volumes(kwargs=None, call=None):
@@ -4648,7 +4678,7 @@ def _parse_pricing(url, name):
         regions[region['region']] = sizes
 
     outfile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
@@ -4712,7 +4742,7 @@ def show_pricing(kwargs=None, call=None):
         name = 'linux'
 
     pricefile = os.path.join(
-        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+        __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
 
     if not os.path.isfile(pricefile):

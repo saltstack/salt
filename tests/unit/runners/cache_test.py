@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 from salt.runners import cache
 import salt.utils
 
-cache.__opts__ = {}
+cache.__opts__ = {'cache': 'localfs'}
 cache.__salt__ = {}
 
 

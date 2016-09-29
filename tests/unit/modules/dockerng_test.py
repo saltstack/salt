@@ -672,7 +672,7 @@ class DockerngTestCase(TestCase):
             )
         docker_create_mock.assert_called_once_with(
             cmd='/usr/bin/sleep infinity',
-            image='fedora', interactive=True, tty=True)
+            image='opensuse/python', interactive=True, name='foo', tty=True)
         docker_start_mock.assert_called_once_with('ID')
         docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
         docker_stop_mock.assert_called_once_with('ID')
@@ -739,6 +739,25 @@ class DockerngTestCase(TestCase):
 
         self.assertEqual(
             {"retcode": 0, "comment": "container cmd"}, ret)
+
+    def test_images_with_empty_tags(self):
+        """
+        docker 1.12 reports also images without tags with `null`.
+        """
+        client = Mock()
+        client.api_version = '1.24'
+        client.images = Mock(
+            return_value=[{'Id': 'sha256:abcde',
+                           'RepoTags': None},
+                          {'Id': 'sha256:abcdef'},
+                          {'Id': 'sha256:abcdefg',
+                           'RepoTags': ['image:latest']}])
+        with patch.dict(dockerng_mod.__context__,
+                        {'docker.client': client}):
+            dockerng_mod._clear_context()
+            result = dockerng_mod.images()
+        self.assertEqual(result,
+                         {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
 
 
 if __name__ == '__main__':

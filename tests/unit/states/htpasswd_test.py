@@ -60,7 +60,7 @@ class HtpasswdTestCase(TestCase):
 
         with patch.dict(htpasswd.__salt__,
                         {'file.grep': mock_grep,
-                         'webutil.useradd_all': mock_useradd}):
+                         'webutil.useradd': mock_useradd}):
             ret = htpasswd.user_exists('larry', 'badpass',
                                        '/etc/httpd/htpasswd')
             expected = {'name': 'larry',
@@ -80,7 +80,7 @@ class HtpasswdTestCase(TestCase):
 
         with patch.dict(htpasswd.__salt__,
                         {'file.grep': mock_grep,
-                         'webutil.useradd_all': mock_useradd}):
+                         'webutil.useradd': mock_useradd}):
             ret = htpasswd.user_exists('larry', 'badpass',
                                        '/etc/httpd/htpasswd')
             expected = {'name': 'larry',

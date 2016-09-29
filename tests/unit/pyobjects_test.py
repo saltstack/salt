@@ -54,10 +54,18 @@ include('http')
 
 extend_template = '''#!pyobjects
 include('http')
+
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
 map_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
+
 class Samba(Map):
     __merge__ = 'samba:lookup'
 
@@ -127,6 +135,9 @@ from salt://password.sls import password
 '''
 
 requisite_implicit_list_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 with Pkg.installed("pkg"):
     Service.running("service", watch=File("file"), require=Cmd("cmd"))
 '''

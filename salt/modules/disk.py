@@ -33,7 +33,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return (False, 'This module doesn\'t work on Windows.')
+        return False, 'This module doesn\'t work on Windows.'
     return True
 
 
@@ -309,13 +309,16 @@ def wipe(device):
         salt '*' disk.wipe /dev/sda1
     '''
 
-    cmd = 'wipefs {0}'.format(device)
+    cmd = 'wipefs -a {0}'.format(device)
     try:
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
     if out['retcode'] == 0:
         return True
+    else:
+        log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
+        return False
 
 
 def dump(device, args=None):
@@ -358,7 +361,6 @@ def resize2fs(device):
 
         salt '*' disk.resize2fs /dev/sda1
     '''
-    ret = {}
     cmd = 'resize2fs {0}'.format(device)
     try:
         out = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -366,6 +368,109 @@ def resize2fs(device):
         return False
     if out['retcode'] == 0:
         return True
+
+
+@decorators.which('sync')
+@decorators.which('mkfs')
+def format_(device,
+            fs_type='ext4',
+            inode_size=None,
+            lazy_itable_init=None,
+            force=False):
+    '''
+    Format a filesystem onto a device
+
+    .. versionadded:: Carbon
+
+    device
+        The device in which to create the new filesystem
+
+    fs_type
+        The type of filesystem to create
+
+    inode_size
+        Size of the inodes
+
+        This option is only enabled for ext and xfs filesystems
+
+    lazy_itable_init
+        If enabled and the uninit_bg feature is enabled, the inode table will
+        not be fully initialized by mke2fs.  This speeds up filesystem
+        initialization noticeably, but it requires the kernel to finish
+        initializing the filesystem  in  the  background  when  the filesystem
+        is first mounted.  If the option value is omitted, it defaults to 1 to
+        enable lazy inode table zeroing.
+
+        This option is only enabled for ext filesystems
+
+    force
+        Force mke2fs to create a filesystem, even if the specified device is
+        not a partition on a block special device. This option is only enabled
+        for ext and xfs filesystems
+
+        This option is dangerous, use it with caution.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' disk.format /dev/sdX1
+    '''
+    cmd = ['mkfs', '-t', str(fs_type)]
+    if inode_size is not None:
+        if fs_type[:3] == 'ext':
+            cmd.extend(['-i', str(inode_size)])
+        elif fs_type == 'xfs':
+            cmd.extend(['-i', 'size={0}'.format(inode_size)])
+    if lazy_itable_init is not None:
+        if fs_type[:3] == 'ext':
+            cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    if force:
+        if fs_type[:3] == 'ext':
+            cmd.append('-F')
+        elif fs_type == 'xfs':
+            cmd.append('-f')
+    cmd.append(str(device))
+
+    mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
+    sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0
+
+    return all([mkfs_success, sync_success])
+
+
+@decorators.which_bin(['lsblk', 'df'])
+def fstype(device):
+    '''
+    Return the filesystem name of the specified device
+
+    .. versionadded:: Carbon
+
+    device
+        The name of the device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' disk.fstype /dev/sdX1
+    '''
+    if salt.utils.which('lsblk'):
+        lsblk_out = __salt__['cmd.run']('lsblk -o fstype {0}'.format(device)).splitlines()
+        if len(lsblk_out) > 1:
+            fs_type = lsblk_out[1].strip()
+            if fs_type:
+                return fs_type
+
+    if salt.utils.which('df'):
+        # the fstype was not set on the block device, so inspect the filesystem
+        # itself for its type
+        df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
+        if len(df_out) > 1:
+            fs_type = df_out[1]
+            if fs_type:
+                return fs_type
+
+    return ''
 
 
 @depends(HAS_HDPARM)

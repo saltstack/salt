@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import collections
 import fnmatch
 import os
+import re
 
 # Import salt libs
 import salt.ext.six
@@ -63,7 +64,7 @@ def _enqueue(revent):
     __context__['inotify.queue'].append(revent)
 
 
-def _get_notifier():
+def _get_notifier(config):
     '''
     Check the context for the notifier and construct it if not present
     '''
@@ -71,10 +72,14 @@ def _get_notifier():
         __context__['inotify.queue'] = collections.deque()
         wm = pyinotify.WatchManager()
         __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
+        if ('coalesce' in config and
+                isinstance(config['coalesce'], bool) and
+                config['coalesce']):
+            __context__['inotify.notifier'].coalesce_events()
     return __context__['inotify.notifier']
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -154,6 +159,9 @@ def beacon(config):
               exclude:
                 - /path/to/file/or/dir/exclude1
                 - /path/to/file/or/dir/exclude2
+                - /path/to/file/or/dir/regex[a-m]*$:
+                    regex: True
+            coalesce: True
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
@@ -183,10 +191,20 @@ def beacon(config):
     auto_add:
       Automatically start watching files that are created in the watched directory
     exclude:
-      Exclude directories or files from triggering events in the watched directory
+      Exclude directories or files from triggering events in the watched directory.
+      Can use regex if regex is set to True
+    coalesce:
+      If this coalescing option is enabled, events are filtered based on
+      their unicity, only unique events are enqueued, doublons are discarded.
+      An event is unique when the combination of its fields (wd, mask,
+      cookie, name) is unique among events of a same batch. After a batch of
+      events is processed any events are accepted again.
+      This option is top-level (at the same level as the path) and therefore
+      affects all paths that are being watched. This is due to this option
+      being at the Notifier level in pyinotify.
     '''
     ret = []
-    notifier = _get_notifier()
+    notifier = _get_notifier(config)
     wm = notifier._watch_manager
 
     # Read in existing events
@@ -208,7 +226,16 @@ def beacon(config):
             excludes = config[path].get('exclude', '')
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
-                    if '*' in exclude:
+                    if isinstance(exclude, dict):
+                        if exclude.values()[0].get('regex', False):
+                            try:
+                                if re.search(exclude.keys()[0], event.pathname):
+                                    _append = False
+                            except Exception:
+                                log.warn('Failed to compile regex: {0}'.format(exclude.keys()[0]))
+                        else:
+                            exclude = exclude.keys()[0]
+                    elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
                     else:
@@ -259,8 +286,19 @@ def beacon(config):
                         update = True
                     if update:
                         wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
-        else:
-            wm.add_watch(path, mask, rec=rec, auto_add=auto_add)
+        elif os.path.exists(path):
+            excludes = config[path].get('exclude', '')
+            excl = None
+            if isinstance(excludes, list):
+                excl = []
+                for exclude in excludes:
+                    if isinstance(exclude, dict):
+                        excl.append(exclude.keys()[0])
+                    else:
+                        excl.append(exclude)
+                excl = pyinotify.ExcludeFilter(excl)
+
+            wm.add_watch(path, mask, rec=rec, auto_add=auto_add, exclude_filter=excl)
 
     # Return event data
     return ret

@@ -1299,6 +1299,7 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
             # The get_user call returns an user ARN:
             #    arn:aws:iam::027050522557:user/salt-test
             arn = ret['get_user_response']['get_user_result']['user']['arn']
+            account_id = arn.split(':')[4]
         except boto.exception.BotoServerError:
             # If call failed, then let's try to get the ARN from the metadata
             timeout = boto.config.getfloat(
@@ -1307,15 +1308,15 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
             attempts = boto.config.getint(
                 'Boto', 'metadata_service_num_attempts', 1
             )
-            metadata = boto.utils.get_instance_metadata(
+            identity = boto.utils.get_instance_identity(
                 timeout=timeout, num_retries=attempts
             )
             try:
-                arn = metadata['iam']['info']['InstanceProfileArn']
+                account_id = identity['document']['accountId']
             except KeyError:
-                log.error('Failed to get user or metadata ARN information in'
+                log.error('Failed to get account id from instance_identity in'
                           ' boto_iam.get_account_id.')
-        __context__[cache_key] = arn.split(':')[4]
+        __context__[cache_key] = account_id
     return __context__[cache_key]
 
 
@@ -2202,3 +2203,156 @@ def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
         msg = 'Failed to list role {0} attached policies.'
         log.error(msg.format(role_name))
         return []
+
+
+def create_saml_provider(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
+    '''
+    Create SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.create_saml_provider my_saml_provider_name saml_metadata_document
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.create_saml_provider(saml_metadata_document, name)
+        msg = 'Successfully created {0} SAML provider.'
+        log.info(msg.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to create SAML provider {0}.'
+        log.error(msg.format(name))
+        return False
+
+
+def get_saml_provider_arn(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_saml_provider_arn my_saml_provider_name
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.list_saml_providers()
+        for saml_provider in response.list_saml_providers_response.list_saml_providers_result.saml_provider_list:
+            if saml_provider['arn'].endswith(':saml-provider/' + name):
+                return saml_provider['arn']
+        return False
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to get ARN of SAML provider {0}.'
+        log.error(msg.format(name))
+        return False
+
+
+def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete SAML provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_saml_provider my_saml_provider_name
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
+        if not saml_provider_arn:
+            msg = 'SAML provider {0} not found.'
+            log.info(msg.format(name))
+            return True
+        conn.delete_saml_provider(saml_provider_arn)
+        msg = 'Successfully deleted {0} SAML provider.'
+        log.info(msg.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to delete {0} SAML provider.'
+        log.error(msg.format(name))
+        return False
+
+
+def list_saml_providers(region=None, key=None, keyid=None, profile=None):
+    '''
+    List SAML providers.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_saml_providers
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        providers = []
+        info = conn.list_saml_providers()
+        for arn in info['list_saml_providers_response']['list_saml_providers_result']['saml_provider_list']:
+            providers.append(arn['arn'].rsplit('/', 1)[1])
+        return providers
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to get list of SAML providers.'
+        log.error(msg)
+        return False
+
+
+def get_saml_provider(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get SAML provider document.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_saml_provider arn
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        provider = conn.get_saml_provider(name)
+        return provider['get_saml_provider_response']['get_saml_provider_result']['saml_metadata_document']
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to get SAML provider document.'
+        log.error(msg)
+        return False
+
+
+def update_saml_provider(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
+    '''
+    Update SAML provider.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.update_saml_provider my_saml_provider_name saml_metadata_document
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        saml_provider_arn = get_saml_provider_arn(name, region=region, key=key, keyid=keyid, profile=profile)
+        if not saml_provider_arn:
+            msg = 'SAML provider {0} not found.'
+            log.info(msg.format(name))
+            return False
+        if conn.update_saml_provider(name, saml_metadata_document):
+            return True
+        return False
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to update of SAML provider.'
+        log.error(msg.format(name))
+        return False

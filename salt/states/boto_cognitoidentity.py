@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage CognitoIdentity Functions
-=================
+================================
 
-.. versionadded:: Boron
+.. versionadded:: Carbon
 
 Create and destroy CognitoIdentity identity pools. Be aware that this interacts with
 Amazon's services, and so may incur charges.

@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
 from integration.utils import testprogram
 
 log = logging.getLogger(__name__)
@@ -38,15 +39,22 @@ class ProxyTest(testprogram.TestProgramCase):
         # Call setup here to ensure config and script exist
         proxy.setup()
         stdout, stderr, status = proxy.run(
-            args=['-d'],
+            args=[
+                '--config-dir', proxy.abs_path(proxy.config_dir),  # Needed due to verbatim_args=True
+                '-d',
+            ],
             verbatim_args=True,   # prevents --proxyid from being added automatically
             catch_stderr=True,
             with_retcode=True,
+            # The proxy minion had a bug where it would loop forever
+            # without daemonizing - protect that with a timeout.
+            timeout=60,
         )
         self.assert_exit_status(
             status, 'EX_USAGE',
             message='no --proxyid specified',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -57,7 +65,7 @@ class ProxyTest(testprogram.TestProgramCase):
 
         proxy = testprogram.TestDaemonSaltProxy(
             name='proxy-unknown_user',
-            config={'user': 'unknown'},
+            config_base={'user': 'some_unknown_user_xyz'},
             parent_dir=self._test_dir,
         )
         # Call setup here to ensure config and script exist
@@ -70,7 +78,8 @@ class ProxyTest(testprogram.TestProgramCase):
         self.assert_exit_status(
             status, 'EX_NOUSER',
             message='unknown user not on system',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         # proxy.shutdown() should be unnecessary since the start-up should fail
 
@@ -117,7 +126,8 @@ class ProxyTest(testprogram.TestProgramCase):
         self.assert_exit_status(
             status, 'EX_OK',
             message='correct usage',
-            stdout=stdout, stderr=stderr
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
         )
         proxy.shutdown()
 

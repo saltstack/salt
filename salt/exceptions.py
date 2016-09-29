@@ -103,9 +103,15 @@ class CommandExecutionError(SaltException):
         self.error = exc_str_prefix = message
         self.info = info
         if self.info:
-            if not exc_str_prefix.endswith('.'):
-                exc_str_prefix += '.'
+            try:
+                if exc_str_prefix[-1] not in '.?!':
+                    exc_str_prefix += '.'
+            except IndexError:
+                pass
             exc_str_prefix += ' Additional info follows:\n\n'
+            # Get rid of leading space if the exception was raised with an
+            # empty message.
+            exc_str_prefix = exc_str_prefix.lstrip()
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
             exc_str = exc_str_prefix + _nested_output(self.info)
@@ -370,4 +376,43 @@ class NotImplemented(SaltException):
     '''
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
+    '''
+
+
+# VMware related exceptions
+class VMwareSaltError(CommandExecutionError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareRuntimeError(VMwareSaltError):
+    '''
+    Used when a runtime error is encountered when communicating with the
+    vCenter
+    '''
+
+
+class VMwareConnectionError(VMwareSaltError):
+    '''
+    Used when the client fails to connect to a either a VMware vCenter server or
+    to a ESXi host
+    '''
+
+
+class VMwareObjectRetrievalError(VMwareSaltError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareApiError(VMwareSaltError):
+    '''
+    Used when representing a generic VMware API error
+    '''
+
+
+class VMwareSystemError(VMwareSaltError):
+    '''
+    Used when representing a generic VMware system error
     '''

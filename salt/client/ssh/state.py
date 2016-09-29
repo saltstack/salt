@@ -154,7 +154,10 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
         for ref in file_refs[saltenv]:
             for name in ref:
                 short = salt.utils.url.parse(name)[0]
-                path = file_client.cache_file(name, saltenv, cachedir=cachedir)
+                try:
+                    path = file_client.cache_file(name, saltenv, cachedir=cachedir)
+                except IOError:
+                    path = ''
                 if path:
                     tgt = os.path.join(env_root, short)
                     tgt_dir = os.path.dirname(tgt)
@@ -162,7 +165,10 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
                     continue
-                files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
+                try:
+                    files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
+                except IOError:
+                    files = ''
                 if files:
                     for filename in files:
                         fn = filename[filename.find(short) + len(short):]

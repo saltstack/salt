@@ -437,7 +437,7 @@ data from the state that will make use of the data.
 Light conditionals and looping
 ``````````````````````````````
 
-Jinja is extremely powerful for programatically generating Salt states. It is
+Jinja is extremely powerful for programmatically generating Salt states. It is
 also easy to overuse. As a rule of thumb, if it is hard to read it will be hard
 to maintain!
 
@@ -461,7 +461,7 @@ Below is a simple example of a readable loop:
 
 Avoid putting a Jinja conditionals within Salt states where possible.
 Readability suffers and the correct YAML indentation is difficult to see in the
-surrounding visual noise. Parameterization (discussed below) and variables are
+surrounding visual noise. Parametrization (discussed below) and variables are
 both useful techniques to avoid this. For example:
 
 .. code-block:: yaml
@@ -500,7 +500,7 @@ both useful techniques to avoid this. For example:
         - name: {{ name }}
 
 Dictionaries are useful to effectively "namespace" a collection of variables.
-This is useful with parameterization (discussed below). Dictionaries are also
+This is useful with parametrization (discussed below). Dictionaries are also
 easily combined and merged. And they can be directly serialized into YAML which
 is often easier than trying to create valid YAML through templating. For
 example:
@@ -1162,7 +1162,7 @@ Pillar overrides
 
 Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
 and must provide a default value. Create local variables using the Jinja
-``set`` construct to increase redability and to avoid potentially hundreds or
+``set`` construct to increase readability and to avoid potentially hundreds or
 thousands of function calls across a large state tree.
 
 .. code-block:: jinja

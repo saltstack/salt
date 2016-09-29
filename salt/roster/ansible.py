@@ -139,9 +139,10 @@ class Target(object):
         Execute the correct tgt_type routine and return
         '''
         try:
-            return getattr(self, 'get_{0}'.format(self.tgt_type))()
+            routine = getattr(self, 'get_{0}'.format(self.tgt_type))
         except AttributeError:
             return {}
+        return routine()
 
     def get_glob(self):
         '''

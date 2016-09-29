@@ -5,6 +5,7 @@ File server pluggable modules and generic backend functions
 
 # Import python libs
 from __future__ import absolute_import
+import collections
 import errno
 import fnmatch
 import logging
@@ -121,8 +122,8 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     age = time.time() - cache_stat.st_mtime
                 else:
                     # if filelist does not exists yet, mark it as expired
-                    age = opts.get('fileserver_list_cache_time', 30) + 1
-                if age < opts.get('fileserver_list_cache_time', 30):
+                    age = opts.get('fileserver_list_cache_time', 20) + 1
+                if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.fopen(list_cache, 'rb') as fp_:
                         log.trace('Returning file_lists cache data from '
@@ -171,7 +172,7 @@ def check_env_cache(opts, env_cache):
     return None
 
 
-def generate_mtime_map(path_map):
+def generate_mtime_map(opts, path_map):
     '''
     Generate a dict of filename -> mtime
     '''
@@ -179,6 +180,8 @@ def generate_mtime_map(path_map):
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
+                # Don't walk any directories that match file_ignore_regex or glob
+                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
@@ -198,11 +201,15 @@ def diff_mtime_map(map1, map2):
     '''
     # check if the mtimes are the same
     if sorted(map1) != sorted(map2):
-        #log.debug('diff_mtime_map: the maps are different')
         return True
 
+    # map1 and map2 are guaranteed to have same keys,
+    # so compare mtimes
+    for filename, mtime in six.iteritems(map1):
+        if map2[filename] != mtime:
+            return True
+
     # we made it, that means we have no changes
-    #log.debug('diff_mtime_map: the maps are the same')
     return False
 
 
@@ -319,10 +326,18 @@ class Fileserver(object):
         if not back:
             back = self.opts['fileserver_backend']
         else:
-            try:
-                back = back.split(',')
-            except AttributeError:
-                back = six.text_type(back).split(',')
+            if not isinstance(back, list):
+                try:
+                    back = back.split(',')
+                except AttributeError:
+                    back = six.text_type(back).split(',')
+
+        if isinstance(back, collections.Sequence):
+            # The test suite uses an ImmutableList type (based on
+            # collections.Sequence) for lists, which breaks this function in
+            # the test suite. This normalizes the value from the opts into a
+            # list if it is based on collections.Sequence.
+            back = list(back)
 
         ret = []
         if not isinstance(back, list):
@@ -628,6 +643,88 @@ class Fileserver(object):
             return self.__file_hash_and_stat(load)
         except (IndexError, TypeError):
             return '', None
+
+    def clear_file_list_cache(self, load):
+        '''
+        Deletes the file_lists cache files
+        '''
+        if 'env' in load:
+            salt.utils.warn_until(
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
+
+        saltenv = load.get('saltenv', [])
+        if saltenv is not None:
+            if not isinstance(saltenv, list):
+                try:
+                    saltenv = [x.strip() for x in saltenv.split(',')]
+                except AttributeError:
+                    saltenv = [x.strip() for x in str(saltenv).split(',')]
+
+            for idx, val in enumerate(saltenv):
+                if not isinstance(val, six.string_types):
+                    saltenv[idx] = six.text_type(val)
+
+        ret = {}
+        fsb = self._gen_back(load.pop('fsbackend', None))
+        list_cachedir = os.path.join(self.opts['cachedir'], 'file_lists')
+        try:
+            file_list_backends = os.listdir(list_cachedir)
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                log.debug('No file list caches found')
+                return {}
+            else:
+                log.error(
+                    'Failed to get list of saltenvs for which the master has '
+                    'cached file lists: %s', exc
+                )
+
+        for back in file_list_backends:
+            # Account for the fact that the file_list cache directory for gitfs
+            # is 'git', hgfs is 'hg', etc.
+            back_virtualname = re.sub('fs$', '', back)
+            try:
+                cache_files = os.listdir(os.path.join(list_cachedir, back))
+            except OSError as exc:
+                log.error(
+                    'Failed to find file list caches for saltenv \'%s\': %s',
+                    back, exc
+                )
+                continue
+            for cache_file in cache_files:
+                try:
+                    cache_saltenv, extension = cache_file.rsplit('.', 1)
+                except ValueError:
+                    # Filename has no dot in it. Not a cache file, ignore.
+                    continue
+                if extension != 'p':
+                    # Filename does not end in ".p". Not a cache file, ignore.
+                    continue
+                elif back_virtualname not in fsb or \
+                        (saltenv is not None and cache_saltenv not in saltenv):
+                    log.debug(
+                        'Skipping %s file list cache for saltenv \'%s\'',
+                        back, cache_saltenv
+                    )
+                    continue
+                try:
+                    os.remove(os.path.join(list_cachedir, back, cache_file))
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to remove %s: %s',
+                                  exc.filename, exc.strerror)
+                else:
+                    ret.setdefault(back, []).append(cache_saltenv)
+                    log.debug(
+                        'Removed %s file list cache for saltenv \'%s\'',
+                        cache_saltenv, back
+                    )
+        return ret
 
     def file_list(self, load):
         '''

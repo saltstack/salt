@@ -3,6 +3,13 @@
 Use a postgresql server for the master job cache. This helps the job cache to
 cope with scale.
 
+.. note::
+    :mod:`returners.postgres <salt.returners.postgres>` is also available if
+    you are not using PostgreSQL as a :ref:`master job cache
+    <external-master-cache>`.  These two modules provide different
+    functionality so you should compare each to see which module best suits
+    your particular needs.
+
 :maintainer:    gjredelinghuys@gmail.com
 :maturity:      New
 :depends:       psycopg2
@@ -127,12 +134,13 @@ RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
 
+__virtualname__ = 'postgres_local_cache'
+
 
 def __virtual__():
     if not HAS_POSTGRES:
-        log.info("Could not import psycopg2, postgres_local_cache disabled.")
-        return False
-    return 'postgres_local_cache'
+        return (False, 'Could not import psycopg2; postges_local_cache disabled')
+    return __virtualname__
 
 
 def _get_conn():

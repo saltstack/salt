@@ -95,6 +95,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import pprint
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
@@ -136,7 +137,7 @@ def present(
         The ID of the VPC to create the security group in, if any. Exclusive with vpc_name.
 
     vpc_name
-        The name of the VPC to create the security group in, if any. Exlusive with vpc_id.
+        The name of the VPC to create the security group in, if any. Exclusive with vpc_id.
 
         .. versionadded:: 2016.3.0
 
@@ -418,7 +419,9 @@ def _rules_present(name, rules, vpc_id=None, vpc_name=None,
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
     if to_create or to_delete:
         if __opts__['test']:
-            msg = 'Security group {0} set to have rules modified.'.format(name)
+            msg = """Security group {0} set to have rules modified.
+            To be created: {1}
+            To be deleted: {2}""".format(name, pprint.pformat(to_create), pprint.pformat(to_delete))
             ret['comment'] = msg
             ret['result'] = None
             return ret
@@ -499,7 +502,9 @@ def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
     )
     if to_create_egress or to_delete_egress:
         if __opts__['test']:
-            msg = 'Security group {0} set to have rules modified.'.format(name)
+            msg = """Security group {0} set to have rules modified.
+            To be created: {1}
+            To be deleted: {2}""".format(name, pprint.pformat(to_create_egress), pprint.pformat(to_delete_egress))
             ret['comment'] = msg
             ret['result'] = None
             return ret

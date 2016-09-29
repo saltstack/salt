@@ -11,8 +11,10 @@ timeout: 3
 open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
+file_recv: True
 pillar_opts: True
 log_file: master.log
+log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
 log_level_logfile: debug
 key_logfile: key.log
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
@@ -78,3 +80,10 @@ nodegroups:
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
+
+
+mysql.host: localhost
+mysql.user: 'salt'
+mysql.pass: 'salt'
+mysql.db: 'salt'
+mysql.port: 3306

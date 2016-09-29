@@ -23,6 +23,7 @@ import salt.loader
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import boto
+    import boto.ec2  # pylint: enable=unused-import
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False

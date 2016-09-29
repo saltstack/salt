@@ -22,10 +22,7 @@ ensure_in_syspath('../../')
 
 SERVICE_NAME = 'libcloud_dns'
 libcloud_dns.__salt__ = {}
-<<<<<<< HEAD
-=======
 libcloud_dns.__utils__ = {}
->>>>>>> 166d5483acfc77f089b6ca0da94be7c1b01cadfc
 
 
 class MockDNSDriver(object):
@@ -62,14 +59,10 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         client = libcloud_dns._get_driver('test')
         self.assertFalse(client is None)
 
-<<<<<<< HEAD
-=======
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
             libcloud_dns.__init__(None)
             dunder.assert_called_with('salt.modules.libcloud_dns')
-
->>>>>>> 166d5483acfc77f089b6ca0da94be7c1b01cadfc
 
 if __name__ == '__main__':
     from unit import run_tests

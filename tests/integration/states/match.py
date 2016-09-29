@@ -35,12 +35,13 @@ class StateMatchTest(integration.ModuleCase):
         top_filename = 'issue-2167-ipcidr-match.sls'
         top_file = os.path.join(STATE_DIR, top_filename)
         try:
-            salt.utils.fopen(top_file, 'w').write(
-                'base:\n'
-                '  {0}:\n'
-                '    - match: ipcidr\n'
-                '    - test\n'.format(subnets[0])
-            )
+            with salt.utils.fopen(top_file, 'w') as fp_:
+                fp_.write(
+                    'base:\n'
+                    '  {0}:\n'
+                    '    - match: ipcidr\n'
+                    '    - test\n'.format(subnets[0])
+                )
             ret = self.run_function('state.top', [top_filename])
             self.assertNotIn(
                 'AttributeError: \'Matcher\' object has no attribute '

@@ -204,8 +204,7 @@ would be passed on the command line.
 run_run_plus
 ~~~~~~~~~~~~
 
-Execute Salt run and the salt run function and return the data from
-each in a dict.
+Execute the runner function the and return the return data and output in a dict
 
 run_salt
 ~~~~~~~~

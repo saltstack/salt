@@ -9,13 +9,16 @@ Module for managing the Salt beacons on a minion
 # Import Python libs
 from __future__ import absolute_import
 import difflib
+import logging
 import os
 import yaml
 
+# Import Salt libs
 import salt.utils
+import salt.utils.event
 from salt.ext.six.moves import map
 
-import logging
+# Get logging started
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
@@ -38,6 +41,7 @@ def list_(return_yaml=True):
         salt '*' beacons.list
 
     '''
+    beacons = None
 
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)

@@ -11,7 +11,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import sys
-import atexit
 import logging
 import threading
 import logging.handlers

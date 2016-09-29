@@ -411,6 +411,31 @@ def get_specific_user():
     return user
 
 
+def get_master_key(key_user, opts, skip_perm_errors=False):
+    if key_user == 'root':
+        if opts.get('user', 'root') != 'root':
+            key_user = opts.get('user', 'root')
+    if key_user.startswith('sudo_'):
+        key_user = opts.get('user', 'root')
+    if salt.utils.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        key_user = key_user.replace('\\', '_')
+    keyfile = os.path.join(opts['cachedir'],
+                           '.{0}_key'.format(key_user))
+    # Make sure all key parent directories are accessible
+    salt.utils.verify.check_path_traversal(opts['cachedir'],
+                                           key_user,
+                                           skip_perm_errors)
+
+    try:
+        with salt.utils.fopen(keyfile, 'r') as key:
+            return key.read()
+    except (OSError, IOError):
+        # Fall back to eauth
+        return ''
+
+
 def reinit_crypto():
     '''
     When a fork arrises, pycrypto needs to reinit
@@ -616,7 +641,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
             ficn = os.path.join(stats_path, '{0}.{1}.stats'.format(id_, date))
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
-                with open(ficn, 'w') as fic:
+                with fopen(ficn, 'w') as fic:
                     pstats.Stats(pr, stream=fic).sort_stats('cumulative')
             log.info('PROFILING: {0} generated'.format(ficp))
             log.info('PROFILING (cumulative): {0} generated'.format(ficn))
@@ -725,6 +750,8 @@ def dns_check(addr, safe=False, ipv6=False):
     exception. Obeys system preference for IPv4/6 address resolution.
     '''
     error = False
+    lookup = addr
+    seen_ipv6 = False
     try:
         # issue #21397: force glibc to re-read resolv.conf
         if HAS_RESINIT:
@@ -737,19 +764,28 @@ def dns_check(addr, safe=False, ipv6=False):
         else:
             addr = False
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
+                if h[0] == socket.AF_INET:
+                    addr = ip_bracket(h[4][0])
+                    break
+                elif h[0] == socket.AF_INET6:
+                    if not ipv6:
+                        seen_ipv6 = True
+                        continue
                     addr = ip_bracket(h[4][0])
                     break
             if not addr:
                 error = True
     except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        if seen_ipv6 and not addr:
+            err = ('DNS lookup of \'{0}\' failed, but ipv6 address ignored. Enable ipv6 in config to use it.').format(lookup)
+        else:
+            err = ('DNS lookup of \'{0}\' failed.').format(lookup)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -863,18 +899,39 @@ def path_join(*parts):
     # Normalize path converting any os.sep as needed
     parts = [os.path.normpath(p) for p in parts]
 
-    root = parts.pop(0)
+    try:
+        root = parts.pop(0)
+    except IndexError:
+        # No args passed to func
+        return ''
+
     if not parts:
-        return root
+        ret = root
+    else:
+        if is_windows():
+            if len(root) == 1:
+                root += ':'
+            root = root.rstrip(os.sep) + os.sep
 
-    if is_windows():
-        if len(root) == 1:
-            root += ':'
-        root = root.rstrip(os.sep) + os.sep
-
-    return os.path.normpath(os.path.join(
-        root, *[p.lstrip(os.sep) for p in parts]
-    ))
+        stripped = [p.lstrip(os.sep) for p in parts]
+        try:
+            ret = os.path.join(root, *stripped)
+        except UnicodeDecodeError:
+            # This is probably Python 2 and one of the parts contains unicode
+            # characters in a bytestring. First try to decode to the system
+            # encoding.
+            try:
+                enc = __salt_system_encoding__
+            except NameError:
+                enc = sys.stdin.encoding or sys.getdefaultencoding()
+            try:
+                ret = os.path.join(root.decode(enc),
+                                   *[x.decode(enc) for x in stripped])
+            except UnicodeDecodeError:
+                # Last resort, try UTF-8
+                ret = os.path.join(root.decode('UTF-8'),
+                                   *[x.decode('UTF-8') for x in stripped])
+    return os.path.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):
@@ -974,7 +1031,7 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun)
 
-    arg_data = arg_lookup(fun)
+    arg_data = arg_lookup(fun, aspec)
     args = arg_data['args']
     kwargs = arg_data['kwargs']
 
@@ -1031,10 +1088,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # We'll be showing errors to the users until Salt Nitrogen comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Carbon',
+        'Nitrogen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1071,7 +1128,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Carbon is out.{1}'.format(
+            'Nitrogen is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1082,13 +1139,14 @@ def format_call(fun,
     return ret
 
 
-def arg_lookup(fun):
+def arg_lookup(fun, aspec=None):
     '''
     Return a dict containing the arguments and default arguments to the
     function.
     '''
     ret = {'kwargs': {}}
-    aspec = salt.utils.args.get_function_argspec(fun)
+    if aspec is None:
+        aspec = salt.utils.args.get_function_argspec(fun)
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
@@ -1914,8 +1972,10 @@ def rm_rf(path):
             func(path)
         else:
             raise  # pylint: disable=E0704
-
-    shutil.rmtree(path, onerror=_onerror)
+    if os.path.isdir(path):
+        shutil.rmtree(path, onerror=_onerror)
+    else:
+        os.remove(path)
 
 
 def option(value, default='', opts=None, pillar=None):
@@ -2456,21 +2516,8 @@ def argspec_report(functions, module=''):
     argspec function signatures
     '''
     ret = {}
-    # TODO: cp.get_file will also match cp.get_file_str. this is the
-    # same logic as sys.doc, and it is not working as expected, see
-    # issue #3614
-    _use_fnmatch = False
-    if '*' in module:
-        target_mod = module
-        _use_fnmatch = True
-    elif module:
-        # allow both "sys" and "sys." to match sys, without also matching
-        # sysctl
-        target_module = module + '.' if not module.endswith('.') else module
-    else:
-        target_module = ''
-    if _use_fnmatch:
-        for fun in fnmatch.filter(functions, target_mod):
+    if '*' in module or '.' in module:
+        for fun in fnmatch.filter(functions, module):
             try:
                 aspec = salt.utils.args.get_function_argspec(functions[fun])
             except TypeError:
@@ -2486,8 +2533,11 @@ def argspec_report(functions, module=''):
             ret[fun]['kwargs'] = True if kwargs else None
 
     else:
+        # "sys" should just match sys without also matching sysctl
+        moduledot = module + '.'
+
         for fun in functions:
-            if fun == module or fun.startswith(target_module):
+            if fun.startswith(moduledot):
                 try:
                     aspec = salt.utils.args.get_function_argspec(functions[fun])
                 except TypeError:

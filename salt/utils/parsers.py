@@ -40,8 +40,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt.utils.verify import verify_files
 import salt.exceptions
-
-# Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -238,7 +236,9 @@ class OptionParser(optparse.OptionParser, object):
     def _add_version_option(self):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
-            '--versions-report', action='store_true',
+            '--versions-report',
+            '-V',
+            action='store_true',
             help='Show program\'s dependencies version number and exit.'
         )
 
@@ -252,8 +252,9 @@ class OptionParser(optparse.OptionParser, object):
             try:
                 mixin_before_exit_func(self)
             except Exception as err:  # pylint: disable=broad-except
-                logging.getLogger(__name__).exception(err)
-                self.error(
+                logger = logging.getLogger(__name__)
+                logger.exception(err)
+                logger.error(
                     'Error while processing {0}: {1}'.format(
                         mixin_before_exit_func, traceback.format_exc(err)
                     )
@@ -921,7 +922,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def _mixin_before_exit(self):
-        if hasattr(self, 'config'):
+        if hasattr(self, 'config') and self.config.get('pidfile', ''):
             # We've loaded and merged options into the configuration, it's safe
             # to query about the pidfile
             if self.check_pidfile():
@@ -1704,6 +1705,45 @@ class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
 
+class EAuthMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        group = self.eauth_group = optparse.OptionGroup(
+            self,
+            'External Authentication',
+            # Include description here as a string
+        )
+        group.add_option(
+            '-a', '--auth', '--eauth', '--external-auth',
+            default='',
+            dest='eauth',
+            help=('Specify an external authentication system to use.')
+        )
+        group.add_option(
+            '-T', '--make-token',
+            default=False,
+            dest='mktoken',
+            action='store_true',
+            help=('Generate and save an authentication token for re-use. The '
+                  'token is generated and made available for the period '
+                  'defined in the Salt Master.')
+        )
+        group.add_option(
+            '--username',
+            dest='username',
+            nargs=1,
+            help=('Username for external authentication.')
+        )
+        group.add_option(
+            '--password',
+            dest='password',
+            nargs=1,
+            help=('Password for external authentication.')
+        )
+        self.add_option_group(group)
+
+
 class MasterOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
                                             ConfigDirMixIn,
@@ -1751,13 +1791,13 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
 
 class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
                                                  OptionParser,
+                                                 ProxyIdMixIn,
                                                  ConfigDirMixIn,
                                                  MergeConfigMixIn,
                                                  LogLevelMixIn,
                                                  RunUserMixin,
                                                  DaemonMixIn,
-                                                 SaltfileMixIn,
-                                                 ProxyIdMixIn)):  # pylint: disable=no-init
+                                                 SaltfileMixIn)):  # pylint: disable=no-init
 
     description = (
         'The Salt proxy minion, connects to and controls devices not able to run a minion.  '
@@ -1770,8 +1810,13 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
 
     def setup_config(self):
+        try:
+            minion_id = self.values.proxyid
+        except AttributeError:
+            minion_id = None
+
         return config.minion_config(self.get_config_file_path(),
-                                   cache_minion_id=False)
+                                   cache_minion_id=False, minion_id=minion_id)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
@@ -1810,7 +1855,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              LogLevelMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
-                                             ArgsStdinMixIn)):
+                                             ArgsStdinMixIn,
+                                             EAuthMixIn)):
 
     default_timeout = 5
 
@@ -1901,21 +1947,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
-            '-a', '--auth', '--eauth', '--external-auth',
-            default='',
-            dest='eauth',
-            help=('Specify an external authentication system to use.')
-        )
-        self.add_option(
-            '-T', '--make-token',
-            default=False,
-            dest='mktoken',
-            action='store_true',
-            help=('Generate and save an authentication token for re-use. The '
-                  'token is generated and made available for the period '
-                  'defined in the Salt Master.')
-        )
-        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -1970,18 +2001,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help=('Display summary information about a salt command.')
-        )
-        self.add_option(
-            '--username',
-            dest='username',
-            nargs=1,
-            help=('Username for external authentication.')
-        )
-        self.add_option(
-            '--password',
-            dest='password',
-            nargs=1,
-            help=('Password for external authentication.')
         )
         self.add_option(
             '--metadata',
@@ -2154,7 +2173,8 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              RunUserMixin,
                                              HardCrashMixin,
-                                             SaltfileMixIn)):
+                                             SaltfileMixIn,
+                                             EAuthMixIn)):
 
     description = 'Salt key is used to manage Salt authentication keys'
 
@@ -2170,6 +2190,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
     def _mixin_setup(self):
         actions_group = optparse.OptionGroup(self, 'Actions')
+        actions_group.set_conflict_handler('resolve')
         actions_group.add_option(
             '-l', '--list',
             default='',
@@ -2195,7 +2216,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             default='',
             help='Accept the specified public key (use --include-rejected and '
                  '--include-denied to match rejected and denied keys in '
-                 'addition to pending keys). Globs are supported.'
+                 'addition to pending keys). Globs are supported.',
         )
 
         actions_group.add_option(
@@ -2661,7 +2682,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              SaltfileMixIn,
                                              OutputOptionsMixIn,
                                              ArgsStdinMixIn,
-                                             ProfilingPMixIn)):
+                                             ProfilingPMixIn,
+                                             EAuthMixIn)):
 
     default_timeout = 1
 
@@ -2717,7 +2739,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['arg'] = []
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path())
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
@@ -2818,6 +2840,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Select a random temp dir to deploy on the remote system. '
                   'The dir will be cleaned after the execution.'))
+        self.add_option(
+            '-t', '--regen-thin', '--thin',
+            dest='regen_thin',
+            default=False,
+            action='store_true',
+            help=('Trigger a thin tarball regeneration. This is needed if',
+                  'custom grains/modules/states have been added or updated.'))
         self.add_option(
             '--python2-bin',
             default='python2',

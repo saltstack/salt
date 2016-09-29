@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase
+from salttesting.mock import MagicMock
 
 # Import Salt Libs
 from salt.cloud.clouds import saltify
@@ -15,6 +16,8 @@ from salt.cloud.clouds import saltify
 # Globals
 saltify.__opts__ = {}
 saltify.__opts__['providers'] = {}
+saltify.__utils__ = {}
+saltify.__utils__['cloud.bootstrap'] = MagicMock()
 
 
 class SaltifyTestCase(TestCase):

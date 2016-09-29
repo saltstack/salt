@@ -328,6 +328,8 @@ class ProcessManager(object):
         '''
         Create new process (assuming this one is dead), then remove the old one
         '''
+        if self._restart_processes is False:
+            return
         log.info('Process {0} ({1}) died with exit status {2},'
                  ' restarting...'.format(self._process_map[pid]['tgt'],
                                          pid,
@@ -379,10 +381,10 @@ class ProcessManager(object):
 
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are not SIGTERM handlers installed, install ours
+            # There are no SIGTERM handlers installed, install ours
             signal.signal(signal.SIGTERM, self.kill_children)
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are not SIGTERM handlers installed, install ours
+            # There are no SIGINT handlers installed, install ours
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
@@ -397,7 +399,8 @@ class ProcessManager(object):
                         log.debug('Process of pid {0} died, not a known'
                                   ' process, will not restart'.format(pid))
                         continue
-                    self.restart_process(pid)
+                    if self._restart_processes is True:
+                        self.restart_process(pid)
                 elif async is True:
                     yield gen.sleep(10)
                 elif async is False:
@@ -426,6 +429,10 @@ class ProcessManager(object):
         '''
         Kill all of the children
         '''
+        # first lets reset signal handlers to default one to prevent running this twice
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         # check that this is the correct process, children inherit this
         # handler, if we are in a child lets just run the original handler
         if os.getpid() != self._pid:
@@ -443,7 +450,7 @@ class ProcessManager(object):
                 # call 'taskkill', it will leave a 'taskkill' zombie process.
                 # We want to avoid this.
                 return
-            with open(os.devnull, 'wb') as devnull:
+            with salt.utils.fopen(os.devnull, 'wb') as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
                     # because the processes don't have a sigterm handler.
@@ -457,7 +464,10 @@ class ProcessManager(object):
                 log.trace('Terminating pid {0}: {1}'.format(pid, p_map['Process']))
                 if args:
                     # escalate the signal to the process
-                    os.kill(pid, args[0])
+                    try:
+                        os.kill(pid, args[0])
+                    except OSError:
+                        pass
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
@@ -501,8 +511,9 @@ class ProcessManager(object):
                     continue
                 log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
                 try:
-                    os.kill(signal.SIGKILL, pid)
-                except OSError:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError as exc:
+                    log.exception(exc)
                     # in case the process has since decided to die, os.kill returns OSError
                     if not p_map['Process'].is_alive():
                         # The process is no longer alive, remove it from the process map dictionary
@@ -672,6 +683,8 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = '{0} received a '.format(self.__class__.__name__)
         if signum == signal.SIGINT:
             msg += 'SIGINT'
@@ -679,6 +692,11 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
+        if HAS_PSUTIL:
+            process = psutil.Process(self.pid)
+            if hasattr(process, 'children'):
+                for child in process.children(recursive=True):
+                    child.terminate()
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):

@@ -34,7 +34,7 @@ except ImportError:
 win_system.__salt__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(NO_MOCK or not HAS_WIN32NET_MODS, NO_MOCK_REASON)
 class WinSystemTestCase(TestCase):
     '''
         Test cases for salt.modules.win_system
@@ -291,11 +291,11 @@ class WinSystemTestCase(TestCase):
         '''
             Test setting a new hostname
         '''
-        cmd_run_mock = MagicMock(return_value="Name\nMINION")
+        cmd_run_mock = MagicMock(return_value="DNSHostName\n\nMINION")
         with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
             ret = win_system.get_hostname()
             self.assertEqual(ret, "MINION")
-        cmd_run_mock.assert_called_once_with(cmd="wmic computersystem get name")
+        cmd_run_mock.assert_called_once_with(cmd="wmic nicconfig get dnshostname")
 
 
 if __name__ == '__main__':
