@@ -1158,16 +1158,16 @@ class Minion(MinionBase):
         else:
             self.win_proc.append(process)
 
-    def _check_module_readyness(self, function_name, minion_instance): 
+    def _check_module_readyness(self, function_name, minion_instance):
         '''
         This method check the availability of function with function_name,
         If the function is not available, it run saltutils.sync_modules to
-        get the module from salt-master. 
+        get the module from salt-master.
         '''
         if function_name not in minion_instance.functions:
             # sync module first. _args = []_kwargs = {}
             log.warning('could not find '+function_name+' will sync modules from master... ', exc_info_on_loglevel=logging.DEBUG)
-            func_sync=minion_instance.functions['saltutil.sync_modules']
+            func_sync = minion_instance.functions['saltutil.sync_modules']
             args, kwargs = load_args_and_kwargs(
                     func_sync,
                     [])
@@ -1178,7 +1178,7 @@ class Minion(MinionBase):
                     retries += 1
                     minion_instance.functions, minion_instance.returners, minion_instance.function_errors = minion_instance._load_modules()
                     log.warning('could not find '+function_name+' will reload modules... ', exc_info_on_loglevel=logging.DEBUG)
-                    if (function_name in minion_instance.functions or retries > 3):
+                    if function_name in minion_instance.functions or retries > 3:
                         if function_name in minion_instance.functions:
                             log.warning(function_name+' loaded @retries={0}'.format(retries), exc_info_on_loglevel=logging.DEBUG)
                         else:
@@ -1191,7 +1191,7 @@ class Minion(MinionBase):
                 except:
                     msg = 'The minion function caused an exception'
                     log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-		
+
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         '''
@@ -1203,7 +1203,7 @@ class Minion(MinionBase):
         if not minion_instance:
             minion_instance = cls(opts)
 
-        function_name = data['fun']               
+        function_name = data['fun']          
         minion_instance._check_module_readyness(function_name, minion_instance)
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
