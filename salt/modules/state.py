@@ -1197,7 +1197,9 @@ def show_lowstate(queue=False, **kwargs):
 
 def show_state_usage(queue=False, **kwargs):
     '''
-    Retrieve the highstate data from the salt master, analyse used states and unused states
+    Retrieve the highstate data from the salt master to analyse used and unused states
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
 
     CLI Example:
 
