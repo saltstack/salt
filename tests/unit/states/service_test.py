@@ -159,14 +159,14 @@ class ServiceTestCase(TestCase):
                         self.assertDictEqual(service.dead("salt", True), ret[1])
 
                 with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[True, True, False]),
-                                                   'service.status': MagicMock(side_effect=[True, True, False]),
+                                                   'service.status': MagicMock(side_effect=[True, False, False]),
                                                    'service.stop': MagicMock(return_value="stack")}):
                     with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
                         self.assertDictEqual(service.dead("salt", True), ret[3])
 
                 # test an initd which a wrong status (True even if dead)
                 with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[False, False, False]),
-                                                   'service.status': MagicMock(side_effect=[True, False, False]),
+                                                   'service.status': MagicMock(side_effect=[True, True, True]),
                                                    'service.stop': MagicMock(return_value="stack")}):
                     with patch.object(service, '_disable', MagicMock(return_value={})):
                         self.assertDictEqual(service.dead("salt", False), ret[4])
