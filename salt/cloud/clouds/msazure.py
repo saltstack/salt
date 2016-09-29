@@ -2054,11 +2054,14 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
     for item in data:
         if 'Role' not in item:
             continue
-        input_endpoint = item['Role']['ConfigurationSets']['ConfigurationSet']['InputEndpoints']['InputEndpoint']
-        if not isinstance(input_endpoint, list):
-            input_endpoint = [input_endpoint]
-        for endpoint in input_endpoint:
-            ret[endpoint['Name']] = endpoint
+        for role in item['Role']:
+            input_endpoint = role['ConfigurationSets']['ConfigurationSet'].get('InputEndpoints', {}).get('InputEndpoint')
+            if not input_endpoint:
+                continue
+            if not isinstance(input_endpoint, list):
+                input_endpoint = [input_endpoint]
+            for endpoint in input_endpoint:
+                ret[endpoint['Name']] = endpoint
     return ret
 
 
