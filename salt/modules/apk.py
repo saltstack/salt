@@ -184,11 +184,13 @@ def latest_version(*names, **kwargs):
     ret = {}
     for name in names:
         ret[name] = ''
+    pkgs = list_pkgs()
 
     # Refresh before looking for the latest version available
     if refresh:
         refresh_db()
 
+    # Upgrade check
     cmd = ['apk', 'upgrade', '-s']
     out = __salt__['cmd.run_stdout'](cmd,
                                      output_loglevel='trace',
@@ -202,6 +204,26 @@ def latest_version(*names, **kwargs):
                 ret[name] = newversion
         except ValueError:
             pass
+
+    # If version is empty, package may not be installed
+    for pkg in ret:
+        if not ret[pkg]:
+            installed = pkgs.get(pkg)
+            cmd = ['apk', 'search', pkg]
+            out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+            for line in salt.utils.itertools.split(out, '\n'):
+                try:
+                    pkg_version = '-'.join(line.split('-')[-2:])
+                    pkg_name = '-'.join(line.split('-')[:-2])
+                    if pkg == pkg_name:
+                        if installed == pkg_version:
+                            ret[pkg] = ''
+                        else:
+                            ret[pkg] = pkg_version
+                except ValueError:
+                    pass
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -288,6 +310,13 @@ def install(name=None,
         refresh_db()
 
     cmd = ['apk', 'add']
+
+    # Switch in update mode if a package is already installed
+    for _pkg in pkg_to_install:
+        if old.get(_pkg):
+            cmd.append('-u')
+            break
+
     cmd.extend(pkg_to_install)
 
     out = __salt__['cmd.run_all'](
