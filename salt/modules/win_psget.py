@@ -44,7 +44,6 @@ def __virtual__():
         return (False, 'Module PSGet: Module only works with PowerShell 5 or newer.')
 
 
-
 def _pshell(cmd, cwd=None, json_depth=2):
     '''
     Execute the desired powershell command and ensure that it returns data
