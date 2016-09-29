@@ -389,7 +389,7 @@ def lvcreate(lvname,
              'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
              'readahead', 'regionsize', 'type',
              'virtualsize', 'zero')
-    no_parameter = ('noudevsync', 'ignoremonitoring', )
+    no_parameter = ('noudevsync', 'ignoremonitoring', 'thin', )
 
     extra_arguments = []
     if kwargs:
