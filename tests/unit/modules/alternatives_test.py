@@ -37,7 +37,7 @@ class AlternativesTestCase(TestCase):
                     python_shell=False
                 )
 
-        with patch.dict(alternatives.__grains__, {'os_family': 'Ubuntu'}):
+        with patch.dict(alternatives.__grains__, {'os_family': 'Suse'}):
             mock = MagicMock(
                 return_value={'retcode': 0, 'stdout': 'undoubtedly-salt'}
             )
