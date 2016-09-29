@@ -326,38 +326,22 @@ class StateModuleTest(integration.ModuleCase,
 
         with salt.utils.fopen(template_path, 'r') as fp_:
             template = fp_.read()
-        try:
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
             )
             self.assertSaltTrueReturn(ret)
 
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
-            )
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
-
         # Now using state.template
-        try:
-            ret = self.run_function(
-                'state.template', [template_path], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template', [template_path], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Now the problematic #2068 including dot's
-        try:
-            ret = self.run_function(
-                'state.sls', mods='issue-2068-template-str', timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.sls', mods='issue-2068-template-str', timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Let's load the template from the filesystem. If running this state
         # with state.sls works, so should using state.template_str
@@ -368,28 +352,16 @@ class StateModuleTest(integration.ModuleCase,
 
         with salt.utils.fopen(template_path, 'r') as fp_:
             template = fp_.read()
-        try:
-            ret = self.run_function(
-                'state.template_str', [template], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
-            )
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template_str', [template], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Now using state.template
-        try:
-            ret = self.run_function(
-                'state.template', [template_path], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template', [template_path], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
     def test_template_invalid_items(self):
         TEMPLATE = textwrap.dedent('''\
