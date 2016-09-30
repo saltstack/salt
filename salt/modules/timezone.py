@@ -127,8 +127,15 @@ def _get_zone_etc_localtime():
 
 
 def _get_zone_etc_timezone():
-    with salt.utils.fopen('/etc/timezone', 'r') as fp_:
-        return fp_.read().strip()
+    tzfile = '/etc/timezone'
+    try:
+        with salt.utils.fopen(tzfile, 'r') as fp_:
+            return fp_.read().strip()
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Problem reading timezone file {0}: {1}'
+            .format(tzfile, exc.strerror)
+        )
 
 
 def get_zone():
