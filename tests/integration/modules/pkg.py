@@ -67,7 +67,6 @@ class PkgModuleTest(integration.ModuleCase,
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
                 ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
                 self.assertNotEqual(ret, {})
-                self.assertIn('deb '+uri, ret.keys()[0])
                 ret = self.run_function('pkg.get_repo', [repo])
                 self.assertEqual(ret['uri'], uri)
             elif os_grain == 'CentOS':
