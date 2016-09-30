@@ -16,7 +16,11 @@ import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "xattr"
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 def __virtual__():
@@ -28,7 +32,7 @@ def __virtual__():
     return False
 
 
-def list(path, hex=False):
+def list_(path, **kwargs):
     '''
     List all of the extended attributes on the given file/directory
 
@@ -49,7 +53,12 @@ def list(path, hex=False):
         salt '*' xattr.list /path/to/file
         salt '*' xattr.list /path/to/file hex=True
     '''
-    cmd = 'xattr "{0}"'.format(path)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    hex_ = kwargs.pop('hex', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    cmd = ['xattr', path]
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
@@ -63,13 +72,13 @@ def list(path, hex=False):
     attrs_ids = ret.split("\n")
     attrs = {}
 
-    for id in attrs_ids:
-        attrs[id] = read(path, id, hex)
+    for id_ in attrs_ids:
+        attrs[id_] = read(path, id_, **{'hex': hex_})
 
     return attrs
 
 
-def read(path, attribute, hex=False):
+def read(path, attribute, **kwargs):
     '''
     Read the given attributes on the given file/directory
 
@@ -92,11 +101,15 @@ def read(path, attribute, hex=False):
         salt '*' xattr.read /path/to/file com.test.attr
         salt '*' xattr.read /path/to/file com.test.attr hex=True
     '''
-    hex_flag = ""
-    if hex:
-        hex_flag = "-x"
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    hex_ = kwargs.pop('hex', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
 
-    cmd = 'xattr -p {0} "{1}" "{2}"'.format(hex_flag, attribute, path)
+    cmd = ['xattr', '-p']
+    if hex_:
+        cmd.append('-x')
+    cmd.extend([attribute, path])
 
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
@@ -110,7 +123,7 @@ def read(path, attribute, hex=False):
     return ret
 
 
-def write(path, attribute, value, hex=False):
+def write(path, attribute, value, **kwargs):
     '''
     Causes the given attribute name to be assigned the given value
 
@@ -134,11 +147,16 @@ def write(path, attribute, value, hex=False):
         salt '*' xattr.write /path/to/file "com.test.attr" "value"
 
     '''
-    hex_flag = ""
-    if hex:
-        hex_flag = "-x"
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    hex_ = kwargs.pop('hex', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
 
-    cmd = 'xattr -w {0} "{1}" "{2}" "{3}"'.format(hex_flag, attribute, value, path)
+    cmd = ['xattr', '-w']
+    if hex_:
+        cmd.append('-x')
+    cmd.extend([attribute, value, path])
+
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
@@ -146,7 +164,7 @@ def write(path, attribute, value, hex=False):
             raise CommandExecutionError('File not found: {0}'.format(path))
         raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
-    return read(path, attribute, hex) == value
+    return read(path, attribute, **{'hex': hex_}) == value
 
 
 def delete(path, attribute):
@@ -180,7 +198,7 @@ def delete(path, attribute):
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
         raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
-    return attribute not in list(path)
+    return attribute not in list_(path)
 
 
 def clear(path):
@@ -207,4 +225,4 @@ def clear(path):
             raise CommandExecutionError('File not found: {0}'.format(path))
         raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
-    return list(path) == {}
+    return list_(path) == {}
