@@ -370,7 +370,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
