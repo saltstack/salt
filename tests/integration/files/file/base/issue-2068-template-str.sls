@@ -1,11 +1,6 @@
-{{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}:
-  virtualenv.managed:
-    - system_site_packages: False
-    - distribute: True
+required_state: test.succeed_without_changes
 
-pep8-pip:
-  pip.installed:
-    - name: pep8
-    - bin_env: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}
+requiring_state:
+  test.succeed_without_changes:
     - require:
-      - virtualenv: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}
+      - test: required_state

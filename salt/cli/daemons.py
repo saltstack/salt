@@ -298,8 +298,10 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.action_log_info('An instance is already running. Exiting')
             self.shutdown(1)
 
+        transport = self.config.get('transport').lower()
+
         # TODO: AIO core is separate from transport
-        if self.config['transport'].lower() in ('zeromq', 'tcp', 'detect'):
+        if transport in ('zeromq', 'tcp', 'detect'):
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop
@@ -311,11 +313,19 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             if self.config.get('master_type') == 'func':
                 salt.minion.eval_master_func(self.config)
             self.minion = salt.minion.MinionManager(self.config)
-        else:
+        elif transport == 'raet':
             import salt.daemons.flo
             self.daemonize_if_required()
             self.set_pidfile()
             self.minion = salt.daemons.flo.IofloMinion(self.config)
+        else:
+            log.error(
+                'The transport \'{0}\' is not supported. Please use one of the following: '
+                'tcp, '
+                'raet, '
+                'or zeromq.'.format(transport)
+            )
+            self.shutdown(1)
 
     def start(self):
         '''
