@@ -2988,7 +2988,7 @@ class ProxyMinion(MinionManager):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv='base')
+        self.functions['saltutil.sync_all'](saltenv=self.opts['environment'])
 
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
@@ -3083,5 +3083,5 @@ class ProxyMinion(MinionManager):
             self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
-        self.functions['saltutil.sync_grains'](saltenv='base')
+        self.functions['saltutil.sync_grains'](saltenv=self.opts['environment'])
         self.grains_cache = self.opts['grains']
