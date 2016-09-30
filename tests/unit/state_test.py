@@ -111,7 +111,7 @@ class HighStateTestCase(TestCase):
     def test_show_state_usage(self):
         # monkey patch sub methods
         self.highstate.avail = {
-            'base': ['state.a', 'state.b','state.c']
+            'base': ['state.a', 'state.b', 'state.c']
         }
 
         def verify_tops(*args, **kwargs):

@@ -3550,7 +3550,7 @@ class BaseHighState(object):
                     env_usage['count_unused'] += 1
                     env_usage['unused'].append(state)
 
-            state_usage[saltenv]= env_usage
+            state_usage[saltenv] = env_usage
 
         return state_usage
 
