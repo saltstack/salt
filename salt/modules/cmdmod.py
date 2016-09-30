@@ -222,7 +222,8 @@ def _check_avail(cmd):
     Check to see if the given command can be run
     '''
     if isinstance(cmd, list):
-        cmd = ' '.join(cmd)
+        cmd = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+                        for x in cmd])
     bret = True
     wret = False
     if __salt__['config.get']('cmd_blacklist_glob'):

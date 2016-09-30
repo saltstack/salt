@@ -164,7 +164,11 @@ except ImportError:
                         if not kill and child.status() == psutil.STATUS_ZOMBIE:
                             # Zombie processes will exit once child processes also exit
                             continue
-                        cmdline = child.cmdline()
+                        try:
+                            cmdline = child.cmdline()
+                        except psutil.AccessDenied as err:
+                            log.debug('Cannot obtain child process cmdline: %s', err)
+                            cmdline = ''
                         if not cmdline:
                             cmdline = child.as_dict()
                         if kill:
