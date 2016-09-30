@@ -268,6 +268,11 @@ class PkgModuleTest(integration.ModuleCase,
 
             # Install a version of vim that should need upgrading
             ret = self.run_function('pkg.install', ['vim', vim_version])
+            if not isinstance(ret, dict):
+                if ret.startswith('ERROR'):
+                    self.skipTest('Could not install earlier vim to complete test.')
+            else:
+                self.assertNotEqual(ret, {})
 
             # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
             ret = self.run_function(func)
@@ -286,6 +291,8 @@ class PkgModuleTest(integration.ModuleCase,
 
                 # The changes dictionary should not be empty.
                 self.assertNotEqual(ret, {})
+                if 'changes' in ret:
+                    self.assertNotEqual(ret['changes'], {})
 
 
 if __name__ == '__main__':
