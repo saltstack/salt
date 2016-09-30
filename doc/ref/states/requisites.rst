@@ -301,6 +301,51 @@ a useful way to execute a post hook after changing aspects of a system.
 If a state has multiple ``onchanges`` requisites then the state will trigger
 if any of the watched states changes.
 
+.. note::
+    One easy-to-make mistake is to use ``onchanges_in`` when ``onchanges`` is
+    supposed to be used. For example, the below configuration is not correct:
+
+    .. code-block:: yaml
+
+        myservice:
+          pkg.installed:
+            - name: myservice
+          file.managed:
+            - name: /etc/myservice/myservice.conf
+            - source: salt://myservice/files/myservice.conf
+            - mode: 600
+          cmd.run:
+            - name: /usr/libexec/myservice/post-changes-hook.sh
+            - onchanges_in:
+              - file: /etc/myservice/myservice.conf
+
+    This will set up a requisite relationship in which the ``cmd.run`` state
+    always executes, and the ``file.managed`` state only executes if the
+    ``cmd.run`` state has changes (which it always will, since the ``cmd.run``
+    state includes the command results as changes).
+
+    It may semantically seem like the the ``cmd.run`` state should only run
+    when there are changes in the file state, but remember that requisite
+    relationships involve one state watching another state, and a
+    :ref:`requisite_in <requisites-onchanges-in>` does the opposite: it forces
+    the specified state to watch the state with the ``requisite_in``.
+
+    The correct usage would be:
+
+    .. code-block:: yaml
+
+        myservice:
+          pkg.installed:
+            - name: myservice
+          file.managed:
+            - name: /etc/myservice/myservice.conf
+            - source: salt://myservice/files/myservice.conf
+            - mode: 600
+          cmd.run:
+            - name: /usr/libexec/myservice/post-changes-hook.sh
+            - onchanges:
+              - file: /etc/myservice/myservice.conf
+
 use
 ~~~
 
@@ -335,6 +380,7 @@ inherit inherited options.
 
 .. _requisites-require-in:
 .. _requisites-watch-in:
+.. _requisites-onchanges-in:
 
 The _in versions of requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
