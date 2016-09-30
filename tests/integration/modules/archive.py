@@ -189,6 +189,7 @@ class ArchiveTest(integration.ModuleCase):
 
         self._tear_down()
 
+    @skipIf(not salt.utils.which('zip'), 'Cannot find zip executable')
     @skipIf(not salt.utils.which('unzip'), 'Cannot find unzip executable')
     def test_cmd_unzip(self):
         '''
