@@ -148,6 +148,7 @@ class PkgModuleTest(integration.ModuleCase,
             test_install()
             test_remove()
 
+    @requires_salt_modules('pkg.hold')
     @requires_network()
     @destructiveTest
     def test_hold_unhold(self):
@@ -258,7 +259,7 @@ class PkgModuleTest(integration.ModuleCase,
             if vim_version_dict == {}:
                 # Latest version is installed, get its version and construct
                 # a version selector so the immediately previous version is selected
-                vim_version_dict = self.run_function('pkg.info_available', ['vim'])
+                vim_version_dict = self.run_function('pkg.info', ['vim'])
                 vim_version = 'version=<'+vim_version_dict['vim']['version']
             else:
                 # Vim was not installed, so pkg.latest_version returns the latest one.
@@ -272,8 +273,10 @@ class PkgModuleTest(integration.ModuleCase,
             ret = self.run_function(func)
 
             # The changes dictionary should not be empty.
-            self.assertIn('changes', ret)
-            self.assertIn('vim', ret['changes'])
+            if 'changes' in ret:
+                self.assertIn('vim', ret['changes'])
+            else:
+                self.assertIn('vim', ret)
         else:
             ret = self.run_function('pkg.list_updates')
             if ret == '':
