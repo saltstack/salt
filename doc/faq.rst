@@ -268,9 +268,9 @@ Linux/Unix
         - name: salt-minion
         - require:
           - pkg: salt-minion
-      cmd.wait:
+      cmd.run:
         - name: echo service salt-minion restart | at now + 1 minute
-        - watch:
+        - onchanges:
           - pkg: salt-minion
 
 To ensure that **at** is installed and **atd** is running, the following states
