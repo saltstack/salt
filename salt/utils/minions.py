@@ -576,7 +576,7 @@ class CkMinions(object):
                 # Add in possible ip addresses of a locally connected minion
                 addrs.discard('127.0.0.1')
                 addrs.discard('0.0.0.0')
-                addrs.update(set(salt.utils.network.ip_addrs()))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
             if subset:
                 search = subset
             for id_ in search:
