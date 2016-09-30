@@ -828,7 +828,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if env_vars:
         if isinstance(env_vars, dict):
             for k, v in env_vars.iteritems():
-                if not isinstance(v, basestring):
+                if not isinstance(v, string_types):
                     env_vars[k] = str(v)
             os.environ.update(env_vars)
         else:
