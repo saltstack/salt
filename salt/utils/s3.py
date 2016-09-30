@@ -133,20 +133,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
     response = None
     if method == 'PUT':
         if local_file:
-            with salt.utils.fopen(local_file, 'r') as data:
-                result = requests.request(method,
-                                          requesturl,
-                                          headers=headers,
-                                          data=data,
-                                          verify=verify_ssl,
-                                          stream=True)
-        else:
-            result = requests.request(method,
-                                      requesturl,
-                                      headers=headers,
-                                      data=data,
-                                      verify=verify_ssl,
-                                      stream=True)
+            data = salt.utils.fopen(local_file, 'r')
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl,
+                                  stream=True)
         response = result.content
     elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,
