@@ -2704,7 +2704,7 @@ def shell_info(shell):
             if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
                 details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
                 ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
-                ret['installed'] = None # if all goes well this will become True
+                ret['installed'] = None  # if all goes well this will become True
                 ret['path'] = which('powershell.exe')
                 for attribute in details:
                     if attribute['vname'].lower() == '(default)':
