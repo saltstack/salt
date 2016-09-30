@@ -25,38 +25,46 @@ class AlterantivesStateTest(integration.ModuleCase,
                             integration.SaltReturnAssertsMixIn):
     @destructiveTest
     def test_install_set_and_remove(self):
-        ret = self.run_state('alternatives.set', name='alt-test', path='/bin/true')
+        name = 'alt-test'
+        true_path = '/bin/true'
+        false_path = '/bin/false'
+
+        ret = self.run_state('alternatives.set', name=name, path=true_path)
+
+        if ret['result'] is True and 'already set to' in ret['comment']:
+            self.skipTest('{0} is already set to {1}. Skipping.'.format(name, true_path))
+
         self.assertSaltFalseReturn(ret)
 
-        ret = self.run_state('alternatives.install', name='alt-test',
-            link='/usr/local/bin/alt-test', path='/bin/true', priority=50)
+        ret = self.run_state('alternatives.install', name=name,
+            link='/usr/local/bin/alt-test', path=true_path, priority=50)
         self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, '/bin/true', keys=['path'])
+        self.assertSaltStateChangesEqual(ret, true_path, keys=['path'])
 
-        ret = self.run_state('alternatives.install', name='alt-test',
-            link='/usr/local/bin/alt-test', path='/bin/true', priority=50)
-        self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, {})
-
-        ret = self.run_state('alternatives.install', name='alt-test',
-            link='/usr/local/bin/alt-test', path='/bin/false', priority=90)
-        self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, '/bin/false', keys=['path'])
-
-        ret = self.run_state('alternatives.set', name='alt-test', path='/bin/false')
+        ret = self.run_state('alternatives.install', name=name,
+            link='/usr/local/bin/alt-test', path=true_path, priority=50)
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
 
-        ret = self.run_state('alternatives.set', name='alt-test', path='/bin/true')
+        ret = self.run_state('alternatives.install', name=name,
+            link='/usr/local/bin/alt-test', path=false_path, priority=90)
         self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, '/bin/true', keys=['path'])
+        self.assertSaltStateChangesEqual(ret, false_path, keys=['path'])
 
-        ret = self.run_state('alternatives.set', name='alt-test', path='/bin/true')
+        ret = self.run_state('alternatives.set', name=name, path=false_path)
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
 
-        ret = self.run_state('alternatives.remove', name='alt-test', path='/bin/true')
+        ret = self.run_state('alternatives.set', name=name, path=true_path)
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, true_path, keys=['path'])
+
+        ret = self.run_state('alternatives.set', name=name, path=true_path)
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+
+        ret = self.run_state('alternatives.remove', name=name, path=true_path)
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('alternatives.remove', name='alt-test', path='/bin/false')
+        ret = self.run_state('alternatives.remove', name=name, path=false_path)
         self.assertSaltTrueReturn(ret)
