@@ -106,6 +106,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if local_file:
             payload_hash = salt.utils.get_hash(local_file, form='sha256')
 
+    if path is None:
+        path = ''
+
     if not requesturl:
         requesturl = 'https://{0}/{1}'.format(endpoint, path)
         headers, requesturl = salt.utils.aws.sig4(
