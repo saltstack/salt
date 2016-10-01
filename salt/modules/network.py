@@ -941,8 +941,7 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    from socket import gethostname
-    return gethostname()
+    return socket.gethostname()
 
 
 def get_fqdn():
@@ -956,8 +955,7 @@ def get_fqdn():
         salt '*' network.get_fqdn
     '''
 
-    from socket import getfqdn
-    return getfqdn()
+    return socket.getfqdn()
 
 
 def mod_hostname(hostname):
