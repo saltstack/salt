@@ -945,6 +945,21 @@ def get_hostname():
     return gethostname()
 
 
+def get_fqdn():
+    '''
+    Get fully qualified domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_fqdn
+    '''
+
+    from socket import getfqdn
+    return getfqdn()
+
+
 def mod_hostname(hostname):
     '''
     Modify hostname
