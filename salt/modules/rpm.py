@@ -669,7 +669,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 result = __salt__['cmd.run'](['rpmdev-vercmp', ver1, ver2],
                                              python_shell=False,
                                              ignore_retcode=True).strip()
-                if result.endswith('equal'):
+                if result.endswith('equal') or result.contains('=='):
                     return 0
                 elif 'is newer' in result:
                     newer_version = result.split()[0]
@@ -677,6 +677,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                         return 1
                     elif newer_version == ver2:
                         return -1
+                elif '<' in result:
+                    return -1
+                elif '>' in result:
+                    return 1
                 log.warning(
                     'Failed to interpret results of rpmdev-vercmp output: %s',
                     result
