@@ -5,8 +5,9 @@ Manage Windows features via the ServerManager powershell module
 
 # Import Python libs
 from __future__ import absolute_import
-import logging
+import ast
 import json
+import logging
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -25,6 +26,17 @@ def __virtual__():
     '''
     Load only on windows with servermanager module
     '''
+    def _module_present():
+        '''
+        Check for the presence of the ServerManager module.
+        '''
+        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'ServerManager' })"
+        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+
+        if cmd_ret['retcode'] == 0:
+            return ast.literal_eval(cmd_ret['stdout'])
+        return False
+
     if not salt.utils.is_windows():
         return False
 
@@ -33,7 +45,7 @@ def __virtual__():
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
 
-    if not _check_server_manager():
+    if not _module_present():
         return False, 'Failed to load win_servermanager module: ' \
                       'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'
