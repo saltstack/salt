@@ -112,6 +112,7 @@ Cloud Provider Specifics
         Getting Started With HP Cloud <hpcloud>
         Getting Started With Joyent <joyent>
         Getting Started With LXC <lxc>
+        Getting Started With Libvirt <libvirt>
         Getting Started With Linode <linode>
         Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
