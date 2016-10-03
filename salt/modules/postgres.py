@@ -96,6 +96,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     'table',
     'group',
     'database',
+    'function',
     )
 )
 _PRIVILEGE_TYPE_MAP = {
@@ -105,6 +106,7 @@ _PRIVILEGE_TYPE_MAP = {
     'sequence': 'rwU',
     'schema': 'UC',
     'database': 'CTc',
+    'function': 'X',
 }
 
 
@@ -2401,16 +2403,16 @@ def _make_privileges_list_query(name, object_type, prepend):
             "WHERE nspname = '{0}'",
             'ORDER BY nspname',
         ])).format(name)
-    # elif object_type == 'function':
-    #     query = (' '.join([
-    #         'SELECT proacl AS name',
-    #         'FROM pg_catalog.pg_proc p',
-    #         'JOIN pg_catalog.pg_namespace n',
-    #         'ON n.oid = p.pronamespace',
-    #         "WHERE nspname = '{0}'",
-    #         "AND proname = '{1}'",
-    #         'ORDER BY proname, proargtypes',
-    #     ])).format(prepend, name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT proacl AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT spcacl AS name',
@@ -2487,6 +2489,16 @@ def _get_object_owner(name,
             'ON n.nspowner = r.oid',
             "WHERE nspname = '{0}'",
         ])).format(name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT rolname AS name',
@@ -2616,6 +2628,7 @@ def privileges_list(
        - language
        - database
        - group
+       - function
 
     prepend
         Table and Sequence object types live under a schema so this should be
@@ -2720,6 +2733,7 @@ def has_privileges(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to check, from the list below:
@@ -2842,6 +2856,7 @@ def privileges_grant(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to grant, from the list below:
@@ -2901,6 +2916,8 @@ def privileges_grant(name,
 
     if object_type in ['table', 'sequence']:
         on_part = '{0}."{1}"'.format(prepend, object_name)
+    elif object_type == 'function':
+        on_part = '{0}'.format(object_name)
     else:
         on_part = '"{0}"'.format(object_name)
 
@@ -2977,6 +2994,7 @@ def privileges_revoke(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to revoke, from the list below:
