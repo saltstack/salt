@@ -59,13 +59,12 @@ from __future__ import absolute_import
 import logging
 import uuid
 import os
-import sys
-import traceback
 
 from xml.etree import ElementTree
 
 try:
     import libvirt  # pylint: disable=import-error
+    from libvirt import libvirtError
     HAS_LIBVIRT = True
 except ImportError:
     HAS_LIBVIRT = False
@@ -326,7 +325,7 @@ def create(vm_):
             # for idempotency the salt-bootstrap needs -F argument
             #  script_args: -F
             clone_domain = conn.lookupByName(name)
-        except:
+        except libvirtError as e:
             domain = conn.lookupByName(base)
             # TODO: ensure base is shut down before cloning
             xml = domain.XMLDesc(0)
@@ -449,8 +448,9 @@ def create(vm_):
         )
 
         return ret
-    except:
-        log.info('cleanup = {0}'.format(cleanup))
+    except Exception as e:  # pylint: disable=broad-except
+        # Try to clean up in as much cases as possible
+        log.info('Cleaning up after exception clean up items: {0}'.format(cleanup))
         for leftover in cleanup:
             what = leftover['what']
             item = leftover['item']
@@ -458,10 +458,7 @@ def create(vm_):
                 destroy_domain(conn, item)
             if what == 'volume':
                 item.delete()
-
-        # info = sys.exc_info()
-        # print 'crashed {0}'.format(info)
-        # traceback.print_tb(info[2])
+        raise e
 
 
 def destroy(name, call=None):
@@ -501,7 +498,7 @@ def destroy(name, call=None):
         try:
             domain = conn.lookupByName(name)
             found.append({'domain': domain, 'conn': conn})
-        except:
+        except libvirtError:
             pass
 
     if not found:
@@ -535,7 +532,7 @@ def destroy_domain(conn, domain):
     log.info('Destroying domain {0}'.format(domain.name()))
     try:
         domain.destroy()
-    except:
+    except libvirtError:
         pass
     volumes = get_domain_volumes(conn, domain)
     for volume in volumes:
@@ -621,6 +618,6 @@ def get_domain_volumes(conn, domain):
             try:
                 pool, volume = find_pool_and_volume(conn, source)
                 volumes.append(volume)
-            except:
+            except libvirtError:
                 log.warn("Disk not found '{0}'".format(source))
     return volumes
