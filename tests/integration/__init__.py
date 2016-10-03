@@ -704,7 +704,7 @@ class TestDaemon(object):
         self._exit_ssh()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
-        salt_log_setup.shutdown_multiprocessing_logging_listener()
+        salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
     def pre_setup_minions(self):
         '''
