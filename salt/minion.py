@@ -1495,7 +1495,8 @@ class Minion(MinionBase):
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
         ret = {
             'return': {},
-            'success': {},
+            'retcode': {},
+            'success': {}
         }
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
@@ -1512,7 +1513,12 @@ class Minion(MinionBase):
                     func,
                     data['arg'][ind],
                     data)
+                minion_instance.functions.pack['__context__']['retcode'] = 0
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
+                    'retcode',
+                    0
+                )
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
