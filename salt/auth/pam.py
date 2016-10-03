@@ -19,6 +19,8 @@ authenticated against.  This defaults to `login`
 
     auth.pam.service: login
 
+.. note:: Solaris-like (SmartOS, OmniOS, ...) systems may need ``auth.pam.service`` set to ``other``.
+
 .. note:: PAM authentication will not work for the ``root`` user.
 
     The Python interface to PAM does not support authenticating as ``root``.
