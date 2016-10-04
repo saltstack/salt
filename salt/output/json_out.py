@@ -35,6 +35,9 @@ from __future__ import absolute_import
 import json
 import logging
 
+# Import salt libs
+from salt.log.setup import get_console_handler_stream
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -52,6 +55,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Print the output data in JSON
     '''
+    data.update(_get_log_stream_as_dict())
     try:
         if 'output_indent' not in __opts__:
             return json.dumps(data, default=repr, indent=4)
@@ -82,3 +86,16 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
         log.debug('An error occurred while outputting JSON', exc_info=True)
     # Return valid JSON for unserializable objects
     return json.dumps({})
+
+
+def _get_log_stream_as_dict():
+    '''
+    try to use the log stream to get log entries as dict
+    '''
+    log_dict = {'logs': []}
+    log_stream = get_console_handler_stream()
+
+    for line in log_stream.getvalue().split("\n"):
+        log_dict['logs'].append(line)
+
+    return log_dict
