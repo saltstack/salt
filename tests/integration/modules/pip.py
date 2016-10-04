@@ -45,7 +45,7 @@ class PipModuleTest(integration.ModuleCase):
         '''
         Checks to see if a download error looks transitory
         '''
-        return any(w in ret for w in ['URLError'])
+        return any(w in ret for w in ['URLError', 'Download error'])
 
     def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
         '''
