@@ -85,7 +85,13 @@ def _check_available(name):
         # See: https://github.com/systemd/systemd/pull/3385
         # Also: https://github.com/systemd/systemd/commit/3dced37
         return 0 <= _status['retcode'] < 4
+
     out = _status['stdout'].lower()
+    if 'could not be found' in out:
+        # Catch cases where the systemd version is < 231 but the return code
+        # and output changes have been backported (e.g. RHEL 7.3).
+        return False
+
     for line in salt.utils.itertools.split(out, '\n'):
         match = re.match(r'\s+loaded:\s+(\S+)', line)
         if match:
