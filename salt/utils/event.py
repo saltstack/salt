@@ -365,6 +365,18 @@ class SaltEvent(object):
             self.cpub = True
         return self.cpub
 
+    def close_pub(self):
+        '''
+        Close the publish connection (if established)
+        '''
+        if not self.cpub:
+            return
+
+        self.subscriber.close()
+        self.subscriber = None
+        self.pending_events = []
+        self.cpub = False
+
     def connect_pull(self, timeout=1):
         '''
         Establish a connection with the event pull socket
