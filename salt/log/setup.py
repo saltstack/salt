@@ -117,6 +117,8 @@ __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 
+__CONSOLE_HANDLER_STREAM = None
+
 
 def is_console_configured():
     return __CONSOLE_CONFIGURED
@@ -486,7 +488,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
             # There's already a logging handler outputting to sys.stderr
             break
     else:
-        handler = StreamHandler(sys.stderr)
+        handler = StreamHandler(get_console_handler_stream())
+
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -502,6 +505,27 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
+
+
+def get_console_handler_stream():
+    '''
+    get console handler stream
+    '''
+    global __CONSOLE_HANDLER_STREAM
+
+    if __CONSOLE_HANDLER_STREAM is None:
+        #set_console_handler_stream(sys.stderr)
+        return sys.stderr
+
+    return __CONSOLE_HANDLER_STREAM
+
+
+def set_console_handler_stream(stream):
+    '''
+    get console handler stream
+    '''
+    global __CONSOLE_HANDLER_STREAM
+    __CONSOLE_HANDLER_STREAM = stream
 
 
 def setup_logfile_logger(log_path, log_level='error', log_format=None,

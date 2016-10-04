@@ -23,6 +23,7 @@ import optparse
 import traceback
 import yaml
 from functools import partial
+from StringIO import StringIO
 
 
 # Import salt libs
@@ -884,9 +885,19 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if getattr(self.options, 'daemon', False) is True:
             return
 
+        # ensure that json stays valid with log output
+        if 'json' == getattr(self.options, 'output', None):
+            log.set_console_handler_stream(StringIO())
+
+        # ensure that yaml stays valid with log output
+        if 'yaml' == getattr(self.options, 'output', None):
+            log_format = '# %s' % self.config['log_fmt_console']
+        else:
+            log_format = self.config['log_fmt_console']
+
         log.setup_console_logger(
             self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
+            log_format=log_format,
             date_format=self.config['log_datefmt_console']
         )
         for name, level in six.iteritems(self.config['log_granular_levels']):
