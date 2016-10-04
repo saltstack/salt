@@ -960,6 +960,7 @@ class Minion(MinionBase):
             return True
         except salt.exceptions.SaltReqTimeoutError:
             log.info('fire_master failed: master could not be contacted. Request timed out.')
+            return False
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
