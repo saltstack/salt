@@ -403,10 +403,16 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
     Create a proxy minion server
     '''
 
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.minion.stop(signum)
+        super(ProxyMinion, self)._handle_signals(signum, sigframe)
+
+
     # pylint: disable=no-member
     def prepare(self):
         '''
-        Run the preparation sequence required to start a salt minion.
+        Run the preparation sequence required to start a salt proxy minion.
 
         If sub-classed, don't **ever** forget to run:
 
@@ -471,8 +477,14 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         self.action_log_info('Setting up "{0}"'.format(self.config['id']))
 
         migrations.migrate_paths(self.config)
+
+        # Bail out if we find a process running and it matches out pidfile
+        if self.check_running():
+            self.action_log_info('An instance is already running. Exiting')
+            self.shutdown(1)
+
         # TODO: AIO core is separate from transport
-        if self.config['transport'].lower() in ('zeromq', 'tcp'):
+        if self.config['transport'].lower() in ('zeromq', 'tcp', 'detect'):
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop
@@ -481,8 +493,9 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
             # This is the latest safe place to daemonize
             self.daemonize_if_required()
             self.set_pidfile()
-            # TODO Proxy minions don't currently support failover
-            self.minion = salt.minion.ProxyMinion(self.config)
+            if self.config.get('master_type') == 'func':
+                salt.minion.eval_master_func(self.config)
+            self.minion = salt.minion.ProxyMinionManager(self.config)
         else:
             # For proxy minions, this doesn't work yet.
             import salt.daemons.flo
@@ -503,18 +516,22 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         super(ProxyMinion, self).start()
         try:
             if check_user(self.config['user']):
-                log.info('The proxy minion is starting up')
+                self.action_log_info('The Proxy Minion is starting up')
                 self.verify_hash_type()
-                self.action_log_info('Starting up')
                 self.minion.tune_in()
+                if self.minion.restart:
+                    raise SaltClientError('Proxy Minion could not connect to Master')
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            self.action_log_info('Stopping')
+            self.action_log_info('Proxy Minion Stopping')
             if isinstance(exc, KeyboardInterrupt):
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
                 log.error(str(exc))
                 self.shutdown(exc.code)
+
+    # def call(self, cleanup_protecteds):
+    # This fn is omitted here, proxy minions have never supported RAET
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''

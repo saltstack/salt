@@ -775,6 +775,10 @@ class MinionManager(MinionBase):
     def _spawn_minions(self):
         '''
         Spawn all the coroutines which will sign in to masters
+
+        NOTE ProxyMinionManager._spawn_minions should be examined if any changes are made to
+        this function to see if those changes should be reflected there as well.
+
         '''
         masters = self.opts['master']
         if self.opts['master_type'] == 'failover' or not isinstance(self.opts['master'], list):
@@ -2933,7 +2937,38 @@ class Matcher(object):
         return False
 
 
-class ProxyMinion(MinionManager):
+class ProxyMinionManager(MinionManager):
+    '''
+    Create the multi-minion interface but for proxy minions
+    '''
+
+    def _spawn_minions(self):
+        '''
+        Spawn all the coroutines which will sign in to masters
+        NOTE MinionManager._spawn_minions should be examined if any changes are made to
+        this function to see if those changes should be reflected there as well.
+
+        '''
+        masters = self.opts['master']
+        if self.opts['master_type'] == 'failover' or not isinstance(self.opts['master'], list):
+            masters = [masters]
+
+        for master in masters:
+            s_opts = copy.deepcopy(self.opts)
+            s_opts['master'] = master
+            s_opts['multimaster'] = True
+            minion = ProxyMinion(s_opts,
+                                 s_opts['auth_timeout'],
+                                 False,
+                                 io_loop=self.io_loop,
+                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
+                                 jid_queue=self.jid_queue,
+                                )
+            self.minions.append(minion)
+            self.io_loop.spawn_callback(self._connect_minion, minion)
+
+
+class ProxyMinion(Minion):
     '''
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
@@ -2950,19 +2985,20 @@ class ProxyMinion(MinionManager):
         '''
         log.debug("subclassed _post_master_init")
 
-        self.opts['master'] = master
+        if self.connected:
+            self.opts['master'] = master
 
-        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv'),
-        ).compile_pillar()
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                saltenv=self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+            ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            errmsg = 'No proxy key found in pillar for id '+self.opts['id']+'. '+\
-                     'Check your pillar configuration and contents.  Salt-proxy aborted.'
+            errmsg = 'No proxy key found in pillar or opts for id '+self.opts['id']+'. '+\
+                    'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)
@@ -3075,3 +3111,4 @@ class ProxyMinion(MinionManager):
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']
+        self.ready = True
