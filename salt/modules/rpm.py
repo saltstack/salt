@@ -633,21 +633,27 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
                 ver1 = _ensure_epoch(ver1)
                 ver2 = _ensure_epoch(ver2)
-                result = __salt__['cmd.run'](['rpmdev-vercmp', ver1, ver2],
-                                             python_shell=False,
-                                             ignore_retcode=True).strip()
-                if result.endswith('equal'):
+                result = __salt__['cmd.run_all'](
+                    ['rpmdev-vercmp', ver1, ver2],
+                    python_shell=False,
+                    redirect_stderr=True,
+                    ignore_retcode=True)
+                # rpmdev-vercmp returns 0 on equal, 11 on greater-than, and
+                # 12 on less-than.
+                if result['retcode'] == 0:
                     return 0
-                elif 'is newer' in result:
-                    newer_version = result.split()[0]
-                    if newer_version == ver1:
-                        return 1
-                    elif newer_version == ver2:
-                        return -1
-                log.warning(
-                    'Failed to interpret results of rpmdev-vercmp output: %s',
-                    result
-                )
+                elif result['retcode'] == 11:
+                    return 1
+                elif result['retcode'] == 12:
+                    return -1
+                else:
+                    # We'll need to fall back to salt.utils.version_cmp()
+                    log.warning(
+                        'Failed to interpret results of rpmdev-vercmp output. '
+                        'This is probably a bug, and should be reported. '
+                        'Return code was %s. Output: %s',
+                        result['retcode'], result['stdout']
+                    )
             else:
                 # We'll need to fall back to salt.utils.version_cmp()
                 log.warning(
