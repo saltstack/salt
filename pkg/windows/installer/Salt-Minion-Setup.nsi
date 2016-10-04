@@ -149,8 +149,8 @@ Function pageFinish_Show
     # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
-    # Create Start Minion Delayed Checkbox
-    ${NSD_CreateCheckbox} 130u 105u 100% 12u "Startup Type: &Automatic (Delayed Start)"
+    # Create Start Minion Delayed ComboBox
+    ${NSD_CreateCheckbox} 130u 105u 100% 12u "&Delayed Start"
     Pop $CheckBox_Minion_Delayed
     SetCtlColors $CheckBox_Minion_Delayed "" "ffffff"
     # This command required to bring the checkbox to the front
