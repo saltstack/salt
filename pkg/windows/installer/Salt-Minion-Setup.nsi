@@ -84,11 +84,13 @@ Page custom pageMinionConfig pageMinionConfig_Leave
 Var Dialog
 Var Label
 Var CheckBox_Minion
+Var CheckBox_Minion_Delayed
 Var MasterHost
 Var MasterHost_State
 Var MinionName
 Var MinionName_State
 Var StartMinion
+Var StartMinionDelayed
 
 
 ###############################################################################
@@ -147,9 +149,21 @@ Function pageFinish_Show
     # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
+    # Create Start Minion Delayed Checkbox
+    ${NSD_CreateCheckbox} 130u 105u 100% 12u "Startup Type: &Automatic (Delayed Start)"
+    Pop $CheckBox_Minion_Delayed
+    SetCtlColors $CheckBox_Minion_Delayed "" "ffffff"
+    # This command required to bring the checkbox to the front
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+
     # Load current settings for Minion
     ${If} $StartMinion == 1
         ${NSD_Check} $CheckBox_Minion
+    ${EndIf}
+
+    # Load current settings for Minion Delayed
+    ${If} $StartMinionDelayed == 1
+        ${NSD_Check} $CheckBox_Minion_Delayed
     ${EndIf}
 
 FunctionEnd
@@ -159,6 +173,7 @@ Function pageFinish_Leave
 
     # Assign the current checkbox states
     ${NSD_GetState} $CheckBox_Minion $StartMinion
+    ${NSD_GetState} $CheckBox_Minion_Delayed $StartMinionDelayed
 
 FunctionEnd
 
@@ -292,6 +307,7 @@ Section -Post
     nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+    nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
@@ -304,6 +320,11 @@ SectionEnd
 
 
 Function .onInstSuccess
+
+    ; If StartMinionDelayed is 1, then set the service to start delayed
+    ${If} $StartMinionDelayed == 1
+        nsExec::Exec "nssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+    ${EndIf}
 
     ; If start-minion is 1, then start the service
     ${If} $StartMinion == 1
@@ -359,7 +380,8 @@ SectionEnd
 Function un.onUninstSuccess
     HideWindow
     MessageBox MB_ICONINFORMATION|MB_OK \
-        "$(^Name) was successfully removed from your computer." /SD IDOK
+        "$(^Name) was successfully removed from your computer." \
+        /SD IDOK
 FunctionEnd
 
 
@@ -742,6 +764,12 @@ Function parseCommandLineSwitches
         ; Otherwise default to 1
         StrCpy $StartMinion 1
     ${EndIf}
+
+    # Service: Startup Type Delayed
+    ${GetOptions} $R0 "/start-minion-delayed" $R1
+    IfErrors start_minion_delayed_not_found
+        StrCpy $StartMinionDelayed 1
+    start_minion_delayed_not_found:
 
     # Minion Config: Master IP/Name
     ${GetOptions} $R0 "/master=" $R1
