@@ -2021,9 +2021,9 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' pkg.file_list httpd
-        salt '*' pkg.file_list httpd postfix
-        salt '*' pkg.file_list
+        salt '*' pkg.file_dict httpd
+        salt '*' pkg.file_dict httpd postfix
+        salt '*' pkg.file_dict
     '''
     return __salt__['lowpkg.file_dict'](*packages)
 
