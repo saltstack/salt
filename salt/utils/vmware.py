@@ -822,6 +822,27 @@ def get_datacenter(service_instance, datacenter_name):
     return items[0]
 
 
+def create_datacenter(service_instance, datacenter_name):
+    '''
+    Creates a datacenter.
+
+    service_instance
+        The Service Instance Object
+
+    datacenter_name
+        The datacenter name
+    '''
+    root_folder = get_root_folder(service_instance)
+    log.trace('Creating datacenter \'{0}\''.format(datacenter_name))
+    try:
+        dc_obj = root_folder.CreateDatacenter(datacenter_name)
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    return dc_obj
+
+
 def list_clusters(service_instance):
     '''
     Returns a list of clusters associated with a given service instance.
