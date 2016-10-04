@@ -408,7 +408,6 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         self.minion.stop(signum)
         super(ProxyMinion, self)._handle_signals(signum, sigframe)
 
-
     # pylint: disable=no-member
     def prepare(self):
         '''
