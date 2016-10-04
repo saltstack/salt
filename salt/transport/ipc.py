@@ -344,6 +344,16 @@ class IPCClient(object):
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
 
+        # Remove the entry from the instance map so
+        # that a closed entry may not be reused.
+        # This forces this operation even if the reference
+        # count of the entry has not yet gone to zero.
+        if self.io_loop in IPCClient.instance_map:
+            loop_instance_map = IPCClient.instance_map[self.io_loop]
+            key = str(self.socket_path)
+            if key in loop_instance_map:
+                del loop_instance_map[key]
+
 
 class IPCMessageClient(IPCClient):
     '''
