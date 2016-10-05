@@ -365,6 +365,18 @@ class SaltEvent(object):
             self.cpub = True
         return self.cpub
 
+    def close_pub(self):
+        '''
+        Close the publish connection (if established)
+        '''
+        if not self.cpub:
+            return
+
+        self.subscriber.close()
+        self.subscriber = None
+        self.pending_events = []
+        self.cpub = False
+
     def connect_pull(self, timeout=1):
         '''
         Establish a connection with the event pull socket
@@ -735,39 +747,65 @@ class SaltEvent(object):
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
+    def _fire_ret_load_specific_fun(self, load, fun):
+        '''
+        Helper function for fire_ret_load
+        '''
+        if isinstance(load['fun'], list):
+            # Multi-function job
+            ret = load.get('return', {})
+            ret = ret.get(fun, {})
+            # This was already validated to exist and be non-zero in the
+            # caller.
+            retcode = load['retcode'][fun]
+        else:
+            # Single-function job
+            ret = load.get('return', {})
+            retcode = load['retcode']
+
+        try:
+            for tag, data in six.iteritems(ret):
+                data['retcode'] = retcode
+                tags = tag.split('_|-')
+                if data.get('result') is False:
+                    self.fire_event(
+                        data,
+                        '{0}.{1}'.format(tags[0], tags[-1])
+                    )  # old dup event
+                    data['jid'] = load['jid']
+                    data['id'] = load['id']
+                    data['success'] = False
+                    data['return'] = 'Error: {0}.{1}'.format(
+                        tags[0], tags[-1])
+                    data['fun'] = fun
+                    data['user'] = load['user']
+                    self.fire_event(
+                        data,
+                        tagify([load['jid'],
+                                'sub',
+                                load['id'],
+                                'error',
+                                fun],
+                               'job'))
+        except Exception:
+            pass
+
     def fire_ret_load(self, load):
         '''
         Fire events based on information in the return load
         '''
         if load.get('retcode') and load.get('fun'):
-            # Minion fired a bad retcode, fire an event
-            if load['fun'] in SUB_EVENT:
-                try:
-                    for tag, data in six.iteritems(load.get('return', {})):
-                        data['retcode'] = load['retcode']
-                        tags = tag.split('_|-')
-                        if data.get('result') is False:
-                            self.fire_event(
-                                data,
-                                '{0}.{1}'.format(tags[0], tags[-1])
-                            )  # old dup event
-                            data['jid'] = load['jid']
-                            data['id'] = load['id']
-                            data['success'] = False
-                            data['return'] = 'Error: {0}.{1}'.format(
-                                tags[0], tags[-1])
-                            data['fun'] = load['fun']
-                            data['user'] = load['user']
-                            self.fire_event(
-                                data,
-                                tagify([load['jid'],
-                                        'sub',
-                                        load['id'],
-                                        'error',
-                                        load['fun']],
-                                       'job'))
-                except Exception:
-                    pass
+            if isinstance(load['fun'], list):
+                # Multi-function job
+                for fun in load['fun']:
+                    if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
+                        # Minion fired a bad retcode, fire an event
+                        self._fire_ret_load_specific_fun(load, fun)
+            else:
+                # Single-function job
+                if load['fun'] in SUB_EVENT:
+                    # Minion fired a bad retcode, fire an event
+                    self._fire_ret_load_specific_fun(load, load['fun'])
 
     def set_event_handler(self, event_handler):
         '''
