@@ -160,9 +160,10 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
             '''
             obj = daemons.ProxyMinion()
             obj.config = {'user': 'dummy', 'hash_type': alg}
-            for attr in ['minion', 'start_log_info', 'prepare', 'shutdown']:
+            for attr in ['minion', 'start_log_info', 'prepare', 'shutdown', 'tune_in']:
                 setattr(obj, attr, MagicMock())
 
+            obj.minion.restart = False
             return obj
 
         _logger = LoggerMock()
