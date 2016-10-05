@@ -96,6 +96,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     'table',
     'group',
     'database',
+    'function',
     )
 )
 _PRIVILEGE_TYPE_MAP = {
@@ -105,6 +106,7 @@ _PRIVILEGE_TYPE_MAP = {
     'sequence': 'rwU',
     'schema': 'UC',
     'database': 'CTc',
+    'function': 'X',
 }
 
 
@@ -2401,16 +2403,16 @@ def _make_privileges_list_query(name, object_type, prepend):
             "WHERE nspname = '{0}'",
             'ORDER BY nspname',
         ])).format(name)
-    # elif object_type == 'function':
-    #     query = (' '.join([
-    #         'SELECT proacl AS name',
-    #         'FROM pg_catalog.pg_proc p',
-    #         'JOIN pg_catalog.pg_namespace n',
-    #         'ON n.oid = p.pronamespace',
-    #         "WHERE nspname = '{0}'",
-    #         "AND proname = '{1}'",
-    #         'ORDER BY proname, proargtypes',
-    #     ])).format(prepend, name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT proacl AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND proname = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT spcacl AS name',
@@ -2487,6 +2489,16 @@ def _get_object_owner(name,
             'ON n.nspowner = r.oid',
             "WHERE nspname = '{0}'",
         ])).format(name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT proacl AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND proname = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT rolname AS name',
@@ -2913,6 +2925,10 @@ def privileges_grant(name,
             query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO ' \
                     '"{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), prepend, name)
+        # FIXME: We need to assemble the complete function signature
+        if object_type == 'function':
+            query = 'GRANT {0} ON {1} {2}() TO "{3}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), on_part, name)
         else:
             query = 'GRANT {0} ON {1} {2} TO "{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), on_part, name)
@@ -2923,6 +2939,10 @@ def privileges_grant(name,
                 object_name.upper() == 'ALL'):
             query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO "{3}"'.format(
                 _grants, object_type.upper(), prepend, name)
+        # FIXME: We need to assemble the complete function signature
+        if object_type == 'function':
+            query = 'GRANT {0} ON {1} {2}() TO "{3}"'.format(
+                _grants, object_type.upper(), on_part, name)
         else:
             query = 'GRANT {0} ON {1} {2} TO "{3}"'.format(
                 _grants, object_type.upper(), on_part, name)

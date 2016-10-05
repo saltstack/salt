@@ -106,6 +106,7 @@ def present(name,
        - language
        - database
        - group
+       - function
 
     privileges
        List of privileges to grant, from the list below:
@@ -226,6 +227,7 @@ def absent(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to revoke, from the list below:
