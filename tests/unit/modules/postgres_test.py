@@ -90,13 +90,13 @@ class PostgresTestCase(TestCase):
                           owner='otheruser',
                           runas='foo')
         postgres._run_psql.assert_has_calls([
-            call(['/usr/bin/pgsql', '--no-align', '--no-readline',
+            call(['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                   '--no-password', '--username', 'testuser', '--host',
                   'testhost', '--port', 'testport', '--dbname', 'maint_db',
                   '-c', 'ALTER DATABASE "dbname" OWNER TO "otheruser"'],
                  host='testhost', user='testuser',
                  password='foo', runas='foo', port='testport'),
-            call(['/usr/bin/pgsql', '--no-align', '--no-readline',
+            call(['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                   '--no-password', '--username', 'testuser', '--host',
                   'testhost', '--port', 'testport', '--dbname', 'maint_db',
                   '-c', 'ALTER DATABASE "dbname" SET TABLESPACE "testspace"'],
@@ -141,7 +141,7 @@ class PostgresTestCase(TestCase):
         )
 
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'CREATE DATABASE "dbname" WITH TABLESPACE = testspace '
@@ -209,7 +209,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'DROP DATABASE "test_db"'],
@@ -258,7 +258,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'DROP ROLE "testgroup"'],
@@ -418,7 +418,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'DROP ROLE "testuser"'],
@@ -830,7 +830,7 @@ class PostgresTestCase(TestCase):
             db_password='testpassword'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'CREATE SCHEMA "testschema"'],
@@ -863,7 +863,7 @@ class PostgresTestCase(TestCase):
             db_password='testpassword'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
              '-c', 'DROP SCHEMA "testschema"'],
@@ -938,7 +938,7 @@ class PostgresTestCase(TestCase):
             password='testpassword'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'testdb',
              '-c', 'CREATE LANGUAGE plpythonu'],
@@ -978,7 +978,7 @@ class PostgresTestCase(TestCase):
             password='testpassword'
         )
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'testdb',
              '-c', 'DROP LANGUAGE plpgsql'],
@@ -1053,7 +1053,7 @@ class PostgresTestCase(TestCase):
         "ORDER BY relname) TO STDOUT WITH CSV HEADER")
 
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'db_name',
              '-v', 'datestyle=ISO,MDY', '-c', query],
@@ -1092,7 +1092,7 @@ class PostgresTestCase(TestCase):
         "TO STDOUT WITH CSV HEADER")
 
         postgres._run_psql.assert_called_once_with(
-            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+            ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'db_name',
              '-v', 'datestyle=ISO,MDY', '-c', query],
@@ -1243,7 +1243,7 @@ class PostgresTestCase(TestCase):
                 query = 'GRANT ALL ON TABLE public."awl" TO "baruwa" WITH GRANT OPTION'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1270,7 +1270,7 @@ class PostgresTestCase(TestCase):
                 query = 'GRANT ALL ON TABLE public."awl" TO "baruwa"'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1298,7 +1298,7 @@ class PostgresTestCase(TestCase):
                 query = 'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "baruwa"'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1329,7 +1329,7 @@ class PostgresTestCase(TestCase):
                 query = 'GRANT admins TO "baruwa" WITH ADMIN OPTION'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1355,7 +1355,7 @@ class PostgresTestCase(TestCase):
                 query = 'GRANT admins TO "baruwa"'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1386,7 +1386,7 @@ class PostgresTestCase(TestCase):
                 query = 'REVOKE ALL ON TABLE public.awl FROM baruwa'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
@@ -1416,7 +1416,7 @@ class PostgresTestCase(TestCase):
                 query = 'REVOKE admins FROM baruwa'
 
                 postgres._run_psql.assert_called_once_with(
-                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                      '--no-password', '--username', 'testuser', '--host',
                      'testhost', '--port', 'testport', '--dbname', 'db_name',
                      '-c', query],
