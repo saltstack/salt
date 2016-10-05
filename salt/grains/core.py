@@ -636,6 +636,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'Parallels'
             elif 'Manufacturer: Google' in output:
                 grains['virtual'] = 'kvm'
+            # Proxmox KVM
+            elif 'Vendor: SeaBIOS' in output:
+                grains['virtual'] = 'kvm'
             # Break out of the loop, lspci parsing is not necessary
             break
         elif command == 'lspci':
