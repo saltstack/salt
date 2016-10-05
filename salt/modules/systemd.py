@@ -71,6 +71,23 @@ def _canonical_unit_name(name):
     return '%s.service' % name
 
 
+def _check_available(name):
+    '''
+    Returns boolean telling whether or not the named service is available
+    '''
+    out = _systemctl_status(name).lower()
+    for line in salt.utils.itertools.split(out, '\n'):
+        match = re.match(r'\s+loaded:\s+(\S+)', line)
+        if match:
+            ret = match.group(1) != 'not-found'
+            break
+    else:
+        raise CommandExecutionError(
+            'Failed to get information on unit \'%s\'' % name
+        )
+    return ret
+
+
 def _check_for_unit_changes(name):
     '''
     Check for modified/updated unit files, and run a daemon-reload if any are
@@ -298,7 +315,7 @@ def _untracked_custom_unit_found(name):
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and not available(name)
+    return os.access(unit_path, os.R_OK) and not _check_available(name)
 
 
 def _unit_file_changed(name):
@@ -520,17 +537,8 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    out = _systemctl_status(name).lower()
-    for line in salt.utils.itertools.split(out, '\n'):
-        match = re.match(r'\s+loaded:\s+(\S+)', line)
-        if match:
-            ret = match.group(1) != 'not-found'
-            break
-    else:
-        raise CommandExecutionError(
-            'Failed to get information on unit \'%s\'' % name
-        )
-    return ret
+    _check_for_unit_changes(name)
+    return _check_available(name)
 
 
 def missing(name):

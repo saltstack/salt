@@ -59,24 +59,27 @@ class HgTestCase(TestCase):
         '''
         Test for Perform a pull on the given repository
         '''
-        with patch.dict(hg.__salt__, {'cmd.run':
-                                      MagicMock(return_value='A')}):
+        with patch.dict(hg.__salt__, {'cmd.run_all':
+                                      MagicMock(return_value={'retcode': 0,
+                                                              'stdout': 'A'})}):
             self.assertEqual(hg.pull('cwd'), 'A')
 
     def test_update(self):
         '''
         Test for Update to a given revision
         '''
-        with patch.dict(hg.__salt__, {'cmd.run':
-                                        MagicMock(return_value='A')}):
+        with patch.dict(hg.__salt__, {'cmd.run_all':
+                                      MagicMock(return_value={'retcode': 0,
+                                                              'stdout': 'A'})}):
             self.assertEqual(hg.update('cwd', 'rev'), 'A')
 
     def test_clone(self):
         '''
         Test for Clone a new repository
         '''
-        with patch.dict(hg.__salt__, {'cmd.run':
-                                        MagicMock(return_value='A')}):
+        with patch.dict(hg.__salt__, {'cmd.run_all':
+                                      MagicMock(return_value={'retcode': 0,
+                                                              'stdout': 'A'})}):
             self.assertEqual(hg.clone('cwd', 'repository'), 'A')
 
     def test_status_single(self):
