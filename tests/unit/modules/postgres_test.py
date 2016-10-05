@@ -237,11 +237,11 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
-            postgres._run_psql.call_args[0][0][13].startswith('CREATE ROLE')
+            postgres._run_psql.call_args[0][0][14].startswith('CREATE ROLE')
         )
 
     @patch('salt.modules.postgres._run_psql',
@@ -286,13 +286,13 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'ALTER.* "testgroup" .* UNENCRYPTED PASSWORD',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
@@ -320,10 +320,10 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
-        call = postgres._run_psql.call_args[0][0][13]
+        # query will be in the 15th argument.
+        call = postgres._run_psql.call_args[0][0][14]
         self.assertTrue(re.match('CREATE ROLE "testuser"', call))
         for i in (
             'INHERIT NOCREATEDB NOCREATEROLE '
@@ -449,16 +449,16 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
                 ' GRANT "test_groups" TO "test_username"',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
@@ -521,15 +521,15 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN NOPASSWORD;'
                 ' GRANT "test_groups" TO "test_username"',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
@@ -557,9 +557,9 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
@@ -567,7 +567,7 @@ class PostgresTestCase(TestCase):
                 'ENCRYPTED PASSWORD '
                 '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
                 '; GRANT "test_groups" TO "test_username"',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
@@ -583,13 +583,13 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'SELECT setting FROM pg_catalog.pg_settings',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
