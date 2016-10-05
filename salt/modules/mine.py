@@ -237,7 +237,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
         This execution module is intended to be executed on minions.
         Master-side operations such as Pillar or Orchestrate that require Mine
         data should use the :py:mod:`Mine Runner module <salt.runners.mine>`
-        instead; it can be invoked from an SLS file using the
+        instead; it can be invoked from a Pillar SLS file using the
         :py:func:`saltutil.runner <salt.modules.saltutil.runner>` module. For
         example:
 
