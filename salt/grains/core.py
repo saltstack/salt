@@ -964,7 +964,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'manjaro': 'Manjaro',
     'sles': 'SUSE',
-    'slesexpand': "RES",
+    'slesexpand': 'RES',
     'linuxmint': 'Mint',
 }
 
