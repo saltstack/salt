@@ -485,15 +485,15 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         # postgres._run_psql.call_args[0][0] will contain the list of CLI args.
-        # The first 13 elements of this list are initial args used in all (or
+        # The first 14 elements of this list are initial args used in all (or
         # virtually all) commands run through _run_psql(), so the actual SQL
-        # query will be in the 14th argument.
+        # query will be in the 15th argument.
         self.assertTrue(
             re.match(
                 'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN;'
                 ' GRANT "test_groups" TO "test_username"',
-                postgres._run_psql.call_args[0][0][13]
+                postgres._run_psql.call_args[0][0][14]
             )
         )
 
