@@ -82,7 +82,7 @@ def show_link(name):
 
     try:
         with salt.utils.fopen(path, 'rb') as r_file:
-            return r_file.readlines()[1]
+            return r_file.readlines()[1].rstrip('\n')
     except OSError:
         log.error(
             'alternatives: {0} does not exist'.format(name)
