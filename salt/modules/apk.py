@@ -511,7 +511,7 @@ def list_upgrades(refresh=True):
         out = call['stdout']
 
     for line in out.splitlines():
-        if not line.startswith('OK:'):
+        if 'Upgrading' in line:
             name = line.split(' ')[2]
             _oldversion = line.split(' ')[3].strip('(')
             newversion = line.split(' ')[5].strip(')')
