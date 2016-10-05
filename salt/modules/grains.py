@@ -412,6 +412,23 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
+def delkey(key):
+    '''
+    .. versionadded:: nitrogen
+
+    Remove a grain complately from the grain system
+
+    key
+        The grain key from which to delete the value.
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' grains.delkey key
+    '''
+    setval(key, None, destructive=True)
+
+
 def delval(key, destructive=False):
     '''
     .. versionadded:: 0.17.0
@@ -430,7 +447,6 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     '''
-
     setval(key, None, destructive=destructive)
 
 
