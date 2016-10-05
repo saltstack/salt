@@ -21,6 +21,7 @@ import traceback
 import fnmatch
 import base64
 import re
+import tempfile
 
 # Import salt libs
 import salt.utils
@@ -28,7 +29,8 @@ import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
 from salt.utils import vt
-from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
+    SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
@@ -2041,8 +2043,8 @@ def script(source,
 
     def _cleanup_tempfile(path):
         try:
-            os.remove(path)
-        except (IOError, OSError) as exc:
+            __salt__['file.remove'](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
             log.error(
                 'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
                     path,
@@ -2059,6 +2061,12 @@ def script(source,
             )
         kwargs.pop('__env__')
 
+    if salt.utils.is_windows() and runas and cwd is None:
+        cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
+        __salt__['win_dacl.add_ace'](
+            cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
+            'FOLDER&SUBFOLDERS&FILES')
+
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
@@ -2071,7 +2079,10 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2080,7 +2091,10 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            _cleanup_tempfile(path)
+            if salt.utils.is_windows() and runas:
+                _cleanup_tempfile(cwd)
+            else:
+                _cleanup_tempfile(path)
             return {'pid': 0,
                     'retcode': 1,
                     'stdout': '',
@@ -2107,7 +2121,10 @@ def script(source,
                bg=bg,
                password=password,
                **kwargs)
-    _cleanup_tempfile(path)
+    if salt.utils.is_windows() and runas:
+        _cleanup_tempfile(cwd)
+    else:
+        _cleanup_tempfile(path)
     return ret
 
 
@@ -2647,54 +2664,59 @@ def shells():
 
 def shell_info(shell):
     '''
-    Provides information about a shell or languages often use #!
-    The values returned are dependant on the shell or languages all return the
-    ``installed``, ``path``, ``version``, ``version_major`` and
-    ``version_major_minor`` e.g. 5.0 or 6-3.
-    The shell must be within the exeuctable search path.
+    Provides information about a shell or script languages which often use ``#!``.
+    The values returned are dependant on the shell or scripting languages all return the
+    ``installed``, ``path``, ``version``, ``version_raw``
 
-    :param str shell: Name of the shell.
-    Support are bash, cmd, perl, php, powershell, python, ruby and zsh
-    :return: Properies of the shell specifically its and other information if
-    available.
+    :param str shell: Name of the shell. Support shells/script languages include
+        bash, cmd, perl, php, powershell, python, ruby and zsh
+    :return: Properties of the shell specifically its and other information if available.
     :rtype: dict
 
-    .. code-block:: cfg
-        {'version': '<version string>',
-         'version_major': '<version string',
-         'version_minor': '<version string>',
+    .. code-block:: python
+
+        {'version': '<2 or 3 numeric components dot-separated>',
+         'version_raw': '<full version string>',
          'path': '<full path to binary>',
          'installed': <True, False or None>,
          '<attribute>': '<attribute value>'}
 
-    ``installed`` is always returned, if None or False also returns error and
-     may also return stdout for diagnostics.
+    ..
 
-    .. versionadded:: 2016.9.0
+    .. note::
+        * ``installed`` is always returned, if ``None`` or ``False`` also returns error and may also return ``stdout`` for diagnostics.
+        * ``version`` is for use in determine if a shell/script language has a particular feature set, not for package management.
+        * The shell must be within the exeuctable search path.
 
-    CLI Example::
+    .. versionadded:: Carbon
+
+    CLI Example:
+
     .. code-block:: bash
+
         salt '*' cmd.shell bash
         salt '*' cmd.shell powershell
+
+    ..
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     regex_shells = {
-        'bash': [r'version ([-\w.]+)', 'bash', '--version'],
+        'bash': [r'version (\d\S*)', 'bash', '--version'],
         'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
         'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
-        'zsh': [r'^zsh ([\d.]+)', 'zsh', '--version'],
-        'tcsh': [r'^tcsh ([\d.]+)', 'tcsh', '--version'],
+        'zsh': [r'^zsh (\d\S*)', 'zsh', '--version'],
+        'tcsh': [r'^tcsh (\d\S*)', 'tcsh', '--version'],
         'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
-        'powershell': [r'PSVersion\s+([\d.]+)', 'powershell', '-NonInteractive', '$PSVersionTable'],
-        'perl': [r'^([\d.]+)', 'perl', '-e', 'printf "%vd\n", $^V;'],
-        'python': [r'^Python ([\d.]+)', 'python', '-V'],
-        'ruby': [r'^ruby ([\d.]+)', 'ruby', '-v'],
-        'php': [r'^PHP ([\d.]+)', 'php', '-v']
+        'powershell': [r'PSVersion\s+(\d\S*)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'perl': [r'^(\d\S*)', 'perl', '-e', 'printf "%vd\n", $^V;'],
+        'python': [r'^Python (\d\S*)', 'python', '-V'],
+        'ruby': [r'^ruby (\d\S*)', 'ruby', '-v'],
+        'php': [r'^PHP (\d\S*)', 'php', '-v']
     }
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {}
-    ret['installed'] = None
+    ret['installed'] = False
     if salt.utils.is_windows() and shell == 'powershell':
         pw_keys = __salt__['reg.list_keys']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell')
         pw_keys.sort(key=int)
@@ -2702,28 +2724,27 @@ def shell_info(shell):
             return {
                 'error': 'Unable to locate \'powershell\' Reason: Cannot be found in registry.',
                 'installed': False,
-                'version': None
             }
         for reg_ver in pw_keys:
             install_data = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver), 'Install')
             if 'vtype' in install_data and install_data['vtype'] == 'REG_DWORD' and install_data['vdata'] == 1:
                 details = __salt__['reg.list_values']('HKEY_LOCAL_MACHINE', 'Software\\Microsoft\\PowerShell\\{0}\\PowerShellEngine'.format(reg_ver))
                 ret = {}  # reset data, want the newest version details only as powershell is backwards compatible
-                ret['installed'] = True
+                ret['installed'] = None  # if all goes well this will become True
                 ret['path'] = which('powershell.exe')
                 for attribute in details:
                     if attribute['vname'].lower() == '(default)':
                         continue
                     elif attribute['vname'].lower() == 'powershellversion':
                         ret['psversion'] = attribute['vdata']
-                        ret['version'] = attribute['vdata']
+                        ret['version_raw'] = attribute['vdata']
                     elif attribute['vname'].lower() == 'runtimeversion':
                         ret['crlversion'] = attribute['vdata']
                         if ret['crlversion'][0] == 'v' or ret['crlversion'][0] == 'V':
                             ret['crlversion'] = ret['crlversion'][1::]
                     elif attribute['vname'].lower() == 'pscompatibleversion':
                         # reg attribute does not end in s, the powershell attibute does
-                        ret['pscompatibleversions'] = attribute['vdata']
+                        ret['pscompatibleversions'] = attribute['vdata'].replace(' ', '').split(',')
                     else:
                         # keys are lower case as python is case sensitive the registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
@@ -2756,7 +2777,6 @@ def shell_info(shell):
             return {
                 'error': 'Unable to run command \'{0}\' Reason: {1}'.format(' '.join(shell_data), exc),
                 'installed': False,
-                'version': None
             }
         try:
             proc.run()
@@ -2764,28 +2784,29 @@ def shell_info(shell):
             return {
                 'error': 'Unable to run command \'{0}\' Reason: Timed out.'.format(' '.join(shell_data)),
                 'installed': False,
-                'version': None
             }
 
-        ret['installed'] = True
         ret['path'] = which(shell_data[0])
         pattern_result = re.search(pattern, proc.stdout, flags=re.IGNORECASE)
         # only set version if we find it, so code later on can deal with it
         if pattern_result:
-            ret['version'] = pattern_result.group(1)
+            ret['version_raw'] = pattern_result.group(1)
+
+    if 'version_raw' in ret:
+        version_results = re.match(r'(\d[\d.]*)', ret['version_raw'])
+        if version_results:
+            ret['installed'] = True
+            ver_list = version_results.group(1).split('.')[:3]
+            if len(ver_list) == 1:
+                ver_list.append('0')
+            ret['version'] = '.'.join(ver_list[:3])
+    else:
+        ret['installed'] = None  # Have an unexpect result
 
     if 'version' not in ret:
         ret['error'] = 'The version regex pattern for shell {0}, could not find the version string'.format(shell)
-        ret['version'] = None
         ret['stdout'] = proc.stdout  # include stdout so they can see the issue
         log.error(ret['error'])
-    else:
-        major_result = re.match('(\\d+)', ret['version'])
-        if major_result:
-            ret['version_major'] = major_result.group(1)
-            major_minor_result = re.match('(\\d+[-.]\\d+)', ret['version'])
-            if major_minor_result:
-                ret['version_major_minor'] = major_minor_result.group(1)
 
     return ret
 

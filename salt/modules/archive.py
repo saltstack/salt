@@ -41,7 +41,7 @@ def __virtual__():
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(salt.utils.which(cmd) for cmd in commands):
-        return (False, 'The archive module could not be loaded: unable to find commands tar,gzip,gunzip,zip,unzip,rar,unrar')
+        return (False, 'Unable to find commands tar,gzip,gunzip,zip,unzip,rar,unrar')
     return True
 
 
@@ -135,7 +135,7 @@ def tar(options, tarfile, sources=None, dest=None,
 
 
 @salt.utils.decorators.which('gzip')
-def gzip(sourcefile, template=None, runas=None):
+def gzip(sourcefile, template=None, runas=None, options=None):
     '''
     Uses the gzip command to create gzip files
 
@@ -147,14 +147,27 @@ def gzip(sourcefile, template=None, runas=None):
 
             salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
 
+    runas : None
+        The user with which to run the gzip command line
+
+    options : None
+        Pass any additional arguments to gzip
+
+        .. versionadded:: 2016.3.4
+
     CLI Example:
 
     .. code-block:: bash
 
         # Create /tmp/sourcefile.txt.gz
         salt '*' archive.gzip /tmp/sourcefile.txt
+        salt '*' archive.gzip /tmp/sourcefile.txt options='-9 --verbose'
     '''
-    cmd = ['gzip', '{0}'.format(sourcefile)]
+    cmd = ['gzip']
+    if options:
+        cmd.append(options)
+    cmd.append('{0}'.format(sourcefile))
+
     return __salt__['cmd.run'](cmd,
                                template=template,
                                runas=runas,
@@ -162,7 +175,7 @@ def gzip(sourcefile, template=None, runas=None):
 
 
 @salt.utils.decorators.which('gunzip')
-def gunzip(gzipfile, template=None, runas=None):
+def gunzip(gzipfile, template=None, runas=None, options=None):
     '''
     Uses the gunzip command to unpack gzip files
 
@@ -174,14 +187,27 @@ def gunzip(gzipfile, template=None, runas=None):
 
             salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
 
+    runas : None
+        The user with which to run the gzip command line
+
+    options : None
+        Pass any additional arguments to gzip
+
+        .. versionadded:: 2016.3.4
+
     CLI Example:
 
     .. code-block:: bash
 
         # Create /tmp/sourcefile.txt
         salt '*' archive.gunzip /tmp/sourcefile.txt.gz
+        salt '*' archive.gunzip /tmp/sourcefile.txt options='--verbose'
     '''
-    cmd = ['gunzip', '{0}'.format(gzipfile)]
+    cmd = ['gunzip']
+    if options:
+        cmd.append(options)
+    cmd.append('{0}'.format(gzipfile))
+
     return __salt__['cmd.run'](cmd,
                                template=template,
                                runas=runas,
@@ -344,7 +370,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
@@ -467,6 +493,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
     return _trim_files(files, trim_output)
 
 
+@salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
 def unzip(zip_file, dest, excludes=None, options=None, template=None,
           runas=None, trim_output=False, password=None, extract_perms=False):
     '''
