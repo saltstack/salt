@@ -1320,7 +1320,7 @@ class TestDaemon(object):
         self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
-        salt_log_setup.shutdown_multiprocessing_logging_listener()
+        salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
     def pre_setup_minions(self):
         '''
