@@ -791,8 +791,8 @@ class Pillar(object):
                 self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(pillar,
-                               self.opts['pillar'],
+                pillar = merge(self.opts['pillar'],
+                               pillar,
                                self.merge_strategy,
                                self.opts.get('renderer', 'yaml'),
                                self.opts.get('pillar_merge_lists', False))
