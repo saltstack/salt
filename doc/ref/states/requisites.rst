@@ -729,3 +729,116 @@ salt/states/ file.
 
 ``mod_run_check_cmd`` is used to check for the check_cmd options. To override
 this one, include a ``mod_run_check_cmd`` in the states file for the state.
+
+Retrying States
+===============
+
+.. versionadded:: Carbon
+
+The retry option in a state allows it to be executed multiple times until a desired
+result is obtained or the maximum number of attempts have been made.
+
+The retry option can be configured by the ``attempts``, ``until``, ``interval``, and
+``splay`` parameters.
+
+The ``attempts`` parameter controls the maximum number of times the state will be
+run.  If not specified or if an invalid value is specified, ``attempts`` will default
+to ``2``.
+
+The ``until`` parameter defines the result that is required to stop retrying the state.
+If not specified or if an invalid value is specified, ``until`` will default to ``True``
+
+The ``interval`` parameter defines the amount of time, in seconds, that the system
+will wait between attempts.  If not specified or if an invalid value is specified,
+``interval`` will default to ``30``.
+
+The ``splay`` parameter allows the ``interval`` to be additionally spread out.  If not
+specified or if an invalid value is specified, ``splay`` defaults to ``0`` (i.e. no
+splaying will occur).
+
+The following example will run the pkg.installed state until it returns ``True`` or it has
+been run ``5`` times.  Each attempt will be ``60`` seconds apart and the interval will be splayed
+up to an additional ``10`` seconds:
+
+.. code-block:: yaml
+
+    my_retried_state:
+      pkg.installed:
+        - name: nano
+        - retry:
+            attempts: 5
+            until: True
+            interval: 60
+            splay: 10
+
+The following example will run the pkg.installed state with all the defaults for ``retry``.
+The state will run up to ``2`` times, each attempt being ``30`` seconds apart, or until it
+returns ``True``.
+
+.. code-block:: yaml
+
+    install_nano:
+      pkg.installed:
+        - name: nano
+        - retry: True
+
+The following example will run the file.exists state every ``30`` seconds up to ``15`` times
+or until the file exists (i.e. the state returns ``True``).
+
+.. code-block:: yaml
+
+    wait_for_file:
+      file.exists:
+        - name: /path/to/file
+        - retry:
+            attempts: 15
+            interval: 30
+
+Return data from a retried state
+--------------------------------
+
+When a state is retried, the returned output is as follows:
+
+The ``result`` return value is the ``result`` from the final run.  For example, imagine a state set
+to ``retry`` up to three times or ``until`` ``True``.  If the state returns ``False`` on the first run
+and then ``True`` on the second, the ``result`` of the state will be ``True``.
+
+The ``started`` return value is the ``started`` from the first run.
+
+The ``duration`` return value is the total duration of all attempts plus the retry intervals.
+
+The ``comment`` return value will include the result and comment from all previous attempts. 
+
+For example:
+
+.. code-block:: yaml
+
+    wait_for_file:
+      file.exists:
+        - name: /path/to/file
+        - retry:
+            attempts: 10
+            interval: 2
+            splay: 5
+
+Would return similar to the following.  The state result in this case is ``False`` (file.exist was run 10
+times with a 2 second interval, but the file specified did not exist on any run).
+
+.. code-block:: none
+
+          ID: wait_for_file
+    Function: file.exists
+      Result: False
+     Comment: Attempt 1: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 2: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 3: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 4: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 5: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 6: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 7: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 8: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Attempt 9: Returned a result of "False", with the following comment: "Specified path /path/to/file does not exist"
+              Specified path /path/to/file does not exist
+     Started: 09:08:12.903000
+    Duration: 47000.0 ms
+     Changes:
