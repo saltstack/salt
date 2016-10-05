@@ -89,6 +89,7 @@ Var Label
 Var Warning
 Var CheckBox_Minion
 Var CheckBox_Minion_State
+Var CheckBox_Minion_Delayed
 Var CheckBox_Master
 Var CheckBox_Master_State
 Var MasterHost
@@ -96,6 +97,7 @@ Var MasterHost_State
 Var MinionName
 Var MinionName_State
 Var StartMinion
+Var StartMinionDelayed
 Var StartMaster
 
 
@@ -231,10 +233,7 @@ FunctionEnd
 Function pageMinionConfig_Leave
 
     ${NSD_GetText} $MasterHost $MasterHost_State
-    #MessageBox MB_OK "Master Hostname is:$\n$\n$MasterHost_State"
-
     ${NSD_GetText} $MinionName $MinionName_State
-    #MessageBox MB_OK "Minion name is:$\n$\n$MinionName_State"
 
 FunctionEnd
 
@@ -256,8 +255,15 @@ Function pageFinish_Show
     # This command required to bring the checkbox to the front
     System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
+    # Create Start Minion Delayed Checkbox
+    ${NSD_CreateCheckbox} 130u 105u 100% 12u "&Delayed Start"
+    Pop $CheckBox_Minion_Delayed
+    SetCtlColors $CheckBox_Minion_Delayed "" "ffffff"
+    # This command required to bring the checkbox to the front
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+
     # Create Start Master Checkbox
-    ${NSD_CreateCheckbox} 120u 105u 100% 12u "&Start salt-master"
+    ${NSD_CreateCheckbox} 120u 120u 100% 12u "Start salt-&master"
     Pop $CheckBox_Master
     SetCtlColors $CheckBox_Master "" "ffffff"
     # This command required to bring the checkbox to the front
@@ -268,9 +274,14 @@ Function pageFinish_Show
         ${If} $StartMinion == 1
             ${NSD_Check} $CheckBox_Minion
         ${EndIf}
+        ${If} $StartMinionDelayed == 1
+            ${NSD_Check} $CheckBox_Minion_Delayed
+        ${EndIf}
     ${Else}
         EnableWindow $CheckBox_Minion 0
+        EnableWindow $CheckBox_Minion_Delayed 0
         ${NSD_UnCheck} $CheckBox_Minion
+        ${NSD_UnCheck} $CheckBox_Minion_Delayed
     ${EndIf}
 
     # Load current settings for Master
@@ -290,6 +301,7 @@ Function pageFinish_Leave
 
     # Assign the current checkbox states
     ${NSD_GetState} $CheckBox_Minion $StartMinion
+    ${NSD_GetState} $CheckBox_Minion_Delayed $StartMinionDelayed
     ${NSD_GetState} $CheckBox_Master $StartMaster
 
 FunctionEnd
@@ -427,6 +439,7 @@ Section -Post
         nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
         nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
         nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+        nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
 
     ${Else}
 
@@ -481,6 +494,11 @@ SectionEnd
 
 
 Function .onInstSuccess
+
+    ; If StartMinionDelayed is 1, then set the service to start delayed
+    ${If} $StartMinionDelayed == 1
+        nsExec::Exec "nssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+    ${EndIf}
 
     ; If start-minion is 1, then start the service
     ${If} $StartMinion == 1
@@ -932,6 +950,12 @@ Function parseCommandLineSwitches
         ; Otherwise default to 1
         StrCpy $StartMinion 1
     ${EndIf}
+
+    # Service: Startup Type Delayed
+    ${GetOptions} $R0 "/start-minion-delayed" $R1
+    IfErrors start_minion_delayed_not_found
+        StrCpy $StartMinionDelayed 1
+    start_minion_delayed_not_found:
 
     # Service: Start Salt Master
     ${GetOptions} $R0 "/start-master=" $R1
