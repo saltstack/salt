@@ -41,6 +41,8 @@ from salt.ext import six
 from salt.ext.six.moves import zip
 from salt.utils.structure import pkg
 
+format_structure = pkg.Package(__file__)
+
 try:
     import yum
     HAS_YUM = True
@@ -2427,7 +2429,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     with salt.utils.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
-    return pkg.Package().yum.mod_repo({repofile: filerepos})
+    return format_structure.mod_repo({repofile: filerepos})
 
 
 def _parse_repo_file(filename):
