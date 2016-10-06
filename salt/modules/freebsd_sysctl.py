@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+import logging
+log = logging.getLogger(__name__)
+
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
 
@@ -79,7 +82,7 @@ def show(config_file=False):
             elif comps[0]:
                 ret[comps[0]] += '{0}\n'.format(line)
             else:
-                 continue
+                continue
         return ret
 
 
