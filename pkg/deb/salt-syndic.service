@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 EnvironmentFile=/etc/default/salt-syndic
-Type=simple
+Type=notify
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-syndic
 Restart=$RESTART
