@@ -803,7 +803,7 @@ class Client(object):
         elif not os.path.isabs(cachedir):
             cachedir = os.path.join(self.opts['cachedir'], cachedir)
 
-        if url_data.query is not None:
+        if url_data.query:
             file_name = '-'.join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
