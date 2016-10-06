@@ -82,7 +82,7 @@ between state files and between files.
 
 This would import the ``test`` template variable or macro, not the ``test``
 state element, from the file ``lib.sls``. In the case that the included file
-performs checks again grains, or something else that requires context, passing
+performs checks against grains, or something else that requires context, passing
 the context into the included file is required:
 
 .. code-block:: yaml
