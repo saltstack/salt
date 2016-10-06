@@ -39,6 +39,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip
+from salt.utils.structure import pkg
 
 try:
     import yum
@@ -2426,7 +2427,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     with salt.utils.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
-    return {repofile: filerepos}
+    return pkg.Package().yum.mod_repo({repofile: filerepos})
 
 
 def _parse_repo_file(filename):
