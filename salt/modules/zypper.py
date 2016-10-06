@@ -39,7 +39,7 @@ from salt.exceptions import (
     CommandExecutionError, MinionError)
 from salt.utils.structure import pkg
 
-output_structure = pkg.Package(__file__)
+format_structure = pkg.Package(__file__)
 
 log = logging.getLogger(__name__)
 
@@ -848,7 +848,7 @@ def mod_repo(repo, **kwargs):
     if comment:
         repo['comment'] = comment
 
-    return output_structure.mod_repo(repo)
+    return format_structure.mod_repo(repo)
 
 
 def refresh_db():
