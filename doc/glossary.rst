@@ -123,7 +123,7 @@ Glossary
     Mine
         A facility to collect arbitrary data from minions and store that data
         on the master. This data is then available to all other minions.
-        [Sometimes referred to as Salt Mine.] *See also*: :ref:`Salt Mine
+        (Sometimes referred to as Salt Mine.) *See also*: :ref:`Salt Mine
         <salt-mine>`.
 
     Minion
