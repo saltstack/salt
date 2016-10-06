@@ -1,5 +1,4 @@
-#!/usr/bin/python
-
+# -*- coding: utf-8 -*-
 '''
 An engine that uses presence detection to keep track of which minions
 have been recently connected and remove their keys if they have not been
@@ -23,6 +22,7 @@ import salt.utils.minions
 import salt.config
 import salt.key
 import salt.wheel
+import salt.utils
 import msgpack
 import os
 import time
@@ -32,36 +32,34 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    opts = salt.config.master_config('/etc/salt/master')
-    if not opts['minion_data_cache']:
+    if not __opts__['minion_data_cache']:
         return (False, 'stalekey engine requires minion_data_cache to be enabled')
 
 
-def _get_keys(opts):
-    keys = salt.key.get_key(opts)
+def _get_keys():
+    keys = salt.key.get_key(__opts__)
     minions = keys.all_keys()
     return minions['minions']
 
 
 def start(interval=3600, expire=604800):
-    opts = salt.config.master_config('/etc/salt/master')
-    ck = salt.utils.minions.CkMinions(opts)
-    presence_file = '{0}/minions/presence.p'.format(opts['cachedir'])
-    wheel = salt.wheel.WheelClient(opts)
+    ck = salt.utils.minions.CkMinions(__opts__)
+    presence_file = '{0}/minions/presence.p'.format(__opts__['cachedir'])
+    wheel = salt.wheel.WheelClient(__opts__)
 
     while True:
         log.debug('Checking for present minions')
         minions = {}
         if os.path.exists(presence_file):
             try:
-                with open(presence_file, 'r') as f:
+                with salt.utils.fopen(presence_file, 'r') as f:
                     minions = msgpack.load(f)
             except IOError as e:
                 log.error('Could not open presence file {0}: {1}'.format(presence_file, e))
                 time.sleep(interval)
                 continue
 
-        minion_keys = _get_keys(opts)
+        minion_keys = _get_keys()
         now = time.time()
         present = ck.connected_ids()
 
@@ -86,10 +84,10 @@ def start(interval=3600, expire=604800):
             for k in stale_keys:
                 log.info('Removing stale key for {0}'.format(k))
             wheel.cmd('key.delete', stale_keys)
-            del(minions[k])
+            del minions[k]
 
         try:
-            with open(presence_file, 'w') as f:
+            with salt.utils.fopen(presence_file, 'w') as f:
                 msgpack.dump(minions, f)
         except IOError as e:
             log.error('Could not write to presence file {0}: {1}'.format(presence_file, e))
