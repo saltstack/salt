@@ -22,8 +22,10 @@ class Package(object):
                     'enabled': bool,
                     'refresh': bool,
                     'gpgcheck': bool,
-                    'type': str,
                     'filename': str,
+                    'name': str,
+                    'distribution-specific': {},  # Data only appears
+                                                  # in this particular distribution
                 }
             }
 
@@ -41,8 +43,8 @@ class Package(object):
                         'baseurl': r_meta['baseurl'],
                         'enabled': bool(r_meta['enabled']),
                         'gpgcheck': bool(r_meta['gpgcheck']),
-                        'type': 'package',
                         'filename': r_filename,
+                        'name': r_alias,
                     }
 
             return schema
@@ -52,7 +54,19 @@ class Package(object):
         Structure unifiers for Zypper.
         '''
         def mod_repo(self, data):
-            return data
+            alias = data.pop('alias')
+            schema = {
+                alias : {
+                    'baseurl': data.pop('baseurl'),
+                    'enabled': data.pop('enabled'),
+                    'refresh': data.pop('autorefresh'),
+                    'gpgcheck': data.get('gpgcheck') and data.pop('gpgcheck') or False,
+                    'filename': data.pop('path'),
+                    'name': data.pop('name'),
+                }
+            }
+            schema[alias]['specific'] = data
+            return schema
 
     class Apt(_Methods):
         '''
