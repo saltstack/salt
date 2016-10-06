@@ -38,15 +38,20 @@ class Package(object):
         '''
         def mod_repo(self, data):
             schema = {}
+            # Supposed to be only one repo, so not really an iteration.
             for r_filename, r_repodata in data.items():
                 for r_alias, r_meta in r_repodata.items():
-                    schema[r_alias] = {
-                        'baseurl': r_meta['baseurl'],
-                        'enabled': bool(r_meta['enabled']),
-                        'gpgcheck': bool(r_meta['gpgcheck']),
+                    schema = {
+                        'alias': r_alias,
+                        'baseurl': r_meta.pop('baseurl'),
+                        'enabled': bool(r_meta.pop('enabled')),
+                        'refresh': 'refresh' in r_meta and bool(r_meta.pop('refresh')) or False,
+                        'gpgcheck': bool(r_meta.pop('gpgcheck')),
                         'filename': r_filename,
-                        'name': r_alias,
+                        'name': r_meta.pop('name'),
                     }
+                    if r_meta:
+                        schema[Package.DIST_SPECIFIC] = r_meta
 
             return schema
 
