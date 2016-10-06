@@ -8,7 +8,6 @@ LimitNOFILE=16384
 Type=simple
 NotifyAccess=all
 ExecStart=/usr/bin/salt-master
-KillMode=process
 Restart=$RESTART
 
 [Install]
