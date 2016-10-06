@@ -592,6 +592,8 @@ Reload
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
 
+.. _unless-requisite:
+
 Unless
 ------
 
@@ -639,6 +641,8 @@ For example:
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
+
+.. _onlyif-requisite:
 
 Onlyif
 ------
