@@ -772,13 +772,22 @@ class MinionManager(MinionBase):
     def handle_event(self, package):
         yield [minion.handle_event(package) for minion in self.minions]
 
+    def _create_minion_object(self, opts, timeout, safe,
+                              io_loop=None, loaded_base_name=None,
+                              jid_queue=None):
+        '''
+        Helper function to return the correct type of object
+        '''
+        return Minion(opts,
+                      timeout,
+                      safe,
+                      io_loop=io_loop,
+                      loaded_base_name=loaded_base_name,
+                      jid_queue=jid_queue)
+
     def _spawn_minions(self):
         '''
         Spawn all the coroutines which will sign in to masters
-
-        NOTE ProxyMinionManager._spawn_minions should be examined if any changes are made to
-        this function to see if those changes should be reflected there as well.
-
         '''
         masters = self.opts['master']
         if self.opts['master_type'] == 'failover' or not isinstance(self.opts['master'], list):
@@ -788,13 +797,13 @@ class MinionManager(MinionBase):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
-            minion = Minion(s_opts,
-                            s_opts['auth_timeout'],
-                            False,
-                            io_loop=self.io_loop,
-                            loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
-                            jid_queue=self.jid_queue,
-                            )
+            minion = self._create_minion_object(s_opts,
+                                                s_opts['auth_timeout'],
+                                                False,
+                                                io_loop=self.io_loop,
+                                                loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
+                                                jid_queue=self.jid_queue,
+                                               )
             self.minions.append(minion)
             self.io_loop.spawn_callback(self._connect_minion, minion)
 
@@ -985,6 +994,13 @@ class Minion(MinionBase):
 
         This is primarily loading modules, pillars, etc. (since they need
         to know which master they connected to)
+
+        If this function is changed, please check ProxyMinion._post_master_init
+        to see if those changes need to be propagated.
+
+        Minions and ProxyMinions need significantly different post master setups,
+        which is why the differences are not factored out into separate helper
+        functions.
         '''
         if self.connected:
             self.opts['master'] = master
@@ -2941,31 +2957,18 @@ class ProxyMinionManager(MinionManager):
     '''
     Create the multi-minion interface but for proxy minions
     '''
-
-    def _spawn_minions(self):
+    def _create_minion_object(self, opts, timeout, safe,
+                              io_loop=None, loaded_base_name=None,
+                              jid_queue=None):
         '''
-        Spawn all the coroutines which will sign in to masters
-        NOTE MinionManager._spawn_minions should be examined if any changes are made to
-        this function to see if those changes should be reflected there as well.
-
+        Helper function to return the correct type of object
         '''
-        masters = self.opts['master']
-        if self.opts['master_type'] == 'failover' or not isinstance(self.opts['master'], list):
-            masters = [masters]
-
-        for master in masters:
-            s_opts = copy.deepcopy(self.opts)
-            s_opts['master'] = master
-            s_opts['multimaster'] = True
-            minion = ProxyMinion(s_opts,
-                                 s_opts['auth_timeout'],
-                                 False,
-                                 io_loop=self.io_loop,
-                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
-                                 jid_queue=self.jid_queue,
-                                )
-            self.minions.append(minion)
-            self.io_loop.spawn_callback(self._connect_minion, minion)
+        return ProxyMinion(opts,
+                           timeout,
+                           safe,
+                           io_loop=io_loop,
+                           loaded_base_name=loaded_base_name,
+                           jid_queue=jid_queue)
 
 
 class ProxyMinion(Minion):
@@ -2982,6 +2985,13 @@ class ProxyMinion(Minion):
 
         This is primarily loading modules, pillars, etc. (since they need
         to know which master they connected to)
+
+        If this function is changed, please check Minion._post_master_init
+        to see if those changes need to be propagated.
+
+        ProxyMinions need a significantly different post master setup,
+        which is why the differences are not factored out into separate helper
+        functions.
         '''
         log.debug("subclassed _post_master_init")
 
