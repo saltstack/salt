@@ -101,7 +101,8 @@ Glossary
         or stored externally.
 
     Job ID
-        A unique identifier to represent a given :term:`job`.
+        A unique identifier to represent a given :term:`job`.  This is often
+        shortened to JID.
 
     Low State
         The collection of processed states after requisites and order are
