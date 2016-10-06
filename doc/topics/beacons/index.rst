@@ -29,17 +29,18 @@ See :ref:`beacon modules <all-salt.beacons>` for a current list.
 Configuring Beacons
 ===================
 
-Salt beacons do not require any changes to the system process that
-is being monitored, everything is configured using Salt.
+Salt beacons do not require any changes to the system components that are being
+monitored, everything is configured using Salt.
 
-Beacons are typically enabled by placing a ``beacons:`` top level block in the
-minion configuration file:
+Beacons are typically enabled by placing a ``beacons:`` top level block in
+``/etc/salt/minion`` or any file in ``/etc/salt/minion.d/`` such as
+``/etc/salt/minion.d/beacons.conf``:
 
 .. code-block:: yaml
 
     beacons:
       inotify:
-        /etc/httpd/conf.d: {}
+        /etc/important_file: {}
         /opt: {}
 
 The beacon system, like many others in Salt, can also be configured via the
@@ -60,9 +61,10 @@ provide an ``interval`` argument to a beacon. The following beacons run on
 
     beacons:
       inotify:
-        /etc/httpd/conf.d: {}
+        /etc/important_file: {}
         /opt: {}
         interval: 5
+        disable_during_state_run: True
       load:
         1m:
           - 0.0
@@ -74,6 +76,8 @@ provide an ``interval`` argument to a beacon. The following beacons run on
           - 0.1
           - 1.0
         interval: 10
+
+.. _avoid-beacon-event-loops:
 
 Avoiding Event Loops
 --------------------
@@ -93,38 +97,56 @@ will resume.
 
     beacons:
       inotify:
-        /etc/passwd: {}
+        /etc/important_file: {}
         disable_during_state_run: True
 
+.. _beacon-example:
 
 Beacon Example
 ==============
 
 This example demonstrates configuring the :py:mod:`~salt.beacons.inotify`
-beacon to monitor a file for changes, and then create a backup each time
-a change is detected.
+beacon to monitor a file for changes, and then restores the file to its
+original contents if a change was made.
 
 .. note::
     The inotify beacon requires Pyinotify on the minion, install it using
     ``salt myminion pkg.install python-inotify``.
 
-First, on the Salt minion, add the following beacon configuration to
-``/etc/salt/minion``:
+Create Watched File
+-------------------
+
+Create the file named ``/etc/important_file`` and add some simple content:
 
 .. code-block:: yaml
 
-   beacons:
-     inotify:
-       home/user/importantfile:
-         mask:
-           - modify
+    important_config: True
 
-Replace ``user`` in the previous example with the name of your user account,
-and then save the configuration file and restart the minion service.
+Add Beacon Configs to Minion
+----------------------------
 
-Next, create a file in your home directory named ``importantfile`` and add some
-simple content. The beacon is now set up to monitor this file for
-modifications.
+On the Salt minion, add the following configuration to
+``/etc/salt/minion.d/beacons.conf``:
+
+.. code-block:: yaml
+
+    beacons:
+      inotify:
+        /etc/important_file:
+          mask:
+            - modify
+        disable_during_state_run: True
+
+Save the configuration file and restart the minion service. The beacon is now
+set up to notify salt upon modifications made to the file.
+
+.. note::
+
+    The ``disable_during_state_run: True`` parameter :ref:`prevents
+    <avoid-beacon-event-loops>` the inotify beacon from generating reactor
+    events due to salt itself modifying the file.
+
+.. _beacon-event-bus:
 
 View Events on the Master
 -------------------------
@@ -135,22 +157,22 @@ On your Salt master, start the event runner using the following command:
 
    salt-run state.event pretty=true
 
-This runner displays events as they are received on the Salt event bus. To test
-the beacon you set up in the previous section, make and save
-a modification to the ``importantfile`` you created. You'll see an event
-similar to the following on the event bus:
+This runner displays events as they are received by the master on the Salt
+event bus. To test the beacon you set up in the previous section, make and save
+a modification to ``/etc/important_file``. You'll see an event similar to the
+following on the event bus:
 
 .. code-block:: json
 
-   salt/beacon/minion1/inotify/home/user/importantfile	{
-    "_stamp": "2015-09-09T15:59:37.972753",
-    "data": {
-        "change": "IN_IGNORED",
-        "id": "minion1",
-        "path": "/home/user/importantfile"
-    },
-    "tag": "salt/beacon/minion1/inotify/home/user/importantfile"
-   }
+    salt/beacon/larry/inotify//etc/important_file	{
+     "_stamp": "2015-09-09T15:59:37.972753",
+     "data": {
+         "change": "IN_IGNORED",
+         "id": "larry",
+         "path": "/etc/important_file"
+     },
+     "tag": "salt/beacon/larry/inotify//etc/important_file"
+    }
 
 
 This indicates that the event is being captured and sent correctly. Now you can
@@ -159,30 +181,69 @@ create a reactor to take action when this event occurs.
 Create a Reactor
 ----------------
 
-On your Salt master, create a file named ``srv/reactor/backup.sls``. If the
-``reactor`` directory doesn't exist, create it. Add the following to ``backup.sls``:
+This reactor reverts the file named ``/etc/important_file`` to the contents
+provided by salt each time it is modified.
+
+Reactor SLS
+```````````
+
+On your Salt master, create a file named ``/srv/reactor/revert.sls``.
+
+.. note::
+
+    If the ``/srv/reactor`` directory doesn't exist, create it.
+
+    .. code-block:: bash
+
+        mkdir -p /srv/reactor
+
+Add the following to ``/srv/reactor/revert.sls``:
 
 .. code-block:: yaml
 
-   backup file:
-    cmd.file.copy:
-      - tgt: {{ data['data']['id'] }}
-      - arg:
-        - {{ data['data']['path'] }}
-        - {{ data['data']['path'] }}.bak
+    revert-file:
+      local.state.apply:
+        - tgt: {{ data['data']['id'] }}
+        - mods: maintain_important_file
 
-Next, add the code to trigger the reactor to ``ect/salt/master``:
+.. note::
+
+    In addition to :ref:`setting <avoid-beacon-event-loops>`
+    ``disable_during_state_run: True`` for an inotify beacon whose reaction is
+    to modify the watched file, it is important to ensure the state applied is
+    also :term:`idempotent`.
+
+.. note::
+
+    The expression ``{{ data['data']['id] }}`` :ref:`is correct
+    <beacons-and-reactors>` as it matches the event structure :ref:`shown above
+    <beacon-event-bus>`.
+
+State SLS
+`````````
+
+Create the state sls file referenced by the reactor sls file.  This state file
+will be located at ``/srv/salt/maintain_important_file.sls``.
 
 .. code-block:: yaml
 
-   reactor:
-     - salt/beacon/*/inotify/*/importantfile:
-       - /srv/reactor/backup.sls
+    important_file:
+      file.managed:
+        - name: /etc/important_file
+        - contents: |
+            important_config: True
 
+Master Config
+`````````````
 
-This reactor creates a backup each time a file named ``importantfile`` is
-modified on a minion that has the :py:mod:`~salt.beacons.inotify` beacon
-configured as previously shown.
+Configure the master to map the inotify beacon event to the ``revert`` reaction
+in ``/etc/salt/master.d/reactor.conf``:
+
+.. code-block:: yaml
+
+    reactor:
+      - salt/beacon/*/inotify//etc/important_file:
+        - /srv/reactor/revert.sls
 
 .. note::
     You can have only one top level ``reactor`` section, so if one already
@@ -196,7 +257,7 @@ Start the Salt Master in Debug Mode
 
 To help with troubleshooting, start the Salt master in debug mode:
 
-.. code-block:: yaml
+.. code-block:: bash
 
    service salt-master stop
    salt-master -l debug
@@ -207,13 +268,15 @@ discover syntax and other issues.
 Trigger the Reactor
 -------------------
 
-On your minion, make and save another change to ``importantfile``. On the Salt
-master, you'll see debug messages that indicate the event was received and the
-``file.copy`` job was sent. When you list the directory on the minion, you'll now
-see ``importantfile.bak``.
+On your minion, make and save another change to ``/etc/important_file``. On the
+Salt master, you'll see debug messages that indicate the event was received and
+the ``state.apply`` job was sent. When you inspect the file on the minion,
+you'll see that the file contents have been restored to ``important_config:
+True``.
 
 All beacons are configured using a similar process of enabling the beacon,
-writing a reactor SLS, and mapping a beacon event to the reactor SLS.
+writing a reactor SLS (and state SLS if needed), and mapping a beacon event to
+the reactor SLS.
 
 Writing Beacon Plugins
 ======================
