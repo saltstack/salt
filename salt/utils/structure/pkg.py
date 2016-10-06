@@ -7,6 +7,8 @@ class Package(object):
     '''
     Refers to the pkg.* module.
     '''
+    DIST_SPECIFIC = 'distribution-specific'
+
     class _Methods(object):
         __metaclass__ = ABCMeta
 
@@ -17,16 +19,15 @@ class Package(object):
             :return:
             '''
             schema = {
-                'alias' : {
-                    'baseurl': str,
-                    'enabled': bool,
-                    'refresh': bool,
-                    'gpgcheck': bool,
-                    'filename': str,
-                    'name': str,
-                    'distribution-specific': {},  # Data only appears
-                                                  # in this particular distribution
-                }
+                'alias': str,
+                'baseurl': str,
+                'enabled': bool,
+                'refresh': bool,
+                'gpgcheck': bool,
+                'filename': str,
+                'name': str,
+                Package.DIST_SPECIFIC: {},  # Data only appears
+                                            # in this particular distribution
             }
 
             return schema
@@ -56,16 +57,17 @@ class Package(object):
         def mod_repo(self, data):
             alias = data.pop('alias')
             schema = {
-                alias : {
-                    'baseurl': data.pop('baseurl'),
-                    'enabled': data.pop('enabled'),
-                    'refresh': data.pop('autorefresh'),
-                    'gpgcheck': data.get('gpgcheck') and data.pop('gpgcheck') or False,
-                    'filename': data.pop('path'),
-                    'name': data.pop('name'),
-                }
+                'alias': alias,
+                'baseurl': data.pop('baseurl'),
+                'enabled': data.pop('enabled'),
+                'refresh': data.pop('autorefresh'),
+                'gpgcheck': data.get('gpgcheck') and data.pop('gpgcheck') or False,
+                'filename': data.pop('path'),
+                'name': data.pop('name'),
             }
-            schema[alias]['specific'] = data
+            if data:
+                schema[Package.DIST_SPECIFIC] = data
+
             return schema
 
     class Apt(_Methods):
