@@ -63,7 +63,7 @@ def getfacl(*args, **kwargs):
     if recursive:
         cmd += ' -R'
     for dentry in args:
-        cmd += ' {0}'.format(dentry)
+        cmd += ' "{0}"'.format(dentry)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     dentry = ''
     for line in out:
