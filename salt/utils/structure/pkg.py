@@ -40,7 +40,7 @@ class Package(object):
 
     class Yumpkg(_Methods):
         '''
-        Structure unifiers for Yum.
+        Structure unifiers for Yum package manager (module/yumpkg.py)
         '''
         def mod_repo(self, data):
             schema = {}
@@ -63,7 +63,7 @@ class Package(object):
 
     class Zypper(_Methods):
         '''
-        Structure unifiers for Zypper.
+        Structure unifiers for Zypper package manager (modules/zypper.py)
         '''
         def mod_repo(self, data):
             alias = data.pop('alias')
@@ -83,7 +83,7 @@ class Package(object):
 
     class Aptpkg(_Methods):
         '''
-        Structure unifiers for Apt
+        Structure unifiers for Apt package manager (modules/aptpkg.py)
         '''
         def mod_repo(self, data):
             return data
