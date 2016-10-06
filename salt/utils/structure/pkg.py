@@ -1,6 +1,8 @@
 # Unification of the returning data
 
+import os
 from abc import ABCMeta, abstractmethod
+from salt.utils.structure import Stub
 
 
 class Package(object):
@@ -8,6 +10,10 @@ class Package(object):
     Refers to the pkg.* module.
     '''
     DIST_SPECIFIC = 'distribution-specific'
+
+    def __init__(self, ident):
+        # This loads the corresponding unifier to the caller module
+        self.unifier = Package.__dict__.get(os.path.basename(ident).split(".")[0].title(), Stub)()
 
     class _Methods(object):
         __metaclass__ = ABCMeta
@@ -32,7 +38,7 @@ class Package(object):
 
             return schema
 
-    class Yum(_Methods):
+    class Yumpkg(_Methods):
         '''
         Structure unifiers for Yum.
         '''
@@ -75,14 +81,27 @@ class Package(object):
 
             return schema
 
-    class Apt(_Methods):
+    class Aptpkg(_Methods):
         '''
         Structure unifiers for Apt
         '''
         def mod_repo(self, data):
             return data
 
-    def __init__(self):
-        self.yum = Package.Yum()
-        self.zypper = Package.Zypper()
-        self.apt = Package.Apt()
+    def __getattr__(self, item):
+        '''
+        Load only what is really needed at the very moment.
+
+        :param item:
+        :return:
+        '''
+        # When this class is initialized, an unifier is set according to the module name.
+        # Example: for modules/zypper.py class is Zypper. For modules/yumpkg is Yumpkg etc.
+        # The usage of this class is simple:
+        #
+        #    foo = Package(__file__)     <-- this sets what module is calling it
+        #    return foo.mod_repo(output) <-- this wraps the output to the certain function
+        #
+        # TODO: Turn all this thing into a generic decorator?
+
+        return getattr(self.unifier, item)
