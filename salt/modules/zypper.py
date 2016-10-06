@@ -39,6 +39,8 @@ from salt.exceptions import (
     CommandExecutionError, MinionError)
 from salt.utils.structure import pkg
 
+output_structure = pkg.Package(__file__)
+
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
@@ -846,7 +848,7 @@ def mod_repo(repo, **kwargs):
     if comment:
         repo['comment'] = comment
 
-    return pkg.Package().zypper.mod_repo(repo)
+    return output_structure.mod_repo(repo)
 
 
 def refresh_db():
