@@ -19,10 +19,10 @@
 
 import os
 from abc import ABCMeta, abstractmethod
-from salt.utils.structure import Stub
+from salt.utils.scm.stub import Stub
 
 
-class Package(object):
+class PackageSchema(object):
     '''
     Refers to the pkg.* module.
     '''
@@ -30,7 +30,7 @@ class Package(object):
 
     def __init__(self, ident):
         # This loads the corresponding unifier to the caller module
-        self.unifier = Package.__dict__.get(os.path.basename(ident).split(".")[0].title(), Stub)()
+        self.unifier = PackageSchema.__dict__.get(os.path.basename(ident).split(".")[0].title(), Stub)()
 
     class _Methods(object):
         __metaclass__ = ABCMeta
@@ -49,8 +49,8 @@ class Package(object):
                 'gpgcheck': bool,
                 'filename': str,
                 'name': str,
-                Package.DIST_SPECIFIC: {},  # Data only appears
-                                            # in this particular distribution
+                PackageSchema.DIST_SPECIFIC: {},  # Data only appears
+                                                  # in this particular distribution
             }
 
             return schema
@@ -74,7 +74,7 @@ class Package(object):
                         'name': r_meta.pop('name'),
                     }
                     if r_meta:
-                        schema[Package.DIST_SPECIFIC] = r_meta
+                        schema[PackageSchema.DIST_SPECIFIC] = r_meta
 
             return schema
 
@@ -94,7 +94,7 @@ class Package(object):
                 'name': data.pop('name'),
             }
             if data:
-                schema[Package.DIST_SPECIFIC] = data
+                schema[PackageSchema.DIST_SPECIFIC] = data
 
             return schema
 
@@ -118,7 +118,28 @@ class Package(object):
         #
         #    foo = Package(__file__)     <-- this sets what module is calling it
         #    return foo.mod_repo(output) <-- this wraps the output to the certain function
-        #
-        # TODO: Turn all this thing into a generic decorator?
 
         return getattr(self.unifier, item)
+
+    def __call__(self, function):
+        '''
+        Call as decorator.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        def formatter(*args, **kwargs):
+            '''
+            Formatter function that wraps the output.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
+            for k_arg in kwargs.copy().keys():
+                if k_arg.startswith('__'):
+                    kwargs.pop(k_arg)
+            return getattr(self.unifier, function.func_name)(function(*args, **kwargs))
+
+        return formatter
