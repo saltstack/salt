@@ -94,7 +94,7 @@ def profile_get(user, default_hidden=True):
     ## read user_attr file (user:qualifier:res1:res2:attr)
     with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
         for profile in user_attr:
-            profile = profile.split(':')
+            profile = profile.strip().split(':')
 
             # skip comments and non complaint lines
             if len(profile) != 5:
@@ -106,10 +106,10 @@ def profile_get(user, default_hidden=True):
 
             # parse attr
             attrs = {}
-            for attr in profile[4].split(';'):
-                attr_key, attr_val = attr.split('=')
+            for attr in profile[4].strip().split(';'):
+                attr_key, attr_val = attr.strip().split('=')
                 if attr_key in ['auths', 'profiles', 'roles']:
-                    attrs[attr_key] = attr_val.split(',')
+                    attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val
             if 'profiles' in attrs:
@@ -293,7 +293,7 @@ def role_get(user):
     ## read user_attr file (user:qualifier:res1:res2:attr)
     with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
         for role in user_attr:
-            role = role.split(':')
+            role = role.strip().strip().split(':')
 
             # skip comments and non complaint lines
             if len(role) != 5:
@@ -305,10 +305,10 @@ def role_get(user):
 
             # parse attr
             attrs = {}
-            for attr in role[4].split(';'):
-                attr_key, attr_val = attr.split('=')
+            for attr in role[4].strip().split(';'):
+                attr_key, attr_val = attr.strip().split('=')
                 if attr_key in ['auths', 'profiles', 'roles']:
-                    attrs[attr_key] = attr_val.split(',')
+                    attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val
             if 'roles' in attrs:
@@ -478,7 +478,7 @@ def auth_get(user, computed=True):
     ## read user_attr file (user:qualifier:res1:res2:attr)
     with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
         for auth in user_attr:
-            auth = auth.split(':')
+            auth = auth.strip().split(':')
 
             # skip comments and non complaint lines
             if len(auth) != 5:
@@ -490,10 +490,10 @@ def auth_get(user, computed=True):
 
             # parse attr
             attrs = {}
-            for attr in auth[4].split(';'):
-                attr_key, attr_val = attr.split('=')
+            for attr in auth[4].strip().split(';'):
+                attr_key, attr_val = attr.strip().split('=')
                 if attr_key in ['auths', 'profiles', 'roles']:
-                    attrs[attr_key] = attr_val.split(',')
+                    attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val
             if 'auths' in attrs:
