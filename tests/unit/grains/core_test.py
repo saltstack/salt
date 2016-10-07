@@ -30,6 +30,7 @@ from salt.grains import core
 core.__salt__ = {}
 core.__opts__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CoreGrainsTestCase(TestCase):
     '''
