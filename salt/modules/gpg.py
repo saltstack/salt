@@ -14,6 +14,7 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
 # Import python libs
 from __future__ import absolute_import
 import distutils.version  # pylint: disable=import-error,no-name-in-module
+import functools
 import logging
 import os
 import re
@@ -142,6 +143,7 @@ def _get_user_gnupghome(user):
 
 
 def _restore_ownership(func):
+    @functools.wraps(func)
     def func_wrapper(*args, **kwargs):
         '''
         Wrap gpg function calls to fix permissions
