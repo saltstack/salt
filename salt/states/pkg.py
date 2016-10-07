@@ -625,11 +625,15 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
     ok = []
     failed = []
     for pkgname, pkgver in desired.items():
-        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
-        origin = bool(re.search('/', pkgname))
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
+        # Homebrew for Mac OSX does something similar with tap names
+        # prefixing package names, separated with a slash.
+        has_origin = '/' in pkgname
 
-        if __grains__['os'] == 'FreeBSD' and origin:
+        if __grains__['os'] == 'FreeBSD' and has_origin:
             cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
+        elif __grains__['os'] == 'MacOS' and has_origin:
+            cver = new_pkgs.get(pkgname, new_pkgs.get(pkgname.split('/')[-1]))
         elif __grains__['os'] == 'OpenBSD':
             cver = new_pkgs.get(pkgname.split('%')[0])
         elif __grains__['os_family'] == 'Debian':
