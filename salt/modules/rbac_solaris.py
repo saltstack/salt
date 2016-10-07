@@ -49,14 +49,14 @@ def profile_list(default_only=False):
         salt '*' rbac.profile_list
     '''
     profiles = {}
-    default_profiles = []
+    default_profiles = ['All']
 
     ## lookup default profile(s)
-    res = __salt__['cmd.run_all']('profiles')
-    if res['retcode'] > 0:
-        log.warning('rbac.profile_list - could not retreive list of default profiles')
-    else:
-        default_profiles = res['stdout'].splitlines()
+    with salt.utils.fopen('/etc/security/policy.conf', 'r') as policy_conf:
+        for policy in policy_conf:
+            policy = policy.split('=')
+            if policy[0].strip() == 'PROFS_GRANTED':
+                default_profiles.extend(policy[1].strip().split(','))
 
     ## read prof_attr file (profname:res1:res2:desc:attr)
     with salt.utils.fopen('/etc/security/prof_attr', 'r') as prof_attr:
