@@ -19,7 +19,7 @@
 
 import os
 from abc import ABCMeta, abstractmethod
-from salt.utils.scm.stub import Stub
+from salt.utils.scm.common import Stub
 
 
 class PackageSchema(object):
