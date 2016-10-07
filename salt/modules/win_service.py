@@ -277,8 +277,12 @@ def info(name):
 
         salt '*' service.info spooler
     '''
-    handle_scm = win32service.OpenSCManager(
-        None, None, win32service.SC_MANAGER_CONNECT)
+    try:
+        handle_scm = win32service.OpenSCManager(
+            None, None, win32service.SC_MANAGER_CONNECT)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed to connect to the SCM: {0}'.format(exc[2]))
 
     try:
         handle_svc = win32service.OpenService(
@@ -294,17 +298,27 @@ def info(name):
     try:
         config_info = win32service.QueryServiceConfig(handle_svc)
         status_info = win32service.QueryServiceStatusEx(handle_svc)
-        description = win32service.QueryServiceConfig2(
-            handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION)
+
+        try:
+            description = win32service.QueryServiceConfig2(
+                handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION)
+        except pywintypes.error:
+            description = 'Failed to get description'
+
         delayed_start = win32service.QueryServiceConfig2(
             handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO)
     finally:
         win32service.CloseServiceHandle(handle_scm)
         win32service.CloseServiceHandle(handle_svc)
 
-    sid = win32security.LookupAccountName('', 'NT Service\\{0}'.format(name))[0]
-
     ret = dict()
+    try:
+        sid = win32security.LookupAccountName(
+            '', 'NT Service\\{0}'.format(name))[0]
+        ret['sid'] = win32security.ConvertSidToStringSid(sid)
+    except pywintypes.error:
+        ret['sid'] = 'Failed to get SID'
+
     ret['BinaryPath'] = config_info[3]
     ret['LoadOrderGroup'] = config_info[4]
     ret['TagID'] = config_info[5]
@@ -312,7 +326,6 @@ def info(name):
     ret['ServiceAccount'] = config_info[7]
     ret['DisplayName'] = config_info[8]
     ret['Description'] = description
-    ret['sid'] = win32security.ConvertSidToStringSid(sid)
     ret['Status_ServiceCode'] = status_info['ServiceSpecificExitCode']
     ret['Status_CheckPoint'] = status_info['CheckPoint']
     ret['Status_WaitHint'] = status_info['WaitHint']
