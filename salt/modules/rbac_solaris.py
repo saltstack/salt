@@ -4,7 +4,7 @@ Module for Solaris' Role-Based Access Control
 
 .. note::
     Solaris' RBAC system is very complex, for now
-    this module will only focus on profiles.
+    this module will only focus on profiles and roles.
 
 '''
 from __future__ import absolute_import
@@ -223,6 +223,184 @@ def profile_rm(user, profile):
             ret[p] = 'Failed'
         else:
             ret[p] = 'Remove'
+
+    return ret
+
+
+def role_list():
+    '''
+    List all available roles
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.role_list
+    '''
+    roles = {}
+
+    ## read user_attr file (user:qualifier:res1:res2:attr)
+    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+        for role in user_attr:
+            role = role.split(':')
+
+            # skip comments and non complaint lines
+            if len(role) != 5:
+                continue
+
+            # parse attr
+            attrs = {}
+            for attr in role[4].split(';'):
+                attr_key, attr_val = attr.split('=')
+                if attr_key in ['auths', 'profiles', 'roles']:
+                    attrs[attr_key] = attr_val.split(',')
+                else:
+                    attrs[attr_key] = attr_val
+            role[4] = attrs
+
+            # add role info to dict
+            if 'type' in role[4] and role[4]['type'] == 'role':
+                del role[4]['type']
+                roles[role[0]] = role[4]
+
+    return roles
+
+
+def role_get(user):
+    '''
+    List roles for user
+
+    user : string
+        username
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.role_get leo
+    '''
+    user_roles = []
+
+    ## retrieve profiles
+    res = __salt__['cmd.run_all']('roles {0}'.format(user))
+    if res['retcode'] == 0:
+        for role in res['stdout'].splitlines():
+            if ',' in role:
+                user_roles.extend(role.strip().split(','))
+            else:
+                user_roles.append(role.strip())
+
+    return user_roles
+
+
+def role_add(user, role):
+    '''
+    Add role to user
+
+    user : string
+        username
+    role : string
+        role name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.role_add martine netcfg
+        salt '*' rbac.role_add martine netcfg,zfssnap
+    '''
+    ret = {}
+
+    ## validate roles
+    roles = role.split(',')
+    known_roles = role_list().keys()
+    valid_roles = [r for r in roles if r in known_roles]
+    log.debug(
+        'rbac.role_add - roles={0}, known_roles={1}, valid_roles={2}'.format(
+            roles,
+            known_roles,
+            valid_roles,
+        )
+    )
+
+    ## update user roles
+    if len(valid_roles) > 0:
+        res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
+            login=user,
+            roles=','.join(set(role_get(user) + valid_roles)),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
+            }
+            return ret
+
+    ## update return value
+    active_roles = role_get(user)
+    for r in roles:
+        if r not in valid_roles:
+            ret[r] = 'Unknown'
+        elif r in active_roles:
+            ret[r] = 'Added'
+        else:
+            ret[r] = 'Failed'
+
+    return ret
+
+
+def role_rm(user, role):
+    '''
+    Remove role from user
+
+    user : string
+        username
+    role : string
+        role name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.role_rm jorge netcfg
+        salt '*' rbac.role_rm jorge netcfg,zfssnap
+    '''
+    ret = {}
+
+    ## validate roles
+    roles = role.split(',')
+    known_roles = role_list().keys()
+    valid_roles = [r for r in roles if r in known_roles]
+    log.debug(
+        'rbac.roles_rm - roles={0}, known_roles={1}, valid_roles={2}'.format(
+            roles,
+            known_roles,
+            valid_roles,
+        )
+    )
+
+    ## update user roles
+    if len(valid_roles) > 0:
+        res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
+            login=user,
+            roles=','.join([r for r in role_get(user) if r not in valid_roles]),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
+            }
+            return ret
+
+    ## update return value
+    active_roles = role_get(user)
+    for r in roles:
+        if r not in valid_roles:
+            ret[r] = 'Unknown'
+        elif r in active_roles:
+            ret[r] = 'Failed'
+        else:
+            ret[r] = 'Remove'
 
     return ret
 
