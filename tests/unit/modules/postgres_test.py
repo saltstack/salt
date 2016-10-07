@@ -158,7 +158,7 @@ class PostgresTestCase(TestCase):
                 maintenance_db='maint_db', password='foo')
 
         postgres._run_psql.assert_called_once_with(
-                ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
                     '--no-password', '--username', 'testuser', '--host',
                     'testhost', '--port', '1234', '--dbname', 'maint_db', '-c',
                     'CREATE DATABASE "dbname" WITH ENCODING = \'utf8\' '
