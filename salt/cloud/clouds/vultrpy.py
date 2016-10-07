@@ -43,7 +43,6 @@ import urllib
 # Import salt cloud libs
 import salt.config as config
 import salt.ext.six as six
-import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudSystemExit
