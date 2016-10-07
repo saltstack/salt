@@ -78,7 +78,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         ret['result'] = False
         ret['comment'] = 'User {0} does not exist!'.format(name)
         return ret
-    if not roles and not isinstance(roles, (list)):
+    if roles and not isinstance(roles, (list)):
         ret['result'] = False
         ret['comment'] = 'Property roles is not None or list!'
         return ret
