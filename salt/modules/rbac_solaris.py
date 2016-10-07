@@ -451,11 +451,8 @@ def auth_list():
                 continue
 
             # add auth info to dict
-<<<<<<< HEAD
             if auth[0][-1:] == '.':
                 auth[0] = '{0}*'.format(auth[0])
-=======
->>>>>>> 82faacb7f0867b3d5a3fcc8556655b430f95e3ab
             auths[auth[0]] = auth[3]
 
     return auths
