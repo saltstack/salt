@@ -484,8 +484,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
             # Not a stream handler, continue
             continue
 
-        if handler.stream is sys.stderr:
-            # There's already a logging handler outputting to sys.stderr
+        if handler.stream is get_console_handler_stream():
+            # There's already a logging handler outputting to sys.stderr or set console handler stream
             break
     else:
         handler = StreamHandler(get_console_handler_stream())
@@ -514,7 +514,8 @@ def get_console_handler_stream():
     global __CONSOLE_HANDLER_STREAM
 
     if __CONSOLE_HANDLER_STREAM is None:
-        #set_console_handler_stream(sys.stderr)
+        # return sys.stderr as default console stream handler
+        #   still possible to set console stream handler later on
         return sys.stderr
 
     return __CONSOLE_HANDLER_STREAM
