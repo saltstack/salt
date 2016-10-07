@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import types
+
 
 class Stub(object):
     '''
@@ -27,3 +29,18 @@ class Stub(object):
             return {'error': 'If you got here, your method is missing and you are in nowhere. :)'}
 
         return stub
+
+
+def bypass_decorator(func):
+    '''
+    Remove a decorators from the function, if any.
+
+    :param func:
+    :return:
+    '''
+
+    for obj in func.__dict__.values():
+        if isinstance(obj, types.FunctionType):
+            func = obj
+
+    return func
