@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for Solaris' Role-Based Access Control
-
-.. note::
-    Solaris' RBAC system is very complex, for now
-    this module will only focus on profiles and roles.
-
 '''
 from __future__ import absolute_import
 
@@ -68,16 +63,12 @@ def profile_list(default_only=False):
                 continue
 
             # add profile info to dict
-            profiles[profile[0]] = {
-                'description': profile[3],
-                'default':     profile[0] in default_profiles,
-            }
+            profiles[profile[0]] = profile[3]
 
     ## filtered profiles
     if default_only:
-        for p in profiles.keys():
-            if not profiles[p]['default']:
-                del profiles[p]
+        for p in [p for p in profiles if p not in default_profiles]:
+            del profiles[p]
 
     return profiles
 
@@ -100,11 +91,29 @@ def profile_get(user, default_hidden=True):
     '''
     user_profiles = []
 
-    ## retrieve profiles
-    res = __salt__['cmd.run_all']('profiles {0}'.format(user))
-    if res['retcode'] == 0:
-        for profile in res['stdout'].splitlines()[1:]:
-            user_profiles.append(profile.strip())
+    ## read user_attr file (user:qualifier:res1:res2:attr)
+    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+        for profile in user_attr:
+            profile = profile.split(':')
+
+            # skip comments and non complaint lines
+            if len(profile) != 5:
+                continue
+
+            # skip other users
+            if profile[0] != user:
+                continue
+
+            # parse attr
+            attrs = {}
+            for attr in profile[4].split(';'):
+                attr_key, attr_val = attr.split('=')
+                if attr_key in ['auths', 'profiles', 'roles']:
+                    attrs[attr_key] = attr_val.split(',')
+                else:
+                    attrs[attr_key] = attr_val
+            if 'profiles' in attrs:
+                user_profiles.extend(attrs['profiles'])
 
     ## remove default profiles
     if default_hidden:
@@ -112,7 +121,7 @@ def profile_get(user, default_hidden=True):
             if profile in user_profiles:
                 user_profiles.remove(profile)
 
-    return user_profiles
+    return list(set(user_profiles))
 
 
 def profile_add(user, profile):
@@ -281,16 +290,31 @@ def role_get(user):
     '''
     user_roles = []
 
-    ## retrieve profiles
-    res = __salt__['cmd.run_all']('roles {0}'.format(user))
-    if res['retcode'] == 0:
-        for role in res['stdout'].splitlines():
-            if ',' in role:
-                user_roles.extend(role.strip().split(','))
-            else:
-                user_roles.append(role.strip())
+    ## read user_attr file (user:qualifier:res1:res2:attr)
+    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+        for role in user_attr:
+            role = role.split(':')
 
-    return user_roles
+            # skip comments and non complaint lines
+            if len(role) != 5:
+                continue
+
+            # skip other users
+            if role[0] != user:
+                continue
+
+            # parse attr
+            attrs = {}
+            for attr in role[4].split(';'):
+                attr_key, attr_val = attr.split('=')
+                if attr_key in ['auths', 'profiles', 'roles']:
+                    attrs[attr_key] = attr_val.split(',')
+                else:
+                    attrs[attr_key] = attr_val
+            if 'roles' in attrs:
+                user_roles.extend(attrs['roles'])
+
+    return list(set(user_roles))
 
 
 def role_add(user, role):
@@ -372,7 +396,7 @@ def role_rm(user, role):
     known_roles = role_list().keys()
     valid_roles = [r for r in roles if r in known_roles]
     log.debug(
-        'rbac.roles_rm - roles={0}, known_roles={1}, valid_roles={2}'.format(
+        'rbac.role_rm - roles={0}, known_roles={1}, valid_roles={2}'.format(
             roles,
             known_roles,
             valid_roles,
@@ -401,6 +425,199 @@ def role_rm(user, role):
             ret[r] = 'Failed'
         else:
             ret[r] = 'Remove'
+
+    return ret
+
+
+def auth_list():
+    '''
+    List all available authorization
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.auth_list
+    '''
+    auths = {}
+
+    ## read auth_attr file (name:res1:res2:short_desc:long_desc:attr)
+    with salt.utils.fopen('/etc/security/auth_attr', 'r') as auth_attr:
+        for auth in auth_attr:
+            auth = auth.split(':')
+
+            # skip comments and non complaint lines
+            if len(auth) != 6:
+                continue
+
+            # add auth info to dict
+            auths[auth[0]] = auth[3]
+
+    return auths
+
+
+def auth_get(user, computed=True):
+    '''
+    List authorization for user
+
+    user : string
+        username
+    computed : boolean
+        merge results from `auths` command into data from user_attr
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.auth_get leo
+    '''
+    user_auths = []
+
+    ## read user_attr file (user:qualifier:res1:res2:attr)
+    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+        for auth in user_attr:
+            auth = auth.split(':')
+
+            # skip comments and non complaint lines
+            if len(auth) != 5:
+                continue
+
+            # skip other users
+            if auth[0] != user:
+                continue
+
+            # parse attr
+            attrs = {}
+            for attr in auth[4].split(';'):
+                attr_key, attr_val = attr.split('=')
+                if attr_key in ['auths', 'profiles', 'roles']:
+                    attrs[attr_key] = attr_val.split(',')
+                else:
+                    attrs[attr_key] = attr_val
+            if 'auths' in attrs:
+                user_auths.extend(attrs['auths'])
+
+    ## also parse auths command
+    if computed:
+        res = __salt__['cmd.run_all']('auths {0}'.format(user))
+        if res['retcode'] == 0:
+            for auth in res['stdout'].splitlines():
+                if ',' in auth:
+                    user_auths.extend(auth.strip().split(','))
+                else:
+                    user_auths.append(auth.strip())
+
+    return list(set(user_auths))
+
+
+def auth_add(user, auth):
+    '''
+    Add authorization to user
+
+    user : string
+        username
+    auth : string
+        authorization name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.auth_add martine solaris.zone.manage
+        salt '*' rbac.auth_add martine solaris.zone.manage,solaris.mail.mailq
+    '''
+    ret = {}
+
+    ## validate auths
+    auths = auth.split(',')
+    known_auths = auth_list().keys()
+    valid_auths = [r for r in auths if r in known_auths]
+    log.debug(
+        'rbac.auth_add - auths={0}, known_auths={1}, valid_auths={2}'.format(
+            auths,
+            known_auths,
+            valid_auths,
+        )
+    )
+
+    ## update user auths
+    if len(valid_auths) > 0:
+        res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
+            login=user,
+            auths=','.join(set(auth_get(user, False) + valid_auths)),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
+            }
+            return ret
+
+    ## update return value
+    active_auths = auth_get(user, False)
+    for a in auths:
+        if a not in valid_auths:
+            ret[a] = 'Unknown'
+        elif a in active_auths:
+            ret[a] = 'Added'
+        else:
+            ret[a] = 'Failed'
+
+    return ret
+
+
+def auth_rm(user, auth):
+    '''
+    Remove authorization from user
+
+    user : string
+        username
+    auth : string
+        authorization name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rbac.auth_rm jorge solaris.zone.manage
+        salt '*' rbac.auth_rm jorge solaris.zone.manage,solaris.mail.mailq
+    '''
+    ret = {}
+
+    ## validate auths
+    auths = auth.split(',')
+    known_auths = auth_list().keys()
+    valid_auths = [a for a in auths if a in known_auths]
+    log.debug(
+        'rbac.auth_rm - auths={0}, known_auths={1}, valid_auths={2}'.format(
+            auths,
+            known_auths,
+            valid_auths,
+        )
+    )
+
+    ## update user auths
+    if len(valid_auths) > 0:
+        res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
+            login=user,
+            auths=','.join([a for a in auth_get(user, False) if a not in valid_auths]),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
+            }
+            return ret
+
+    ## update return value
+    active_auths = auth_get(user, False)
+    for a in auths:
+        if a not in valid_auths:
+            ret[a] = 'Unknown'
+        elif a in active_auths:
+            ret[a] = 'Failed'
+        else:
+            ret[a] = 'Remove'
 
     return ret
 
