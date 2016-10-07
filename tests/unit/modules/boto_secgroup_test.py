@@ -149,8 +149,6 @@ class BotoSecgroupTestCase(TestCase):
         secgroup_create_result = [secgroup_created_group[0].name, secgroup_created_group[0].description, secgroup_created_group[0].vpc_id]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
-    @skipIf(True, 'test skipped due to error in moto return - fixed in'
-                  ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
     @mock_ec2
     def test_get_group_id_ec2_classic(self):
         '''
@@ -217,8 +215,6 @@ class BotoSecgroupTestCase(TestCase):
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
-    @skipIf(True, 'test skipped due to error in moto return - fixed in '
-                  'https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
     @mock_ec2
     def test_exists_true_name_classic(self):
         '''
@@ -232,8 +228,6 @@ class BotoSecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(name=group_name, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
-    @skipIf(True, 'test skipped because moto does not yet support group'
-                  ' filters https://github.com/spulec/moto/issues/154')
     @mock_ec2
     def test_exists_false_name_classic(self):
         pass
@@ -280,8 +274,6 @@ class BotoSecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(group_id=group_id, **conn_parameters)
         self.assertFalse(salt_exists_result)
 
-    @skipIf(True, 'test skipped due to error in moto return - fixed in'
-                  ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
     @mock_ec2
     def test_delete_group_ec2_classic(self):
         '''
@@ -308,8 +300,6 @@ class BotoSecgroupTestCase(TestCase):
         actual_groups = [group.id for group in conn.get_all_security_groups()]
         self.assertEqual(expected_groups, actual_groups)
 
-    @skipIf(True, 'test skipped because moto does not yet support group'
-                  ' filters https://github.com/spulec/moto/issues/154')
     @mock_ec2
     def test_delete_group_name_ec2_vpc(self):
         pass

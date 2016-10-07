@@ -27,7 +27,7 @@ MOCK_FILE = 'ok ok ignore '
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(sys.platform.startswith('OpenBSD'), 'OpenBSD does not use PAM')
+@skipIf(sys.platform.startswith('openbsd'), 'OpenBSD does not use PAM')
 class PamTestCase(TestCase):
     '''
     Test cases for salt.modules.pam
