@@ -331,6 +331,7 @@ def _psql_cmd(*args, **kwargs):
     cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
+           '--no-psqlrc',
            '--no-password']  # It is never acceptable to issue a password prompt.
     if user:
         cmd += ['--username', user]
