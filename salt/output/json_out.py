@@ -95,7 +95,9 @@ def _get_log_stream_as_dict():
     log_dict = {'logs': []}
     log_stream = get_console_handler_stream()
 
-    for line in log_stream.getvalue().split("\n"):
-        log_dict['logs'].append(line)
+    getvalue_funcion = getattr(log_stream, "getvalue", None)
+    if callable(getvalue_funcion):
+        for line in log_stream.getvalue().split("\n"):
+            log_dict['logs'].append(line)
 
     return log_dict
