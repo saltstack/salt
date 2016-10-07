@@ -310,9 +310,6 @@ def create(vm_):
         if str(data.get('default_password', '')) == '':
             time.sleep(1)
             return False
-        if '!' not in data['default_password']:
-            time.sleep(1)
-            return False
         return data['default_password']
 
     vm_['ssh_host'] = __utils__['cloud.wait_for_fun'](
