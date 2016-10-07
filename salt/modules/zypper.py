@@ -37,9 +37,7 @@ import salt.utils
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError)
-from salt.utils.structure import pkg
-
-format_structure = pkg.Package(__file__)
+from salt.utils import scm
 
 log = logging.getLogger(__name__)
 
@@ -714,6 +712,7 @@ def del_repo(repo):
     raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
 
 
+@scm.pkg(__file__)
 def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
@@ -848,7 +847,7 @@ def mod_repo(repo, **kwargs):
     if comment:
         repo['comment'] = comment
 
-    return format_structure.mod_repo(repo)
+    return repo
 
 
 def refresh_db():
