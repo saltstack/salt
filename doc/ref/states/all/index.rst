@@ -185,6 +185,7 @@ state modules
     rabbitmq_policy
     rabbitmq_user
     rabbitmq_vhost
+    rbac_solaris
     rbenv
     rdp
     redismod

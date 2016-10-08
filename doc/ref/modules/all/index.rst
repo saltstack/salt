@@ -286,6 +286,7 @@ execution modules
     raet_publish
     rallydev
     random_org
+    rbac_solaris
     rbenv
     rdp
     redismod
