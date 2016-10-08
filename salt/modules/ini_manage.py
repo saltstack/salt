@@ -10,6 +10,8 @@ Edit ini files
 (for example /etc/sysctl.conf)
 '''
 
+from __future__ import absolute_import, print_function
+
 # Import Python libs
 from __future__ import print_function
 from __future__ import absolute_import
@@ -20,6 +22,7 @@ import json
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils
+from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
 
@@ -50,8 +53,8 @@ def set_option(file_name, sections=None, separator='='):
         A dictionary representing the sections to be edited ini file
         The keys are the section names and the values are the dictionary
         containing the options
-        If the Ini does not contain sections the keys and values represent the
-        options
+        If the ini file does not contain sections the keys and values represent
+        the options
 
     separator : =
         A character used to separate keys and values. Standard ini files use
@@ -364,7 +367,13 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
-        inicontents = inicontents or salt.utils.fopen(self.name).read()
+        try:
+            inicontents = inicontents or salt.utils.fopen(self.name).read()
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to open file '{0}'. "
+                "Exception: {1}".format(self.name, exc)
+            )
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
@@ -383,10 +392,16 @@ class _Ini(_Section):
             self.update({sect_obj.name: sect_obj})
 
     def flush(self):
-        with salt.utils.fopen(self.name, 'w') as outfile:
-            ini_gen = self.gen_ini()
-            next(ini_gen)
-            outfile.writelines(ini_gen)
+        try:
+            with salt.utils.fopen(self.name, 'w') as outfile:
+                ini_gen = self.gen_ini()
+                next(ini_gen)
+                outfile.writelines(ini_gen)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to write file '{0}'. "
+                "Exception: {1}".format(self.name, exc)
+            )
 
     @staticmethod
     def get_ini_file(file_name, separator='='):

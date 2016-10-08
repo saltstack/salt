@@ -160,6 +160,7 @@ class ArchiveTest(integration.ModuleCase):
 
         self._tear_down()
 
+    @skipIf(not salt.utils.which('gzip'), 'Cannot find gzip executable')
     @skipIf(not salt.utils.which('gunzip'), 'Cannot find gunzip executable')
     def test_gunzip(self):
         '''
@@ -205,7 +206,7 @@ class ArchiveTest(integration.ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not HAS_ZIPFILE, 'Cannot find zip python module')
+    @skipIf(not HAS_ZIPFILE, 'Cannot find zipfile python module')
     def test_zip(self):
         '''
         Validate using the zip function
@@ -219,7 +220,7 @@ class ArchiveTest(integration.ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not HAS_ZIPFILE, 'Cannot find zip python module')
+    @skipIf(not HAS_ZIPFILE, 'Cannot find zipfile python module')
     def test_unzip(self):
         '''
         Validate using the unzip function
@@ -248,7 +249,8 @@ class ArchiveTest(integration.ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which_bin(('rar', 'unrar')), 'Cannot find rar or unrar executable')
+    @skipIf(not salt.utils.which('rar'), 'Cannot find rar executable')
+    @skipIf(not salt.utils.which('unrar'), 'Cannot find unrar executable')
     def test_unrar(self):
         '''
         Validate using the unrar function
