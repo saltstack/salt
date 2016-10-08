@@ -917,7 +917,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     if __opts__['test']:
         if changed_attrs:
             ret['changes']['new'] = changed_attrs
-        ret['result'] = None
+            ret['result'] = None
+        else:
+            ret['comment'] = 'Instance {0} is in the correct state'.format(instance_name if instance_name else name)
+            ret['result'] = True
 
     return ret
 
