@@ -20,6 +20,7 @@ execution modules
     aliases
     alternatives
     apache
+    apcups
     apf
     aptpkg
     archive
