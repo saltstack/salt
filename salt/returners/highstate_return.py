@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Return the results of a highstate (or any other state function that returns
-data in a compatible format) via an HTML email or HTML out.
+data in a compatible format) via an HTML email or HTML file.
 
 Similar results can be achieved by using smtp returner with a custom template,
 except an attempt at writing such a template for the complex data structure
@@ -62,7 +62,7 @@ Supported values for *report_format* are html, json, and yaml. The later two
 are typically used for debugging purposes, but could be used for applying
 a template at some later stage.
 
-The values for *report_delivery* are smtp or out. In case of out delivery
+The values for *report_delivery* are smtp or file. In case of file delivery
 the only other applicable option is *file_output*.
 
 In case of smtp delivery, smtp_* options demonstrated by the example above
