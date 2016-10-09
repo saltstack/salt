@@ -25,6 +25,7 @@ execution modules
     archive
     artifactory
     at
+    at_solaris
     augeas_cfg
     aws_sqs
     bamboohr
