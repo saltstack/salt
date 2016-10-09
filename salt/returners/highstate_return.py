@@ -75,6 +75,8 @@ values at the time of pillar generation, these will contain minion values at
 the time of execution.
 
 '''
+from __future__ import absolute_import
+
 import logging
 import json
 import yaml
@@ -82,6 +84,7 @@ import StringIO
 import smtplib
 import cgi
 from email.mime.text import MIMEText
+from salt.ext.six.moves import range
 
 import salt.returners
 
@@ -89,11 +92,13 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'highstate'
 
+
 def __virtual__():
     '''
     Return our name
     '''
     return __virtualname__
+
 
 def _get_options(ret):
     '''
@@ -131,18 +136,19 @@ def _get_options(ret):
 #
 _STYLES = {
     '_table': 'border-collapse:collapse;width:100%;',
-    '_td': 'vertical-align:top;' \
-        'font-family:Helvetica,Arial,sans-serif;font-size:9pt;',
+    '_td': 'vertical-align:top;'
+           'font-family:Helvetica,Arial,sans-serif;font-size:9pt;',
     'unchanged': 'color:blue;',
     'changed': 'color:green',
     'failed': 'color:red;',
     'first': 'border-top:0;border-left:1px solid #9e9e9e;',
-    'first_first' : 'border-top:0;border-left:0;',
+    'first_first': 'border-top:0;border-left:0;',
     'notfirst_first': 'border-left:0;border-top:1px solid #9e9e9e;',
     'other': 'border-top:1px solid #9e9e9e;border-left:1px solid #9e9e9e;',
     'name': 'width:70pt;',
     'container': 'padding:0;'
 }
+
 
 def _lookup_style(element, names):
     '''
@@ -150,6 +156,7 @@ def _lookup_style(element, names):
     '''
     return _STYLES.get('_'+element, '') + \
         ''.join([_STYLES.get(name, '') for name in names])
+
 
 def _generate_html_table(data, out, level=0, extra_style=''):
     '''
@@ -247,6 +254,7 @@ def _generate_html_table(data, out, level=0, extra_style=''):
         firstone = False
     print>>out, '</table>'
 
+
 def _generate_html(data, out):
     '''
     Generate report data as HTML
@@ -256,6 +264,7 @@ def _generate_html(data, out):
     _generate_html_table(data, out, 0)
     print>>out, '</body>'
     print>>out, '</html>'
+
 
 def _dict_to_name_value(data):
     '''
@@ -272,6 +281,7 @@ def _dict_to_name_value(data):
     else:
         result = data
     return result
+
 
 def _generate_states_report(sorted_data):
     '''
@@ -308,6 +318,7 @@ def _generate_states_report(sorted_data):
         states.append({stateid: single, '__style__': style})
     return states
 
+
 def _generate_report(ret, setup):
     '''
     Generate report dictionary
@@ -343,8 +354,8 @@ def _generate_report(ret, setup):
 
     # generate report if required
     if setup.get('report_everything', False) or \
-         (setup.get('report_changes', True) and changed != 0) or \
-         (setup.get('report_failures', True) and failed != 0):
+       (setup.get('report_changes', True) and changed != 0) or \
+       (setup.get('report_failures', True) and failed != 0):
 
         report = [
             {'stats': [
@@ -381,15 +392,17 @@ def _generate_report(ret, setup):
 
     return report, failed
 
+
 def _sprinkle(config_str):
     '''
     Sprinkle with grains of salt, that is
     convert 'test {id} test {host} ' types of strings
     '''
     parts = [x for sub in config_str.split('{') for x in sub.split('}')]
-    for i in xrange(1, len(parts), 2):
+    for i in range(1, len(parts), 2):
         parts[i] = str(__grains__.get(parts[i], ''))
     return ''.join(parts)
+
 
 def _produce_output(report, failed, setup):
     '''
@@ -439,6 +452,7 @@ def _produce_output(report, failed, setup):
             [x.strip() for x in recipients.split(',')], msg.as_string())
         smtp.quit()
 
+
 def returner(ret):
     '''
     Check highstate return information and possibly fire off an email
@@ -451,6 +465,7 @@ def returner(ret):
             _produce_output(report, failed, setup)
     except BaseException as ex:
         log.error(str(ex))
+
 
 def __test_html():
     '''
@@ -474,6 +489,6 @@ def __test_html():
     with open('test.html', 'w') as output:
         output.write(result)
 
+
 if __name__ == '__main__':
     __test_html()
-
