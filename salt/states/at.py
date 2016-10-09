@@ -243,4 +243,68 @@ def absent(name, jobid=None, **kwargs):
     return ret
 
 
+def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
+    '''
+    .. versionadded:: nitrogen
+    Add an at job if trigger by watch
+
+    job : string
+        Command to run.
+
+    timespec : string
+        The 'timespec' follows the format documented in the at(1) manpage.
+
+    tag : string
+        Make a tag for the job.
+
+    user : string
+        The user to run the at job
+        .. versionadded:: 2014.1.4
+
+    unique_tag : boolean
+        If set to True job will not be added if a job with the tag exists.
+        .. versionadded:: nitrogen
+
+    .. code-block:: yaml
+
+        minion_restart:
+          at.watch:
+            - job: 'salt-call --local service.restart salt-minion'
+            - timespec: 'now +1 min'
+            - tag: minion_restart
+            - unique_tag: trye
+            - watch:
+                - file: /etc/salt/minion
+
+    '''
+    return {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+
+
+def mod_watch(name, **kwargs):
+    '''
+    The at watcher, called to invoke the watch command.
+
+    name
+        The name of the atjob
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if kwargs['sfun'] == 'watch':
+        for p in ['sfun', '__reqs__']:
+            del kwargs[p]
+        kwargs['name'] = name
+        ret = present(**kwargs)
+
+    return ret
+
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
