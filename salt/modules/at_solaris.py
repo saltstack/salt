@@ -2,8 +2,15 @@
 '''
 Wrapper for at(1) on Solaris-like systems
 
-Output is compatible with the generic at
-module where possible.
+.. note::
+    we try to mirror the generic at module
+    where possible
+
+:maintainer:    jorge schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      solaris,illumos,smartso
+
+.. versionadded:: nitrogen
 '''
 from __future__ import absolute_import
 
