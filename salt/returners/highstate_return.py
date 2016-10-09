@@ -79,11 +79,12 @@ from __future__ import absolute_import
 
 import logging
 import json
-import yaml
 import StringIO
 import smtplib
 import cgi
 from email.mime.text import MIMEText
+
+import yaml
 from salt.ext.six.moves import range
 
 import salt.returners
@@ -388,7 +389,7 @@ def _generate_report(ret, setup):
             )
 
     else:
-        report = {}
+        report = []
 
     return report, failed
 
@@ -410,6 +411,8 @@ def _produce_output(report, failed, setup):
     '''
     report_format = setup.get('report_format', 'yaml')
 
+    log.debug('highstate output format: {0}'.format(report_format))
+
     if report_format == 'json':
         report_text = json.dumps(report)
     elif report_format == 'yaml':
@@ -423,9 +426,11 @@ def _produce_output(report, failed, setup):
         string_file.seek(0)
         report_text = string_file.read()
 
-    report_delivery = setup.get('report_delivery', 'out')
+    report_delivery = setup.get('report_delivery', 'file')
 
-    if report_delivery == 'out':
+    log.debug('highstate report_delivery: {0}'.format(report_delivery))
+
+    if report_delivery == 'file':
         output_file = _sprinkle(setup.get('file_output', '/tmp/test.rpt'))
         with open(output_file, 'w') as out:
             out.write(report_text)
@@ -456,25 +461,22 @@ def _produce_output(report, failed, setup):
 def returner(ret):
     '''
     Check highstate return information and possibly fire off an email
-    or save a out.
+    or save a file.
     '''
-    try:
-        setup = _get_options(ret)
-        report, failed = _generate_report(ret, setup)
-        if report:
-            _produce_output(report, failed, setup)
-    except BaseException as ex:
-        log.error(str(ex))
+    setup = _get_options(ret)
+    report, failed = _generate_report(ret, setup)
+    if report:
+        _produce_output(report, failed, setup)
 
 
 def __test_html():
     '''
     HTML generation test only used when called from the command line:
         python ./highstate.py
-    Typical options for generating the report out:
+    Typical options for generating the report file:
     highstate:
         report_format: yaml
-        report_delivery: out
+        report_delivery: file
         file_output: '/srv/salt/_returners/test.rpt'
     '''
     with open('test.rpt', 'r') as input_file:
