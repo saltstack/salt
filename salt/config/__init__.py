@@ -432,6 +432,9 @@ VALID_OPTS = {
     # salt master
     'retry_dns': float,
 
+    # In the case when the resolve of the salt master hostname fails, fall back to localhost
+    'resolve_dns_fallback': bool,
+
     # set the zeromq_reconnect_ivl option on the minion.
     # http://lists.zeromq.org/pipermail/zeromq-dev/2011-January/008845.html
     'recon_max': float,
@@ -1077,6 +1080,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
