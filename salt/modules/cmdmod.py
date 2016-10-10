@@ -247,6 +247,42 @@ def _check_avail(cmd):
     return bret and wret
 
 
+def _get_powershell_modules():
+    '''
+    Get a list of the PowerShell modules which are potentially available to be imported. The intent
+    is to mimick the functionality of ``Get-Module -ListAvaiable | Select-Object -Expand Name``,
+    without the delay of loading PowerShell to do so.
+    '''
+    ret = list()
+    valid_extensions = ('.psd1', '.psm1')
+    env_var = 'PSModulePath'
+
+    if env_var not in os.environ:
+        log.error('Environment variable not present: %s', env_var)
+        return ret
+
+    root_paths = [str(path) for path in os.environ[env_var].split(';') if path]
+    for root_path in root_paths:
+        if not os.path.isdir(root_path):
+            continue
+
+        for root_dir, sub_dirs, file_names in os.walk(root_path):
+            for file_name in file_names:
+                base_name, file_extension = os.path.splitext(file_name)
+
+                # If a module file or module manifest is present, check if
+                # the base name matches the directory name.
+                if file_extension.lower() in valid_extensions:
+                    dir_name = os.path.basename(os.path.normpath(root_dir))
+
+                    # Stop recursing once we find a match, and use
+                    # the capitalization from the directory name.
+                    if dir_name not in ret and base_name.lower() == dir_name.lower():
+                        del sub_dirs[:]
+                        ret.append(dir_name)
+    return ret
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -2748,6 +2784,8 @@ def shell_info(shell):
                     else:
                         # keys are lower case as python is case sensitive the registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
+        # Get a list of the PowerShell modules which are potentially available to be imported.
+        ret['availablemodules'] = _get_powershell_modules()
     else:
         if shell not in regex_shells:
             return {
