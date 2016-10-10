@@ -14,10 +14,7 @@ features </topics/releases/carbon>`! Be sure to report any bugs you find on `Git
 Installing Using Packages
 =========================
 
-Builds for a few platforms are available as part of the RC at:
-
-- https://repo.saltstack.com/salt_rc/
-- https://repo.saltstack.com/freebsd/salt_rc/
+Builds for a few platforms are available as part of the RC at https://repo.saltstack.com/salt_rc/.
 
 .. note::
 
@@ -25,7 +22,7 @@ Builds for a few platforms are available as part of the RC at:
     https://repo.saltstack.com/, but insert ``salt_rc/`` into the URL between
     the hostname and the remainder of the path.  For example:
 
-    .. code-block::
+    .. code-block:: bash
 
         baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
 
@@ -37,10 +34,9 @@ Available builds:
 
 - Windows
 - Mac OS X
-- RHEL 6
 - RHEL 7
-- Ubuntu 14.04
-- FreeBSD
+- Ubuntu 16.04
+- Debian 8
 
 Installing Using Bootstrap
 ==========================
