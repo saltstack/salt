@@ -1190,6 +1190,7 @@ class Minion(MinionBase):
                 self._send_req_sync(load, timeout)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
+                return False
             except Exception:
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
