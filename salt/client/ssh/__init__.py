@@ -151,7 +151,7 @@ do
         py_cmd_path=`"$py_cmd" -c \
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
-        cmdpath=$(which $py_cmd 2>&1)
+        cmdpath=$(command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null)
         if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
