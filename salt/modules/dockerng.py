@@ -953,7 +953,8 @@ def _image_wrapper(attr, *args, **kwargs):
                     creds['username'],
                     password=creds['password'],
                     email=creds.get('email'),
-                    registry=registry)
+                    registry=registry,
+                    reauth=cred.get('reauth', False))
         except KeyError:
             raise SaltInvocationError(
                 err.format('Incomplete', ' for registry {0}'.format(registry))
