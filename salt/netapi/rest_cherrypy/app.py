@@ -115,7 +115,7 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
-    app
+    app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
     app_path : ``/app``
@@ -460,6 +460,7 @@ import itertools
 import functools
 import logging
 import json
+import os
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -2508,7 +2509,12 @@ class App(object):
             :status 401: |401|
         '''
         apiopts = cherrypy.config['apiopts']
-        return cherrypy.lib.static.serve_file(apiopts['app'])
+
+        default_index = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'index.html'))
+
+        return cherrypy.lib.static.serve_file(
+                apiopts.get('app', default_index))
 
 
 class API(object):
@@ -2551,10 +2557,9 @@ class API(object):
         })
 
         # Enable the single-page JS app URL.
-        if 'app' in self.apiopts:
-            self.url_map.update({
-                self.apiopts.get('app_path', 'app').lstrip('/'): App,
-            })
+        self.url_map.update({
+            self.apiopts.get('app_path', 'app').lstrip('/'): App,
+        })
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
