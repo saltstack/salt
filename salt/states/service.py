@@ -347,18 +347,13 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
+        ret['comment'] = 'Service {0} is already started'.format(name)
         if not before_toggle_status:
             ret['comment'] = 'Service {0} is set to start'.format(name)
         if enable is True and not before_toggle_enable_status:
-            if ret['comment']:
-                ret['comment'] += ' and will be enabled'
-            else:
-                ret['comment'] = 'Service {0} is set to be enabled'.format(name)
+            ret['comment'] += ' and will be enabled'
         if enable is False and before_toggle_enable_status:
-            if ret['comment']:
-                ret['comment'] += ' and will be disabled'
-            else:
-                ret['comment'] = 'Service {0} is set to be disabled'.format(name)
+            ret['comment'] += ' and will be disabled'
         return ret
 
     # Enable the service
@@ -453,18 +448,13 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
+        ret['comment'] = 'Service {0} is already stopped'.format(name)
         if before_toggle_status:
-            ret['comment'] = 'Service {0} is set to killed'.format(name)
+            ret['comment'] = 'Service {0} is set to be killed'.format(name)
         if enable is True and not before_toggle_enable_status:
-            if ret['comment']:
-                ret['comment'] += ' and will be enabled'
-            else:
-                ret['comment'] = 'Service {0} is set to be enabled'.format(name)
+            ret['comment'] += ' and will be enabled'
         if enable is False and before_toggle_enable_status:
-            if ret['comment']:
-                ret['comment'] += ' and will be disabled'
-            else:
-                ret['comment'] = 'Service {0} is set to be disabled'.format(name)
+            ret['comment'] += ' and will be disabled'
         return ret
 
     # Enable/Disable service
