@@ -17,6 +17,7 @@ Requires that the minion_data_cache option be enabled.
               expire: 86400
 
 '''
+from __future__ import absolute_import
 
 import salt.utils.minions
 import salt.config
