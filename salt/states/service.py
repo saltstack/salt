@@ -344,19 +344,32 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     else:
         before_toggle_enable_status = True
 
-    # See if the service is already running
-    if before_toggle_status:
-        ret['comment'] = 'The service {0} is already running'.format(name)
-        if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
-        elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
-        return ret
-
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to start'.format(name)
+        if not before_toggle_status:
+            ret['comment'] = 'Service {0} is set to start'.format(name)
+        if enable is True and not before_toggle_enable_status:
+            if ret['comment']:
+                ret['comment'] += ' and will be enabled'
+            else:
+                ret['comment'] = 'Service {0} is set to be enabled'.format(name)
+        if enable is False and before_toggle_enable_status:
+            if ret['comment']:
+                ret['comment'] += ' and will be disabled'
+            else:
+                ret['comment'] = 'Service {0} is set to be disabled'.format(name)
+        return ret
+
+    # Enable the service
+    if enable is True:
+        ret.update(_enable(name, before_toggle_status, **kwargs))
+    elif enable is False:
+        ret.update(_disable(name, before_toggle_status, **kwargs))
+
+    # See if the service is already running
+    if before_toggle_status:
+        ret['comment'] = 'The service {0} is already running'.format(name)
         return ret
 
     func_ret = __salt__['service.start'](name)
@@ -364,10 +377,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
-        if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, False, result=False, **kwargs))
         return ret
 
     if init_delay:
@@ -389,11 +398,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Started Service {0}'.format(name)
     else:
         ret['comment'] = 'Service {0} failed to start'.format(name)
-
-    if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
-    elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, **kwargs))
 
     if init_delay:
         ret['comment'] = (
@@ -445,29 +449,39 @@ def dead(name, enable=None, sig=None, **kwargs):
     else:
         before_toggle_enable_status = True
 
-    # See if the service is already dead
-    if not before_toggle_status:
-        ret['comment'] = 'The service {0} is already dead'.format(name)
-        if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
-        elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
-        return ret
 
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to be killed'.format(name)
+        if before_toggle_status:
+            ret['comment'] = 'Service {0} is set to killed'.format(name)
+        if enable is True and not before_toggle_enable_status:
+            if ret['comment']:
+                ret['comment'] += ' and will be enabled'
+            else:
+                ret['comment'] = 'Service {0} is set to be enabled'.format(name)
+        if enable is False and before_toggle_enable_status:
+            if ret['comment']:
+                ret['comment'] += ' and will be disabled'
+            else:
+                ret['comment'] = 'Service {0} is set to be disabled'.format(name)
+        return ret
+
+    # Enable/Disable service
+    if enable is True:
+        ret.update(_enable(name, None, **kwargs))
+    elif enable is False:
+        ret.update(_disable(name, None, **kwargs))
+
+    # See if the service is already dead
+    if not before_toggle_status:
+        ret['comment'] = 'The service {0} is already dead'.format(name)
         return ret
 
     func_ret = __salt__['service.stop'](name)
     if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
-        if enable is True:
-            ret.update(_enable(name, True, result=False, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, True, result=False, **kwargs))
         return ret
 
     # only force a change state if we have explicitly detected them
@@ -488,11 +502,6 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} failed to die'.format(name)
     else:
         ret['comment'] = 'Service {0} was killed'.format(name)
-
-    if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
-    elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
 
     return ret
 
