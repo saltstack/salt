@@ -353,6 +353,11 @@ def _generate_report(ret, setup):
 
     unchanged = total - failed - changed
 
+    log.debug('highstate total: {0}'.format(total))
+    log.debug('highstate failed: {0}'.format(failed))
+    log.debug('highstate unchanged: {0}'.format(unchanged))
+    log.debug('highstate changed: {0}'.format(changed))
+
     # generate report if required
     if setup.get('report_everything', False) or \
        (setup.get('report_changes', True) and changed != 0) or \
@@ -464,6 +469,9 @@ def returner(ret):
     or save a file.
     '''
     setup = _get_options(ret)
+
+    log.debug('highstate setup {0}'.format(setup))
+
     report, failed = _generate_report(ret, setup)
     if report:
         _produce_output(report, failed, setup)
