@@ -309,11 +309,11 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kw
 
 def get_url(path, dest, saltenv='base', env=None):
     '''
-    Used to get a single file from a URL.
+    Used to get a single file from a URL
 
-    The default behaviuor is to write the fetched file to the given
-    destination path. To simply return the text contents instead, set destination to
-    None.
+    The default behaviour is to write the fetched file to the given
+    destination path. To simply return the file contents instead, set
+    destination to ``None``.
 
     CLI Example:
 
@@ -331,7 +331,7 @@ def get_url(path, dest, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    if dest:
+    if isinstance(dest, str):
         return _client().get_url(path, dest, False, saltenv)
     else:
         return _client().get_url(path, None, False, saltenv, no_cache=True)
