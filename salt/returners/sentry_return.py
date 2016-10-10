@@ -92,6 +92,7 @@ def returner(ret):
                 if failed_states:
                     result['failed_states'] = failed_states
                     return False
+                return True
 
         if result.get('success'):
             return True
