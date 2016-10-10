@@ -188,6 +188,21 @@ For example:
         - require:
           - salt: do_first_thing
 
+.. _beacons-and-reactors:
+
+Beacons and Reactors
+--------------------
+
+An event initiated by a beacon, when it arrives at the master will be wrapped
+inside a second event, such that the data object containing the beacon
+information will be ``data['data']``, rather than ``data``.
+
+For example, to access the ``id`` field of the beacon event in a reactor file,
+you will need to reference ``{{ data['data']['id'] }}`` rather than ``{{
+data['id'] }}`` as for events initiated directly on the event bus.
+
+See the :ref:`beacon documentation <beacon-example>` for examples.
+
 Fire an event
 =============
 
