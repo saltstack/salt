@@ -19,6 +19,7 @@ import yaml
 import re
 import datetime
 import ast
+import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -670,7 +671,7 @@ def create_private_key(path=None, text=False, bits=2048):
 
 def create_crl(path=None, text=False, signing_private_key=None,
         signing_cert=None, revoked=None, include_expired=False,
-        days_valid=100):
+        days_valid=100, digest=""):
     '''
     Create a CRL
 
@@ -713,6 +714,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
 
     days_valid:
         The number of days that the CRL should be valid. This sets the Next Update field in the CRL.
+    digest:
+        The digest to use for signing the CRL.
+        This has no effect on versions of pyOpenSSL less than 0.14
 
     .. note
 
@@ -730,7 +734,6 @@ def create_crl(path=None, text=False, signing_private_key=None,
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
     # Client operations like creating CRLs shouldn't require pyOpenSSL
-    # Note due to current limitations in pyOpenSSL it is impossible to specify a digest
     # For signing the CRL. This will hopefully be fixed soon: https://github.com/pyca/pyopenssl/pull/161
     import OpenSSL
     crl = OpenSSL.crypto.CRL()
@@ -774,7 +777,10 @@ def create_crl(path=None, text=False, signing_private_key=None,
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_private_key))
 
-    crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+    if digest and pkg_resources.get_distribution("pyopenssl").version >= '0.15':
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
+    else:
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
 
     if text:
         return crltext
@@ -1090,7 +1096,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
         cert_txt = __salt__['publish.publish'](tgt=ca_server,
@@ -1377,7 +1383,7 @@ def verify_crl(crl, cert):
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(crltempfile.name, certtempfile.name))
 
-    output = __salt__['cmd.run_stdout'](cmd)
+    output = __salt__['cmd.run_stderr'](cmd)
 
     crltempfile.close()
     certtempfile.close()
