@@ -1898,12 +1898,12 @@ def init(cwd,
             separate_git_dir = str(separate_git_dir)
         command.append('--separate-git-dir={0}'.format(separate_git_dir))
     if shared is not None:
-        if isinstance(shared, six.integer_types):
-            shared = '0' + str(shared)
-        elif not isinstance(shared, six.string_types):
+        if not isinstance(shared, six.string_types):
             # Using lower here because booleans would be capitalized when
             # converted to a string.
             shared = str(shared).lower()
+        elif isinstance(shared, six.integer_types):
+            shared = '0' + str(shared)
         command.append('--shared={0}'.format(shared))
     command.extend(_format_opts(opts))
     command.append(cwd)
