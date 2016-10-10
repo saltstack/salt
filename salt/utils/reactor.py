@@ -59,8 +59,10 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
         if glob_ref.startswith('salt://'):
             glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
-
-        for fn_ in glob.glob(glob_ref):
+        globbed_ref = glob.glob(glob_ref)
+        if not globbed_ref:
+            log.error('Can not render SLS {0} for tag {1}. File missing or not found.'.format(glob_ref, tag))
+        for fn_ in globbed_ref:
             try:
                 res = self.render_template(
                     fn_,

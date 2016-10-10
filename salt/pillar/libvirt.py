@@ -15,6 +15,10 @@ import subprocess
 import salt.utils
 
 
+def __virtual__():
+    return salt.utils.which('certtool') is not None
+
+
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                command):  # pylint: disable=W0613

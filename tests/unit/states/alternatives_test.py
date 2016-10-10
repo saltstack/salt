@@ -49,31 +49,46 @@ class AlternativesTestCase(TestCase):
                'changes': {},
                'comment': ''}
 
-        mock = MagicMock(side_effect=[True, False, False])
-        mock_bool = MagicMock(return_value=True)
+        bad_link = '/bin/pager'
+        err = 'the primary link for {0} must be {1}'.format(name, link)
+
+        mock = MagicMock(side_effect=[True, False, False, False])
+        mock_out = MagicMock(side_effect=['', err])
+        mock_path = MagicMock(return_value=path)
+        mock_link = MagicMock(return_value=link)
         with patch.dict(alternatives.__salt__,
                         {'alternatives.check_installed': mock,
-                         'alternatives.install': mock_bool}):
+                         'alternatives.install': mock_out,
+                         'alternatives.show_current': mock_path,
+                         'alternatives.show_link': mock_link}):
             comt = ('Alternatives for {0} is already set to {1}'
-                    ).format(name, path)
+                   ).format(name, path)
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(alternatives.install(name, link, path,
                                                       priority), ret)
 
             comt = (('Alternative will be set for {0} to {1} with priority {2}'
-                     ).format(name, path, priority))
+                    ).format(name, path, priority))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
                 self.assertDictEqual(alternatives.install(name, link, path,
                                                           priority), ret)
 
-            comt = ('Setting alternative for {0} to {1} with priority {2}'
-                    ).format(name, path, priority)
+            comt = ('Alternative for {0} set to path {1} with priority {2}'
+                   ).format(name, path, priority)
             ret.update({'comment': comt, 'result': True,
                         'changes': {'name': name, 'link': link, 'path': path,
                                     'priority': priority}})
             with patch.dict(alternatives.__opts__, {'test': False}):
                 self.assertDictEqual(alternatives.install(name, link, path,
+                                                          priority), ret)
+
+            comt = ('Alternative for {0} not installed: {1}'
+                   ).format(name, err)
+            ret.update({'comment': comt, 'result': False,
+                        'changes': {}, 'link': bad_link})
+            with patch.dict(alternatives.__opts__, {'test': False}):
+                self.assertDictEqual(alternatives.install(name, bad_link, path,
                                                           priority), ret)
 
     # 'remove' function tests: 1
@@ -94,10 +109,10 @@ class AlternativesTestCase(TestCase):
 
         mock = MagicMock(side_effect=[True, True, True, False, False])
         mock_bool = MagicMock(return_value=True)
-        mock_bol = MagicMock(side_effect=[False, True, True, False])
+        mock_show = MagicMock(side_effect=[False, True, True, False])
         with patch.dict(alternatives.__salt__,
                         {'alternatives.check_exists': mock,
-                         'alternatives.show_current': mock_bol,
+                         'alternatives.show_current': mock_show,
                          'alternatives.remove': mock_bool}):
             comt = ('Alternative for {0} will be removed'.format(name))
             ret.update({'comment': comt})
@@ -116,7 +131,7 @@ class AlternativesTestCase(TestCase):
                 self.assertDictEqual(alternatives.remove(name, path), ret)
 
             comt = ('Alternative for {0} is set to it\'s default path True'
-                    ).format(name)
+                   ).format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(alternatives.remove(name, path), ret)
 
@@ -175,17 +190,17 @@ class AlternativesTestCase(TestCase):
 
         mock = MagicMock(side_effect=[path, path, ''])
         mock_bool = MagicMock(return_value=True)
-        mock_bol = MagicMock(side_effect=[path, False, False, False, False])
+        mock_show = MagicMock(side_effect=[path, False, False, False, False])
         with patch.dict(alternatives.__salt__,
                         {'alternatives.display': mock,
-                         'alternatives.show_current': mock_bol,
+                         'alternatives.show_current': mock_show,
                          'alternatives.set': mock_bool}):
             comt = ('Alternative for {0} already set to {1}'.format(name, path))
             ret.update({'comment': comt})
             self.assertDictEqual(alternatives.set_(name, path), ret)
 
             comt = ('Alternative for {0} will be set to path False'
-                    ).format(name)
+                   ).format(name)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
                 self.assertDictEqual(alternatives.set_(name, path), ret)
