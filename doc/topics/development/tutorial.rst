@@ -5,6 +5,7 @@ Developing Salt Tutorial
 ========================
 
 This tutorial assumes you have:
+
 * a web browser
 * a GitHub account (``<my_account>``)
 * a command line (CLI)
