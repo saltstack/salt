@@ -519,7 +519,7 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
     else:
-        ret['comment'] = 'Service {0} was killed'.format(name)
+        ret['comment'] = 'Killed Service {0}'.format(name)
 
     # add enable/disable status
     if before_toggle_enable_status != after_toggle_enable_status:
