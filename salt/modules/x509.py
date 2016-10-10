@@ -1225,6 +1225,9 @@ def create_csr(path=None, text=False, **kwargs):
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
+    algorithm:
+        The hashing algorithm to be used for signing this request. Defaults to sha256.
+
     kwargs:
         The subject, extension and version arguments from
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
@@ -1243,10 +1246,23 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr = M2Crypto.X509.Request()
     subject = csr.get_subject()
+
+    for prop, default in six.iteritems(CERT_DEFAULTS):
+        if prop not in kwargs:
+            kwargs[prop] = default
+
     csr.set_version(kwargs['version'] - 1)
 
+    if 'private_key' not in kwargs and 'public_key' in kwargs:
+        kwargs['private_key'] = kwargs['public_key']
+        log.warning("OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+
+    if 'private_key' not in kwargs not in kwargs:
+        raise salt.exceptions.SaltInvocationError('private_key is required')
+
     if 'public_key' not in kwargs:
-        raise salt.exceptions.SaltInvocationError('public_key is required')
+        kwargs['public_key'] = kwargs['private_key']
+
     csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
@@ -1255,7 +1271,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
-        if extname not in kwargs or extlongname not in kwargs:
+        if extname not in kwargs and extlongname not in kwargs:
             continue
 
         extval = kwargs[extname] or kwargs[extlongname]
@@ -1274,6 +1290,8 @@ def create_csr(path=None, text=False, **kwargs):
         extstack.push(ext)
 
     csr.add_extensions(extstack)
+
+    csr.sign(_get_private_key_obj(kwargs['private_key']), kwargs['algorithm'])
 
     if path:
         return write_pem(text=csr.as_pem(), path=path,
