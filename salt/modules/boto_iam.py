@@ -967,13 +967,15 @@ def create_role(name, policy_document=None, path=None, region=None, key=None,
 
     if role_exists(name, region, key, keyid, profile):
         return True
+    if not policy_document:
+        policy_document = None
     try:
         conn.create_role(name, assume_role_policy_document=policy_document,
                          path=path)
         log.info('Created {0} iam role.'.format(name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to create {0} iam role.'
         log.error(msg.format(name))
         return False
@@ -1180,7 +1182,7 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
         log.info(msg.format(policy_name, role_name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to {0} {1} policy for role {2}.'
         log.error(msg.format(mode, policy_name, role_name))
         return False
@@ -1239,7 +1241,7 @@ def update_assume_role_policy(role_name, policy_document, region=None,
         log.info(msg.format(role_name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to update assume role policy for role {0}.'
         log.error(msg.format(role_name))
         return False
