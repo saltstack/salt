@@ -163,6 +163,9 @@ def _get_csr_extensions(csr):
     if csryaml and 'Requested Extensions' in csryaml['Certificate Request']['Data']:
         csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
+        if not csrexts:
+            return ret
+
         for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
             if long_name in csrexts:
                 ret[short_name] = csrexts[long_name]
