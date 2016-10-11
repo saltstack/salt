@@ -104,7 +104,7 @@ def __virtual__():
 def present(
         name,
         policy_document=None,
-        policy_document_from_pillars='boto_iam_role_policy_document',
+        policy_document_from_pillars=None,
         path=None,
         policies=None,
         policies_from_pillars=None,
