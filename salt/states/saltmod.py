@@ -516,6 +516,12 @@ def wait_for_event(
     '''
     ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
 
+    if __opts__.get('test'):
+        ret['comment'] = \
+            'Orchestration would wait for event \'{0}\''.format(name)
+        ret['result'] = None
+        return ret
+
     sevent = salt.utils.event.get_event(
             node,
             __opts__['sock_dir'],
