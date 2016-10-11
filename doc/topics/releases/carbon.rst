@@ -118,9 +118,22 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
-          
-- The ``junos`` state module is now available. It has all the functions 
+
+- The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
+
+New Top File Merging Strategy for States
+========================================
+
+A new strategy called ``merge_all`` has been added to provide a new way of
+merging top file matches when executing a :ref:`highstate <running-highstate>`.
+See the :conf_master:`top_file_merging_strategy` documentation for further
+information.
+
+In addition, the ``same`` merging strategy was not functioning as documented.
+This has now been corrected. While this is technically a bugfix, we decided to
+hold a change in top file merging until a feature release to minimize user
+impact.
 
 Config Changes
 ==============
@@ -196,7 +209,7 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
-  
+
 Junos Module Changes
 ===================
 

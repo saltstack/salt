@@ -399,7 +399,12 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
+    if 'name' not in nodes[name]:
+        nodes[name]['name'] = nodes[name]['id']
+    try:
+        __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
+    except TypeError:
+        log.warn('Unable to show cache node data; this may be because the node has been deleted')
     return nodes[name]
 
 
@@ -463,13 +468,13 @@ def create(vm_):
         )
 
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
-                                             default='22', search_global=True)
+                                             default=22, search_global=True)
 
     ssh_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
         name='SSH',
         protocol='TCP',
         port=ssh_port,
-        local_port='22',
+        local_port=22,
     )
 
     network_config = azure.servicemanagement.ConfigurationSet()

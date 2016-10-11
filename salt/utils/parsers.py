@@ -2855,7 +2855,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             dest='regen_thin',
             default=False,
             action='store_true',
-            help=('Trigger a thin tarball regeneration. This is needed if',
+            help=('Trigger a thin tarball regeneration. This is needed if '
                   'custom grains/modules/states have been added or updated.'))
         self.add_option(
             '--python2-bin',
