@@ -1047,9 +1047,9 @@ This option has no default value. Set it to an environment name to ensure that
     :conf_minion:`top_file_merging_strategy` is left at its default, and
     :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
-    will be ignored. With :conf_minion:`top_file_merging_strategy` set to
-    ``base``, all states from all environments in the ``base`` top file will
-    be applied, while all other top files are ignored.
+    will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
+    states from all environments in the ``base`` top file will be applied,
+    while all other top files are ignored.
 
 .. code-block:: yaml
 
