@@ -315,6 +315,8 @@ def get_url(path, dest, saltenv='base', env=None):
     destination path. To simply return the file contents instead, set
     destination to ``None``.
 
+    Returns ``False`` if Salt was unable to fetch a file from a URL.
+
     CLI Example:
 
     .. code-block:: bash
@@ -331,10 +333,17 @@ def get_url(path, dest, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    if isinstance(dest, str):
-        return _client().get_url(path, dest, False, saltenv)
+    if isinstance(dest, six.string_type):
+        result = _client().get_url(path, dest, False, saltenv)
     else:
-        return _client().get_url(path, None, False, saltenv, no_cache=True)
+        result = _client().get_url(path, None, False, saltenv, no_cache=True)
+    if not result:
+        log.error(
+            'Unable to fetch file {0!r} from saltenv {1!r}.'.format(
+                path, saltenv
+            )
+        )
+    return result
 
 
 def get_file_str(path, saltenv='base', env=None):

@@ -556,12 +556,13 @@ class Client(object):
             return url_data.path
 
         if url_data.scheme == 'salt':
-            cached = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
-            if dest is None:
-                with salt.utils.fopen(cached, 'r') as fp_:
+            result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
+            if result and dest is None:
+                with salt.utils.fopen(result, 'r') as fp_:
                     data = fp_.read()
                 return data
-            return cached
+            return result
+
         if dest:
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
