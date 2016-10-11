@@ -346,14 +346,17 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
     # Run the tests
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = True
         ret['comment'] = 'Service {0} is already started'.format(name)
         if not before_toggle_status:
             ret['comment'] = 'Service {0} is set to start'.format(name)
+            ret['result'] = None
         if enable is True and not before_toggle_enable_status:
             ret['comment'] += ' and will be enabled'
+            ret['result'] = None
         if enable is False and before_toggle_enable_status:
             ret['comment'] += ' and will be disabled'
+            ret['result'] = None
         return ret
 
     # Enable the service
@@ -464,13 +467,16 @@ def dead(name, enable=None, sig=None, **kwargs):
 
     # Run the tests
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = True
         ret['comment'] = 'Service {0} is already stopped'.format(name)
         if before_toggle_status:
+            ret['result'] = None
             ret['comment'] = 'Service {0} is set to be killed'.format(name)
         if enable is True and not before_toggle_enable_status:
+            ret['result'] = None
             ret['comment'] += ' and will be enabled'
         if enable is False and before_toggle_enable_status:
+            ret['result'] = None
             ret['comment'] += ' and will be disabled'
         return ret
 
