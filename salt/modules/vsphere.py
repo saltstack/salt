@@ -195,7 +195,7 @@ def __virtual__():
     return __virtualname__
 
 
-def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi_hosts=None):
+def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, port=None, esxi_hosts=None):
     '''
     Run an ESXCLI command directly on the host or list of hosts.
 

@@ -319,8 +319,8 @@ def init(opts):
     DETAILS['host'] = host
     DETAILS['username'] = username
     DETAILS['password'] = password
-    DETAILS['protocol'] = opts['proxy'].get('protocol')
-    DETAILS['port'] = opts['proxy'].get('port')
+    DETAILS['protocol'] = opts['proxy'].get('protocol', 'https')
+    DETAILS['port'] = opts['proxy'].get('port', '443')
 
 
 def grains():
@@ -353,7 +353,7 @@ def ping():
 
         salt esxi-host test.ping
     '''
-    find_credentials(DETAILS['host'])
+    # find_credentials(DETAILS['host'])
     try:
         __salt__['vsphere.system_info'](host=DETAILS['host'],
                                         username=DETAILS['username'],
@@ -395,6 +395,12 @@ def ch_config(cmd, *args, **kwargs):
     for k in kwargs.keys():
         if k.startswith('__pub_'):
             kwargs.pop(k)
+
+    kwargs['host'] = DETAILS['host']
+    kwargs['username'] = DETAILS['username']
+    kwargs['password'] = DETAILS['password']
+    kwargs['port'] = DETAILS['port']
+    kwargs['protocol'] = DETAILS['protocol']
 
     if 'vsphere.' + cmd not in __salt__:
         return {'retcode': -1, 'message': 'vsphere.' + cmd + ' is not available.'}
