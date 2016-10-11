@@ -202,7 +202,7 @@ class TopFileMergeTestCase(TestCase):
             ret[env].append(tops[env])
         return ret
 
-    def test_merge_tops_default(self):
+    def test_merge_tops_merge(self):
         '''
         Test the default merge strategy for top files, in an instance where the
         base top file contains sections for all envs and the other envs' top
@@ -216,9 +216,10 @@ class TopFileMergeTestCase(TestCase):
 
         self.assertEqual(merged_tops, expected_merge)
 
-    def test_merge_tops_default_limited_base(self):
+    def test_merge_tops_merge_limited_base(self):
         '''
-        Test the default merge strategy for top files when
+        Test the default merge strategy for top files when the base environment
+        only defines states for itself.
         '''
         tops = self.get_tops(tops=self.tops_limited_base)
         merged_tops = self.highstate().merge_tops(tops)
@@ -230,7 +231,7 @@ class TopFileMergeTestCase(TestCase):
 
         self.assertEqual(merged_tops, expected_merge)
 
-    def test_merge_tops_default_state_top_saltenv_base(self):
+    def test_merge_tops_merge_state_top_saltenv_base(self):
         '''
         Test the 'state_top_saltenv' parameter to load states exclusively from
         the 'base' saltenv, with the default merging strategy. This should
@@ -247,7 +248,7 @@ class TopFileMergeTestCase(TestCase):
 
         self.assertEqual(merged_tops, expected_merge)
 
-    def test_merge_tops_default_state_top_saltenv_foo(self):
+    def test_merge_tops_merge_state_top_saltenv_foo(self):
         '''
         Test the 'state_top_saltenv' parameter to load states exclusively from
         the 'foo' saltenv, with the default merging strategy. This should
