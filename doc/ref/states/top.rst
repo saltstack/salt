@@ -428,13 +428,8 @@ If the ``base`` environment were specified, the result would be that only the
 If the ``qa`` environment were specified, the :ref:`highstate
 <running-highstate>` would exit with an error.
 
-Scenario 2 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "default"
---------------------------------------------------------------------------------------------
-
-.. versionchanged:: Carbon
-    The default merging strategy has been renamed from ``merge`` to
-    ``default`` to reflect the fact that SLS names from identical targets in
-    matching environments from multiple top files are not actually merged.
+Scenario 2 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge"
+------------------------------------------------------------------------------------------
 
 In this scenario, assuming that the ``base`` environment's top file was
 evaluated first, the ``base1``, ``dev1``, and ``qa1`` states would be applied
@@ -463,7 +458,7 @@ the default), then ``qa1`` from the ``qa`` environment will be applied to all
 minions. If :conf_minion:`default_top` were set to ``dev``, then both ``qa1``
 and ``qa2`` from the ``qa`` environment would be applied to all minions.
 
-Scenario 3 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge_all"
+Scenario 4 - No Environment Specified, :conf_minion:`top_file_merging_strategy` is "merge_all"
 ----------------------------------------------------------------------------------------------
 
 .. versionadded:: Carbon

@@ -974,7 +974,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
     },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'default_top': 'base',
     'fileserver_limit_traversal': False,
@@ -1192,7 +1192,7 @@ DEFAULT_MASTER_OPTS = {
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'environment': None,
     'default_top': 'base',

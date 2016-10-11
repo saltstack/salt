@@ -2485,16 +2485,6 @@ class BaseHighState(object):
             opts['file_roots'] = mopts['file_roots']
             opts['top_file_merging_strategy'] = mopts.get('top_file_merging_strategy',
                                                           opts.get('top_file_merging_strategy'))
-            if opts['top_file_merging_strategy'] == 'merge':
-                salt.utils.warn_until(
-                    'Oxygen',
-                    'The top_file_merging_strategy \'merge\' has been renamed '
-                    'to \'default\'. Please comment out the '
-                    '\'top_file_merging_strategy\' line or change it to '
-                    '\'default\'.'
-                )
-                opts['top_file_merging_strategy'] = 'default'
-
             opts['env_order'] = mopts.get('env_order', opts.get('env_order', []))
             opts['default_top'] = mopts.get('default_top', opts.get('default_top'))
             opts['state_events'] = mopts.get('state_events')
@@ -2665,12 +2655,12 @@ class BaseHighState(object):
         except (AttributeError, TypeError):
             log.warning(
                 'Invalid top_file_merging_strategy \'%s\', falling back to '
-                '\'default\'', merging_strategy
+                '\'merge\'', merging_strategy
             )
-            merge_func = self._merge_tops_default
+            merge_func = self._merge_tops_merge
         return merge_func(tops)
 
-    def _merge_tops_default(self, tops):
+    def _merge_tops_merge(self, tops):
         '''
         The default merging strategy. The base env is authoritative, so it is
         checked first, followed by the remaining environments. In top files
@@ -2701,7 +2691,7 @@ class BaseHighState(object):
                         log.debug(
                             'Section for saltenv \'%s\' in the \'%s\' '
                             'saltenv\'s top file will be ignored, as the '
-                            'top_file_merging_strategy is set to \'default\' '
+                            'top_file_merging_strategy is set to \'merge\' '
                             'and the saltenvs do not match',
                             saltenv, cenv
                         )
