@@ -301,6 +301,12 @@ def install(name=None,
             pkg_to_install = [name]
 
     if pkgs:
+        # We don't support installing specific version for now
+        # so transform the dict in list ignoring version provided
+        pkgs = [
+            p.keys()[0] for p in pkgs
+            if isinstance(p, dict)
+        ]
         pkg_to_install.extend(pkgs)
 
     if not pkg_to_install:
