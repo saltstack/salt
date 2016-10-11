@@ -37,6 +37,24 @@ Available builds:
 - RHEL 7
 - Ubuntu 16.04
 - Debian 8
+- FreeBSD
+- SmartOS (see below)
+
+SmartOS
+-------
+Release candidate builds for SmartOS are available at http://pkg.blackdot.be/extras/salt-2016.11rc/.
+
+On a base64 2015Q4-x86_64 based native zone the package can be installed by the following:
+
+.. code-block:: bash
+
+    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2015Q4_x86_64.tgz
+
+When using the 2016Q2-tools release on the global zone by the following:
+
+.. code-block:: bash
+
+    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2016Q2_TOOLS.tgz
 
 Installing Using Bootstrap
 ==========================
