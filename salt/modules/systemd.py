@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Provide the service module for systemd
+Provides the service module for systemd
 
 .. versionadded:: 0.10.0
 
