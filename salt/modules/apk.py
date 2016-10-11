@@ -202,7 +202,7 @@ def latest_version(*names, **kwargs):
             newversion = line.split(' ')[5].strip(')')
             if name in names:
                 ret[name] = newversion
-        except ValueError:
+        except (ValueError, IndexError):
             pass
 
     # If version is empty, package may not be installed
