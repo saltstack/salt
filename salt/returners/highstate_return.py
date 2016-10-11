@@ -75,7 +75,7 @@ values at the time of pillar generation, these will contain minion values at
 the time of execution.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import logging
 import json
@@ -163,8 +163,8 @@ def _generate_html_table(data, out, level=0, extra_style=''):
     '''
     Generate a single table of data
     '''
-    print>>out, '<table style="{0}">'.format(
-        _lookup_style('table', ['table' + str(level)]))
+    print('<table style="{0}">'.format(
+        _lookup_style('table', ['table' + str(level)])), file=out)
 
     firstone = True
 
@@ -184,18 +184,18 @@ def _generate_html_table(data, out, level=0, extra_style=''):
             if len(subdata) == 1:
                 name = subdata.keys()[0]
                 value = subdata.values()[0]
-                print>>out, '<tr style="{0}">'.format(
+                print('<tr style="{0}">'.format(
                     _lookup_style('tr', [row_style])
-                )
-                print>>out, '<td style="{0}">{1}</td>'.format(
+                ), file=out)
+                print('<td style="{0}">{1}</td>'.format(
                     _lookup_style(
                         'td',
                         [cell_style, first_style, 'name', new_extra_style]
                     ),
                     name
-                )
+                ), file=out)
                 if isinstance(value, list):
-                    print>>out, '<td style="{0}">'.format(
+                    print('<td style="{0}">'.format(
                         _lookup_style(
                             'td',
                             [
@@ -205,16 +205,16 @@ def _generate_html_table(data, out, level=0, extra_style=''):
                                 new_extra_style
                             ]
                         )
-                    )
+                    ), file=out)
                     _generate_html_table(
                         value,
                         out,
                         level + 1,
                         new_extra_style
                     )
-                    print>>out, '</td>'
+                    print('</td>', file=out)
                 else:
-                    print>>out, '<td style="{0}">{1}</td>'.format(
+                    print('<td style="{0}">{1}</td>'.format(
                         _lookup_style(
                             'td',
                             [
@@ -225,46 +225,46 @@ def _generate_html_table(data, out, level=0, extra_style=''):
                             ]
                         ),
                         cgi.escape(str(value))
-                    )
-                print>>out, '</tr>'
+                    ), file=out)
+                print('</tr>', file=out)
         elif isinstance(subdata, list):
-            print>>out, '<tr style="{0}">'.format(
+            print('<tr style="{0}">'.format(
                 _lookup_style('tr', [row_style])
-            )
-            print>>out, '<td style="{0}">'.format(
+            ), file=out)
+            print('<td style="{0}">'.format(
                 _lookup_style(
                     'td',
                     [cell_style, first_style, 'container', extra_style]
                 )
-            )
+            ), file=out)
             _generate_html_table(subdata, out, level + 1, extra_style)
-            print>>out, '</td>'
-            print>>out, '</tr>'
+            print('</td>', file=out)
+            print('</tr>', file=out)
         else:
-            print>>out, '<tr style="{0}">'.format(
+            print('<tr style="{0}">'.format(
                 _lookup_style('tr', [row_style])
-            )
-            print>>out, '<td style="{0}">{1}</td>'.format(
+            ), file=out)
+            print('<td style="{0}">{1}</td>'.format(
                 _lookup_style(
                     'td',
                     [cell_style, first_style, 'value', extra_style]
                 ),
                 cgi.escape(str(subdata))
-            )
-            print>>out, '</tr>'
+            ), file=out)
+            print('</tr>', file=out)
         firstone = False
-    print>>out, '</table>'
+    print('</table>', file=out)
 
 
 def _generate_html(data, out):
     '''
     Generate report data as HTML
     '''
-    print>>out, '<html>'
-    print>>out, '<body>'
+    print('<html>', file=out)
+    print('<body>', file=out)
     _generate_html_table(data, out, 0)
-    print>>out, '</body>'
-    print>>out, '</html>'
+    print('</body>', file=out)
+    print('</html>', file=out)
 
 
 def _dict_to_name_value(data):
