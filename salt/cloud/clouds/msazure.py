@@ -468,13 +468,13 @@ def create(vm_):
         )
 
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
-                                             default='22', search_global=True)
+                                             default=22, search_global=True)
 
     ssh_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
         name='SSH',
         protocol='TCP',
         port=ssh_port,
-        local_port='22',
+        local_port=22,
     )
 
     network_config = azure.servicemanagement.ConfigurationSet()
