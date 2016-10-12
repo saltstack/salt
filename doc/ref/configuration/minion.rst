@@ -1242,12 +1242,12 @@ This option has no default value. Set it to an environment name to ensure that
 
 .. note::
     Using this value does not change the merging strategy. For instance, if
-    :conf_minion:`top_file_merging_strategy` is set to ``default``, and
+    :conf_minion:`top_file_merging_strategy` is set to ``merge``, and
     :conf_minion:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
-    will be ignored. With :conf_minion:`top_file_merging_strategy` set to
-    ``base``, all states from all environments in the ``base`` top file will
-    be applied, while all other top files are ignored. The only way to set
+    will be ignored. With :conf_minion:`state_top_saltenv` set to ``base``, all
+    states from all environments in the ``base`` top file will be applied,
+    while all other top files are ignored. The only way to set
     :conf_minion:`state_top_saltenv` to something other than ``base`` and not
     have the other environments in the targeted top file ignored, would be to
     set :conf_minion:`top_file_merging_strategy` to ``merge_all``.
@@ -1262,28 +1262,25 @@ This option has no default value. Set it to an environment name to ensure that
 -----------------------------
 
 .. versionchanged:: Carbon
-    Default value has been changed from ``merge`` to ``default`` to reflect the
-    fact that states from matching targets in matching environments in multiple
-    top files are not actually being merged. Additonally, the ``merge_all``
-    strategy has been added.
+    A ``merge_all`` strategy has been added.
 
-Default: ``default``
+Default: ``merge``
 
 When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
 for a :ref:`highstate <running-highstate>`, all environments' top files are
 inspected. This config option determines how the SLS targets in those top files
 are handled.
 
-When set to ``default``, the ``base`` environment's top file is evaluated
-first, followed by the other environments' top files. The first target
-expression (e.g. ``'*'``) for a given environment is kept, and when the same
-target expression is used in a different top file evaluated later, it is
-ignored. Because ``base`` is evaluated first, it is authoritative. For
-example, if there is a target for ``'*'`` for the ``foo`` environment in both
-the ``base`` and ``foo`` environment's top files, the one in the ``foo``
-environment would be ignored. The environments will be evaluated in no specific
-order (aside from ``base`` coming first). For greater control over the order in
-which the environments are evaluated, use :conf_minion:`env_order`.
+When set to ``merge``, the ``base`` environment's top file is evaluated first,
+followed by the other environments' top files. The first target expression
+(e.g. ``'*'``) for a given environment is kept, and when the same target
+expression is used in a different top file evaluated later, it is ignored.
+Because ``base`` is evaluated first, it is authoritative. For example, if there
+is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
+``foo`` environment's top files, the one in the ``foo`` environment would be
+ignored. The environments will be evaluated in no specific order (aside from
+``base`` coming first). For greater control over the order in which the
+environments are evaluated, use :conf_minion:`env_order`.
 
 When set to ``same``, then for each environment, only that environment's top
 file is processed, with the others being ignored. For example, only the ``dev``

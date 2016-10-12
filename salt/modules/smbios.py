@@ -91,6 +91,10 @@ def get(string, clean=True):
     # Don't.
     val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
 
+    # handle missing /dev/mem
+    if val.startswith('/dev/mem'):
+        return None
+
     if not clean or _dmi_isclean(string, val):
         return val
 

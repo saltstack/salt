@@ -19,8 +19,8 @@ Management of the Salt scheduler
         - function: test.ping
         - seconds: 15
         - splay:
-            - start: 10
-            - end: 20
+            start: 10
+            end: 20
 
     This will schedule the command: test.ping every 15 seconds
     splaying the time between 10 and 20 seconds
