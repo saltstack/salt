@@ -2830,7 +2830,7 @@ def replace(name,
             performance if used with large files.
 
     ignore_if_missing : False
-        .. versionadded:: 2016.3.5
+        .. versionadded:: 2016.3.4
 
         Controls what to do if the file is missing. If set to ``False``, the
         state will display an error raised by the execution module. If set to
