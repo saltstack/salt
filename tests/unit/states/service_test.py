@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import contextlib
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -159,7 +158,6 @@ class ServiceTestCase(TestCase):
                                      MagicMock(side_effect=[False, False]),
                                  'service.status': fmock}):
                     self.assertDictEqual(service.running("salt"), ret)
-
 
     def test_dead(self):
         '''
