@@ -25,7 +25,6 @@ A profile must be setup in the minion configuration or pillar.  If you want to u
       url: https://my.tismd:8080/decrypt
       token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6MSwiZXhwIjoxNTg1MTExNDYwLCJqdGkiOiI3NnA5cWNiMWdtdmw4Iiwia2V5cyI6WyJBTEwiXX0.RtAhG6Uorf5xnSf4Ya_GwJnoHkCsql4r1_hiOeDSLzo
 '''
-
 # import python libs
 import logging
 import json
@@ -41,16 +40,7 @@ def __virtual__():
     '''
     This module has no other system dependencies
     '''
-
-    # TODO Make sure profile key and url work.
     return __virtualname__
-
-def set(key, value, service=None, profile=None):  # pylint: disable=W0613
-    '''
-    This module doesn't perform set
-    '''
-    return None
-
 
 def get(key, service=None, profile=None):  # pylint: disable=W0613
     '''
@@ -72,7 +62,6 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
 
     if not decrypted:
         log.warning('tism.get sdb decryption request failed with error {}'.format(result.get('error', 'unknown')))
-        # What to return here?
-        return False
+        return "ERROR"+str(result.get('status', 'unknown'))
 
     return decrypted
