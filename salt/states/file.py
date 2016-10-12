@@ -2016,6 +2016,7 @@ def directory(name,
                                               dir_mode,
                                               follow_symlinks)
 
+    errors = []
     if recurse or clean:
         walk_l = list(os.walk(name))  # walk path only once and store the result
         # root: (dirs, files) structure, compatible for python2.6
@@ -2077,23 +2078,31 @@ def directory(name,
             if check_files:
                 for fn_ in files:
                     full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
+                    try:
+                        ret, _ = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                    except CommandExecutionError as exc:
+                        if not exc.strerror.endswith('does not exist'):
+                            errors.append(exc.strerror)
             if check_dirs:
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                    try:
+                        ret, _ = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
+                    except CommandExecutionError as exc:
+                        if not exc.strerror.endswith('does not exist'):
+                            errors.append(exc.strerror)
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
@@ -2111,6 +2120,12 @@ def directory(name,
         ret['comment'] = 'Directory {0} not updated'.format(name)
     elif not ret['changes'] and ret['result']:
         ret['comment'] = 'Directory {0} is in the correct state'.format(name)
+
+    if errors:
+        ret['result'] = False
+        ret['comment'] += '\n\nThe following errors were encountered:\n'
+        for error in errors:
+            ret['comment'] += '\n- {0}'.format(error)
     return ret
 
 
