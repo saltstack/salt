@@ -29,7 +29,7 @@ def sdb_get(uri, opts):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = opts['pillar'].get(uri[sdlen:indx], {})
+        profile = opts.get('pillar', {}).get(comps[0], {})
     if 'driver' not in profile:
         return uri
 
@@ -60,7 +60,7 @@ def sdb_set(uri, value, opts):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = opts['pillar'].get(uri[sdlen:indx], {})
+        profile = opts.get('pillar', {}).get(comps[0], {})
     if 'driver' not in profile:
         return False
 
@@ -91,7 +91,7 @@ def sdb_delete(uri, opts):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = opts['pillar'].get(uri[sdlen:indx], {})
+        profile = opts.get('pillar', {}).get(comps[0], {})
     if 'driver' not in profile:
         return False
 
