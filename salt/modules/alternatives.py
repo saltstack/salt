@@ -76,9 +76,14 @@ def show_link(name):
         salt '*' alternatives.show_link editor
     '''
 
-    path = '/var/lib/dpkg/alternatives/{0}'.format(name)
-    if _get_cmd() == 'alternatives':
-        path = '/var/lib/alternatives/{0}'.format(name)
+    if __grains__['os_family'] == 'RedHat':
+        path = '/var/lib/'
+    elif __grains__['os_family'] == 'Suse':
+        path = '/var/lib/rpm/'
+    else:
+        path = '/var/lib/dpkg/'
+
+    path += 'alternatives/{0}'.format(name)
 
     try:
         with salt.utils.fopen(path, 'rb') as r_file:
