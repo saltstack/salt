@@ -9,7 +9,7 @@ pull request won't be accepted, but these are things we consider when reviewing
 a pull request.
 
 * Does this change work on all platforms? In cases where it does not, is an
-  appropriate and easy-to-understand reason presented to the user? It it
+  appropriate and easy-to-understand reason presented to the user? Is it
   documented as-such? Have we thought about all the possible ways this code
   might be used and accounted as best we can for them?
 
