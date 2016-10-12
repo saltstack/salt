@@ -239,6 +239,11 @@ class TestVerify(TestCase):
             verify_log({'log_level': 'trace'})
             mock_trace.assert_called_once_with(message)
 
+        mock_none = MagicMock()
+        with patch.object(log, 'warn', mock_none):
+            verify_log({})
+            mock_none.assert_called_once_with(message)
+
         mock_info = MagicMock()
         with patch.object(log, 'warn', mock_info):
             verify_log({'log_level': 'info'})

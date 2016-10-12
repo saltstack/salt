@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Wrapper module for at(1)
+Wrapper for at(1) on Solaris-like systems
 
-Also, a 'tag' feature has been added to more
-easily tag jobs.
+.. note::
+    we try to mirror the generic at module
+    where possible
 
-:platform:      linux,openbsd,freebsd
+:maintainer:    jorge schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      solaris,illumos,smartso
 
-.. versionchanged:: nitrogen
+.. versionadded:: nitrogen
 '''
 from __future__ import absolute_import
 
@@ -15,46 +18,30 @@ from __future__ import absolute_import
 import re
 import time
 import datetime
+import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
-# pylint: enable=import-error,redefined-builtin
-from salt.exceptions import CommandNotFoundError
 
 # Import salt libs
 import salt.utils
 
-# OS Families that should work (Ubuntu and Debian are the default)
-# TODO: Refactor some of this module to remove the checks for binaries
-
-# Tested on OpenBSD 5.0
-BSD = ('OpenBSD', 'FreeBSD')
-
+log = logging.getLogger(__name__)
 __virtualname__ = 'at'
 
 
 def __virtual__():
     '''
-    Most everything has the ability to support at(1)
+    We only deal with Solaris' specific version of at
     '''
-    if salt.utils.is_windows() or salt.utils.is_sunos():
+    if not salt.utils.is_sunos():
         return (False, 'The at module could not be loaded: unsupported platform')
-    if salt.utils.which('at') is None:
+    if not salt.utils.which('at') or \
+        not salt.utils.which('atq') or \
+        not salt.utils.which('atrm'):
         return (False, 'The at module could not be loaded: at command not found')
     return __virtualname__
-
-
-def _cmd(binary, *args):
-    '''
-    Wrapper to run at(1) or return None.
-    '''
-    binary = salt.utils.which(binary)
-    if not binary:
-        raise CommandNotFoundError('{0}: command not found'.format(binary))
-    cmd = [binary] + list(args)
-    return __salt__['cmd.run_stdout']([binary] + list(args),
-                                      python_shell=False)
 
 
 def atq(tag=None):
@@ -72,19 +59,13 @@ def atq(tag=None):
     '''
     jobs = []
 
-    # Shim to produce output similar to what __virtual__() should do
-    # but __salt__ isn't available in __virtual__()
-    # Tested on CentOS 5.8
-    if __grains__['os_family'] == 'RedHat':
-        output = _cmd('at', '-l')
-    else:
-        output = _cmd('atq')
+    res = __salt__['cmd.run_all']('atq')
 
-    if output is None:
-        return '\'at.atq\' is not available.'
+    if res['retcode'] > 0:
+        return {'error': res['stderr']}
 
     # No jobs so return
-    if output == '':
+    if res['stdout'] == 'no files in queue.':
         return {'jobs': jobs}
 
     # Jobs created with at.at() will use the following
@@ -94,55 +75,42 @@ def atq(tag=None):
     # Split each job into a dictionary and handle
     # pulling out tags or only listing jobs with a certain
     # tag
-    for line in output.splitlines():
+    for line in res['stdout'].splitlines():
         job_tag = ''
 
-        # Redhat/CentOS
-        if __grains__['os_family'] == 'RedHat':
-            job, spec = line.split('\t')
-            specs = spec.split()
-        elif __grains__['os'] in BSD:
-            if line.startswith(' Rank'):
-                continue
-            else:
-                tmp = line.split()
-                timestr = ' '.join(tmp[1:5])
-                job = tmp[6]
-                specs = datetime.datetime(*(time.strptime(timestr, '%b %d, %Y '
-                    '%H:%M')[0:5])).isoformat().split('T')
-                specs.append(tmp[7])
-                specs.append(tmp[5])
+        # skip header
+        if line.startswith(' Rank'):
+            continue
 
-        else:
-            job, spec = line.split('\t')
-            tmp = spec.split()
-            timestr = ' '.join(tmp[0:5])
-            specs = datetime.datetime(*(time.strptime(timestr)
-                [0:5])).isoformat().split('T')
-            specs.append(tmp[5])
-            specs.append(tmp[6])
+        # parse job output
+        tmp = line.split()
+        timestr = ' '.join(tmp[1:5])
+        job = tmp[6]
+        specs = datetime.datetime(
+            *(time.strptime(timestr, '%b %d, %Y %H:%M')[0:5])
+        ).isoformat().split('T')
+        specs.append(tmp[7])
+        specs.append(tmp[5])
 
-        # Search for any tags
-        atc_out = _cmd('at', '-c', job)
-        for line in atc_out.splitlines():
-            tmp = job_kw_regex.match(line)
-            if tmp:
-                job_tag = tmp.groups()[0]
+        # make sure job is str
+        job = str(job)
 
-        if __grains__['os'] in BSD:
-            job = str(job)
-        else:
-            job = int(job)
+        # search for any tags
+        atjob_file = '/var/spool/cron/atjobs/{job}'.format(
+            job=job
+        )
+        if __salt__['file.file_exists'](atjob_file):
+            with salt.utils.fopen(atjob_file, 'r') as atjob:
+                for line in atjob:
+                    tmp = job_kw_regex.match(line)
+                    if tmp:
+                        job_tag = tmp.groups()[0]
 
-        # If a tag is supplied, only list jobs with that tag
-        if tag:
-            # TODO: Looks like there is a difference between salt and salt-call
-            # If I don't wrap job in an int(), it fails on salt but works on
-            # salt-call. With the int(), it fails with salt-call but not salt.
-            if tag == job_tag or tag == job:
-                jobs.append({'job': job, 'date': specs[0], 'time': specs[1],
-                    'queue': specs[2], 'user': specs[3], 'tag': job_tag})
-        else:
+        # filter on tags
+        if not tag:
+            jobs.append({'job': job, 'date': specs[0], 'time': specs[1],
+                'queue': specs[2], 'user': specs[3], 'tag': job_tag})
+        elif tag and tag in [job_tag, job]:
             jobs.append({'job': job, 'date': specs[0], 'time': specs[1],
                 'queue': specs[2], 'user': specs[3], 'tag': job_tag})
 
@@ -162,10 +130,6 @@ def atrm(*args):
         salt '*' at.atrm all [tag]
     '''
 
-    # Need to do this here also since we use atq()
-    if not salt.utils.which('at'):
-        return '\'at.atrm\' is not available.'
-
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
 
@@ -181,11 +145,20 @@ def atrm(*args):
             if i['job'] in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
-    # Shim to produce output similar to what __virtual__() should do
-    # but __salt__ isn't available in __virtual__()
-    output = _cmd('at', '-d', ' '.join(opts))
-    if output is None:
-        return '\'at.atrm\' is not available.'
+    # call atrm for each job in ret['jobs']['removed']
+    for job in ret['jobs']['removed']:
+        res_job = __salt__['cmd.run_all']('atrm {job}'.format(
+            job=job
+        ))
+        if res_job['retcode'] > 0:
+            if 'failed' not in ret['jobs']:
+                ret['jobs']['failed'] = {}
+            ret['jobs']['failed'][job] = res_job['stderr']
+
+    # remove failed from list
+    if 'failed' in ret['jobs']:
+        for job in ret['jobs']['failed']:
+            ret['jobs']['removed'].remove(job)
 
     return ret
 
@@ -206,44 +179,32 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         salt '*' at.at '3:05am +3 days' 'bin/myscript' tag=nightly runas=jim
     '''
 
+    # check args
     if len(args) < 2:
         return {'jobs': []}
 
-    # Shim to produce output similar to what __virtual__() should do
-    # but __salt__ isn't available in __virtual__()
-    binary = salt.utils.which('at')
-    if not binary:
-        return '\'at.at\' is not available.'
-
+    # build job
     if 'tag' in kwargs:
         stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
     else:
         stdin = ' '.join(args[1:])
-    cmd = [binary, args[0]]
 
     cmd_kwargs = {'stdin': stdin, 'python_shell': False}
     if 'runas' in kwargs:
         cmd_kwargs['runas'] = kwargs['runas']
-    output = __salt__['cmd.run'](cmd, **cmd_kwargs)
+    res = __salt__['cmd.run_all']('at "{timespec}"'.format(
+        timespec=args[0]
+    ), **cmd_kwargs)
 
-    if output is None:
-        return '\'at.at\' is not available.'
-
-    if output.endswith('Garbled time'):
-        return {'jobs': [], 'error': 'invalid timespec'}
-
-    if output.startswith('warning: commands'):
-        output = output.splitlines()[1]
-
-    if output.startswith('commands will be executed'):
-        output = output.splitlines()[1]
-
-    output = output.split()[1]
-
-    if __grains__['os'] in BSD:
-        return atq(str(output))
+    # verify job creation
+    if res['retcode'] > 0:
+        if 'bad time specification' in res['stderr']:
+            return {'jobs': [], 'error': 'invalid timespec'}
+        return {'jobs': [], 'error': res['stderr']}
     else:
-        return atq(int(output))
+        jobid = res['stderr'].splitlines()[1]
+        jobid = str(jobid.split()[1])
+        return atq(jobid)
 
 
 def atc(jobid):
@@ -258,16 +219,14 @@ def atc(jobid):
 
         salt '*' at.atc <jobid>
     '''
-    # Shim to produce output similar to what __virtual__() should do
-    # but __salt__ isn't available in __virtual__()
-    output = _cmd('at', '-c', str(jobid))
 
-    if output is None:
-        return '\'at.atc\' is not available.'
-    elif output == '':
+    atjob_file = '/var/spool/cron/atjobs/{job}'.format(
+        job=jobid
+    )
+    if __salt__['file.file_exists'](atjob_file):
+        return "".join(salt.utils.fopen(atjob_file, 'r').readlines())
+    else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}
-
-    return output
 
 
 def _atq(**kwargs):
@@ -369,3 +328,6 @@ def jobcheck(**kwargs):
         return {'error': 'You have given a condition'}
 
     return _atq(**kwargs)
+
+
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

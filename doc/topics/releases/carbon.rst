@@ -80,7 +80,7 @@ Ponies!
 -------
 
 We all agreed that cowsay was just not good enough, install the `ponysay`
-command and the new `pony` outputter will work. For for the whole family!
+command and the new `pony` outputter will work. Fun for the whole family!
 
 Additional Features
 -------------------

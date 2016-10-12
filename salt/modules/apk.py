@@ -202,7 +202,7 @@ def latest_version(*names, **kwargs):
             newversion = line.split(' ')[5].strip(')')
             if name in names:
                 ret[name] = newversion
-        except ValueError:
+        except (ValueError, IndexError):
             pass
 
     # If version is empty, package may not be installed
@@ -301,6 +301,12 @@ def install(name=None,
             pkg_to_install = [name]
 
     if pkgs:
+        # We don't support installing specific version for now
+        # so transform the dict in list ignoring version provided
+        pkgs = [
+            p.keys()[0] for p in pkgs
+            if isinstance(p, dict)
+        ]
         pkg_to_install.extend(pkgs)
 
     if not pkg_to_install:
