@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Take data from salt and "return" it into a raw file containing the json, with one line per event.
+Take data from salt and "return" it into a raw file containing the json, with
+one line per event.
 
 Add the following to the minion or master configuration file.
 
-... code-block: yaml
+.. code-block:: yaml
 
     rawfile_json.filename: <path_to_output_file>
 
-Default is /var/log/salt/events.
+Default is ``/var/log/salt/events``.
 
 Common use is to log all events on the master. This can generate a lot of
 noise, so you may wish to configure batch processing and/or configure the
-event_return_whitelist or event_return_blacklist to restrict the events
-that are written.
+:conf_master:`event_return_whitelist` or :conf_master:`event_return_blacklist`
+to restrict the events that are written.
 '''
 
 # Import python libs

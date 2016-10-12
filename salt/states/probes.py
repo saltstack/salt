@@ -13,7 +13,7 @@ Configure RPM (JunOS)/SLA (Cisco) probes on the device via NAPALM proxy.
 Dependencies
 ------------
 
-- :doc:`napalm probes management module (salt.modules.napalm_probes) </ref/modules/all/salt.modules.napalm_probes>`
+- :mod:`napalm probes management module <salt.modules.napalm_probes>`
 
 .. versionadded: Carbon
 '''
@@ -283,20 +283,21 @@ def managed(name, probes, defaults=None):
                     test_interval: 3
                     probe_type: icmp-ping
 
-    In the probes configuration, the only mandatory attribute is *target* (specified either in probes configuration,
-    either in the defaults dictionary).
-    All the other parameters will use the operating system defaults, if not provided:
+    In the probes configuration, the only mandatory attribute is *target*
+    (specified either in probes configuration, either in the defaults
+    dictionary).  All the other parameters will use the operating system
+    defaults, if not provided:
 
-        * source:           Specifies the source IP Address to be used during the tests.
-                            If not specified will use the IP Address of the logical interface loopback0.
-        * target:           Destination IP Address.
-        * probe_count:      Total number of probes per test (1..15). System defaults: 1 on both JunOS & Cisco.
-        * probe_interval:   Delay between tests (0..86400 seconds). System defaults: 3 on JunOS, 5 on Cisco.
-        * probe_type:       Probe request type. Available options:
+    * source:           Specifies the source IP Address to be used during the tests.
+                        If not specified will use the IP Address of the logical interface loopback0.
+    * target:           Destination IP Address.
+    * probe_count:      Total number of probes per test (1..15). System defaults: 1 on both JunOS & Cisco.
+    * probe_interval:   Delay between tests (0..86400 seconds). System defaults: 3 on JunOS, 5 on Cisco.
+    * probe_type:       Probe request type. Available options:
 
-                * icmp-ping
-                * tcp-ping
-                * udp-ping
+            * icmp-ping
+            * tcp-ping
+            * udp-ping
 
     Using the example configuration above, after running the state, on the device will be configured 4 probes,
     with the following properties:
