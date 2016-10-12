@@ -223,7 +223,7 @@ def _run(cmd,
          stderr=subprocess.PIPE,
          output_loglevel='debug',
          log_callback=None,
-         runas=None,
+         runas=None
          shell=DEFAULT_SHELL,
          python_shell=False,
          env=None,
@@ -2752,7 +2752,8 @@ def powershell(cmd,
     :param str saltenv: The salt environment to use. Default is 'base'
 
     :param int depth: The number of levels of contained objects to be included.
-        Default is 2.
+        Default is 2. Values greater than 4 seem to greatly increase the time
+        it takes for the command to complete for some commands. eg: ``dir``
 
     :returns:
         :dict: A dictionary of data returned by the powershell command.
