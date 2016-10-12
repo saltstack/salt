@@ -4,13 +4,15 @@
 Send json response data to Splunk via the HTTP Event Collector
 Requires the following config values to be specified in config or pillar:
 
-splunk_http_forwader:
-  token: <splunk_http_forwarder_token>
-  indexer: <hostname/IP of Splunk indexer>
-  sourcetype: <Destination sourcetype for data>
-  index: <Destination index for data>
+.. code-block:: yaml
 
-Run a test by using salt-call test.ping --return splunk
+    splunk_http_forwarder:
+      token: <splunk_http_forwarder_token>
+      indexer: <hostname/IP of Splunk indexer>
+      sourcetype: <Destination sourcetype for data>
+      index: <Destination index for data>
+
+Run a test by using ``salt-call test.ping --return splunk``
 
 Written by Scott Pack (github.com/scottjpack)
 

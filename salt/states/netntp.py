@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Network NTP
-===============
+===========
 
 Configure NTP peers on the device via a salt proxy.
 

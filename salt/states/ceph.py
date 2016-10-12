@@ -61,7 +61,7 @@ def quorum(name, **kwargs):
 
     Example usage in sls file:
 
-    . code-block:: yaml
+    .. code-block:: yaml
 
         quorum:
           sesceph.quorum:

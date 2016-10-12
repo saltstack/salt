@@ -13,9 +13,9 @@ Manages RPM/SLA probes on the network device.
 Dependencies
 ------------
 
-- :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
+- :mod:`napalm proxy minion <salt.proxy.napalm>`
 
-.. versionadded: Carbon
+.. versionadded:: Carbon
 '''
 
 from __future__ import absolute_import

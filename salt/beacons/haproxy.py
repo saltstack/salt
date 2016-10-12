@@ -41,7 +41,9 @@ def beacon(config):
     '''
     Check if current number of sessions of a server for a specific haproxy backend
     is over a defined threshold.
+
     .. code-block:: yaml
+
         beacons:
           haproxy:
             - www-backend:
