@@ -274,6 +274,97 @@ Functionality Changes
           - host2
           - host3
 
+New Modules
+===========
+
+Beacons
+-------
+
+- :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
+- :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
+- :mod:`salt.beacons.status <salt.beacons.status>`
+
+Engines
+-------
+
+- :mod:`salt.engines.hipchat <salt.engines.hipchat>`
+
+Modules
+-------
+
+- :mod:`salt.modules.boto_cloudwatch_event <salt.modules.boto_cloudwatch_event>`
+- :mod:`salt.modules.celery <salt.modules.celery>`
+- :mod:`salt.modules.ceph <salt.modules.ceph>`
+- :mod:`salt.modules.influx08 <salt.modules.influx08>`
+- :mod:`salt.modules.inspectlib.entities <salt.modules.inspectlib.entities>`
+- :mod:`salt.modules.inspectlib.fsdb <salt.modules.inspectlib.fsdb>`
+- :mod:`salt.modules.inspectlib.kiwiproc <salt.modules.inspectlib.kiwiproc>`
+- :mod:`salt.modules.inspector <salt.modules.inspector>`
+- :mod:`salt.modules.libcloud_dns <salt.modules.libcloud_dns>`
+- :mod:`salt.modules.openstack_mng <salt.modules.openstack_mng>`
+- :mod:`salt.modules.servicenow <salt.modules.servicenow>`
+- :mod:`salt.modules.testinframod <salt.modules.testinframod>`
+- :mod:`salt.modules.win_lgpo <salt.modules.win_lgpo>`
+- :mod:`salt.modules.win_pki <salt.modules.win_pki>`
+- :mod:`salt.modules.win_psget <salt.modules.win_psget>`
+- :mod:`salt.modules.win_snmp <salt.modules.win_snmp>`
+- :mod:`salt.modules.xbpspkg <salt.modules.xbpspkg>`
+
+Outputters
+----------
+
+- :mod:`salt.output.pony <salt.output.pony>`
+
+Pillar
+------
+
+- :mod:`salt.pillar.csvpillar <salt.pillar.csvpillar>`
+- :mod:`salt.pillar.http_json <salt.pillar.http_json>`
+- :mod:`salt.pillar.makostack <salt.pillar.makostack>`
+
+Returners
+---------
+
+- :mod:`salt.returners.zabbix_return <salt.returners.zabbix_return>`
+
+Runners
+-------
+
+- :mod:`salt.runners.auth <salt.runners.auth>`
+- :mod:`salt.runners.event <salt.runners.event>`
+- :mod:`salt.runners.smartos_vmadm <salt.runners.smartos_vmadm>`
+- :mod:`salt.runners.vistara <salt.runners.vistara>`
+
+SDB
+---
+
+- :mod:`salt.sdb.env <salt.sdb.env>`
+
+States
+------
+
+- :mod:`salt.states.boto_cloudwatch_event <salt.states.boto_cloudwatch_event>`
+- :mod:`salt.states.csf <salt.states.csf>`
+- :mod:`salt.states.ethtool <salt.states.ethtool>`
+- :mod:`salt.states.influxdb08_database <salt.states.influxdb08_database>`
+- :mod:`salt.states.influxdb08_user <salt.states.influxdb08_user>`
+- :mod:`salt.states.libcloud_dns <salt.states.libcloud_dns>`
+- :mod:`salt.states.snapper <salt.states.snapper>`
+- :mod:`salt.states.testinframod <salt.states.testinframod>`
+- :mod:`salt.states.win_lgpo <salt.states.win_lgpo>`
+- :mod:`salt.states.win_pki <salt.states.win_pki>`
+- :mod:`salt.states.win_snmp <salt.states.win_snmp>`
+
+Thorium
+-------
+
+- :mod:`salt.thorium.calc <salt.thorium.calc>`
+- :mod:`salt.thorium.key <salt.thorium.key>`
+- :mod:`salt.thorium.runner <salt.thorium.runner>`
+- :mod:`salt.thorium.status <salt.thorium.status>`
+- :mod:`salt.thorium.wheel <salt.thorium.wheel>`
+
+
 Deprecations
 ============
 

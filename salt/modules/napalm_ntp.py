@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 NAPALM NTP
-===============
+==========
 
 Manages NTP peers of a network device.
 
@@ -12,15 +12,12 @@ Manages NTP peers of a network device.
 
 Dependencies
 ------------
+- :mod:`napalm proxy minion <salt.proxy.napalm>`
 
-- :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
+.. seealso::
+    :mod:`NTP peers management state <salt.states.netntp>`
 
-See also
---------
-
-- :doc:`NTP peers management state (salt.states.netntp) </ref/states/all/salt.states.netntp>`
-
-.. versionadded: Carbon
+.. versionadded:: Carbon
 '''
 
 from __future__ import absolute_import

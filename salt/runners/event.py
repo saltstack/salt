@@ -2,7 +2,7 @@
 '''
 Module for sending events using the runner system.
 
-.. versionadded:: TBD
+.. versionadded:: Carbon
 '''
 from __future__ import absolute_import
 
@@ -18,7 +18,7 @@ def send(tag, data=None):
     '''
     Send an event with the given tag and data.
 
-    .. versionadded:: TBD
+    .. versionadded:: Carbon
 
     This is useful for sending events directly to the master from the shell
     with salt-run. It is also quite useful for sending events in orchestration
