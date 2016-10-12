@@ -14,10 +14,7 @@ features </topics/releases/carbon>`! Be sure to report any bugs you find on `Git
 Installing Using Packages
 =========================
 
-Builds for a few platforms are available as part of the RC at:
-
-- https://repo.saltstack.com/salt_rc/
-- https://repo.saltstack.com/freebsd/salt_rc/
+Builds for a few platforms are available as part of the RC at https://repo.saltstack.com/salt_rc/.
 
 .. note::
 
@@ -25,7 +22,7 @@ Builds for a few platforms are available as part of the RC at:
     https://repo.saltstack.com/, but insert ``salt_rc/`` into the URL between
     the hostname and the remainder of the path.  For example:
 
-    .. code-block::
+    .. code-block:: bash
 
         baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
 
@@ -37,10 +34,27 @@ Available builds:
 
 - Windows
 - Mac OS X
-- RHEL 6
 - RHEL 7
-- Ubuntu 14.04
+- Ubuntu 16.04
+- Debian 8
 - FreeBSD
+- SmartOS (see below)
+
+SmartOS
+-------
+Release candidate builds for SmartOS are available at http://pkg.blackdot.be/extras/salt-2016.11rc/.
+
+On a base64 2015Q4-x86_64 based native zone the package can be installed by the following:
+
+.. code-block:: bash
+
+    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2015Q4_x86_64.tgz
+
+When using the 2016Q2-tools release on the global zone by the following:
+
+.. code-block:: bash
+
+    pfexec pkg_add -U http://pkg.blackdot.be/extras/salt-2016.11rc/salt-2016.11.0rc1_2016Q2_TOOLS.tgz
 
 Installing Using Bootstrap
 ==========================
