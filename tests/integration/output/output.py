@@ -32,9 +32,11 @@ class OutputReturnTest(integration.ShellCase):
         '''
         Tests the return of json-formatted data
         '''
-        expected = ['{', '    "local": true', '}']
         ret = self.run_call('test.ping --out=json')
-        self.assertEqual(ret, expected)
+        self.assertIn('{', ret)
+        self.assertIn('"local": true', ret)
+        self.assertIn('"logs": [', ret)
+        self.assertIn('}', ret)
 
     def test_output_nested(self):
         '''
