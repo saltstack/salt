@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 from salt.output import yaml_out as yaml
 from salt.log.setup import set_console_handler_stream
 
+
 class YamlTestCase(TestCase):
     '''
     Test cases for salt.output.json_out

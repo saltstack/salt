@@ -891,7 +891,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
         # ensure that yaml stays valid with log output
         if 'yaml' == getattr(self.options, 'output', None):
-            log_format = '# %s' % self.config['log_fmt_console']
+            log_format = '# {0}'.format(self.config['log_fmt_console'])
         else:
             log_format = self.config['log_fmt_console']
 

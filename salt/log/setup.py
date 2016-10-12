@@ -511,8 +511,6 @@ def get_console_handler_stream():
     '''
     get console handler stream
     '''
-    global __CONSOLE_HANDLER_STREAM
-
     if __CONSOLE_HANDLER_STREAM is None:
         # return sys.stderr as default console stream handler
         #   still possible to set console stream handler later on

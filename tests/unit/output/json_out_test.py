@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 from salt.output import json_out as json
 from salt.log.setup import set_console_handler_stream
 
+
 class JsonTestCase(TestCase):
     '''
     Test cases for salt.output.json_out
