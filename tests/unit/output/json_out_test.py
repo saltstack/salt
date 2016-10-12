@@ -31,32 +31,37 @@ class JsonTestCase(TestCase):
 
     def test_default_output(self):
         ret = json.output(self.data)
-        expect = '{\n    "test": "two", \n    "example": "one", \n    "logs": []\n}'
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
 
     def test_pretty_output(self):
         json.__opts__['output_indent'] = 'pretty'
         ret = json.output(self.data)
-        expect = '{\n    "example": "one", \n    "logs": [], \n    "test": "two"\n}'
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
 
     def test_indent_output(self):
         json.__opts__['output_indent'] = 2
-        expect = '{\n  "test": "two", \n  "example": "one", \n  "logs": []\n}'
         ret = json.output(self.data)
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
 
     def test_negative_zero_output(self):
         json.__opts__['output_indent'] = 0
-        expect = '{\n"test": "two", \n"example": "one", \n"logs": []\n}'
         ret = json.output(self.data)
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
 
     def test_negative_int_output(self):
         json.__opts__['output_indent'] = -1
-        expect = '{"test": "two", "example": "one", "logs": []}'
         ret = json.output(self.data)
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
 
     def test_unicode_output(self):
         json.__opts__['output_indent'] = 'pretty'
@@ -73,8 +78,11 @@ class JsonTestCase(TestCase):
 
         json.__opts__['output_indent'] = -1
         ret = json.output(self.data)
-        expect = '{"test": "two", "example": "one", "logs": ["line1", "line2"]}'
-        self.assertEqual(expect, ret)
+        self.assertIn('"test": "two"', ret)
+        self.assertIn('"example": "one"', ret)
+        self.assertIn('"logs": [', ret)
+        self.assertIn('"line1"', ret)
+        self.assertIn('"line2"', ret)
 
 
 if __name__ == '__main__':
