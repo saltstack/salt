@@ -3748,6 +3748,10 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     perms = {}
     cur = stats(name, follow_symlinks=follow_symlinks)
     if not cur:
+        # NOTE: The file.directory state checks the content of the error
+        # message in this exception. Any changes made to the message for this
+        # exception will reflect the file.directory state as well, and will
+        # likely require changes there.
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
