@@ -16,7 +16,7 @@ This module will decrypt PGP encrypted secrets against a tISM server.
 
   sdb://tism/hQEMAzJ+GfdAB3KqAQf9E3cyvrPEWR1sf1tMvH0nrJ0bZa9kDFLPxvtwAOqlRiNp0F7IpiiVRF+h+sW5Mb4ffB1TElMzQ+/G5ptd6CjmgBfBsuGeajWmvLEi4lC6/9v1rYGjjLeOCCcN4Dl5AHlxUUaSrxB8akTDvSAnPvGhtRTZqDlltl5UEHsyYXM8RaeCrBw5Or1yvC9Ctx2saVp3xmALQvyhzkUv5pTb1mH0I9Z7E0ian07ZUOD+pVacDAf1oQcPpqkeNVTQQ15EP0fDuvnW+a0vxeLhkbFLfnwqhqEsvFxVFLHVLcs2ffE5cceeOMtVo7DS9fCtkdZr5hR7a+86n4hdKfwDMFXiBwSIPMkmY980N/H30L/r50+CBkuI/u4M2pXDcMYsvvt4ajCbJn91qaQ7BDI=
 
-A profile must be setup in the minion configuration or pillar.  If you want to use sdb in a runner or pillar you must also placea  configuration in the master configuration.
+A profile must be setup in the minion configuration or pillar.  If you want to use sdb in a runner or pillar you must also place a profile in the master configuration.
 
 .. code-block:: yaml
 
@@ -31,30 +31,48 @@ import logging
 import json
 
 import salt.utils.http as http
+from salt.exceptions import SaltConfigurationError
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = "tism"
+
+def __virtual__():
+    '''
+    This module has no other system dependencies
+    '''
+
+    # TODO Make sure profile key and url work.
+    return __virtualname__
 
 def set(key, value, service=None, profile=None):  # pylint: disable=W0613
     '''
-    TiSM dont't do set
+    This module doesn't perform set
     '''
     return None
 
 
 def get(key, service=None, profile=None):  # pylint: disable=W0613
     '''
-    Get a value from the tISMd
+    Get a decrypted secret from the tISMd API
     '''
 
-    #TODO Validate the the profile has everything that we need.
+    if not profile.get('url') or not profile.get('token'):
+        raise SaltConfigurationError("url and/or token missing from the tism sdb profile")
+
     request = {"token": profile['token'], "encsecret": key} 
 
     result = http.query(
         profile['url'],
         method='POST',
         data=json.dumps(request),
-        decode=True,
     )
-    #TODO crash everything if we get back an error
-    return result['body']
+
+    decrypted = result.get('body')
+
+    if not decrypted:
+        log.warning('tism.get sdb decryption request failed with error {}'.format(result.get('error', 'unknown')))
+        # What to return here?
+        return False
+
+    return decrypted
