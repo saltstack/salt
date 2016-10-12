@@ -25,11 +25,13 @@ a pull request.
   Would this change pass muster with a professional security audit? Is it
   obvious to a person using this code what the risks are?
 
-* Is it readable? Does it conform to our style-guide? Is the code documented
+* Is it readable? Does it conform to our style-guide_? Is the code documented
   such that the next person who comes along will be able to read and understand
   it? Most especially, are edge-cases documented to avoid regressions? Will it
   be immediately evident to the next person who comes along why this change was
   made?
+
+.. _style-guide: https://docs.saltstack.com/en/latest/topics/development/conventions/style.html
 
 * If appropriate, has the person who wrote the code which is being modified
   been notified and included in the process?
