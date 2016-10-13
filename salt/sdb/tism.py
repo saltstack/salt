@@ -25,7 +25,7 @@ A profile must be setup in the minion configuration or pillar.  If you want to u
       url: https://my.tismd:8080/decrypt
       token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6MSwiZXhwIjoxNTg1MTExNDYwLCJqdGkiOiI3NnA5cWNiMWdtdmw4Iiwia2V5cyI6WyJBTEwiXX0.RtAhG6Uorf5xnSf4Ya_GwJnoHkCsql4r1_hiOeDSLzo
 '''
-# import python libs
+
 import logging
 import json
 
@@ -36,11 +36,13 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "tism"
 
+
 def __virtual__():
     '''
     This module has no other system dependencies
     '''
     return __virtualname__
+
 
 def get(key, service=None, profile=None):  # pylint: disable=W0613
     '''
@@ -50,7 +52,7 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     if not profile.get('url') or not profile.get('token'):
         raise SaltConfigurationError("url and/or token missing from the tism sdb profile")
 
-    request = {"token": profile['token'], "encsecret": key} 
+    request = {"token": profile['token'], "encsecret": key}
 
     result = http.query(
         profile['url'],
@@ -61,7 +63,7 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     decrypted = result.get('body')
 
     if not decrypted:
-        log.warning('tism.get sdb decryption request failed with error {}'.format(result.get('error', 'unknown')))
+        log.warning('tism.get sdb decryption request failed with error {0}'.format(result.get('error', 'unknown')))
         return "ERROR"+str(result.get('status', 'unknown'))
 
     return decrypted
