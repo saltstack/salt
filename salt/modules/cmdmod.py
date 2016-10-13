@@ -2694,8 +2694,8 @@ def shell_info(shell):
 
     .. code-block:: bash
 
-        salt '*' cmd.shell bash
-        salt '*' cmd.shell powershell
+        salt '*' cmd.shell_info bash
+        salt '*' cmd.shell_info powershell
 
     ..
 

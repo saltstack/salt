@@ -186,7 +186,7 @@ VALID_OPTS = {
 
     # Append minion_id to these directories.  Helps with
     # multiple proxies and minions running on the same machine.
-    # Allowed elements in the list: pki_dir, cachedir, extension_modules
+    # Allowed elements in the list: pki_dir, cachedir, extension_modules, pidfile
     'append_minionid_config_dirs': list,
 
     # Flag to cache jobs locally.
@@ -977,7 +977,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
     },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'default_top': 'base',
     'fileserver_limit_traversal': False,
@@ -1195,7 +1195,7 @@ DEFAULT_MASTER_OPTS = {
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'environment': None,
     'default_top': 'base',
@@ -1440,7 +1440,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
-    'append_minionid_config_dirs': ['cachedir'],
+    'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
 }
 
@@ -3082,7 +3082,7 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+        if directory in ['pki_dir', 'cachedir', 'extension_modules', 'pidfile']:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
 

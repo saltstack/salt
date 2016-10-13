@@ -4,6 +4,21 @@
 Salt Release Notes - Codename Carbon
 ====================================
 
+Release Candidate
+=================
+
+See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the latest release candidate.
+
+Release Candidate Known Issues
+------------------------------
+
+- :issue:`36729`: Minion does not shutdown properly when attempting to start multiple minions on same host
+- :issue:`36693`: /etc/salt/master.d/schedule.conf schedule jobs fail to run
+- :issue:`36746`: When killing a job jid output missing
+- :issue:`36748`: Proxy minion is not working
+- :issue:`36134`: multi-master with failover does not failover when master goes down
+- :issue:`36804`: error when using pkg.installed with url source
+
 New Features
 ============
 
@@ -65,7 +80,7 @@ Ponies!
 -------
 
 We all agreed that cowsay was just not good enough, install the `ponysay`
-command and the new `pony` outputter will work. For for the whole family!
+command and the new `pony` outputter will work. Fun for the whole family!
 
 Additional Features
 -------------------
@@ -103,9 +118,22 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
-          
-- The ``junos`` state module is now available. It has all the functions 
+
+- The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
+
+New Top File Merging Strategy for States
+========================================
+
+A new strategy called ``merge_all`` has been added to provide a new way of
+merging top file matches when executing a :ref:`highstate <running-highstate>`.
+See the :conf_master:`top_file_merging_strategy` documentation for further
+information.
+
+In addition, the ``same`` merging strategy was not functioning as documented.
+This has now been corrected. While this is technically a bugfix, we decided to
+hold a change in top file merging until a feature release to minimize user
+impact.
 
 Config Changes
 ==============
@@ -181,7 +209,7 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
-  
+
 Junos Module Changes
 ===================
 
