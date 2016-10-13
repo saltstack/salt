@@ -4,11 +4,12 @@ Proxy Minion for Cisco NX OS Switches
 
 .. versionadded: Carbon
 
-The Cisco NX OS Proxy Minion uses the built in SSHConnection module in `salt.utils.vt_helper`
+The Cisco NX OS Proxy Minion uses the built in SSHConnection module in :mod:`salt.utils.vt_helper <salt.utils.vt_helper>`
 
-To configure the proxy minion, include the following in
+To configure the proxy minion:
 
 .. code-block:: yaml
+
     proxy:
       proxytype: nxos
       host: 192.168.187.100
@@ -224,8 +225,8 @@ def check_password(username, password, encrypted=False):
     .. code-block: bash
 
         salt '*' nxos.cmd check_password username=admin password=admin
-        salt '*' nxos.cmd check_password username=admin \
-            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \
+        salt '*' nxos.cmd check_password username=admin \\
+            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     '''
     hash_algorithms = {'1': 'md5',
@@ -266,8 +267,8 @@ def set_password(username, password, encrypted=False, role=None, crypt_salt=None
     .. code-block:: bash
 
         salt '*' nxos.cmd set_password admin TestPass
-        salt '*' nxos.cmd set_password admin \
-            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \
+        salt '*' nxos.cmd set_password admin \\
+            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     '''
     password_line = get_user(username)
