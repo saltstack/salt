@@ -284,7 +284,7 @@ class PkgModuleTest(integration.ModuleCase,
                 self.assertIn('vim', ret)
         else:
             ret = self.run_function('pkg.list_updates')
-            if ret == '':
+            if ret == '' or ret == {}:
                 self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
             else:
                 ret = self.run_function(func)

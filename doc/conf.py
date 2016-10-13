@@ -156,6 +156,8 @@ MOCK_MODULES = [
     'netaddr.core.AddrFormatError',
     'pyroute2',
     'pyroute2.ipdb',
+    'avahi',
+    'dbus',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -275,6 +277,7 @@ exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 extensions = [
     'saltdomain', # Must come early
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
