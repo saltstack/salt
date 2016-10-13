@@ -104,6 +104,7 @@ def __virtual__():
 def present(
         name,
         policy_document=None,
+        policy_document_from_pillars=None,
         path=None,
         policies=None,
         policies_from_pillars=None,
@@ -122,6 +123,11 @@ def present(
 
     policy_document
         The policy that grants an entity permission to assume the role. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
+
+    policy_document_from_pillars
+        A pillar key that contains a role policy document. The statements
+        defined here will be appended with the policy document statements
+        defined in the policy_document argument.
 
     path
         The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
@@ -166,8 +172,22 @@ def present(
         .. versionadded:: 2015.8.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    _ret = _role_present(name, policy_document, path, region, key, keyid,
+    # Build up _policy_document
+    _policy_document = {}
+    if policy_document_from_pillars:
+        from_pillars = __salt__['pillar.get'](policy_document_from_pillars)
+        if from_pillars:
+            _policy_document['Version'] = from_pillars['Version']
+            _policy_document.setdefault('Statement', [])
+            _policy_document['Statement'].extend(from_pillars['Statement'])
+    if policy_document:
+        _policy_document['Version'] = policy_document['Version']
+        _policy_document.setdefault('Statement', [])
+        _policy_document['Statement'].extend(policy_document['Statement'])
+    _ret = _role_present(name, _policy_document, path, region, key, keyid,
                          profile)
+
+    # Build up _policies
     if not policies:
         policies = {}
     if not policies_from_pillars:
