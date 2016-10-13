@@ -129,6 +129,8 @@ def present(
         defined here will be appended with the policy document statements
         defined in the policy_document argument.
 
+        .. versionadded:: Nitrogen
+
     path
         The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
 
