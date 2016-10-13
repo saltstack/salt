@@ -70,7 +70,9 @@ def running():
     '''
     Check apf status
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.running
     '''
     return True if _status_apf() else False
@@ -80,7 +82,9 @@ def disable():
     '''
     Stop (flush) all firewall rules
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.disable
     '''
     if _status_apf():
@@ -91,7 +95,9 @@ def enable():
     '''
     Load all firewall rules
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.enable
     '''
     if not _status_apf():
@@ -102,7 +108,9 @@ def reload():
     '''
     Stop (flush) & reload firewall rules
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.reload
     '''
     if not _status_apf():
@@ -113,7 +121,9 @@ def refresh():
     '''
     Refresh & resolve dns names in trust rules
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.refresh
     '''
     return __apf_cmd('-e')
@@ -123,7 +133,9 @@ def allow(ip, port=None):
     '''
     Add host (IP/FQDN) to allow_hosts.rules and immediately load new rule into firewall
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.allow 127.0.0.1
     '''
     if port is None:
@@ -134,7 +146,9 @@ def deny(ip):
     '''
     Add host (IP/FQDN) to deny_hosts.rules and immediately load new rule into firewall
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.deny 1.2.3.4
     '''
     return __apf_cmd('-d {0}'.format(ip))
@@ -144,7 +158,9 @@ def remove(ip):
     '''
     Remove host from [glob]*_hosts.rules and immediately remove rule from firewall
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' apf.remove 1.2.3.4
     '''
     return __apf_cmd('-u {0}'.format(ip))

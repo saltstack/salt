@@ -6,8 +6,12 @@ via Hipchat by setting the control parameter to ``True`` and using command
 prefaced with a ``!``. Only token key is required, but room and control
 keys make the engine interactive.
 .. versionadded: Carbon
+
+:depends: hypchat
 :configuration: Example configuration
+
     .. code-block:: yaml
+
         engines:
             hipchat:
                token: 'XXXXXX'
@@ -25,7 +29,6 @@ keys make the engine interactive.
                        cmd: jobs.list_jobs
                    list_commands:
                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
-:depends: hypchat
 '''
 
 from __future__ import absolute_import

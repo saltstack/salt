@@ -42,6 +42,7 @@ def start_service(service_name):
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' openstack_mng.start_service neutron
     '''
 
@@ -56,6 +57,7 @@ def stop_service(service_name):
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' openstack_mng.stop_service neutron
     '''
 

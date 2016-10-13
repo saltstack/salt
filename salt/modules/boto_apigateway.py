@@ -494,7 +494,7 @@ def create_api_key(name, description, enabled=True, stageKeys=None,
 
         salt myminion boto_apigateway.create_api_key name description enabled=False
 
-        salt myminion boto_apigateway.create_api_key name description \
+        salt myminion boto_apigateway.create_api_key name description \\
              stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
 
     '''
@@ -519,7 +519,7 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
         salt myminion boto_apigateway.delete_api_key apikeystring
 
@@ -572,7 +572,7 @@ def update_api_key_description(apiKey, description, region=None, key=None, keyid
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
         salt myminion boto_apigateway.update_api_key_description api_key description
 
@@ -591,7 +591,7 @@ def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
         salt myminion boto_apigateway.enable_api_key api_key
 
@@ -610,7 +610,7 @@ def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
         salt myminion boto_apigateway.enable_api_key api_key
 
@@ -629,9 +629,10 @@ def associate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, ke
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
-        salt myminion boto_apigateway.associate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
+        salt myminion boto_apigateway.associate_stagekeys_api_key \\
+                api_key '["restapi id/stage name", ...]'
 
     '''
     try:
@@ -649,9 +650,10 @@ def disassociate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None,
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
-        salt myminion boto_apigateway.disassociate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
+        salt myminion boto_apigateway.disassociate_stagekeys_api_key \\
+                api_key '["restapi id/stage name", ...]'
 
     '''
     try:
@@ -743,8 +745,8 @@ def create_api_deployment(restApiId, stageName, stageDescription='', description
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_deployent restApiId stagename stageDescription='' \
-             description='' cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
+        salt myminion boto_apigateway.create_api_deployent restApiId stagename stageDescription='' \\
+        description='' cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
 
     '''
     try:
@@ -873,7 +875,7 @@ def create_api_stage(restApiId, stageName, deploymentId, description='',
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_stage restApiId stagename deploymentId \
+        salt myminion boto_apigateway.create_api_stage restApiId stagename deploymentId \\
             description='' cacheClusterEnabled=True|False cacheClusterSize='0.5' variables='{"name": "value"}'
 
     '''
@@ -937,7 +939,7 @@ def create_api_method(restApiId, resourcePath, httpMethod, authorizationType,
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_method restApiId resourcePath, httpMethod, authorizationType, \
+        salt myminion boto_apigateway.create_api_method restApiId resourcePath, httpMethod, authorizationType, \\
             apiKeyRequired=False, requestParameters='{"name", "value"}', requestModels='{"content-type", "value"}'
 
     '''
@@ -1014,7 +1016,7 @@ def create_api_method_response(restApiId, resourcePath, httpMethod, statusCode, 
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_method_response restApiId resourcePath httpMethod \
+        salt myminion boto_apigateway.create_api_method_response restApiId resourcePath httpMethod \\
                statusCode responseParameters='{"name", "True|False"}' responseModels='{"content-type", "model"}'
 
     '''
@@ -1153,7 +1155,7 @@ def update_api_model_schema(restApiId, modelName, schema, region=None, key=None,
 
     CLI Example:
 
-    .. code_block:: bash
+    .. code-block:: bash
 
         salt myminion boto_apigateway.update_api_model_schema restApiId modelName schema
 
@@ -1335,7 +1337,7 @@ def create_api_integration(restApiId, resourcePath, httpMethod, integrationType,
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_integration restApiId resourcePath httpMethod \
+        salt myminion boto_apigateway.create_api_integration restApiId resourcePath httpMethod \\
                              integrationType integrationHttpMethod uri credentials ['{}' ['{}']]
 
     '''
@@ -1372,7 +1374,7 @@ def create_api_integration_response(restApiId, resourcePath, httpMethod, statusC
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_integration_response restApiId resourcePath httpMethod \
+        salt myminion boto_apigateway.create_api_integration_response restApiId resourcePath httpMethod \\
                             statusCode selectionPattern ['{}' ['{}']]
 
     '''
