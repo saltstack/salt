@@ -7,6 +7,9 @@ from __future__ import absolute_import
 import logging
 import os
 
+# Import Salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'powershell'

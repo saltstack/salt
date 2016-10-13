@@ -5,7 +5,6 @@ Manage Windows features via the ServerManager powershell module
 
 # Import Python libs
 from __future__ import absolute_import
-import ast
 import json
 import logging
 
