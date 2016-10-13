@@ -1552,6 +1552,9 @@ def os_data():
     # Get the hardware and bios data
     grains.update(_hw_data(grains))
 
+    # Get zpool data
+    grains.update(_zpool_data(grains))
+
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
@@ -2086,6 +2089,53 @@ def _mdata():
                 grains['mdata'][mdata_grain] = grain_data
 
     return grains
+
+
+def _zpool_data(grains):
+    '''
+    Provide grains about zpools
+    '''
+    # quickly return if windows or proxy
+    if salt.utils.is_windows() or 'proxyminion' in __opts__:
+        return {}
+
+    # quickly return if no zpool and zfs command
+    if not salt.utils.which('zpool'):
+        return {}
+
+    # collect zpool data
+    zpool_grains = {}
+
+    for zpool in __salt__['cmd.run']('zpool list -H -o name,health,size,alloc,free,cap').splitlines():
+        zpool = zpool.split()
+
+        # append zpool information
+        zpool_grains[zpool[0]] = {
+            'health':        zpool[1],
+            'size': {
+                'total':     zpool[2],
+                'free':      zpool[3],
+                'alloc':     zpool[4],
+                'cap_pct':   int(zpool[5][:-1])
+            },
+        }
+
+    # collect addition zpool data
+    if salt.utils.which('zfs'):
+        for zpool in zpool_grains.keys():
+            zpool_type_data = __salt__['cmd.run'](
+                'zfs list -H -t all -o type -r {0}'.format(zpool)
+            ).splitlines()
+            zpool_grains[zpool]['children'] = {
+                'datasets':  zpool_type_data.count('filesystem'),
+                'volumes':   zpool_type_data.count('volume'),
+                'snapshots': zpool_type_data.count('snapshot'),
+            }
+
+    # return grain data
+    if len(zpool_grains.keys()) < 1:
+        return {}
+    return {'zpool': zpool_grains}
 
 
 def get_server_id():
