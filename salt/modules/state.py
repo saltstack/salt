@@ -338,10 +338,10 @@ def high(data, test=None, queue=False, **kwargs):
             'is specified.'
         )
     try:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
                 context=__context__)
     except NameError:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
 
     ret = st_.call_high(data)
     _set_retcode(ret)
