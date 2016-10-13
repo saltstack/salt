@@ -602,7 +602,7 @@ class LocalClient(object):
         :returns: A generator
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        pub_data = self.run_job(
+        self.pub_data = self.run_job(
             tgt,
             fun,
             arg,
@@ -611,13 +611,13 @@ class LocalClient(object):
             timeout,
             **kwargs)
 
-        if not pub_data:
-            yield pub_data
+        if not self.pub_data:
+            yield self.pub_data
         else:
             try:
                 for fn_ret in self.get_cli_event_returns(
-                        pub_data['jid'],
-                        pub_data['minions'],
+                        self.pub_data['jid'],
+                        self.pub_data['minions'],
                         self._get_timeout(timeout),
                         tgt,
                         expr_form,
@@ -630,12 +630,16 @@ class LocalClient(object):
 
                     yield fn_ret
             except KeyboardInterrupt:
-                msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
-                       'The minions may not have all finished running and any '
-                       'remaining minions will return upon completion. To '
-                       'look up the return data for this job later run:\n'
-                       'salt-run jobs.lookup_jid {0}').format(pub_data['jid'])
-                raise SystemExit(msg)
+                raise SystemExit(
+                    '\n'
+                    'This job\'s jid is: {0}\n'
+                    'Exiting gracefully on Ctrl-c\n'
+                    'The minions may not have all finished running and any '
+                    'remaining minions will return upon completion. To look '
+                    'up the return data for this job later, run the following '
+                    'command:\n\n'
+                    'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid'])
+                )
 
     def cmd_iter(
             self,
