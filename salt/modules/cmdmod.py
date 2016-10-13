@@ -223,7 +223,7 @@ def _run(cmd,
          stderr=subprocess.PIPE,
          output_loglevel='debug',
          log_callback=None,
-         runas=None
+         runas=None,
          shell=DEFAULT_SHELL,
          python_shell=False,
          env=None,
