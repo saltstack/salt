@@ -492,7 +492,6 @@ def cmd_unzip(zip_file, dest, excludes=None,
     return _trim_files(files, trim_output)
 
 
-@salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
 def unzip(zip_file, dest, excludes=None,
           template=None, runas=None, trim_output=False, password=None):
     '''
