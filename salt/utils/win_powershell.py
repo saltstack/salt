@@ -51,5 +51,4 @@ def module_exists(name):
         if os.path.isfile(mod_path):
             return True
 
-    log.debug('Powershell Module {0} not installed'.format(name))
     return False
