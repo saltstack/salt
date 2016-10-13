@@ -255,7 +255,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
 
 def nics_skip(name, nics, ipv6):
     '''
-    Alias for func::csf.nics_skipped
+    Alias for :mod:`csf.nics_skipped <salt.states.csf.nics_skipped>`
     '''
     return nics_skipped(name, nics=nics, ipv6=ipv6)
 

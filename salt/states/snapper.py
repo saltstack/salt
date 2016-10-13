@@ -75,8 +75,8 @@ Once you take a new snapshot and you update the baseline snapshot number to
 include the change in ``/etc/hosts`` the ``hosts_entry`` rule will basically
 do nothing. You are free to leave it there for documentation, to ensure that
 the change is made in case the snapshot is wrong, but if you remove anything
-that comes after the ``snapper.baseline_snapshot`` as it will have no effect:
- by the moment the state is evaluated, the baseline state was already applied
+that comes after the ``snapper.baseline_snapshot`` as it will have no effect;
+by the moment the state is evaluated, the baseline state was already applied
 and include this change.
 
 .. warning::

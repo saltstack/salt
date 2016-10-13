@@ -6,8 +6,10 @@ HTTP Logstash engine
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint via HTTP requests.
 
-:configuration:
-    Example configuration
+:configuration: Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - http_logstash:
                 url: http://blabla.com/salt-stuff
