@@ -289,6 +289,11 @@ class PkgModuleTest(integration.ModuleCase,
             else:
                 ret = self.run_function(func)
 
+                if 'Problem encountered' in ret:
+                    self.skipTest('A problem was encountered when running pkg.upgrade. This test is '
+                                  'meant to catch no-ops or problems with the salt function itself, '
+                                  'not problems with actual package installation. Skipping.')
+
                 # The changes dictionary should not be empty.
                 self.assertNotEqual(ret, {})
                 if 'changes' in ret:
