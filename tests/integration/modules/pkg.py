@@ -275,14 +275,9 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertIn('changes', ret)
             self.assertIn('vim', ret['changes'])
         else:
-            ret = self.run_function('pkg.list_updates')
-            if ret == '' or ret == {}:
-                self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
-            else:
-                ret = self.run_function(func)
-
-                # The changes dictionary should not be empty.
-                self.assertNotEqual(ret, {})
+            self.skipTest('This test is meant to catch a no-op bug in Suse. Other distros should be '
+                          'skipped on the 2016.3 branch as there is no way to check for pkg upgrade '
+                          'problems before Carbon. See PRs #36450 and #36980 for a better test.')
 
 
 if __name__ == '__main__':
