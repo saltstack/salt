@@ -102,7 +102,7 @@ class NetworkTestCase(TestCase):
 
     def test_host_to_ip(self):
         ret = network.host_to_ip('www.saltstack.com')
-        self.assertEqual(ret, '198.58.116.50')
+        self.assertEqual(ret, '104.199.122.13')
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
