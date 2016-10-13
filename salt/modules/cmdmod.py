@@ -245,6 +245,10 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
+    # Remove whitespace from strings
+    if isinstance(cmd, six.string_types):
+        cmd = cmd.strip()
+
     if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
