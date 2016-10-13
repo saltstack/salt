@@ -17,6 +17,7 @@ from salt.exceptions import SaltInvocationError
 import ast
 import os
 import salt.utils
+import salt.utils.win_powershell
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -31,24 +32,13 @@ def __virtual__():
     '''
     Only works on Windows systems with the PKI PowerShell module installed.
     '''
-
-    def _module_present():
-        '''
-        Check for the presence of the PKI module.
-        '''
-        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'PKI' })"
-        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
-
-        if cmd_ret['retcode'] == 0:
-            return ast.literal_eval(cmd_ret['stdout'])
+    if not salt.utils.is_windows():
         return False
 
-    if salt.utils.is_windows():
-        if _module_present():
-            return __virtualname__
-        else:
-            _LOG.debug('PowerShell PKI module not available.')
-    return False
+    if not salt.utils.win_powershell.module_exists('PKI'):
+        return False, 'PowerShell PKI module not available'
+
+    return __virtualname__
 
 
 def _cmd_run(cmd, as_json=False):
