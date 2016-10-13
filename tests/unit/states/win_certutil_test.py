@@ -44,7 +44,7 @@ class CertUtilTestCase(TestCase):
             cache_mock.assert_called_once_with('/path/to/cert.cer', 'base')
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
-            add_mock.assert_called_once_with('/tmp/cert.cer', 'TrustedPublisher')
+            add_mock.assert_called_once_with('/path/to/cert.cer', 'TrustedPublisher')
             self.assertEqual(expected, out)
 
     def test_add_serial_missing(self):
@@ -122,7 +122,7 @@ class CertUtilTestCase(TestCase):
             cache_mock.assert_called_once_with('/path/to/cert.cer', 'base')
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
-            add_mock.assert_called_once_with('/tmp/cert.cer', 'TrustedPublisher')
+            add_mock.assert_called_once_with('/path/to/cert.cer', 'TrustedPublisher')
             self.assertEqual(expected, out)
 
     def test_del_serial(self):
