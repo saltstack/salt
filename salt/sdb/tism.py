@@ -26,9 +26,12 @@ A profile must be setup in the minion configuration or pillar.  If you want to u
       token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6MSwiZXhwIjoxNTg1MTExNDYwLCJqdGkiOiI3NnA5cWNiMWdtdmw4Iiwia2V5cyI6WyJBTEwiXX0.RtAhG6Uorf5xnSf4Ya_GwJnoHkCsql4r1_hiOeDSLzo
 '''
 
+# Import Python libs
+from __future__ import absolute_import
 import logging
 import json
 
+# Import Salt libs
 import salt.utils.http as http
 from salt.exceptions import SaltConfigurationError
 
