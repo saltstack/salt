@@ -2755,6 +2755,8 @@ def powershell(cmd,
         Default is 2. Values greater than 4 seem to greatly increase the time
         it takes for the command to complete for some commands. eg: ``dir``
 
+        .. versionadded:: 2016.3.4
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
