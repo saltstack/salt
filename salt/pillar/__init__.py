@@ -800,8 +800,8 @@ class Pillar(object):
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(pillar,
-                               self.opts['pillar'],
+                pillar = merge(self.opts['pillar'],
+                               pillar,
                                self.merge_strategy,
                                self.opts.get('renderer', 'yaml'),
                                self.opts.get('pillar_merge_lists', False))
