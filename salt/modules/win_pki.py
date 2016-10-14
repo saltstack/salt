@@ -17,7 +17,7 @@ from salt.exceptions import SaltInvocationError
 import ast
 import os
 import salt.utils
-import salt.utils.win_powershell
+import salt.utils.powershell
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -35,7 +35,7 @@ def __virtual__():
     if not salt.utils.is_windows():
         return False
 
-    if not salt.utils.win_powershell.module_exists('PKI'):
+    if not salt.utils.powershell.module_exists('PKI'):
         return False, 'PowerShell PKI module not available'
 
     return __virtualname__
