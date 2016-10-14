@@ -247,7 +247,7 @@ class ReactWrap(object):
         Wrap Caller to enable executing :ref:`caller modules <all-salt.caller>`
         '''
         log.debug("in caller with fun {0} args {1} kwargs {2}".format(fun, args, kwargs))
-        args = kwargs['args']
+        args = kwargs.get('args', [])
         if 'caller' not in self.client_cache:
             self.client_cache['caller'] = salt.client.Caller(self.opts['conf_file'])
         try:
