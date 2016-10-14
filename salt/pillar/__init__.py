@@ -613,10 +613,12 @@ class Pillar(object):
                             env_matches.append(item)
         return matches
 
-    def render_pstate(self, sls, saltenv, mods, defaults=None):
+    def render_pstate(self, sls, saltenv, mods, renderers=None, defaults=None):
         '''
         Collect a single pillar sls file and render it
         '''
+        if renderers is None:
+            renderers = self.rend
         if defaults is None:
             defaults = {}
         err = ''
@@ -656,7 +658,7 @@ class Pillar(object):
         state = None
         try:
             state = compile_template(fn_,
-                                     self.rend,
+                                     renderers,
                                      self.opts['renderer'],
                                      self.opts['renderer_blacklist'],
                                      self.opts['renderer_whitelist'],
@@ -724,7 +726,10 @@ class Pillar(object):
         Extract the sls pillar files from the matches and render them into the
         pillar
         '''
-        pillar = copy.copy(self.pillar_override)
+        pillar = self.__merge(
+            self.opts.get('pillar', {}),
+            self.pillar_override
+        )
         if errors is None:
             errors = []
         for saltenv, pstates in six.iteritems(matches):
@@ -745,7 +750,16 @@ class Pillar(object):
                     pstatefiles.append(sls_match)
 
             for sls in pstatefiles:
-                pstate, mods, err = self.render_pstate(sls, saltenv, mods)
+                opts = dict(self.opts, pillar=pillar)
+                utils = salt.loader.utils(opts)
+                functions = salt.loader.minion_mods(opts, utils=utils)
+                renderers = salt.loader.render(opts, functions)
+                pstate, mods, err = self.render_pstate(
+                    sls,
+                    saltenv,
+                    mods,
+                    renderers=renderers
+                )
 
                 if err:
                     errors += err

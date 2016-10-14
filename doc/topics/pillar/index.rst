@@ -263,6 +263,51 @@ Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
 
+
+Referencing Other Pillars
+=========================
+
+.. versionadded:: Nitrogen
+
+It is possible to reference pillar values that are defined in other
+pillar files. To do this, place any pillar SLS files with referenced pillar
+values *before* referencing SLS files in the Top file.
+
+For example with such Top file:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - settings
+        - postgres
+
+And such ``settings.sls`` file:
+
+.. code-block:: yaml
+
+    db:
+      name: qux
+      user: baz
+      password: supersecret
+
+Values from ``settings`` can be referenced from ``postgres`` like that:
+
+.. code-block:: yaml
+
+    postgres:
+      users:
+        {{ salt['pillar.get']('db:user', 'bar') }}:
+          ensure: present
+          password: {{ salt['pillar.get']('db:password', 'secret') }}
+      databases:
+        {{ salt['pillar.get']('db:name', 'foo') }}:
+          owner: '{{ salt['pillar.get']('db:user', 'bar') }}'
+          template: 'template0'
+          lc_ctype: 'en_US.UTF-8'
+          lc_collate: 'en_US.UTF-8'
+
+
 Including Other Pillars
 =======================
 
