@@ -82,6 +82,9 @@ def latest(name,
 
     update_head
         Should we update the head if new changes are found? Defaults to True
+
+        .. versionadded:: Nitrogen
+
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
