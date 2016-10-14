@@ -265,3 +265,9 @@ def beacon(config):
 
     # Return event data
     return ret
+
+
+def close(config):
+    if 'inotify.notifier' in __context__:
+        __context__['inotify.notifier'].stop()
+        del __context__['inotify.notifier']

@@ -86,7 +86,12 @@ class Beacon(object):
                         if re.match('state.*', job['fun']):
                             is_running = True
                     if is_running:
-                        log.info('Skipping beacon {0}. State run in progress.'.format(mod))
+                        close_str = '{0}.close'.format(mod)
+                        if close_str in self.beacons:
+                            log.info('Closing beacon {0}. State run in progress.'.format(mod))
+                            self.beacons[close_str](b_config[mod])
+                        else:
+                            log.info('Skipping beacon {0}. State run in progress.'.format(mod))
                         continue
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
