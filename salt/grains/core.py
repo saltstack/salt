@@ -2104,36 +2104,9 @@ def _zpool_data(grains):
         return {}
 
     # collect zpool data
-    zpool_grains = {}
-
-    for zpool in __salt__['cmd.run']('zpool list -H -o name,health,size,alloc,free,cap').splitlines():
-        zpool = zpool.split()
-
-        # append zpool information
-        zpool_grains[zpool[0]] = {
-            'health':        zpool[1],
-            'size': {
-                'total':     zpool[2],
-                'free':      zpool[3],
-                'alloc':     zpool[4],
-                'cap_pct':   int(zpool[5][:-1])
-            },
-        }
-
-    # collect addition zpool data
-    if salt.utils.which('zfs'):
-        for zpool in zpool_grains.keys():
-            zpool_type_data = __salt__['cmd.run'](
-                'zfs list -H -t all -o type -r {0}'.format(zpool)
-            ).splitlines()
-            zpool_grains[zpool]['children'] = {
-                'datasets':  zpool_type_data.count('filesystem'),
-                'volumes':   zpool_type_data.count('volume'),
-                'snapshots': zpool_type_data.count('snapshot'),
-            }
-
+    zpool_grains = __salt__['cmd.run']('zpool list -H -o name').splitlines()
     # return grain data
-    if len(zpool_grains.keys()) < 1:
+    if len(zpool_grains) < 1:
         return {}
     return {'zpool': zpool_grains}
 
