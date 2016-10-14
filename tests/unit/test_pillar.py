@@ -22,6 +22,82 @@ import salt.pillar
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PillarTestCase(TestCase):
+    def test_referencing_preceding_pillars(self):
+        '''
+        Pillars, that come first in the top file can be referenced from
+        the subsequent pillars.
+        '''
+        opts = {
+            'renderer': 'py',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'file_roots': {},
+            'extension_modules': ''
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+        pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+        top = tempfile.NamedTemporaryFile()
+        top.write(
+b'''#!yaml
+
+base:
+    '*':
+        - foo
+        - bar
+'''
+        )
+        top.flush()
+        foo = tempfile.NamedTemporaryFile()
+        foo.write(
+b'''#!py
+
+def run():
+    return {'foo': {'spam': 'eggs'}}
+'''
+        )
+        foo.flush()
+        bar = tempfile.NamedTemporaryFile()
+        bar.write(
+b'''#!py
+
+def run():
+    return {
+        'bar': {
+            'bacon': __pillar__.get('foo', {}).get('spam', 'cheddar'),
+            'sausage': __salt__['pillar.get']('foo:spam', 'cheddar')
+        }
+    }
+'''
+        )
+        bar.flush()
+
+        def get_state(sls, env):
+            return {
+                'foo': {'path': '', 'dest': foo.name},
+                'bar': {'path': '', 'dest': bar.name}
+            }[sls]
+
+        pillar.client = MagicMock(**{
+            'get_state.side_effect': get_state,
+            'cache_file.return_value': top.name
+        })
+        pillar.matcher = MagicMock()
+        pillar.matcher.confirm_top.return_value = True
+        actual_pillar_data = pillar.compile_pillar()
+        expected_pillar_data = {
+            'foo': {'spam': 'eggs'},
+            'bar': {'bacon': 'eggs', 'sausage': 'eggs'}
+        }
+        self.assertEqual(actual_pillar_data, expected_pillar_data)
 
     def tearDown(self):
         for attrname in ('generic_file', 'generic_minion_file', 'ssh_file', 'ssh_minion_file', 'top_file'):
