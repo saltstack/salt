@@ -108,6 +108,8 @@ def managed(name,
     process_dependency_links: False
         Run pip install with the --process_dependency_links flag.
 
+        .. versionadded:: Nitrogen
+
     Also accepts any kwargs that the virtualenv module will. However, some
     kwargs, such as the ``pip`` option, require ``- distribute: True``.
 
