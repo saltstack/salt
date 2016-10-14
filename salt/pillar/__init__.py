@@ -396,6 +396,21 @@ class Pillar(object):
             envs.update(list(self.opts['file_roots']))
         return envs
 
+    def __merge(self, *items):
+        '''
+        Merge 'items' according to Pillar's merge strategy and other options.
+        '''
+        return six.moves.reduce(
+            lambda a, b: merge(
+                a,
+                b,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False)
+            ),
+            items
+        )
+
     def get_tops(self):
         '''
         Gather the top files
@@ -698,12 +713,7 @@ class Pillar(object):
                                                 key_fragment: nstate
                                             }
 
-                                    state = merge(
-                                        state,
-                                        nstate,
-                                        self.merge_strategy,
-                                        self.opts.get('renderer', 'yaml'),
-                                        self.opts.get('pillar_merge_lists', False))
+                                    state = self.__merge(state, nstate)
 
                                 if err:
                                     errors += err
@@ -754,12 +764,7 @@ class Pillar(object):
                             )
                         )
                         continue
-                    pillar = merge(
-                        pillar,
-                        pstate,
-                        self.merge_strategy,
-                        self.opts.get('renderer', 'yaml'),
-                        self.opts.get('pillar_merge_lists', False))
+                    pillar = self.__merge(pillar, pstate)
 
         return pillar, errors
 
@@ -821,11 +826,7 @@ class Pillar(object):
         ext = None
         # Bring in CLI pillar data
         if self.pillar_override:
-            pillar = merge(pillar,
-                           self.pillar_override,
-                           self.merge_strategy,
-                           self.opts.get('renderer', 'yaml'),
-                           self.opts.get('pillar_merge_lists', False))
+            pillar = self.__merge(pillar, self.pillar_override)
 
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
@@ -858,12 +859,7 @@ class Pillar(object):
                         key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
-                pillar = merge(
-                    pillar,
-                    ext,
-                    self.merge_strategy,
-                    self.opts.get('renderer', 'yaml'),
-                    self.opts.get('pillar_merge_lists', False))
+                pillar = self.__merge(pillar, ext)
                 ext = None
         return pillar, errors
 
@@ -880,11 +876,7 @@ class Pillar(object):
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(self.opts['pillar'],
-                               pillar,
-                               self.merge_strategy,
-                               self.opts.get('renderer', 'yaml'),
-                               self.opts.get('pillar_merge_lists', False))
+                pillar = self.__merge(self.opts['pillar'], pillar)
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
@@ -908,11 +900,7 @@ class Pillar(object):
             pillar['_errors'] = errors
 
         if self.pillar_override:
-            pillar = merge(pillar,
-                           self.pillar_override,
-                           self.merge_strategy,
-                           self.opts.get('renderer', 'yaml'),
-                           self.opts.get('pillar_merge_lists', False))
+            pillar = self.__merge(pillar, self.pillar_override)
 
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
