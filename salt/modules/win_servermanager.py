@@ -15,7 +15,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-import salt.utils.win_powershell
+import salt.utils.powershell
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def __virtual__():
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
 
-    if not salt.utils.win_powershell.module_exists('ServerManager'):
+    if not salt.utils.powershell.module_exists('ServerManager'):
         return False, 'Failed to load win_servermanager module: ' \
                       'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'

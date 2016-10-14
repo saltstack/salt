@@ -25,6 +25,7 @@ import tempfile
 
 # Import salt libs
 import salt.utils
+import salt.utils.powershell
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
@@ -2743,6 +2744,9 @@ def shell_info(shell):
                     else:
                         # keys are lower case as python is case sensitive the registry is not
                         ret[attribute['vname'].lower()] = attribute['vdata']
+        # Get a list of the PowerShell modules which are potentially available
+        # to be imported
+        ret['availablemodules'] = salt.utils.powershell.get_modules()
     else:
         if shell not in regex_shells:
             return {
