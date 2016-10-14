@@ -7,28 +7,12 @@ from __future__ import absolute_import
 import logging
 import os
 
-# Import Salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
-
-__virtualname__ = 'powershell'
-
-
-def __virtual__():
-    '''
-    Load only on Systems with PowerShell
-    '''
-    if not __salt__['cmd.shell_info']('powershell')['installed']:
-        return (False, 'Failed to load win_powershell: '
-                       'The utility only works on systems with PowerShell.')
-    return __virtualname__
 
 
 def module_exists(name):
     '''
-    See if a module is installed
-    Look in paths specified in PSModulePath environment variable
+    Check if a module exists on the system.
 
     Use this utility instead of attempting to import the module with powershell.
     Using powershell to try to import the module is expensive.
@@ -54,8 +38,8 @@ def module_exists(name):
 def get_modules():
     '''
     Get a list of the PowerShell modules which are potentially available to be
-    imported. The intent is to mimick the functionality of ``Get-Module
-    -ListAvaiable | Select-Object -Expand Name``, without the delay of loading
+    imported. The intent is to mimic the functionality of ``Get-Module
+    -ListAvailable | Select-Object -Expand Name``, without the delay of loading
     PowerShell to do so.
 
     Returns:
@@ -94,9 +78,10 @@ def get_modules():
                 if file_extension.lower() in valid_extensions:
                     dir_name = os.path.basename(os.path.normpath(root_dir))
 
-                    # Stop recursing once we find a match, and use
+                    # Stop recursion once we find a match, and use
                     # the capitalization from the directory name.
-                    if dir_name not in ret and base_name.lower() == dir_name.lower():
+                    if dir_name not in ret and \
+                            base_name.lower() == dir_name.lower():
                         del sub_dirs[:]
                         ret.append(dir_name)
 
