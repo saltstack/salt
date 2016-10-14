@@ -60,7 +60,10 @@ def install(pkg, target='LocalSystem', store=False, allow_untrusted=False):
 
         salt '*' macpackage.install test.pkg
     '''
-    pkg = _quote(pkg)
+    if '*.' not in pkg:
+        # If we use wildcards, we cannot use quotes
+        pkg = _quote(pkg)
+    
     target = _quote(target)
 
     cmd = 'installer -pkg {0} -target {1}'.format(pkg, target)
