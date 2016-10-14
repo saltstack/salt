@@ -419,6 +419,25 @@ def get_pem_entry(text, pem_type=None):
 
     _match = None
 
+    if len(text.splitlines()) == 1 and text.startswith('-----') and text.endswith('-----'):
+        # mine.get returns the PEM on a single line, we fix this
+        pem_fixed = []
+        pem_temp = text
+        while len(pem_temp) > 0:
+            if pem_temp.startswith('-----'):
+                # Grab ----(.*)---- blocks
+                pem_fixed.append(pem_temp[:pem_temp.index('-----', 5)+5])
+                pem_temp = pem_temp[pem_temp.index('-----', 5)+5:]
+            else:
+                # grab base64 chunks
+                if pem_temp[:64].count('-') == 0:
+                    pem_fixed.append(pem_temp[:64])
+                    pem_temp = pem_temp[64:]
+                else:
+                    pem_fixed.append(pem_temp[:pem_temp.index('-')])
+                    pem_temp = pem_temp[pem_temp.index('-'):]
+        text = "\n".join(pem_fixed)
+
     if not pem_type:
         # Find using a regex iterator, pick the first match
         for _match in PEM_RE.finditer(text):
