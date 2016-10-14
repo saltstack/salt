@@ -180,6 +180,26 @@ def get_fqhostname():
     except socket.gaierror:
         pass
 
+    # remove empty elements
+    l = [h for h in l if h]
+
+    # apply minimal weighting
+    def _weighted_hostname(e):
+        # favor hostnames w/o spaces
+        if ' ' in e:
+            first = 1
+        else:
+            first = -1
+
+        # favor hosts with more dots
+        second = -(e.count('.'))
+
+        # favor longest fqdn
+        third = -(len(e))
+
+        return (first, second, third)
+    l = sorted(l, key=_weighted_hostname)
+
     return l and l[0] or None
 
 
