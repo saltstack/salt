@@ -2104,9 +2104,13 @@ def _zpool_data(grains):
         return {}
 
     # collect zpool data
-    zpool_grains = __salt__['cmd.run']('zpool list -H -o name').splitlines()
+    zpool_grains = {}
+    for zpool in __salt__['cmd.run']('zpool list -H -o name,size').splitlines():
+        zpool = zpool.split()
+        zpool_grains[zpool[0]] = zpool[1]
+
     # return grain data
-    if len(zpool_grains) < 1:
+    if len(zpool_grains.keys()) < 1:
         return {}
     return {'zpool': zpool_grains}
 
