@@ -524,7 +524,8 @@ def list_updates(software=True,
 
     # If the list is empty after filtering, return a message
     if not updates:
-        return 'No updates found. Check software and drivers parameters. One must be true.'
+        return 'No updates found. Check software and drivers parameters. One ' \
+               'must be true.'
 
     if install:
         guid_list = []
