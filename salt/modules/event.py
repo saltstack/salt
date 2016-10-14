@@ -226,7 +226,7 @@ def send(tag,
     if isinstance(data, collections.Mapping):
         data_dict.update(data)
 
-    if __opts__.get('file_client') == 'local':
+    if __opts__.get('local') or __opts__.get('file_client') == 'local' or __opts__.get('master_type') == 'disable':
         return fire(data_dict, tag)
     else:
         return fire_master(data_dict, tag, preload=preload)
