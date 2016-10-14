@@ -22,6 +22,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 hg.__opts__ = {}
+hg.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -55,6 +56,70 @@ class HgTestCase(TestCase):
                 with patch.object(hg, '_clone_repo', mock):
                     self.assertDictEqual(hg.latest("salt", target="c:\\salt"),
                                          ret)
+
+    def test_latest_update_changes(self):
+        '''
+            Test to make sure we don't update even if we have changes
+        '''
+        ret = {'changes': {}, 'comment': '',
+               'name': 'salt', 'result': True}
+        revision_mock = MagicMock(return_value='abcdef')
+        pull_mock = MagicMock(return_value='Blah.')
+        update_mock = MagicMock()
+
+        with patch.dict(hg.__salt__, {'hg.revision': revision_mock,
+                                      'hg.pull': pull_mock,
+                                      'hg.update': update_mock}):
+            mock = MagicMock(side_effect=[True, True])
+            with patch.object(os.path, 'isdir', mock):
+                mock = MagicMock(return_value=True)
+                with patch.dict(hg.__opts__, {'test': False}):
+                    with patch.object(hg, '_clone_repo', mock):
+                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=True), ret)
+                        assert update_mock.called
+
+    def test_latest_no_update_changes(self):
+        '''
+            Test to make sure we don't update even if we have changes
+        '''
+        ret = {'changes': {}, 'comment': 'Update is probably required but update_head=False so we will skip updating.',
+               'name': 'salt', 'result': True}
+        revision_mock = MagicMock(return_value='abcdef')
+        pull_mock = MagicMock(return_value='Blah.')
+        update_mock = MagicMock()
+
+        with patch.dict(hg.__salt__, {'hg.revision': revision_mock,
+                                      'hg.pull': pull_mock,
+                                      'hg.update': update_mock}):
+            mock = MagicMock(side_effect=[True, True])
+            with patch.object(os.path, 'isdir', mock):
+                mock = MagicMock(return_value=True)
+                with patch.dict(hg.__opts__, {'test': False}):
+                    with patch.object(hg, '_clone_repo', mock):
+                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=False), ret)
+                        assert not update_mock.called
+
+    def test_latest_no_update_no_changes(self):
+        '''
+            Test to Make sure the repository is cloned to
+            the given directory and is up to date
+        '''
+        ret = {'changes': {}, 'comment': 'No changes found and update_head=False so will skip updating.',
+               'name': 'salt', 'result': True}
+        revision_mock = MagicMock(return_value='abcdef')
+        pull_mock = MagicMock(return_value='Blah no changes found.')
+        update_mock = MagicMock()
+
+        with patch.dict(hg.__salt__, {'hg.revision': revision_mock,
+                                      'hg.pull': pull_mock,
+                                      'hg.update': update_mock}):
+            mock = MagicMock(side_effect=[True, True])
+            with patch.object(os.path, 'isdir', mock):
+                mock = MagicMock(return_value=True)
+                with patch.dict(hg.__opts__, {'test': False}):
+                    with patch.object(hg, '_clone_repo', mock):
+                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=False), ret)
+                        assert not update_mock.called
 
 
 if __name__ == '__main__':
