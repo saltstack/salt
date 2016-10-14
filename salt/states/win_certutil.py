@@ -62,7 +62,7 @@ def add_store(name, store, saltenv='base'):
         serials = __salt__['certutil.get_stored_cert_serials'](store)
 
         if cert_serial not in serials:
-            out = __salt__['certutil.add_store'](cert_file, store)
+            out = __salt__['certutil.add_store'](name, store)
             if "successfully" in out:
                 ret['changes']['added'] = name
             else:
