@@ -76,7 +76,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
-    tgt = salt.utils.mkstemp(prefix=bname, dir=dname)
+    tgt = mkstemp(prefix=bname, dir=dname)
     shutil.copyfile(source, tgt)
     bkroot = ''
     if cachedir:

@@ -13,6 +13,7 @@ import fnmatch
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.utils.files
 import salt.utils.url
 import salt.crypt
 import salt.transport
@@ -137,7 +138,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         temp file, rendering that file, and returning the result.
         '''
         # write out path to temp file
-        tmp_path_fn = salt.utils.mkstemp()
+        tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](

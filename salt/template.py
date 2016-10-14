@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.utils.odict import OrderedDict
 from salt._compat import string_io
 from salt.ext.six import string_types
@@ -128,7 +129,7 @@ def compile_template_str(template, renderers, default, blacklist, whitelist):
     Take template as a string and return the high data structure
     derived from the template.
     '''
-    fn_ = salt.utils.mkstemp()
+    fn_ = salt.utils.files.mkstemp()
     with salt.utils.fopen(fn_, 'wb') as ofile:
         ofile.write(SLS_ENCODER(template)[0])
     return compile_template(fn_, renderers, default, blacklist, whitelist)

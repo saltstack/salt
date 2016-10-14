@@ -268,6 +268,7 @@ import salt.loader
 import salt.payload
 import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
@@ -1792,7 +1793,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()+tmp_ext
+        tmp_filename = salt.utils.files.mkstemp() + tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):

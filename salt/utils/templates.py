@@ -20,6 +20,7 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.yamlencoding
 import salt.utils.locales
 from salt.exceptions import (
@@ -526,7 +527,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         if string:
             return {'result': True,
                     'data': data}
-        tgt = salt.utils.mkstemp()
+        tgt = salt.utils.files.mkstemp()
         with salt.utils.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,

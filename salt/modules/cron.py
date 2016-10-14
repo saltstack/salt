@@ -15,6 +15,7 @@ import random
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.ext.six.moves import range
 
 
@@ -220,7 +221,7 @@ def _write_cron_lines(user, lines):
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
     appUser = __opts__['user']
-    path = salt.utils.mkstemp()
+    path = salt.utils.files.mkstemp()
     if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
         # on solaris/aix we change to the user before executing the commands
         with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
