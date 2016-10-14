@@ -299,3 +299,30 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     hmac_hash = hmac.new(key, msg, hashlib.sha256)
     valid_hmac = base64.b64encode(hmac_hash.digest())
     return valid_hmac == challenge
+
+
+def github_signature(string, shared_secret, challenge_hmac):
+    '''
+    Verify a challenging hmac signature against a string / shared-secret for
+    github webhooks.
+
+    .. versionadded:: Nitrogen
+
+    Returns a boolean if the verification succeeded or failed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.github_signature '{"ref":....} ' 'shared secret' 'sha1=bc6550fc290acf5b42283fa8deaf55cea0f8c206'
+    '''
+    if six.PY3:
+        msg = salt.utils.to_bytes(string)
+        key = salt.utils.to_bytes(shared_secret)
+        hashtype, challenge = salt.utils.to_bytes(challenge_hmac).split('=')
+    else:
+        msg = string
+        key = shared_secret
+        hashtype, challenge = challenge_hmac.split('=')
+    hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
+    return hmac_hash.hexdigest() == challenge

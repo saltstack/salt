@@ -20,6 +20,7 @@ class HashutilTestCase(ModuleCase):
     the_string_sha256 = 'd49859ccbc854fa68d800b5734efc70d72383e6479d545468bc300263164ff33'
     the_string_sha512 = 'a8c174a7941c64a068e686812a2fafd7624c840fde800f5965fbeca675f2f6e37061ffe41e17728c919bdea290eab7a21e13c04ae71661955a87f2e0e04bb045'
     the_string_hmac = 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ='
+    the_string_github = 'sha1=b06aa56bdf4935eec82c4e53e83ed03f03fdb32d'
 
     def setUp(self):
         minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
@@ -50,6 +51,13 @@ class HashutilTestCase(ModuleCase):
                 self.the_string,
                 'shared secret',
                 self.the_string_hmac)
+        self.assertTrue(ret)
+
+    def test_github_signature(self):
+        ret = self.hashutil['hashutil.github_signature'](
+                self.the_string,
+                'shared secret',
+                self.the_string_github)
         self.assertTrue(ret)
 
 
