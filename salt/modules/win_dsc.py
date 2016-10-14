@@ -8,7 +8,6 @@ Module for working with DSC (Alpha)
 from __future__ import absolute_import, unicode_literals
 
 # Import python libs
-import copy
 import logging
 import json
 import os
