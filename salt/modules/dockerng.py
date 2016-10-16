@@ -287,6 +287,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.decorators
+import salt.utils.files
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -4387,7 +4388,7 @@ def save(name,
             )
 
     if compression:
-        saved_path = salt.utils.mkstemp()
+        saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
 
@@ -5145,9 +5146,9 @@ def _script(name,
                 )
             )
 
-    path = salt.utils.mkstemp(dir='/tmp',
-                              prefix='salt',
-                              suffix=os.path.splitext(source)[1])
+    path = salt.utils.files.mkstemp(dir='/tmp',
+                                    prefix='salt',
+                                    suffix=os.path.splitext(source)[1])
     if template:
         fn_ = __salt__['cp.get_template'](source, path, template, saltenv)
         if not fn_:

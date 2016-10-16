@@ -171,6 +171,7 @@ import types
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils
+import salt.utils.files
 import salt.utils.odict
 
 # Import 3rd-party libs
@@ -2179,7 +2180,7 @@ def _script(status,
                 )
             kwargs.pop('env')
 
-        path = salt.utils.mkstemp(dir=tpath)
+        path = salt.utils.files.mkstemp(dir=tpath)
         if template:
             __salt__['cp.get_template'](
                 source, path, template, saltenv, **kwargs)

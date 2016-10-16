@@ -49,6 +49,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import SaltInvocationError
 
@@ -168,7 +169,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     if password is None:
         password = __salt__['config.option']('postgres.pass')
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
@@ -222,7 +223,7 @@ def _run_initdb(name,
         cmd.append('--locale={0}'.format(locale))
 
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}'.format(password))
             __salt__['file.chown'](pgpassfile, runas, '')

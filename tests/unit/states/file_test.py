@@ -6,7 +6,6 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import json
 import pprint
-import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -32,6 +31,7 @@ import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
 import salt
 import salt.utils
+import salt.utils.files
 import os
 import shutil
 
@@ -148,7 +148,7 @@ class FileTestCase(TestCase):
         Test to create a symlink.
         '''
         name = '/tmp/testfile.txt'
-        target = tempfile.mkstemp()[1]
+        target = salt.utils.files.mkstemp()
         test_dir = '/tmp'
         user = 'salt'
 
@@ -656,7 +656,7 @@ class FileTestCase(TestCase):
                                                  (name, user=user, group=group,
                                                   contents='A'), ret)
 
-                            with patch.object(salt.utils, 'mkstemp',
+                            with patch.object(salt.utils.files, 'mkstemp',
                                               return_value=name):
                                 comt = ('Unable to copy file {0} to {1}: '
                                         .format(name, name))

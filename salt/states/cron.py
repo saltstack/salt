@@ -144,6 +144,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
@@ -472,7 +473,7 @@ def file(name,
     mode = salt.utils.normalize_mode('0600')
     owner, group, crontab_dir = _get_cron_info()
 
-    cron_path = salt.utils.mkstemp()
+    cron_path = salt.utils.files.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):

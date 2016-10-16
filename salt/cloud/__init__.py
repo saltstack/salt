@@ -31,6 +31,7 @@ import salt.client
 import salt.loader
 import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.syspaths
 from salt.utils import reinit_crypto
 from salt.utils import context
@@ -2092,7 +2093,7 @@ class Map(Cloud):
 
             # Generate the fingerprint of the master pubkey in order to
             # mitigate man-in-the-middle attacks
-            master_temp_pub = salt.utils.mkstemp()
+            master_temp_pub = salt.utils.files.mkstemp()
             with salt.utils.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
             master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
