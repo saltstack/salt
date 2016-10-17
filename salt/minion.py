@@ -1993,7 +1993,11 @@ class Minion(MinionBase):
                         # re-init the subsystems to work with the new master
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
+                        # put the current schedule into the new loaders
+                        self.opts['schedule'] = self.schedule.option('schedule')
                         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+                        # make the schedule to use the new 'functions' loader
+                        self.schedule.functions = self.functions
                         self.pub_channel.on_recv(self._handle_payload)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')

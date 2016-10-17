@@ -101,6 +101,12 @@ which point the normal beacon interval will resume.
 
 .. _beacon-example:
 
+.. note::
+    For beacon writers:  If you need extra stuff to happen, like closing file
+    handles for the ``disable_during_state_run`` to actually work, you can add
+    a `close()` function to the beacon to run those extra things. See the
+    `inotify` beacon.
+
 Beacon Example
 ==============
 
