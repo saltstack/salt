@@ -4679,10 +4679,8 @@ def get_pid(name, path=None):
     pid = filter(lambda line: re.match(r'\s*PID', line) != None, info)[0].split(':')[1].strip()
     return pid
 
-def add_veth(name,
-          interface_name,
-          bridge=None,
-          path=None):
+
+def add_veth(name, interface_name, bridge=None, path=None):
     '''
     Add a veth to a container.
     Note : this function doesn't update the container config, just add the interface at runtime
@@ -4762,4 +4760,3 @@ def add_veth(name,
 
     if bridge is not None:
         __salt__['bridge.addif'](bridge, random_veth)
-
