@@ -220,6 +220,22 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('Windows', data)
             self.assertNotIn('AYBABTU', data)
 
+    def test_get_url_https_no_dest(self):
+        '''
+        cp.get_url with https:// source given and destination set as None
+        '''
+        tgt = None
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                'https://repo.saltstack.com/index.html',
+                tgt,
+            ])
+        self.assertIn('Bootstrap', ret)
+        self.assertIn('Debian', ret)
+        self.assertIn('Windows', ret)
+        self.assertNotIn('AYBABTU', ret)
+
     def test_cache_file(self):
         '''
         cp.cache_file

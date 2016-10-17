@@ -322,7 +322,13 @@ def get_url(path, dest='', saltenv='base', env=None):
         destination path. If this parameter is omitted or set as empty string
         (``''``), the function places the file on the local filesystem inside
         the Minion cache directory and will return the path to that file.
-        To simply return the file contents instead, set destination to ``None``.
+
+        .. note::
+
+            To simply return the file contents instead, set destination to
+            ``None``. This works with ``salt://``, ``http://`` and ``https://``
+            URLs. The files fetched by ``http://`` and ``https://`` will not be
+            cached.
 
     saltenv : base
         Salt fileserver envrionment from which to retrieve the file. Ignored if
