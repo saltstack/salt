@@ -30,7 +30,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['letsencrypt-auto', '/opt/letsencrypt/letsencrypt-auto'])
+LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+                            'certbot-auto', 'letsencrypt-auto',
+                            '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
 
 
