@@ -160,6 +160,9 @@ dictionary. For example:
         grains['anothergrain'] = 'somevalue'
         return grains
 
+The name of the function does not matter and will not factor into the grains
+data at all; only the keys/values returned become part of the grains.
+
 When to Use a Custom Grain
 --------------------------
 
