@@ -133,20 +133,30 @@ Writing Grains
 ==============
 
 Consider adding grains when the information is needed for targeting within
-top.sls or salt cli. The grains should only contain the **bare minimum data**
-required for targeting. The "name" and "data structure" of the grain should be
-design to support many platforms, operating systems or applications. Most of the
-time an "execution module" called from within Jinja template will provide the
-necessary detail information for a Salt State. Consider if the idea for a grain
-should be developed as a execution module rather than a grain or a combination
-of both keeping minimum data within the grain.
+top.sls or the Salt CLI. The grains should only contain the **bare minimum
+data** required for targeting. The name and data structure of the grain should
+be designed to support many platforms, operating systems or applications. Also,
+consider whether or not the information is likely to change. Grains are for the
+most part static data that should rarely (if ever) change. Information that is
+more dynamic should be retrived by an execution module. Also, keep in mind that
+Jinja templating in Salt supports invoking functions from execution modules, so
+there's no need to place information in grains to make it available to Jinja
+templates:
 
-The grains interface is derived by executing
-all of the "public" functions found in the modules located in the grains
-package or the custom grains directory. The functions in the modules of
-the grains must return a Python :ref:`dict <python2:typesmapping>`, where the
-keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and
-the values are the values.
+.. code-block:: text
+
+    ...
+    ...
+    {{ salt['module.function_name']('argument_1, 'argument_2') }}
+    ...
+    ...
+
+The grains interface is derived by executing all of the "public" functions
+(i.e. those which do not begin with an underscore) found in the modules located
+in the grains package or the custom grains directory. The functions in the
+modules of the grains must return a Python :ref:`dict <python2:typesmapping>`,
+where the keys in the :ref:`dict <python2:typesmapping>` are the names of the
+grains and the values are the values.
 
 Custom grains should be placed in a ``_grains`` directory located under the
 :conf_master:`file_roots` specified by the master config file.  The default path
