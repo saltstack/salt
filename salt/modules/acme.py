@@ -9,10 +9,6 @@ This module currently uses letsencrypt-auto, which needs to be available in the 
 
 .. note::
 
-    Currently only the webroot authentication is tested/implemented.
-
-.. note::
-
     Installation & configuration of the Let's Encrypt client can for example be done using
     https://github.com/saltstack-formulas/letsencrypt-formula
 
@@ -34,7 +30,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['letsencrypt-auto', '/opt/letsencrypt/letsencrypt-auto'])
+LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+                            'certbot-auto', 'letsencrypt-auto',
+                            '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
 
 
@@ -104,7 +102,7 @@ def cert(name,
     :param name: Common Name of the certificate (DNS name of certificate)
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
-    :param webroot: True or full path to webroot used for authentication
+    :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
@@ -120,7 +118,7 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly']
+    cmd = [LEA, 'certonly', '--quiet']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
@@ -149,6 +147,8 @@ def cert(name,
         cmd.append('--authenticator webroot')
         if webroot is not True:
             cmd.append('--webroot-path {0}'.format(webroot))
+    else:
+        cmd.append('--authenticator standalone')
 
     if email:
         cmd.append('--email {0}'.format(email))
