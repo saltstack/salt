@@ -30,6 +30,10 @@ Complete example
       user: 'salt'
       pass: 'super_secret_password'
       db: 'salt_db'
+      port: 3306
+      ssl:
+        cert: /etc/mysql/client-cert.pem
+        key: /etc/mysql/client-key.pem
 
     ext_pillar:
       - mysql:
@@ -83,7 +87,8 @@ class MySQLExtPillar(SqlBaseExtPillar):
                     'user': 'salt',
                     'pass': 'salt',
                     'db': 'salt',
-                    'port': 3306}
+                    'port': 3306,
+                    'ssl': {}}
         _options = {}
         _opts = __opts__.get('mysql', {})
         for attr in defaults:
@@ -103,7 +108,8 @@ class MySQLExtPillar(SqlBaseExtPillar):
         conn = MySQLdb.connect(host=_options['host'],
                                user=_options['user'],
                                passwd=_options['pass'],
-                               db=_options['db'], port=_options['port'])
+                               db=_options['db'], port=_options['port'],
+                               ssl=_options['ssl'])
         cursor = conn.cursor()
         try:
             yield cursor

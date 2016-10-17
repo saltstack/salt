@@ -35,6 +35,7 @@ import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import reload_module
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -1286,7 +1287,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for submodule in submodules:
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + '.'):
-                reload(submodule)
+                reload_module(submodule)
                 self._reload_submodules(submodule)
 
     def _load_module(self, name):
@@ -1337,14 +1338,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             raise
         except ImportError as exc:
             if 'magic number' in str(exc):
-                log.warning('Failed to import {0} {1}. Bad magic number. If migrating '
-                        'from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name))
+                error_msg = 'Failed to import {0} {1}. Bad magic number. If migrating from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name)
+                log.warning(error_msg)
+                self.missing_modules[name] = error_msg
             log.debug(
                 'Failed to import {0} {1}:\n'.format(
                     self.tag, name
                 ),
                 exc_info=True
             )
+            self.missing_modules[name] = exc
             return False
         except Exception as error:
             log.error(
@@ -1354,14 +1357,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
+            self.missing_modules[name] = error
             return False
-        except SystemExit:
+        except SystemExit as error:
             log.error(
                 'Failed to import {0} {1} as the module called exit()\n'.format(
                     self.tag, name
                 ),
                 exc_info=True
             )
+            self.missing_modules[name] = error
             return False
         finally:
             sys.path.remove(fpath_dirname)

@@ -88,7 +88,9 @@ if _has_required_boto():
                   EBSOptions={},
                   AccessPolicies={},
                   SnapshotOptions={},
-                  AdvancedOptions={})
+                  AdvancedOptions={},
+                  ElasticsearchVersion='1.5',
+                  )
 
 
 class BotoElasticsearchDomainStateTestCaseBase(TestCase):

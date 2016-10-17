@@ -50,7 +50,8 @@ Walkthrough <tutorial-gitfs>`.
 from __future__ import absolute_import
 import logging
 
-PER_REMOTE_OVERRIDES = ('base', 'mountpoint', 'root', 'ssl_verify')
+PER_REMOTE_OVERRIDES = ('base', 'mountpoint', 'root', 'ssl_verify',
+                        'env_whitelist', 'env_blacklist')
 PER_REMOTE_ONLY = ('name', 'saltenv')
 
 # Auth support (auth params can be global or per-remote, too)

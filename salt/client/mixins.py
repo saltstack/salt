@@ -10,6 +10,7 @@ import logging
 import weakref
 import traceback
 import collections
+import copy as pycopy
 
 # Import Salt libs
 import salt.exceptions
@@ -332,13 +333,14 @@ class SyncClientMixin(object):
                         }
 
         try:
-            salt.utils.lazy.verify_fun(self.functions, fun)
+            self_functions = pycopy.copy(self.functions)
+            salt.utils.lazy.verify_fun(self_functions, fun)
 
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
 
-            for mod_name in six.iterkeys(self.functions):
+            for mod_name in six.iterkeys(self_functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)

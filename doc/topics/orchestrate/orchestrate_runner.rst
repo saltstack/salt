@@ -24,12 +24,10 @@ The Orchestrate Runner
     used.
   * The states/functions will also work on salt-ssh minions.
 
-  The Orchestrate Runner was added with the intent to eventually deprecate the
-  OverState system, however the OverState will still be maintained until Salt
-  2015.8.0.
+  The Orchestrate Runner replaced the OverState system in Salt 2015.8.0.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
-context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are
+context.  Whereas the ``state.sls``, ``state.highstate``, et al. functions are
 concurrently and independently executed on each Salt minion, the
 ``state.orchestrate`` runner is executed on the master, giving it a
 master-level view and control over requisites, such as state ordering and
@@ -38,13 +36,25 @@ application of states on different minions that must not happen simultaneously,
 or for halting the state run on all minions if a minion fails one of its
 states.
 
-If you want to setup a load balancer in front of a cluster of web servers, for
-example, you can ensure the load balancer is setup before the web servers or
-stop the state run altogether if one of the minions does not set up correctly.
+If you want to set up a load balancer in front of a cluster of web servers, for
+example, you can ensure the load balancer is set up before the web servers or
+stop the state run altogether if a minion fails to apply any states.
 
-The ``state.sls``, ``state.highstate``, et al functions allow you to statefully
+The ``state.sls``, ``state.highstate``, et al. functions allow you to statefully
 manage each minion and the ``state.orchestrate`` runner allows you to
 statefully manage your entire infrastructure.
+
+Writing SLS Files
+~~~~~~~~~~~~~~~~~
+
+Orchestrate SLS files are stored in the same location as State SLS files. This
+means that both ``file_roots`` and ``gitfs_remotes`` impact what SLS files are
+available to the reactor and orchestrator.
+
+It is recommended to keep reactor and orchestrator SLS files in their own
+uniquely named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``,
+``react/``, ``_reactor/``, etc. This will avoid duplicate naming and will help
+prevent confusion.
 
 Executing the Orchestrate Runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,8 +62,8 @@ Executing the Orchestrate Runner
 The Orchestrate Runner command format is the same as for the ``state.sls``
 function, except that since it is a runner, it is executed with ``salt-run``
 rather than ``salt``.  Assuming you have a state.sls file called
-``/srv/salt/orch/webserver.sls`` the following command run on the master will
-apply the states defined in that file.
+``/srv/salt/orch/webserver.sls`` the following command, run on the master,
+will apply the states defined in that file.
 
 .. code-block:: bash
 

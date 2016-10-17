@@ -53,8 +53,9 @@ DUMMY_TOKEN = {
 
 # Use certifi if installed
 try:
-    import certifi
-    libcloud.security.CA_CERTS_PATH.append(certifi.where())
+    if HAS_LIBCLOUD:
+        import certifi
+        libcloud.security.CA_CERTS_PATH.append(certifi.where())
 except ImportError:
     pass
 

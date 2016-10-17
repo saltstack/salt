@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+    <form id="runJob">
+        <label>Target (compound): <input name="tgt"></label><br>
+        <label>Function: <input name="fun"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <button type="submit">Submit job</button>
+    </form>
+
+    <div>
+        <p>Salt Events Seen: <span id="eventCount">0</span></p>
+        <p>Salt Job Returns:</p>
+        <ul id="jobReturns"></ul>
+    </div>
+
+    <script>
+    // -- App -----------------------------------------------------------------
+
+    // 1. Subscribe to the event stream.
+    // Deserialize and broadcast incoming events.
+    var Observable = getObservable();
+    var saltEvents = new Observable(function(observer) {
+        var source = new EventSource('/events');
+
+        source.onerror = showLogin;
+        source.onmessage = function(message) {
+            observer(JSON.parse(message.data));
+        };
+    });
+
+    // 2. Set up pre-defined actions for incoming events.
+    // Remember, these can arrive at any time!
+    // You cannot look for returns synchronously.
+
+    // Keep a counter of all events seen.
+    var counter = 0;
+    var lastEventModel = saltEvents.map(function(e) {
+        return counter += 1;
+    });
+
+    var eventCount = document.querySelector('#eventCount');
+    var lastEventView = lastEventModel.subscribe(function(e) {
+        eventCount.textContent = e;
+    });
+
+    // Keep a list of recent job returns.
+    // Salt's event stream is very busy and can easily overwhelm the available
+    // memory for a browser tab so keep uneeded data out of the DOM.
+    var isJobEvent = fnmatch('salt/job/*');
+    var isJobNew = fnmatch('salt/job/*/new');
+    var isJobReturn = fnmatch('salt/job/*/ret/*');
+    var jobReturnBuffer = [];
+    var jobReturnBufferSize = 10;
+    var jobReturnModel = saltEvents.map(function eventCounter(ev) {
+        var tag = ev.tag,
+            data = ev.data;
+
+        if (isJobReturn(tag)) {
+            if (jobReturnBuffer.length >= jobReturnBufferSize) {
+                jobReturnBuffer.pop();
+            }
+            jobReturnBuffer.unshift(data);
+        }
+
+        return jobReturnBuffer;
+    });
+
+    var jobReturns = document.querySelector('#jobReturns');
+    var jobReturnView = jobReturnModel.subscribe(function(returns) {
+        var li = returns.map(function(ret) {
+            return ("<li title='"
+                + JSON.stringify(ret, null, 4)
+                + "'>"
+                + ret.jid +': '+ JSON.stringify(ret.return)
+                + '</li>');
+        });
+
+        jobReturns.innerHTML = '<ul>'+ li.join('') +'</ul>';
+    });
+
+    // -- Run Jobs ------------------------------------------------------------
+
+    document.querySelector('#runJob').onsubmit = function(ev) {
+        ev.preventDefault();
+
+        var reduce = Array.prototype.reduce;
+        var body = reduce.call(ev.target, function(acc, el) {
+            if (el.name) {
+                if (Array.isArray(acc[el.name])) {
+                    acc[el.name].push(el.value);
+                } else {
+                    acc[el.name] = el.value;
+                }
+            }
+            return acc;
+        }, {client: 'local_async', arg: []});
+
+        // We don't need to process the response here since we know the event
+        // stream will pick up all job returns automatically. Though we could
+        // keep a separate buffer of JIDs if desired in order to highlight
+        // incoming job returns.
+        fetch('/', {
+            method: 'post',
+            body: JSON.stringify(body),
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+        });
+    };
+
+    // -- Auth ----------------------------------------------------------------
+
+    // Abuse the SSE error callback to display a login form if not authenticated.
+    function showLogin() {
+        document.querySelector('body').innerHTML = ('<form id="login">'
+            + '  <label>Username: <input name="username"></label><br>'
+            + '  <label>Password: <input name="password"></label><br>'
+            + '  <label>Eauth: <input name="eauth"></label><br>'
+            + '  <button type="submit">Login</button>'
+            + '</form>');
+
+        document.querySelector('#login').onsubmit = function(ev) {
+            ev.preventDefault();
+
+            var reduce = Array.prototype.reduce;
+            var body = reduce.call(ev.target, function(acc, el) {
+                if (el.name) { acc[el.name] = el.value; }
+                return acc;
+            }, {});
+
+            fetch('/login', {
+                method: 'post',
+                body: JSON.stringify(body),
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+            })
+            .then(function(resp) {
+                console.log('resp', resp);
+                if (resp.ok) { window.location.reload(false); }
+            });
+        };
+    }
+
+    // -- Util ----------------------------------------------------------------
+
+    // A simple function to allow Salt-style globbing on event tags.
+    function fnmatch(pattern) {
+        if (pattern.indexOf('*') === -1) {
+            return function (filename) { return pattern === filename; };
+        } else {
+            // Taken from Lodash (MIT).
+            // Use _.escapeRegExp directly if available.
+            var reRegExpChar = /[\\^$.*+?()[\]{}|]/g;
+            var escaped = pattern.replace(reRegExpChar, '\\$&');
+            var matcher = new RegExp('^'+ escaped.replace(/\\\*/g, '.*') +'$');
+            return function (filename) { return matcher.test(filename); };
+        }
+    }
+
+    // A bare-bones Observable implementation without
+    // cancelation or unsubscription or anything else.
+    // Use a full implementation or an event emitter in real apps.
+    function getObservable() {
+        function Observable(_subscribe) {
+            this._subscribe = _subscribe;
+        }
+        Observable.prototype.subscribe = function(observer) {
+            this._subscribe(observer);
+        };
+        Observable.prototype.map = function(project) {
+            return new Observable(function(observer) {
+                return this.subscribe(function(x) {
+                    observer(project(x));
+                });
+            }.bind(this));
+        }
+        return Observable;
+    }
+    </script>
+</html>

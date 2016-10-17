@@ -166,12 +166,11 @@ def refresh_db():
     return ret
 
 
-# TODO: opkg doesn't support installation of a specific version of a package
-#       (opkg issue 176). Once fixed, this function should add support.
 def install(name=None,
             refresh=False,
             pkgs=None,
             sources=None,
+            reinstall=False,
             **kwargs):
     '''
     Install the passed package, add refresh=True to update the opkg database.
@@ -192,6 +191,23 @@ def install(name=None,
     refresh
         Whether or not to refresh the package database before installing.
 
+    version
+        Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
+        if "pkgs" or "sources" is passed.
+
+        .. versionadded:: Nitrogen
+
+    reinstall : False
+        Specifying reinstall=True will use ``opkg install --force-reinstall``
+        rather than simply ``opkg install`` for requested packages that are
+        already installed.
+
+        If a version is specified with the requested package, then ``opkg
+        install --force-reinstall`` will only be used if the installed version
+        matches the requested version.
+
+        .. versionadded:: Nitrogen
+
 
     Multiple Package Installation Options:
 
@@ -204,6 +220,7 @@ def install(name=None,
         .. code-block:: bash
 
             salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-0ubuntu0"}]'
 
     sources
         A list of IPK packages to install. Must be passed as a list of dicts,
@@ -220,6 +237,12 @@ def install(name=None,
     install_recommends
         Whether to install the packages marked as recommended. Default is True.
 
+    only_upgrade
+        Only upgrade the packages (disallow downgrades), if they are already
+        installed. Default is False.
+
+        .. versionadded:: Nitrogen
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -228,37 +251,101 @@ def install(name=None,
     refreshdb = salt.utils.is_true(refresh)
 
     try:
-        pkgs, pkg_type = __salt__['pkg_resource.parse_targets'](
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    cmd = ['opkg', 'install']
-    if pkgs is None or len(pkgs) == 0:
+    cmd_prefix = ['opkg', 'install']
+    to_install = []
+    to_reinstall = []
+    to_downgrade = []
+
+    if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
-        cmd.extend(pkgs)
+        if reinstall:
+            cmd_prefix.append('--force-reinstall')
+        if not kwargs.get('only_upgrade', False):
+            cmd_prefix.append('--force-downgrade')
+        to_install.extend(pkg_params)
     elif pkg_type == 'repository':
-        targets = list(pkgs.keys())
-        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
-            cmd.append('--no-install-recommends')
-        cmd.extend(targets)
+        if not kwargs.get('install_recommends', True):
+            cmd_prefix.append('--no-install-recommends')
+        for pkgname, pkgversion in six.iteritems(pkg_params):
+            if (name and pkgs is None and kwargs.get('version') and
+                    len(pkg_params) == 1):
+                # Only use the 'version' param if 'name' was not specified as a
+                # comma-separated list
+                version_num = kwargs['version']
+            else:
+                version_num = pkgversion
+
+            if version_num is None:
+                # Don't allow downgrades if the version
+                # number is not specified.
+                if reinstall and pkgname in old:
+                    to_reinstall.append(pkgname)
+                else:
+                    to_install.append(pkgname)
+            else:
+                pkgstr = '{0}={1}'.format(pkgname, version_num)
+                cver = old.get(pkgname, '')
+                if reinstall and cver and salt.utils.compare_versions(
+                        ver1=version_num,
+                        oper='==',
+                        ver2=cver,
+                        cmp_func=version_cmp):
+                    to_reinstall.append(pkgstr)
+                elif not cver or salt.utils.compare_versions(
+                        ver1=version_num,
+                        oper='>=',
+                        ver2=cver,
+                        cmp_func=version_cmp):
+                    to_install.append(pkgstr)
+                else:
+                    if not kwargs.get('only_upgrade', False):
+                        to_downgrade.append(pkgstr)
+                    else:
+                        # This should cause the command to fail.
+                        to_install.append(pkgstr)
+
+    cmds = []
+
+    if to_install:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.extend(to_install)
+        cmds.append(cmd)
+
+    if to_downgrade:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append('--force-downgrade')
+        cmd.extend(to_downgrade)
+        cmds.append(cmd)
+
+    if to_reinstall:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append('--force-reinstall')
+        cmd.extend(to_reinstall)
+        cmds.append(cmd)
+
+    if not cmds:
+        return {}
 
     if refreshdb:
         refresh_db()
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
-
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
-    else:
-        errors = []
+    errors = []
+    for cmd in cmds:
+        out = __salt__['cmd.run_all'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False
+        )
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

@@ -119,7 +119,7 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        Postres database username, if different from config or default.
+        Postgres database username, if different from config or default.
 
     db_password
         Postgres user's password, if any password, for a specified db_user.
@@ -140,7 +140,7 @@ def present(name,
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if if not already and necessary
+    # maybe encrypt if it's not already and necessary
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)

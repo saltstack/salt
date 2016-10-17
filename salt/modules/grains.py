@@ -412,11 +412,31 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
+def delkey(key):
+    '''
+    .. versionadded:: nitrogen
+
+    Remove a grain completely from the grain system, this will remove the
+    grain key and value
+
+    key
+        The grain key from which to delete the value.
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' grains.delkey key
+    '''
+    setval(key, None, destructive=True)
+
+
 def delval(key, destructive=False):
     '''
     .. versionadded:: 0.17.0
 
-    Delete a grain from the grains config file
+    Delete a grain value from the grains config file. This will just set the
+    grain value to `None`. To completely remove the grain run `grains.delkey`
+    of pass `destructive=True` to `grains.delval`.
 
     key
         The grain key from which to delete the value.
@@ -430,7 +450,6 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     '''
-
     setval(key, None, destructive=destructive)
 
 

@@ -43,6 +43,8 @@ import salt.defaults.exitcodes
 
 try:
     import psutil
+    if not hasattr(psutil, 'virtual_memory'):
+        raise ImportError('Version of psutil too old.')
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -429,6 +431,9 @@ VALID_OPTS = {
     # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
     # salt master
     'retry_dns': float,
+
+    # In the case when the resolve of the salt master hostname fails, fall back to localhost
+    'resolve_dns_fallback': bool,
 
     # set the zeromq_reconnect_ivl option on the minion.
     # http://lists.zeromq.org/pipermail/zeromq-dev/2011-January/008845.html
@@ -912,8 +917,9 @@ VALID_OPTS = {
     # Minion data cache driver (one of satl.cache.* modules)
     'cache': str,
 
-    # Extra modules for Salt Thin
+    # Thin and minimal Salt extra modules
     'thin_extra_mods': str,
+    'min_extra_mods': str,
 }
 
 # default configurations
@@ -1074,6 +1080,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
@@ -1424,6 +1431,7 @@ DEFAULT_MASTER_OPTS = {
     'python3_bin': 'python3',
     'cache': 'localfs',
     'thin_extra_mods': '',
+    'min_extra_mods': '',
 }
 
 
@@ -2895,12 +2903,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'profitbricks']
+                        'virtualbox', 'profitbricks', 'libvirt']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]

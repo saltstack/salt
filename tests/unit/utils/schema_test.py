@@ -11,8 +11,6 @@ import yaml
 
 from distutils.version import LooseVersion
 
-from distutils.version import LooseVersion
-
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath

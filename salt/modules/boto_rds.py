@@ -247,21 +247,27 @@ def create(name, allocated_storage, db_instance_class, engine,
 
         taglist = _tag_doc(tags)
 
-        rds = conn.create_db_instance(DBInstanceIdentifier=name,
-                                      AllocatedStorage=allocated_storage,
-                                      DBInstanceClass=db_instance_class,
-                                      Engine=engine,
-                                      MasterUsername=master_username,
-                                      MasterUserPassword=master_user_password,
-                                      VpcSecurityGroupIds=vpc_security_group_ids,
-                                      AvailabilityZone=availability_zone,
-                                      DBSubnetGroupName=db_subnet_group_name,
-                                      PreferredMaintenanceWindow=preferred_maintenance_window,
-                                      DBParameterGroupName=db_parameter_group_name,
-                                      BackupRetentionPeriod=backup_retention_period,
-                                      PreferredBackupWindow=preferred_backup_window,
-                                      StorageType=storage_type, Tags=taglist,
-                                      **kwargs)
+        kwargs['DBInstanceIdentifier'] = name
+        kwargs['AllocatedStorage'] = allocated_storage
+        kwargs['DBInstanceClass'] = db_instance_class
+        kwargs['Engine'] = engine
+        kwargs['MasterUsername'] = master_username
+        kwargs['MasterUserPassword'] = master_user_password
+        kwargs['VpcSecurityGroupIds'] = vpc_security_group_ids
+        kwargs['AvailabilityZone'] = availability_zone
+        kwargs['DBSubnetGroupName'] = db_subnet_group_name
+        kwargs['PreferredMaintenanceWindow'] = preferred_maintenance_window
+        kwargs['DBParameterGroupName'] = db_parameter_group_name
+        kwargs['BackupRetentionPeriod'] = backup_retention_period
+        kwargs['PreferredBackupWindow'] = preferred_backup_window
+        kwargs['StorageType'] = storage_type
+        kwargs['Tags'] = taglist
+
+        # Validation doesn't want parameters that are None
+        # https://github.com/boto/boto3/issues/400
+        kwargs = dict((k, v) for k, v in six.iteritems(kwargs) if v is not None)
+
+        rds = conn.create_db_instance(**kwargs)
 
         if not rds:
             return {'created': False}

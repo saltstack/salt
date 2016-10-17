@@ -31,6 +31,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
         return __virtualname__
+    if __grains__['os'] == 'Alpine':
+        return __virtualname__
     return (False, 'The gentoo_service execution module cannot be loaded: '
             'only available on Gentoo/Open-RC systems.')
 

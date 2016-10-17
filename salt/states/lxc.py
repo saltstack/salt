@@ -28,6 +28,7 @@ def present(name,
             backing=None,
             vgname=None,
             lvname=None,
+            thinpool=None,
             path=None):
     '''
     .. versionchanged:: 2015.8.0
@@ -136,6 +137,10 @@ def present(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing`` is set to ``lvm``.
+
+    thinpool
+        Name of a pool volume that will be used for thin-provisioning this
+        container. Only applicable if ``backing`` is set to ``lvm``.
     '''
     ret = {'name': name,
            'result': True,
@@ -239,7 +244,8 @@ def present(name,
                     backing=backing,
                     vgname=vgname,
                     path=path,
-                    lvname=lvname)
+                    lvname=lvname,
+                    thinpool=thinpool)
         except (CommandExecutionError, SaltInvocationError) as exc:
             ret['result'] = False
             ret['comment'] = exc.strerror

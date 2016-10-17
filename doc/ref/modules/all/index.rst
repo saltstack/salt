@@ -26,6 +26,7 @@ execution modules
     archive
     artifactory
     at
+    at_solaris
     augeas_cfg
     aws_sqs
     bamboohr
@@ -287,6 +288,7 @@ execution modules
     raet_publish
     rallydev
     random_org
+    rbac_solaris
     rbenv
     rdp
     redismod

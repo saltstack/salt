@@ -110,7 +110,7 @@ class AESReqServerMixin(object):
             return self.crypticle.dumps({})
         except IOError:
             log.error('AES key not found')
-            return 'AES key not found'
+            return {'error': 'AES key not found'}
 
         pret = {}
         cipher = PKCS1_OAEP.new(pub)

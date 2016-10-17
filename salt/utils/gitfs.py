@@ -42,9 +42,6 @@ AUTH_PROVIDERS = ('pygit2',)
 AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
                'insecure_auth')
 
-# Params which should not be forced to be strings
-BOOL_PARAMS = ('ssl_verify', 'insecure_auth')
-
 # GitFS only: params which can be overridden for a single saltenv. Aside from
 # 'ref', this must be a subset of the per-remote params passed to the
 # constructor for the GitProvider subclasses.
@@ -116,6 +113,33 @@ LIBGIT2_MINVER = '0.20.0'
 DULWICH_MINVER = (0, 9, 4)
 
 
+def enforce_types(key, val):
+    '''
+    Force params to be strings unless they should remain a different type
+    '''
+    non_string_params = {
+        'ssl_verify': bool,
+        'insecure_auth': bool,
+        'env_whitelist': 'stringlist',
+        'env_blacklist': 'stringlist',
+        'gitfs_env_whitelist': 'stringlist',
+        'gitfs_env_blacklist': 'stringlist',
+    }
+
+    if key not in non_string_params:
+        return six.text_type(val)
+    else:
+        expected = non_string_params[key]
+        if expected is bool:
+            return val
+        elif expected == 'stringlist':
+            if not isinstance(val, (six.string_types, list)):
+                val = six.text_type(val)
+            if isinstance(val, six.string_types):
+                return [x.strip() for x in val.split(',')]
+            return [six.text_type(x) for x in val]
+
+
 def failhard(role):
     '''
     Fatal configuration issue, raise an exception
@@ -135,10 +159,6 @@ class GitProvider(object):
                  override_params, cache_root, role='gitfs'):
         self.opts = opts
         self.role = role
-        self.env_blacklist = self.opts.get(
-            '{0}_env_blacklist'.format(self.role), [])
-        self.env_whitelist = self.opts.get(
-            '{0}_env_whitelist'.format(self.role), [])
         self.global_saltenv = salt.utils.repack_dictlist(
             self.opts.get('{0}_saltenv'.format(self.role), []),
             strict=True,
@@ -176,18 +196,12 @@ class GitProvider(object):
             self.id = next(iter(remote))
             self.get_url()
 
-            def val_cb(key, val):
-                '''
-                Force the value to be a string for params that aren't bools
-                '''
-                return six.text_type(val) if key not in BOOL_PARAMS else val
-
             per_remote_conf = salt.utils.repack_dictlist(
                 remote[self.id],
                 strict=True,
                 recurse=True,
                 key_cb=six.text_type,
-                val_cb=val_cb)
+                val_cb=enforce_types)
 
             if not per_remote_conf:
                 log.critical(
@@ -2147,10 +2161,7 @@ class GitBase(object):
                     'a bug, please report it.', key
                 )
                 failhard(self.role)
-            # ssl_verify should be a bool, everything else a string
-            per_remote_defaults[param] = \
-                six.text_type(self.opts[key]) if param not in BOOL_PARAMS \
-                else self.opts[key]
+            per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
         for remote in remotes:

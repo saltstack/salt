@@ -210,7 +210,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 ssh_id_wrapper += '.bat'
                 env['GIT_SSH'] = ssh_id_wrapper
             else:
-                tmp_file = salt.utils.mkstemp()
+                tmp_file = salt.utils.files.mkstemp()
                 salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
                 os.chmod(tmp_file, 0o500)
                 os.chown(tmp_file, __salt__['file.user_to_uid'](user), -1)

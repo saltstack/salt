@@ -25,6 +25,7 @@ import tempfile
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
@@ -137,7 +138,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
 
     def _render(contents):
         # write out path to temp file
-        tmp_path_fn = salt.utils.mkstemp()
+        tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -348,6 +349,15 @@ def _run(cmd,
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
+    def _get_stripped(cmd):
+        # Return stripped command string copies to improve logging.
+        if isinstance(cmd, list):
+            return [x.strip() if isinstance(x, str) else x for x in cmd]
+        elif isinstance(cmd, str):
+            return cmd.strip()
+        else:
+            return cmd
+
     if _check_loglevel(output_loglevel) is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
@@ -355,7 +365,7 @@ def _run(cmd,
         msg = (
             'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
                 '\'' if not isinstance(cmd, list) else '',
-                cmd,
+                _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
                 cwd,
                 '. Executing command in the background, no output will be '
@@ -2058,7 +2068,7 @@ def script(source,
             cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
             'FOLDER&SUBFOLDERS&FILES')
 
-    path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
+    path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
         if 'pillarenv' in kwargs or 'pillar' in kwargs:
@@ -2358,9 +2368,9 @@ def exec_code_all(lang, code, cwd=None):
     powershell = lang.lower().startswith("powershell")
 
     if powershell:
-        codefile = salt.utils.mkstemp(suffix=".ps1")
+        codefile = salt.utils.files.mkstemp(suffix=".ps1")
     else:
-        codefile = salt.utils.mkstemp()
+        codefile = salt.utils.files.mkstemp()
 
     with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)

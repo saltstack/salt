@@ -338,10 +338,10 @@ def high(data, test=None, queue=False, **kwargs):
             'is specified.'
         )
     try:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
                 context=__context__)
     except NameError:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
 
     ret = st_.call_high(data)
     _set_retcode(ret)
@@ -1192,6 +1192,42 @@ def show_lowstate(queue=False, **kwargs):
         ret = st_.compile_low_chunks()
     finally:
         st_.pop_active()
+    return ret
+
+
+def show_state_usage(queue=False, **kwargs):
+    '''
+    Retrieve the highstate data from the salt master to analyse used and unused states
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_state_usage
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+    pillar = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
+    st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
+    st_.push_active()
+
+    try:
+        ret = st_.compile_state_usage()
+    finally:
+        st_.pop_active()
+    _set_retcode(ret)
     return ret
 
 

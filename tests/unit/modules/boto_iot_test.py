@@ -158,13 +158,6 @@ class BotoIoTTestCaseMixin(object):
     pass
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}.  The botocore'
-                                       ' module must be greater than or equal to'
-                                       ' version {1}.'
-        .format(required_boto3_version, required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot module
@@ -288,13 +281,6 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('delete_thing_type'))
 
 
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
-                                       ' or equal to version {0}.  The botocore'
-                                       ' module must be greater than or equal to'
-                                       ' version {1}.'
-        .format(required_boto3_version, required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot module

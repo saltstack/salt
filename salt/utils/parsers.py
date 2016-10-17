@@ -236,7 +236,9 @@ class OptionParser(optparse.OptionParser, object):
     def _add_version_option(self):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
-            '--versions-report', action='store_true',
+            '--versions-report',
+            '-V',
+            action='store_true',
             help='Show program\'s dependencies version number and exit.'
         )
 
@@ -2812,6 +2814,10 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=None,
             help='Pass in extra files to include in the state tarball.'
         )
+        self.add_option('--min-extra-modules',
+                        dest='min_extra_mods', default=None,
+                        help='One or comma-separated list of extra Python modules'
+                             'to be included into Minimal Salt.')
         self.add_option(
             '--thin-extra-modules',
             dest='thin_extra_mods',

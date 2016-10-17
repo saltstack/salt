@@ -129,6 +129,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           Hard disk 3:
             size: 5
             controller: SCSI controller 3
+            datastore: smalldiskdatastore
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
@@ -274,6 +275,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
             controller as well as the hard disk at the same time.
+        datastore
+            The name of a valid datastore should you wish the new disk to be in
+            a datastore other than the default for the VM.
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
@@ -663,6 +667,7 @@ Example of a complete profile:
           Hard disk 0:
             controller: 'SCSI controller 0'
             size: 20
+            mode: 'independent_nonpersistent'
         cd:
           CD/DVD drive 0:
             controller: 'IDE 0'
@@ -679,3 +684,27 @@ Example of a complete profile:
     be available. In such cases, the closest match to another ``image`` should
     be used. In the example above, a Debian 8 VM is created using the image
     ``debian7_64Guest`` which is for a Debian 7 guest.
+
+
+Specifying disk backing mode
+============================
+
+.. versionadded:: Nitrogen
+
+Disk backing mode can now be specified when cloning a VM. This option
+can be set in the cloud profile as shown in example below:
+
+.. code-block:: yaml
+
+    my-vm:
+      provider: esx01
+      datastore: esx01-datastore
+      resourcepool: Resources
+      folder: vm
+      devices:
+        disk:
+          Hard disk 1:
+            mode: 'independent_nonpersistent'
+          Hard disk 2:
+            size: 15
+            mode: 'independent_nonpersistent'

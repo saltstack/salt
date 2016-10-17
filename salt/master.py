@@ -957,7 +957,7 @@ class AESFuncs(object):
         self.mminion = salt.minion.MasterMinion(
             self.opts,
             states=False,
-            rend=False,
+            rend=True,
             ignore_config_errors=True
         )
         self.__setup_fileserver()
@@ -1322,7 +1322,6 @@ class AESFuncs(object):
         load['grains']['id'] = load['id']
 
         pillar_dirs = {}
-#        pillar = salt.pillar.Pillar(
         pillar = salt.pillar.get_pillar(
             self.opts,
             load['grains'],
@@ -1330,7 +1329,8 @@ class AESFuncs(object):
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
             pillar=load.get('pillar_override', {}),
-            pillarenv=load.get('pillarenv'))
+            pillarenv=load.get('pillarenv'),
+            rend=self.mminion.rend)
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
@@ -1338,6 +1338,7 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
+            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
@@ -1983,6 +1984,14 @@ class ClearFuncs(object):
             )
             return ''
 
+        # Retrieve the minions list
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+        minions = self.ckminions.check_minions(
+            clear_load['tgt'],
+            clear_load.get('tgt_type', 'glob'),
+            delimiter
+        )
+
         # Check for external auth calls
         if extra.get('token', False):
             # A token was passed, check it
@@ -2044,7 +2053,8 @@ class ClearFuncs(object):
                 clear_load['fun'],
                 clear_load['arg'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
+                clear_load.get('tgt_type', 'glob'),
+                minions=minions)
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
@@ -2141,7 +2151,8 @@ class ClearFuncs(object):
                 clear_load['fun'],
                 clear_load['arg'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
+                clear_load.get('tgt_type', 'glob'),
+                minions=minions
                 )
             if not good:
                 # Accept find_job so the CLI will function cleanly
@@ -2173,7 +2184,8 @@ class ClearFuncs(object):
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
-                                clear_load.get('tgt_type', 'glob'))
+                                clear_load.get('tgt_type', 'glob'),
+                                minions=minions)
                     if not good:
                         # Accept find_job so the CLI will function cleanly
                         if clear_load['fun'] != 'saltutil.find_job':
@@ -2218,7 +2230,8 @@ class ClearFuncs(object):
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],
-                        clear_load.get('tgt_type', 'glob'))
+                        clear_load.get('tgt_type', 'glob'),
+                        minions=minions)
                     if not good:
                         # Accept find_job so the CLI will function cleanly
                         if clear_load['fun'] != 'saltutil.find_job':
@@ -2238,14 +2251,7 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
-        # FIXME Needs additional refactoring
-        # Retrieve the minions list
-        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
-            clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'),
-            delimiter
-        )
+
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):

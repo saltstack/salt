@@ -665,6 +665,8 @@ class CkMinions(object):
         v_minions = self._expand_matching(valid)
         if minions is None:
             minions = set(self.check_minions(expr, expr_form))
+        else:
+            minions = set(minions)
         d_bool = not bool(minions.difference(v_minions))
         if len(v_minions) == len(minions) and d_bool:
             return True

@@ -732,6 +732,7 @@ class RemoteFuncs(object):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
                              {'grains': load['grains'], 'pillar': data})
+            self.event.fire_event('Minion data cache refresh', tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):

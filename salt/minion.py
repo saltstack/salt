@@ -83,6 +83,7 @@ import salt.engines
 import salt.payload
 import salt.syspaths
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.context
 import salt.utils.jid
 import salt.pillar
@@ -512,6 +513,7 @@ class MinionBase(object):
 
         tries = opts.get('master_tries', 1)
         attempts = 0
+        resolve_dns_fallback = opts.get('resolve_dns_fallback', False)
 
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
@@ -536,7 +538,14 @@ class MinionBase(object):
                 for master in opts['local_masters']:
                     opts['master'] = master
                     opts.update(prep_ip_port(opts))
-                    opts.update(resolve_dns(opts))
+                    try:
+                        opts.update(resolve_dns(opts, fallback=resolve_dns_fallback))
+                    except SaltClientError as exc:
+                        last_exc = exc
+                        msg = ('Master hostname: \'{0}\' not found. Trying '
+                               'next master (if any)'.format(opts['master']))
+                        log.info(msg)
+                        continue
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
@@ -588,8 +597,8 @@ class MinionBase(object):
                               '(infinite attempts)'.format(attempts)
                     )
                 opts.update(prep_ip_port(opts))
-                opts.update(resolve_dns(opts))
                 try:
+                    opts.update(resolve_dns(opts, fallback=resolve_dns_fallback))
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
                         for trans in ('zeromq', 'tcp'):
@@ -663,14 +672,6 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
-        if self.opts.get('master_type') != 'disable':
-            self.opts['pillar'] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
-            ).compile_pillar()
 
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -688,6 +689,17 @@ class SMinion(MinionBase):
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
+
+        if self.opts.get('master_type') != 'disable':
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+                funcs=self.functions,
+                rend=self.rend,
+            ).compile_pillar()
 
 
 class MasterMinion(object):
@@ -864,6 +876,10 @@ class MinionManager(MinionBase):
         for minion in self.minions:
             minion.destroy()
 
+    def reload(self):
+        for minion in self.minions:
+            minion.reload()
+
 
 class Minion(MinionBase):
     '''
@@ -977,6 +993,14 @@ class Minion(MinionBase):
             raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
+
+    def reload(self):
+        log.info('Minion reloading config')
+        disk_opts = salt.config.minion_config(os.path.join(salt.syspaths.CONFIG_DIR, 'minion'))  # FIXME POC
+        self.opts = salt.utils.dictupdate.merge_overwrite(self.opts, disk_opts)
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        self.schedule.functions = self.functions
+        self.schedule.returners = self.returners
 
     @tornado.gen.coroutine
     def connect_master(self):
@@ -3029,7 +3053,7 @@ class ProxyMinion(Minion):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv='base')
+        self.functions['saltutil.sync_all'](saltenv=self.opts['environment'])
 
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
@@ -3124,6 +3148,6 @@ class ProxyMinion(Minion):
             self.schedule.delete_job(master_event(type='failback'), persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
-        self.functions['saltutil.sync_grains'](saltenv='base')
+        self.functions['saltutil.sync_grains'](saltenv=self.opts['environment'])
         self.grains_cache = self.opts['grains']
         self.ready = True

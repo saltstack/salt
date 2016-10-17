@@ -45,6 +45,7 @@ except ImportError:
     HAS_HYPCHAT = False
 
 import salt.utils
+import salt.utils.files
 import salt.runner
 import salt.client
 import salt.loader
@@ -228,7 +229,7 @@ def start(token,
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
 
-            tmp_path_fn = salt.utils.mkstemp()
+            tmp_path_fn = salt.utils.files.mkstemp()
             with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
                 fp_.write(json.dumps(ret, sort_keys=True, indent=4))
             message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)

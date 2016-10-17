@@ -1026,9 +1026,43 @@
 # Save runner returns to the job cache
 #runner_returns: True
 
-# Permanently include any available Python 3rd party modules into Salt Thin
+# Permanently include any available Python 3rd party modules into thin and minimal Salt
 # when they are generated for Salt-SSH or other purposes.
 # The modules should be named by the names they are actually imported inside the Python.
 # The value of the parameters can be either one module or a comma separated list of them.
 #thin_extra_mods: foo,bar
+#min_extra_mods: foo,bar,baz
+
+
+######      Keepalive settings        ######
+############################################
+# Warning: Failure to set TCP keepalives on the salt-master can result in
+# not detecting the loss of a minion when the connection is lost or when
+# it's host has been terminated without first closing the socket.
+# Salt's Presence System depends on this connection status to know if a minion
+# is "present".
+# ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by
+# the OS. If connections between the minion and the master pass through
+# a state tracking device such as a firewall or VPN gateway, there is
+# the risk that it could tear down the connection the master and minion
+# without informing either party that their connection has been taken away.
+# Enabling TCP Keepalives prevents this from happening.
+
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
+# or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
+#tcp_keepalive: True
+
+# How long before the first keepalive should be sent in seconds. Default 300
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
+# on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
+#tcp_keepalive_idle: 300
+
+# How many lost probes are needed to consider the connection lost. Default -1
+# to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
+#tcp_keepalive_cnt: -1
+
+# How often, in seconds, to send keepalives after the first one. Default -1 to
+# use OS defaults, typically 75 seconds on Linux, see
+# /proc/sys/net/ipv4/tcp_keepalive_intvl.
+#tcp_keepalive_intvl: -1
 

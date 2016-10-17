@@ -412,7 +412,7 @@ def _get_reg_software():
         if d_name not in ignore_list:
             # some MS Office updates don't register a product name which means
             # their information is useless
-            reg_software.update({d_name: d_vers})
+            reg_software.update({d_name: str(d_vers)})
 
     for reg_key in __salt__['reg.list_keys'](hive, key):
         update(hive, key, reg_key, False)

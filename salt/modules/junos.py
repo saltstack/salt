@@ -355,7 +355,10 @@ def install_config(path=None, **kwargs):
     if 'timeout' in kwargs:
         conn.timeout = kwargs['timeout']
 
-    options = {'path': path}
+    if kwargs['template']:
+        options = {'template_path': path, 'template_vars': __pillar__['proxy']}
+    else:
+        options = {'path': path}
 
     try:
         conn.cu.load(**options)
