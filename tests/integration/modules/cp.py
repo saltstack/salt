@@ -150,15 +150,59 @@ class CPModuleTest(integration.ModuleCase):
         '''
         tgt = os.path.join(integration.TMP, 'scene33')
         self.run_function(
-                'cp.get_url',
-                [
-                    'salt://grail/scene33',
-                    tgt,
-                ])
+            'cp.get_url',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ])
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
+
+    def test_get_url_dest_empty(self):
+        '''
+        cp.get_url with salt:// source and destination set as empty string: ''
+        '''
+        tgt = ''
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ])
+        with salt.utils.fopen(ret, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+
+    def test_get_url_no_dest(self):
+        '''
+        cp.get_url with salt:// source and destination set as None
+        '''
+        tgt = None
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+
+    def test_get_url_nonexistent_source(self):
+        '''
+        cp.get_url with nonexistent salt:// source
+        '''
+        tgt = None
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                'salt://grail/nonexistent_scene',
+                tgt,
+            ])
+        self.assertEqual(ret, False)
 
     def test_get_url_https(self):
         '''
@@ -166,11 +210,11 @@ class CPModuleTest(integration.ModuleCase):
         '''
         tgt = os.path.join(integration.TMP, 'test_get_url_https')
         self.run_function(
-                'cp.get_url',
-                [
-                    'https://repo.saltstack.com/index.html',
-                    tgt,
-                ])
+            'cp.get_url',
+            [
+                'https://repo.saltstack.com/index.html',
+                tgt,
+            ])
         with salt.utils.fopen(tgt, 'r') as instructions:
             data = instructions.read()
             self.assertIn('Bootstrap', data)
