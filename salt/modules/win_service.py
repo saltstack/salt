@@ -392,6 +392,7 @@ def start(name):
     if status(name):
         return True
 
+    # Set the service to manual if disabled
     if disabled(name):
         modify(name, start_type='Manual')
 
