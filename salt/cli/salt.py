@@ -42,7 +42,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
-            local = salt.client.get_local_client(
+            self.local_client = salt.client.get_local_client(
                 self.get_config_file_path(),
                 skip_perm_errors=skip_perm_errors)
         except SaltClientError as exc:
@@ -54,7 +54,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.timeout <= 0:
-            self.options.timeout = local.opts['timeout']
+            self.options.timeout = self.local_client.opts['timeout']
 
         kwargs = {
             'tgt': self.config['tgt'],
@@ -116,12 +116,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             kwargs['eauth'] = self.options.eauth
 
         if self.config['async']:
-            jid = local.cmd_async(**kwargs)
+            jid = self.local_client.cmd_async(**kwargs)
             print_cli('Executed command with job ID: {0}'.format(jid))
             return
 
         # local will be None when there was an error
-        if not local:
+        if not self.local_client:
             return
 
         retcodes = []
@@ -129,11 +129,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         try:
             if self.options.subset:
-                cmd_func = local.cmd_subset
+                cmd_func = self.local_client.cmd_subset
                 kwargs['sub'] = True
                 kwargs['cli'] = True
             else:
-                cmd_func = local.cmd_cli
+                cmd_func = self.local_client.cmd_cli
 
             if self.options.progress:
                 kwargs['progress'] = True
@@ -152,7 +152,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             elif self.config['fun'] == 'sys.doc':
                 ret = {}
                 out = ''
-                for full_ret in local.cmd_cli(**kwargs):
+                for full_ret in self.local_client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
                 self._output_ret(ret, out)

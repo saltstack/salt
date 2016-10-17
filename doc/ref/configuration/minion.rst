@@ -84,8 +84,8 @@ The option can can also be set to a list of masters, enabling
 
 Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be ``str``, ``failover`` or
-``func``.
+The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
+``func`` or ``disable``.
 
 .. code-block:: yaml
 
@@ -106,6 +106,13 @@ of reading in the static master value, set this to ``func``. This can be used
 to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
+
+.. code-block:: yaml
+
+    master_type: disable
+
+If you just want to run a masterless minion, this can be set and the minion
+will never attempt to talk to the master.
 
 .. conf_minion:: max_event_size
 
