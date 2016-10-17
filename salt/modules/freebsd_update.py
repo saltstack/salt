@@ -44,6 +44,9 @@ def _cmd(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
+    Private function that returns the freebsd-update command string to be
+    executed. It checks if any arguments are given to freebsd-update and appends
+    them accordingly.
     '''
     update_cmd = salt.utils.which('freebsd-update')
     if not update_cmd:
@@ -67,7 +70,9 @@ def _cmd(**kwargs):
     if 'address' in kwargs:
         params.append('-t {0}'.format(kwargs['address']))
 
-    return '{0} {1}'.format(update_cmd, ' '.join(params))
+    if params:
+        return '{0} {1}'.format(update_cmd, ' '.join(params))
+    return update_cmd
 
 
 def _wrapper(orig, pre='', post='', err_=None, run_args={}, **kwargs):
@@ -92,157 +97,111 @@ def _wrapper(orig, pre='', post='', err_=None, run_args={}, **kwargs):
     kwargs:
         Parameters of freebsd-update command.
     '''
-
+    ret = ''    # the message to be returned
     cmd = _cmd(**kwargs)
-    res = __salt__['cmd.run_all']('{0} {1} {2} {3}'.format(pre, cmd, post, orig), **run_args)
-    if err_ is not None: # copy return values if asked to
+    cmd_str = ' '.join([x for x in (pre, cmd, post, orig)])
+    res = __salt__['cmd.run_all'](cmd_str, **run_args)
+
+    if isinstance(err_, dict):  # copy return values if asked to
         for k, v in res.items():
             err_[k] = v
 
     if 'retcode' in res and res['retcode'] != 0:
-        log.error('Unable to run "{0} {1} {2} {3}". Error: {1}'.format(pre, cmd, post, orig, res['stderr']))
-        return res
-    return res['stdout']
+        msg = ' '.join([x for x in (res['stdout'], res['stderr']) if x])
+        ret = 'Unable to run "{0}" with run_args="{1}". Error: {2}'.format(cmd_str, run_args, msg)
+        log.error(ret)
+    else:
+        try:
+            ret = res['stdout']
+        except KeyError:
+            log.error("cmd.run_all did not return a dictionary with a key named 'stdout'")
+    return ret
 
 
-def fetch(pre='', post='', err_=None, run_args={}, **kwargs):
+def fetch(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
     freebsd-update fetch wrapper. Based on the currently installed world and the
     configuration options set, fetch all available binary updates.
 
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
-
     kwargs:
         Parameters of freebsd-update command.
     '''
     # fetch continues when no controlling terminal is present
+    pre = ''
+    post = ''
+    run_args = {}
     if float(__grains__['osrelease']) >= 10.2:
         post += '--not-running-from-cron'
     else:
         pre += ' env PAGER=cat'
         run_args['python_shell'] = True
-    return _wrapper('fetch', pre=pre, post=post, err_=err_, run_args=run_args, **kwargs)
+    return _wrapper('fetch', pre=pre, post=post, run_args=run_args, **kwargs)
 
 
-def install(pre='', post='', err_=None, run_args={}, **kwargs):
+def install(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
-    freebsd-update install wrapper.
-
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
+    freebsd-update install wrapper. Install the most recently fetched updates or
+    upgrade.
 
     kwargs:
         Parameters of freebsd-update command.
     '''
-    return _wrapper('install', err_=err_, **kwargs)
+    return _wrapper('install', **kwargs)
 
 
-def rollback(pre='', post='', err_=None, run_args={}, **kwargs):
+def rollback(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
     freebsd-update rollback wrapper. Uninstalls the most recently installed
     updates.
 
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
-
     kwargs:
         Parameters of freebsd-update command.
     '''
-    return _wrapper('rollback', err_=err_, **kwargs)
+    return _wrapper('rollback', **kwargs)
 
 
-def update(pre='', post='', err_=None, run_args={}, **kwargs):
+def update(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
     Command that simplifies freebsd-update by running freebsd-update fetch first
     and then freebsd-update install.
 
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
-
     kwargs:
         Parameters of freebsd-update command.
     '''
     stdout = {}
-    for name, fun in zip(('fetch', 'install'), (fetch, install)):
-        fun(err_=err_, **kwargs)
-        if err_ is not None and 'retcode' in err_ and err_['retcode'] != 0:
-            return err_
-        if err_ is not None and 'stdout' in err_:
-            stdout[name] = err_['stdout']
+
+    for mode in ('fetch', 'install'):
+        err_ = {}
+        ret = _wrapper( mode, err_=err_, **kwargs)
+        if 'retcode' in err_ and err_['retcode'] != 0:
+            return ret
+        if 'stdout' in err_:
+            stdout[mode] = err_['stdout']
     return '\n'.join(['{0}: {1}'.format(k, v) for (k, v) in stdout.items()])
 
 
-def ids(pre='', post='', err_=None, run_args={}, **kwargs):
+def ids(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
     freebsd-update IDS wrapper function. Compares the system against a "known
     good" index of the installed release.
 
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
-
     kwargs:
         Parameters of freebsd-update command.
     '''
-    return _wrapper('IDS', err_=err_, **kwargs)
+    return _wrapper('IDS', **kwargs)
 
 
-def upgrade(pre='', post='', err_=None, run_args={}, **kwargs):
+def upgrade(**kwargs):
     '''
     .. versionadded:: 2016.3.4
 
@@ -254,18 +213,6 @@ def upgrade(pre='', post='', err_=None, run_args={}, **kwargs):
 
     the additional freebsd-update install that needs to run after the reboot
     cannot be implemented easily.
-
-    pre:
-        String that will be prepended to freebsd-update command.
-
-    post:
-        String that will be appended to freebsd-update command.
-
-    err_:
-        Dictionary on which return codes and stout/stderr are copied.
-
-    run_args:
-        Arguments to be passed on cmd.run_all.
 
     kwargs:
         Parameters of freebsd-update command.
