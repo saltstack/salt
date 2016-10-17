@@ -333,7 +333,7 @@ def get_url(path, dest, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    if isinstance(dest, six.string_type):
+    if isinstance(dest, six.string_types):
         result = _client().get_url(path, dest, False, saltenv)
     else:
         result = _client().get_url(path, None, False, saltenv, no_cache=True)
