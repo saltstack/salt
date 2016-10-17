@@ -307,21 +307,32 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kw
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest, saltenv='base', env=None):
+def get_url(path, dest='', saltenv='base', env=None):
     '''
     Used to get a single file from a URL
 
-    The default behaviour is to write the fetched file to the given
-    destination path. To simply return the file contents instead, set
-    destination to ``None``.
+    path
+        A URL to download a file from. Supported URL schemes are: ``salt://``,
+        ``http://``, ``https://``, ``ftp://``, ``s3://`` and ``swift://``.
+        The function returns ``False`` if Salt was unable to fetch a file from
+        a ``salt://`` URL.
 
-    Returns ``False`` if Salt was unable to fetch a file from a URL.
+    dest
+        The default behaviour is to write the fetched file to the given
+        destination path. If this parameter is omitted or set as empty string
+        (``''``), the function places the file on the local filesystem inside
+        the Minion cache directory and will return the path to that file.
+        To simply return the file contents instead, set destination to ``None``.
+
+    saltenv : base
+        Salt fileserver envrionment from which to retrieve the file. Ignored if
+        ``path`` is not a ``salt://`` URL.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' cp.get_url salt://my/file /tmp/mine
+        salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
     if env is not None:

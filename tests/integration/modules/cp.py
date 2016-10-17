@@ -146,7 +146,7 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url(self):
         '''
-        cp.get_url with salt:// source
+        cp.get_url with salt:// source given
         '''
         tgt = os.path.join(integration.TMP, 'scene33')
         self.run_function(
@@ -162,14 +162,12 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url_dest_empty(self):
         '''
-        cp.get_url with salt:// source and destination set as empty string: ''
+        cp.get_url with salt:// source given and destination omitted.
         '''
-        tgt = ''
         ret = self.run_function(
             'cp.get_url',
             [
                 'salt://grail/scene33',
-                tgt,
             ])
         with salt.utils.fopen(ret, 'r') as scene:
             data = scene.read()
@@ -180,7 +178,7 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url_no_dest(self):
         '''
-        cp.get_url with salt:// source and destination set as None
+        cp.get_url with salt:// source given and destination set as None
         '''
         tgt = None
         ret = self.run_function(
@@ -193,7 +191,7 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url_nonexistent_source(self):
         '''
-        cp.get_url with nonexistent salt:// source
+        cp.get_url with nonexistent salt:// source given
         '''
         tgt = None
         ret = self.run_function(
@@ -206,7 +204,7 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url_https(self):
         '''
-        cp.get_url with https:// source
+        cp.get_url with https:// source given
         '''
         tgt = os.path.join(integration.TMP, 'test_get_url_https')
         self.run_function(
