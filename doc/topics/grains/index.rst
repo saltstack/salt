@@ -132,14 +132,14 @@ Using Jinja templating, only one match entry needs to be defined.
 Writing Grains
 ==============
 
-Consider adding Gains when the information is needed for targeting,
-the grains should only contain the **bare minimum data** required. Also think
-about other platforms/operating systems, and if the grain key name and data
-structure can be named and design to support many platforms, operating systems
-or applications. Most of the time execution module called from a JINJA template
-will provide the necessary detail information for a Salt State. Consider if your
-idea for a Grain would should be developed as a execution module rather than a
-Gain or a combination of both keeping minimum grain data.
+Consider adding grains when the information is needed for targeting within
+top.sls or salt cli. The grains should only contain the **bare minimum data**
+required for targeting. The "name" and "data structure" of the grain should be
+design to support many platforms, operating systems or applications. Most of the
+time an "execution module" called from within Jinja template will provide the
+necessary detail information for a Salt State. Consider if the idea for a grain
+should be developed as a execution module rather than a grain or a combination
+of both keeping minimum data within the grain.
 
 The grains interface is derived by executing
 all of the "public" functions found in the modules located in the grains
