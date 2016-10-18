@@ -247,10 +247,10 @@ def memoize(func):
 
     @wraps(func)
     def _memoize(*args, **kwargs):
-       args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
-       if args_ not in cache:
-           cache[args_] = func(*args, **kwargs)
-       return cache[args_]
+        args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
+        if args_ not in cache:
+            cache[args_] = func(*args, **kwargs)
+        return cache[args_]
 
     return _memoize
 
