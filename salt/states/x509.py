@@ -293,7 +293,7 @@ def csr_managed(name,
 
         /etc/pki/mycert.csr:
           x509.csr_managed:
-             - public_key: /etc/pki/mycert.key
+             - private_key: /etc/pki/mycert.key
              - CN: www.example.com
              - C: US
              - ST: Utah
