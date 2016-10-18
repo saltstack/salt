@@ -39,6 +39,7 @@ import logging
 # Import third party libs
 import salt.ext.six as six
 import salt.utils
+import salt.utils.files
 import salt.exceptions
 import yaml
 # Import python libs
@@ -175,7 +176,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
         return ret
     if existing_stack['result'] and update:
         if template:
-            template_tmp_file = salt.utils.mkstemp()
+            template_tmp_file = salt.utils.files.mkstemp()
             tsfn, source_sum, comment_ = __salt__['file.get_managed'](
                 name=template_tmp_file,
                 template=None,

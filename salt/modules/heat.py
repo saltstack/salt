@@ -48,6 +48,7 @@ import yaml
 # Import salt libs
 import salt.ext.six as six
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 # pylint: disable=import-error
@@ -508,7 +509,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
     if not parameters:
         parameters = {}
     if template_file:
-        template_tmp_file = salt.utils.mkstemp()
+        template_tmp_file = salt.utils.files.mkstemp()
         tsfn, source_sum, comment_ = __salt__['file.get_managed'](
             name=template_tmp_file,
             template=None,
@@ -570,7 +571,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
         return ret
     env = {}
     if enviroment:
-        enviroment_tmp_file = salt.utils.mkstemp()
+        enviroment_tmp_file = salt.utils.files.mkstemp()
         esfn, source_sum, comment_ = __salt__['file.get_managed'](
             name=enviroment_tmp_file,
             template=None,
@@ -697,7 +698,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
     if not parameters:
         parameters = {}
     if template_file:
-        template_tmp_file = salt.utils.mkstemp()
+        template_tmp_file = salt.utils.files.mkstemp()
         tsfn, source_sum, comment_ = __salt__['file.get_managed'](
             name=template_tmp_file,
             template=None,
@@ -759,7 +760,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
         return ret
     env = {}
     if enviroment:
-        enviroment_tmp_file = salt.utils.mkstemp()
+        enviroment_tmp_file = salt.utils.files.mkstemp()
         esfn, source_sum, comment_ = __salt__['file.get_managed'](
             name=enviroment_tmp_file,
             template=None,

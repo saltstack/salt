@@ -47,7 +47,6 @@ import yaml
 import salt.ext.six as six
 import salt.utils.compat
 import salt.utils.odict as odict
-import salt.utils.boto
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -967,13 +966,15 @@ def create_role(name, policy_document=None, path=None, region=None, key=None,
 
     if role_exists(name, region, key, keyid, profile):
         return True
+    if not policy_document:
+        policy_document = None
     try:
         conn.create_role(name, assume_role_policy_document=policy_document,
                          path=path)
         log.info('Created {0} iam role.'.format(name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to create {0} iam role.'
         log.error(msg.format(name))
         return False
@@ -1180,7 +1181,7 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
         log.info(msg.format(policy_name, role_name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to {0} {1} policy for role {2}.'
         log.error(msg.format(mode, policy_name, role_name))
         return False
@@ -1239,7 +1240,7 @@ def update_assume_role_policy(role_name, policy_document, region=None,
         log.info(msg.format(role_name))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         msg = 'Failed to update assume role policy for role {0}.'
         log.error(msg.format(role_name))
         return False
@@ -1737,7 +1738,7 @@ def delete_policy(policy_name,
         conn.delete_policy(policy_arn)
         log.info('Deleted {0} policy.'.format(policy_name))
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to delete {0} policy: {1}.'
         log.error(msg.format(policy_name, aws.get('message')))
@@ -1759,7 +1760,7 @@ def list_policies(region=None, key=None, keyid=None, profile=None):
 
     try:
         policies = []
-        for ret in salt.utils.boto.paged_call(conn.list_policies):
+        for ret in __utils__['boto.paged_call'](conn.list_policies):
             policies.append(ret.get('list_policies_response', {}).get('list_policies_result', {}).get('policies'))
         return policies
     except boto.exception.BotoServerError as e:
@@ -1842,7 +1843,7 @@ def create_policy_version(policy_name, policy_document, set_as_default=None,
         log.debug(e)
         msg = 'Failed to create {0} policy version.'
         log.error(msg.format(policy_name))
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': __utils__['boto.get_error'](e)}
 
 
 def delete_policy_version(policy_name, version_id,
@@ -1865,7 +1866,7 @@ def delete_policy_version(policy_name, version_id,
         conn.delete_policy_version(policy_arn, version_id)
         log.info('Deleted {0} policy version {1}.'.format(policy_name, version_id))
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to delete {0} policy version {1}: {2}'
         log.error(msg.format(policy_name, version_id, aws.get('message')))
@@ -1915,7 +1916,7 @@ def set_default_policy_version(policy_name, version_id,
         conn.set_default_policy_version(policy_arn, version_id)
         log.info('Set {0} policy to version {1}.'.format(policy_name, version_id))
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to set {0} policy to version {1}: {2}'
         log.error(msg.format(policy_name, version_id, aws.get('message')))
@@ -2098,7 +2099,7 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
           'policy_users': [],
           'policy_roles': [],
         }
-        for ret in salt.utils.boto.paged_call(conn.list_entities_for_policy, policy_arn=policy_arn, **params):
+        for ret in __utils__['boto.paged_call'](conn.list_entities_for_policy, policy_arn=policy_arn, **params):
             for k, v in six.iteritems(allret):
                 v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
         return allret
@@ -2130,7 +2131,7 @@ def list_attached_user_policies(user_name, path_prefix=None, entity_filter=None,
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
-        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedUserPolicies', params, list_marker='AttachedPolicies'):
+        for ret in __utils__['boto.paged_call'](conn.get_response, 'ListAttachedUserPolicies', params, list_marker='AttachedPolicies'):
             policies.extend(ret.get('list_attached_user_policies_response', {}).get('list_attached_user_policies_result', {}
                                    ).get('attached_policies', []))
         return policies
@@ -2162,7 +2163,7 @@ def list_attached_group_policies(group_name, path_prefix=None, entity_filter=Non
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
-        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedGroupPolicies', params, list_marker='AttachedPolicies'):
+        for ret in __utils__['boto.paged_call'](conn.get_response, 'ListAttachedGroupPolicies', params, list_marker='AttachedPolicies'):
             policies.extend(ret.get('list_attached_group_policies_response', {}).get('list_attached_group_policies_result', {}
                                    ).get('attached_policies', []))
         return policies
@@ -2194,7 +2195,7 @@ def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
-        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedRolePolicies', params, list_marker='AttachedPolicies'):
+        for ret in __utils__['boto.paged_call'](conn.get_response, 'ListAttachedRolePolicies', params, list_marker='AttachedPolicies'):
             policies.extend(ret.get('list_attached_role_policies_response', {}).get('list_attached_role_policies_result', {}
                                    ).get('attached_policies', []))
         return policies
@@ -2222,7 +2223,7 @@ def create_saml_provider(name, saml_metadata_document, region=None, key=None, ke
         log.info(msg.format(name))
         return True
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to create SAML provider {0}.'
         log.error(msg.format(name))
@@ -2247,7 +2248,7 @@ def get_saml_provider_arn(name, region=None, key=None, keyid=None, profile=None)
                 return saml_provider['arn']
         return False
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to get ARN of SAML provider {0}.'
         log.error(msg.format(name))
@@ -2276,7 +2277,7 @@ def delete_saml_provider(name, region=None, key=None, keyid=None, profile=None):
         log.info(msg.format(name))
         return True
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to delete {0} SAML provider.'
         log.error(msg.format(name))
@@ -2301,7 +2302,7 @@ def list_saml_providers(region=None, key=None, keyid=None, profile=None):
             providers.append(arn['arn'].rsplit('/', 1)[1])
         return providers
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to get list of SAML providers.'
         log.error(msg)
@@ -2323,7 +2324,7 @@ def get_saml_provider(name, region=None, key=None, keyid=None, profile=None):
         provider = conn.get_saml_provider(name)
         return provider['get_saml_provider_response']['get_saml_provider_result']['saml_metadata_document']
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to get SAML provider document.'
         log.error(msg)
@@ -2351,7 +2352,7 @@ def update_saml_provider(name, saml_metadata_document, region=None, key=None, ke
             return True
         return False
     except boto.exception.BotoServerError as e:
-        aws = salt.utils.boto.get_error(e)
+        aws = __utils__['boto.get_error'](e)
         log.debug(aws)
         msg = 'Failed to update of SAML provider.'
         log.error(msg.format(name))

@@ -5,7 +5,7 @@ State module for Cisco NSO Proxy minions
 .. versionadded: Carbon
 
 For documentation on setting up the cisconso proxy minion look in the documentation
-for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.
+for :mod:`salt.proxy.cisconso <salt.proxy.cisconso>`.
 '''
 
 

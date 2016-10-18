@@ -54,7 +54,8 @@ def managed(name,
             env_vars=None,
             no_use_wheel=False,
             pip_upgrade=False,
-            pip_pkgs=None):
+            pip_pkgs=None,
+            process_dependency_links=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -103,6 +104,11 @@ def managed(name,
     pip_pkgs: None
         As an alternative to `requirements`, pass a list of pip packages that
         should be installed.
+
+    process_dependency_links: False
+        Run pip install with the --process_dependency_links flag.
+
+        .. versionadded:: Nitrogen
 
     Also accepts any kwargs that the virtualenv module will. However, some
     kwargs, such as the ``pip`` option, require ``- distribute: True``.
@@ -253,6 +259,7 @@ def managed(name,
         _ret = __salt__['pip.install'](
             pkgs=pip_pkgs,
             requirements=requirements,
+            process_dependency_links=process_dependency_links,
             bin_env=name,
             use_wheel=use_wheel,
             no_use_wheel=no_use_wheel,
