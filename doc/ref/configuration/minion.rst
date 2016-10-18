@@ -923,6 +923,57 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: proxy_host
+
+``proxy_host``
+--------------
+
+Default: ``''``
+
+The hostname used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_host: proxy.my-domain
+
+.. conf_minion:: proxy_port
+
+``proxy_port``
+--------------
+
+Default: ``0``
+
+The port number used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_port: 31337
+
+.. conf_minion:: proxy_username
+
+``proxy_username``
+--------------
+
+Default: ``''``
+
+The username used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_username: charon
+
+.. conf_minion:: proxy_password
+
+``proxy_password``
+--------------
+
+Default: ``''``
+
+The password used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_password: obolus
 
 Minion Module Management
 ========================
