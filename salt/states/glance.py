@@ -71,7 +71,8 @@ def _find_image(name):
 
 
 def image_present(name, visibility='public', protected=None,
-        checksum=None, location=None, wait_for=None, timeout=30):
+        checksum=None, location=None, disk_format='raw', wait_for=None,
+        timeout=30):
     '''
     Checks if given image is present with properties
     set as specified.
@@ -90,6 +91,8 @@ def image_present(name, visibility='public', protected=None,
       - protected (bool)
       - checksum (string, md5sum)
       - location (URL, to copy from)
+      - disk_format ('raw' (default), 'vhd', 'vhdx', 'vmdk', 'vdi', 'iso',
+        'qcow2', 'aki', 'ari' or 'ami')
     '''
     ret = {'name': name,
             'changes': {},
@@ -128,7 +131,7 @@ def image_present(name, visibility='public', protected=None,
             return ret
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
-            location=location)
+            location=location, disk_format=disk_format)
         log.debug('Created new image:\n{0}'.format(image))
         ret['changes'] = {
             name:
