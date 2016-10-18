@@ -80,7 +80,7 @@ Translate to::
         }
 
         config[home + '/.s3cfg'] = {
-             'file.managed': [
+            'file.managed': [
                 {'source': 'salt://s3cfg/templates/s3cfg'},
                 {'template': 'jinja'},
                 {'user': user},
@@ -94,7 +94,7 @@ Translate to::
             ],
         }
 
-         return config
+        return config
 
 '''
 from __future__ import absolute_import
