@@ -238,14 +238,20 @@ def memoize(func):
     '''
     Memoize aka cache the return output of a function
     given a specific set of arguments
+
+    .. versionedited:: 2016.3.4
+
+    Added **kwargs support.
     '''
     cache = {}
 
     @wraps(func)
-    def _memoize(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
+    def _memoize(*args, **kwargs):
+       args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
+       if args_ not in cache:
+           cache[args_] = func(*args, **kwargs)
+       return cache[args_]
+
     return _memoize
 
 
