@@ -19,7 +19,6 @@ import yaml
 import re
 import datetime
 import ast
-import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -674,7 +673,7 @@ def create_private_key(path=None, text=False, bits=2048):
 
 def create_crl(path=None, text=False, signing_private_key=None,
         signing_cert=None, revoked=None, include_expired=False,
-        days_valid=100, digest=""):
+        days_valid=100, digest=''):
     '''
     Create a CRL
 
@@ -780,9 +779,10 @@ def create_crl(path=None, text=False, signing_private_key=None,
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_private_key))
 
-    if digest and pkg_resources.get_distribution("pyopenssl").version >= '0.15':
+    try:
         crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
-    else:
+    except TypeError:
+        log.warning('Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
         crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
 
     if text:
