@@ -15,9 +15,8 @@ import logging
 
 # Import salt libs
 import salt
-import salt.utils.decorators as decorators
+import salt.ext.six as six
 from salt.exceptions import CommandNotFoundError
-
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ def _cmd(**kwargs):
     return update_cmd
 
 
-def _wrapper(orig, pre='', post='', err_=None, run_args={}, **kwargs):
+def _wrapper(orig, pre='', post='', err_=None, run_args=None, **kwargs):
     '''
     Helper function that wraps the execution of freebsd-update command.
 
@@ -100,10 +99,13 @@ def _wrapper(orig, pre='', post='', err_=None, run_args={}, **kwargs):
     ret = ''    # the message to be returned
     cmd = _cmd(**kwargs)
     cmd_str = ' '.join([x for x in (pre, cmd, post, orig)])
-    res = __salt__['cmd.run_all'](cmd_str, **run_args)
+    if run_args and isinstance(run_args, dict):
+        res = __salt__['cmd.run_all'](cmd_str, **run_args)
+    else:
+        res = __salt__['cmd.run_all'](cmd_str)
 
     if isinstance(err_, dict):  # copy return values if asked to
-        for k, v in res.items():
+        for k, v in six.itermitems(res):
             err_[k] = v
 
     if 'retcode' in res and res['retcode'] != 0:
@@ -185,7 +187,7 @@ def update(**kwargs):
             return ret
         if 'stdout' in err_:
             stdout[mode] = err_['stdout']
-    return '\n'.join(['{0}: {1}'.format(k, v) for (k, v) in stdout.items()])
+    return '\n'.join(['{0}: {1}'.format(k, v) for (k, v) in six.iteritems(stdout)])
 
 
 def ids(**kwargs):
