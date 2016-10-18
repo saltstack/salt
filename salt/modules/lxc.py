@@ -4676,7 +4676,7 @@ def get_pid(name, path=None):
     if name not in list_(limit='running', path=path):
         raise CommandExecutionError('Container {0} is not running, can\'t determine PID'.format(name))
     info = __salt__['cmd.run']('lxc-info -n {0}'.format(name)).split("\n")
-    pid = filter(lambda line: re.match(r'\s*PID', line) != None, info)[0].split(':')[1].strip()
+    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line) != None][0]
     return pid
 
 
@@ -4713,7 +4713,7 @@ def add_veth(name, interface_name, bridge=None, path=None):
 
     # Check prerequisites
     if not __salt__['file.directory_exists']('/var/run/'):
-        raise CommandExecutionError('Directory /var/run required for lxc.add_veth doesn\'t exists'.format(name))
+        raise CommandExecutionError('Directory /var/run required for lxc.add_veth doesn\'t exists')
     if not __salt__['file.file_exists']('/proc/{0}/ns/net'.format(pid)):
         raise CommandExecutionError('Proc file for container {0} network namespace doesn\'t exists'.format(name))
 
