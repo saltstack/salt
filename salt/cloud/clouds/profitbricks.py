@@ -515,7 +515,7 @@ def list_nodes_full(conn=None, call=None):
 
         ret[node['name']] = node
 
-    salt.utils.cloud.cache_node_list(
+    __utils__['cloud.cache_node_list'](
         ret,
         __active_provider_name__.split(':')[0],
         __opts__
@@ -534,8 +534,11 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__,
-                                __opts__)
+    __utils__['cloud.cache_node'](
+        nodes[name],
+        __active_provider_name__,
+        __opts__
+    )
     return nodes[name]
 
 
@@ -682,7 +685,7 @@ def create(vm_):
     # Assembla the composite server object.
     server = _get_server(vm_, volumes, nics)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
@@ -777,7 +780,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -792,7 +795,7 @@ def create(vm_):
 
     if 'ssh_host' in vm_:
         vm_['key_filename'] = get_key_filename(vm_)
-        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+        ret = __utils__['cloud.bootstrap'](vm_, __opts__)
         ret.update(data)
         return ret
     else:
@@ -821,7 +824,7 @@ def destroy(name, call=None):
             '-a or --action.'
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -836,7 +839,7 @@ def destroy(name, call=None):
 
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
@@ -846,7 +849,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__['cloud.delete_minion_cachedir'](
             name,
             __active_provider_name__.split(':')[0],
             __opts__

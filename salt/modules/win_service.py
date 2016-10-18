@@ -373,6 +373,10 @@ def start(name):
     '''
     Start the specified service
 
+    .. warning::
+        You cannot start a disabled service in Windows. If the service is
+        disabled, it will be changed to ``Manual`` start.
+
     Args:
         name (str): The name of the service to start
 
@@ -387,6 +391,10 @@ def start(name):
     '''
     if status(name):
         return True
+
+    # Set the service to manual if disabled
+    if disabled(name):
+        modify(name, start_type='Manual')
 
     try:
         win32serviceutil.StartService(name)
