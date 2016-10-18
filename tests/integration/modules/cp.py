@@ -174,8 +174,6 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
-        self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
-
     def test_get_url_no_dest(self):
         '''
         cp.get_url with salt:// source given and destination set as None
@@ -220,6 +218,22 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('Windows', data)
             self.assertNotIn('AYBABTU', data)
 
+    def test_get_url_https_dest_empty(self):
+        '''
+        cp.get_url with https:// source given and destination omitted.
+        '''
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                'https://repo.saltstack.com/index.html',
+            ])
+        with salt.utils.fopen(ret, 'r') as instructions:
+            data = instructions.read()
+            self.assertIn('Bootstrap', data)
+            self.assertIn('Debian', data)
+            self.assertIn('Windows', data)
+            self.assertNotIn('AYBABTU', data)
+
     def test_get_url_https_no_dest(self):
         '''
         cp.get_url with https:// source given and destination set as None
@@ -235,6 +249,38 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('Debian', ret)
         self.assertIn('Windows', ret)
         self.assertNotIn('AYBABTU', ret)
+
+    def test_get_url_file(self):
+        '''
+        cp.get_url with file:// source given
+        '''
+        tgt = ''
+        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                src,
+                tgt,
+            ])
+        with salt.utils.fopen(ret, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_url_file_no_dest(self):
+        '''
+        cp.get_url with file:// source given and destination set as None
+        '''
+        tgt = None
+        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                src,
+                tgt,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+        self.assertNotIn('bacon', ret)
 
     def test_cache_file(self):
         '''
