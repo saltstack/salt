@@ -26,9 +26,11 @@ def _check_error(result, success_message):
     ret = {}
 
     if 'ERROR' in result:
-        if 'already started' in result:
-            ret['comment'] = success_message
-        elif 'not running' in result:
+        if any(substring in result for substring in [
+            'already started',
+            'not running',
+            'process group already active'
+        ]):
             ret['comment'] = success_message
         else:
             ret['comment'] = result
@@ -154,25 +156,14 @@ def running(name,
 
     changes = []
     just_updated = False
-    if to_add:
-        comment = 'Adding service: {0}'.format(name)
-        __salt__['supervisord.reread'](
-            user=user,
-            conf_file=conf_file,
-            bin_env=bin_env
-        )
-        result = __salt__['supervisord.add'](
-            name,
-            user=user,
-            conf_file=conf_file,
-            bin_env=bin_env
-        )
 
-        ret.update(_check_error(result, comment))
-        changes.append(comment)
-        log.debug(comment)
-
-    elif update:
+    if update:
+        # If the state explicitly asks to update, we don't care if the process
+        # is being added or not, since it'll take care of this for us,
+        # so give this condition priority in order
+        #
+        # That is, unless `to_add` somehow manages to contain processes
+        # we don't want running, in which case adding them may be a mistake
         comment = 'Updating supervisor'
         result = __salt__['supervisord.update'](
             user=user,
@@ -184,6 +175,27 @@ def running(name,
 
         if '{0}: updated'.format(name) in result:
             just_updated = True
+    elif to_add:
+        # Not sure if this condition is precise enough.
+        comment = 'Adding service: {0}'.format(name)
+        __salt__['supervisord.reread'](
+            user=user,
+            conf_file=conf_file,
+            bin_env=bin_env
+        )
+        # Causes supervisorctl to throw `ERROR: process group already active`
+        # if process group exists. At this moment, I'm not sure how to handle
+        # this outside of grepping out the expected string in `_check_error`.
+        result = __salt__['supervisord.add'](
+            name,
+            user=user,
+            conf_file=conf_file,
+            bin_env=bin_env
+        )
+
+        ret.update(_check_error(result, comment))
+        changes.append(comment)
+        log.debug(comment)
 
     is_stopped = None
 
