@@ -304,6 +304,8 @@ def get_file_str(path, saltenv='base'):
     '''
     Return the contents of a file from a URL
 
+    Returns ``False`` if Salt was unable to cache a file from a URL.
+
     CLI Example:
 
     .. code-block:: bash
@@ -311,9 +313,11 @@ def get_file_str(path, saltenv='base'):
         salt '*' cp.get_file_str salt://my/file
     '''
     fn_ = cache_file(path, saltenv)
-    with salt.utils.fopen(fn_, 'r') as fp_:
-        data = fp_.read()
-    return data
+    if isinstance(fn_, six.string_types):
+        with salt.utils.fopen(fn_, 'r') as fp_:
+            data = fp_.read()
+        return data
+    return fn_
 
 
 def cache_file(path, saltenv='base'):

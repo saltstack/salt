@@ -152,7 +152,7 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -331,7 +331,7 @@ def create(vm_):
         )
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
@@ -414,7 +414,7 @@ def create_lb(kwargs=None, call=None):
     log.debug('Network Domain: %s', network_domain.id)
     lb_conn.ex_set_current_network_domain(network_domain.id)
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
@@ -427,7 +427,7 @@ def create_lb(kwargs=None, call=None):
         name, port, protocol, algorithm, members
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
