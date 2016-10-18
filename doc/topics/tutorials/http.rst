@@ -247,6 +247,29 @@ The format of this file is msgpack, which is consistent with much of the rest
 of Salt's internal structure. Historically, the extension for this file is
 ``.p``. There are no current plans to make this configurable.
 
+Proxy
+`````
+
+If the ``tornado`` backend is used (``tornado`` is the default), proxy
+information configured in ``proxy_host``, ``proxy_port``, ``proxy_username``,
+and ``proxy_password`` from the ``__opts__`` dictionary will be used.  Normally
+these are set in the minion configuration file.
+
+.. code-block:: yaml
+
+    proxy_host: proxy.my-domain
+    proxy_port: 31337
+    proxy_username: charon
+    proxy_password: obolus
+
+.. code-block:: python
+
+    salt.utils.http.query(
+        'http://example.com',
+        opts=__opts__,
+        backend='tornado'
+    )
+
 Return Data
 ~~~~~~~~~~~
 
