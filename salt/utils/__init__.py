@@ -1585,22 +1585,6 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     return data
 
 
-def mkstemp(*args, **kwargs):
-    '''
-    Helper function which does exactly what `tempfile.mkstemp()` does but
-    accepts another argument, `close_fd`, which, by default, is true and closes
-    the fd before returning the file path. Something commonly done throughout
-    Salt's code.
-    '''
-    close_fd = kwargs.pop('close_fd', True)
-    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
-    if close_fd is False:
-        return (fd_, fpath)
-    os.close(fd_)
-    del fd_
-    return fpath
-
-
 def clean_kwargs(**kwargs):
     '''
     Return a dict without any of the __pub* keys (or any other keys starting

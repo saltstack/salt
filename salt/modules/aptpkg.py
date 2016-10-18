@@ -282,7 +282,8 @@ def latest_version(*names, **kwargs):
             cmd.extend(repo)
         out = __salt__['cmd.run_all'](cmd,
                                       output_loglevel='trace',
-                                      python_shell=False)
+                                      python_shell=False,
+                                      env={'LC_ALL': 'C', 'LANG': 'C'})
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -2143,9 +2144,9 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' pkg.file_list httpd
-        salt '*' pkg.file_list httpd postfix
-        salt '*' pkg.file_list
+        salt '*' pkg.file_dict httpd
+        salt '*' pkg.file_dict httpd postfix
+        salt '*' pkg.file_dict
     '''
     return __salt__['lowpkg.file_dict'](*packages)
 

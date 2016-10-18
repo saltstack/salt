@@ -2,7 +2,7 @@ Licence Notice
 ==============
 
 The Salt project is open and encouraging to code contributions. Please be
-advised that all code contributions will be licenced under the Apache 2.0
+advised that all code contributions will be licensed under the Apache 2.0
 License. We cannot accept contributions that already hold a Licence other
 than Apache 2.0 without explicit exception.
 
@@ -65,19 +65,19 @@ reason to ask first.
 Fixing issues
 =============
 
-If you wish to help us fix the issue you're reporting, `Salt's documentation`_ already includes
-information to help you setup a development environment, under `Developing Salt`_.
+If you wish to help us fix the issue you're reporting, `Salt's documentation`_
+already includes information to help you setup a development environment,
+under `Developing Salt`_.
 
-`SaltStack's Contributing documentation`_ is also helpful, as it explains sending in pull requests,
-keeping your salt branches in sync, and knowing `which branch`_ new features or bug fixes should be
-submitted against.
+`SaltStack's Contributing documentation`_ is also helpful, as it explains
+sending in pull requests, keeping your salt branches in sync, and knowing
+`which branch`_ new features or bug fixes should be submitted against.
 
-Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a
-`pull request`_, and **that's it**!
+Fix the issue you have in hands, if possible also add a test case to Salt's
+testing suite, create a `pull request`_, and **that's it**!
 
-Salt's development team will review your fix and if everything is OK, your fix will be merged into
-salt's code.
-
+Salt's development team will review your fix and if everything is OK, your fix
+will be merged into Salt's code.
 
 .. _`report an issue`: https://github.com/saltstack/salt/issues
 .. _`Salt's documentation`: http://docs.saltstack.com/en/latest/index.html
@@ -86,4 +86,4 @@ salt's code.
 .. _`SaltStack's Contributing documentation`: https://docs.saltstack.com/en/latest/topics/development/contributing.html
 .. _`which branch`: https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch
 
-.. vim: fenc=utf-8 spell spl=en
+.. vim: set fenc=utf-8 spell spl=en:

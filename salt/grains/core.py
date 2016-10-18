@@ -636,6 +636,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'Parallels'
             elif 'Manufacturer: Google' in output:
                 grains['virtual'] = 'kvm'
+            # Proxmox KVM
+            elif 'Vendor: SeaBIOS' in output:
+                grains['virtual'] = 'kvm'
             # Break out of the loop, lspci parsing is not necessary
             break
         elif command == 'lspci':
@@ -1047,6 +1050,7 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
+    'slesexpand': 'RES',
     'void': 'Void',
     'linuxmint': 'Mint',
 }
@@ -1070,6 +1074,7 @@ _OS_FAMILY_MAP = {
     'OEL': 'RedHat',
     'XCP': 'RedHat',
     'XenServer': 'RedHat',
+    'RES': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMware',
     'Mint': 'Debian',
@@ -1546,6 +1551,9 @@ def os_data():
 
     # Get the hardware and bios data
     grains.update(_hw_data(grains))
+
+    # Get zpool data
+    grains.update(_zpool_data(grains))
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
@@ -2081,6 +2089,30 @@ def _mdata():
                 grains['mdata'][mdata_grain] = grain_data
 
     return grains
+
+
+def _zpool_data(grains):
+    '''
+    Provide grains about zpools
+    '''
+    # quickly return if windows or proxy
+    if salt.utils.is_windows() or 'proxyminion' in __opts__:
+        return {}
+
+    # quickly return if no zpool and zfs command
+    if not salt.utils.which('zpool'):
+        return {}
+
+    # collect zpool data
+    zpool_grains = {}
+    for zpool in __salt__['cmd.run']('zpool list -H -o name,size').splitlines():
+        zpool = zpool.split()
+        zpool_grains[zpool[0]] = zpool[1]
+
+    # return grain data
+    if len(zpool_grains.keys()) < 1:
+        return {}
+    return {'zpool': zpool_grains}
 
 
 def get_server_id():

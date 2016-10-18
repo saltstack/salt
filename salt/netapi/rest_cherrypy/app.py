@@ -115,7 +115,7 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
-    app
+    app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
     app_path : ``/app``
@@ -460,6 +460,7 @@ import itertools
 import functools
 import logging
 import json
+import os
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -1971,10 +1972,30 @@ class Events(object):
             source.onopen = function() { console.info('Listening ...') };
             source.onerror = function(err) { console.error(err) };
             source.onmessage = function(message) {
-              var saltEvent = JSON.parse(message.data);
-              console.info(saltEvent.tag)
-              console.debug(saltEvent.data)
+                var saltEvent = JSON.parse(message.data);
+                console.log(saltEvent.tag, saltEvent.data);
             };
+
+        Note, the SSE stream is fast and completely asynchronous and Salt is
+        very fast. If a job is created using a regular POST request, it is
+        possible that the job return will be available on the SSE stream before
+        the response for the POST request arrives. It is important to take that
+        asynchronity into account when designing an application. Below are some
+        general guidelines.
+
+        * Subscribe to the SSE stream _before_ creating any events.
+        * Process SSE events directly as they arrive and don't wait for any
+          other process to "complete" first (like an ajax request).
+        * Keep a buffer of events if the event stream must be used for
+          synchronous lookups.
+        * Be cautious in writing Salt's event stream directly to the DOM. It is
+          very busy and can quickly overwhelm the memory allocated to a
+          browser tab.
+
+        A full, working proof-of-concept JavaScript appliction is available
+        :blob:`adjacent to this file <salt/netapi/rest_cherrypy/index.html>`.
+        It can be viewed by pointing a browser at the ``/app`` endpoint in a
+        running ``rest_cherrypy`` instance.
 
         Or using CORS:
 
@@ -2466,7 +2487,12 @@ class App(object):
             :status 401: |401|
         '''
         apiopts = cherrypy.config['apiopts']
-        return cherrypy.lib.static.serve_file(apiopts['app'])
+
+        default_index = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'index.html'))
+
+        return cherrypy.lib.static.serve_file(
+                apiopts.get('app', default_index))
 
 
 class API(object):
@@ -2509,10 +2535,9 @@ class API(object):
         })
 
         # Enable the single-page JS app URL.
-        if 'app' in self.apiopts:
-            self.url_map.update({
-                self.apiopts.get('app_path', 'app').lstrip('/'): App,
-            })
+        self.url_map.update({
+            self.apiopts.get('app_path', 'app').lstrip('/'): App,
+        })
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']

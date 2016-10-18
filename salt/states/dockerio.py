@@ -143,6 +143,7 @@ import logging
 # Import salt libs
 from salt.ext.six import string_types
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 
 # Enable proper logging
@@ -503,7 +504,7 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
         comment = 'Image {0} will be loaded'.format(image_name)
         return _ret_status(name=name, comment=comment)
 
-    tmp_filename = salt.utils.mkstemp()
+    tmp_filename = salt.utils.files.mkstemp()
     __salt__['state.single']('file.managed',
                              name=tmp_filename,
                              source=source,

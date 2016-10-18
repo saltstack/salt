@@ -513,6 +513,7 @@ class MinionBase(object):
 
         tries = opts.get('master_tries', 1)
         attempts = 0
+        resolve_dns_fallback = opts.get('resolve_dns_fallback', False)
 
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
@@ -537,7 +538,14 @@ class MinionBase(object):
                 for master in opts['local_masters']:
                     opts['master'] = master
                     opts.update(prep_ip_port(opts))
-                    opts.update(resolve_dns(opts))
+                    try:
+                        opts.update(resolve_dns(opts, fallback=resolve_dns_fallback))
+                    except SaltClientError as exc:
+                        last_exc = exc
+                        msg = ('Master hostname: \'{0}\' not found. Trying '
+                               'next master (if any)'.format(opts['master']))
+                        log.info(msg)
+                        continue
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
@@ -589,8 +597,8 @@ class MinionBase(object):
                               '(infinite attempts)'.format(attempts)
                     )
                 opts.update(prep_ip_port(opts))
-                opts.update(resolve_dns(opts))
                 try:
+                    opts.update(resolve_dns(opts, fallback=resolve_dns_fallback))
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
                         for trans in ('zeromq', 'tcp'):
@@ -776,6 +784,19 @@ class MinionManager(MinionBase):
     def handle_event(self, package):
         yield [minion.handle_event(package) for minion in self.minions]
 
+    def _create_minion_object(self, opts, timeout, safe,
+                              io_loop=None, loaded_base_name=None,
+                              jid_queue=None):
+        '''
+        Helper function to return the correct type of object
+        '''
+        return Minion(opts,
+                      timeout,
+                      safe,
+                      io_loop=io_loop,
+                      loaded_base_name=loaded_base_name,
+                      jid_queue=jid_queue)
+
     def _spawn_minions(self):
         '''
         Spawn all the coroutines which will sign in to masters
@@ -788,13 +809,13 @@ class MinionManager(MinionBase):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
-            minion = Minion(s_opts,
-                            s_opts['auth_timeout'],
-                            False,
-                            io_loop=self.io_loop,
-                            loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
-                            jid_queue=self.jid_queue,
-                            )
+            minion = self._create_minion_object(s_opts,
+                                                s_opts['auth_timeout'],
+                                                False,
+                                                io_loop=self.io_loop,
+                                                loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
+                                                jid_queue=self.jid_queue,
+                                               )
             self.minions.append(minion)
             self.io_loop.spawn_callback(self._connect_minion, minion)
 
@@ -997,6 +1018,13 @@ class Minion(MinionBase):
 
         This is primarily loading modules, pillars, etc. (since they need
         to know which master they connected to)
+
+        If this function is changed, please check ProxyMinion._post_master_init
+        to see if those changes need to be propagated.
+
+        Minions and ProxyMinions need significantly different post master setups,
+        which is why the differences are not factored out into separate helper
+        functions.
         '''
         if self.connected:
             self.opts['master'] = master
@@ -1206,6 +1234,7 @@ class Minion(MinionBase):
                 self._send_req_sync(load, timeout)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
+                return False
             except Exception:
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
@@ -1511,7 +1540,8 @@ class Minion(MinionBase):
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
         ret = {
             'return': {},
-            'success': {},
+            'retcode': {},
+            'success': {}
         }
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
@@ -1528,7 +1558,12 @@ class Minion(MinionBase):
                     func,
                     data['arg'][ind],
                     data)
+                minion_instance.functions.pack['__context__']['retcode'] = 0
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
+                    'retcode',
+                    0
+                )
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
@@ -1958,7 +1993,11 @@ class Minion(MinionBase):
                         # re-init the subsystems to work with the new master
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
+                        # put the current schedule into the new loaders
+                        self.opts['schedule'] = self.schedule.option('schedule')
                         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+                        # make the schedule to use the new 'functions' loader
+                        self.schedule.functions = self.functions
                         self.pub_channel.on_recv(self._handle_payload)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
@@ -2943,7 +2982,25 @@ class Matcher(object):
         return False
 
 
-class ProxyMinion(MinionManager):
+class ProxyMinionManager(MinionManager):
+    '''
+    Create the multi-minion interface but for proxy minions
+    '''
+    def _create_minion_object(self, opts, timeout, safe,
+                              io_loop=None, loaded_base_name=None,
+                              jid_queue=None):
+        '''
+        Helper function to return the correct type of object
+        '''
+        return ProxyMinion(opts,
+                           timeout,
+                           safe,
+                           io_loop=io_loop,
+                           loaded_base_name=loaded_base_name,
+                           jid_queue=jid_queue)
+
+
+class ProxyMinion(Minion):
     '''
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
@@ -2957,22 +3014,30 @@ class ProxyMinion(MinionManager):
 
         This is primarily loading modules, pillars, etc. (since they need
         to know which master they connected to)
+
+        If this function is changed, please check Minion._post_master_init
+        to see if those changes need to be propagated.
+
+        ProxyMinions need a significantly different post master setup,
+        which is why the differences are not factored out into separate helper
+        functions.
         '''
         log.debug("subclassed _post_master_init")
 
-        self.opts['master'] = master
+        if self.connected:
+            self.opts['master'] = master
 
-        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv'),
-        ).compile_pillar()
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                saltenv=self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+            ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            errmsg = 'No proxy key found in pillar for id '+self.opts['id']+'. '+\
-                     'Check your pillar configuration and contents.  Salt-proxy aborted.'
+            errmsg = 'No proxy key found in pillar or opts for id '+self.opts['id']+'. '+\
+                    'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)
@@ -3085,3 +3150,4 @@ class ProxyMinion(MinionManager):
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv=self.opts['environment'])
         self.grains_cache = self.opts['grains']
+        self.ready = True

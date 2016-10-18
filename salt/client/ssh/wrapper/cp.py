@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.client.ssh
+import salt.utils.files
 import logging
 import os
 from salt.exceptions import CommandExecutionError
@@ -136,7 +137,7 @@ def _render_filenames(path, dest, saltenv, template):
         temp file, rendering that file, and returning the result.
         '''
         # write out path to temp file
-        tmp_path_fn = salt.utils.mkstemp()
+        tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](

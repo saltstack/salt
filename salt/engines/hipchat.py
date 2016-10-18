@@ -6,8 +6,12 @@ via Hipchat by setting the control parameter to ``True`` and using command
 prefaced with a ``!``. Only token key is required, but room and control
 keys make the engine interactive.
 .. versionadded: Carbon
+
+:depends: hypchat
 :configuration: Example configuration
+
     .. code-block:: yaml
+
         engines:
             hipchat:
                token: 'XXXXXX'
@@ -25,7 +29,6 @@ keys make the engine interactive.
                        cmd: jobs.list_jobs
                    list_commands:
                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
-:depends: hypchat
 '''
 
 from __future__ import absolute_import
@@ -42,6 +45,7 @@ except ImportError:
     HAS_HYPCHAT = False
 
 import salt.utils
+import salt.utils.files
 import salt.runner
 import salt.client
 import salt.loader
@@ -225,7 +229,7 @@ def start(token,
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
 
-            tmp_path_fn = salt.utils.mkstemp()
+            tmp_path_fn = salt.utils.files.mkstemp()
             with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
                 fp_.write(json.dumps(ret, sort_keys=True, indent=4))
             message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)

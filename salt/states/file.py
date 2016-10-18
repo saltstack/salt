@@ -268,6 +268,7 @@ import salt.loader
 import salt.payload
 import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
@@ -1792,7 +1793,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.mkstemp()+tmp_ext
+        tmp_filename = salt.utils.files.mkstemp() + tmp_ext
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2198,6 +2199,7 @@ def directory(name,
                                                   dir_mode,
                                                   follow_symlinks)
 
+    errors = []
     if recurse or clean:
         # walk path only once and store the result
         walk_l = list(_depth_limited_walk(name, max_depth))
@@ -2260,23 +2262,31 @@ def directory(name,
             if check_files:
                 for fn_ in files:
                     full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
+                    try:
+                        ret, _ = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                    except CommandExecutionError as exc:
+                        if not exc.strerror.endswith('does not exist'):
+                            errors.append(exc.strerror)
             if check_dirs:
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                    try:
+                        ret, _ = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
+                    except CommandExecutionError as exc:
+                        if not exc.strerror.endswith('does not exist'):
+                            errors.append(exc.strerror)
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
@@ -2298,6 +2308,12 @@ def directory(name,
         ret['comment'] = 'Directory {0} not updated'.format(name)
     elif not ret['changes'] and ret['result']:
         ret['comment'] = 'Directory {0} is in the correct state'.format(name)
+
+    if errors:
+        ret['result'] = False
+        ret['comment'] += '\n\nThe following errors were encountered:\n'
+        for error in errors:
+            ret['comment'] += '\n- {0}'.format(error)
     return ret
 
 
@@ -3123,7 +3139,8 @@ def replace(name,
             prepend_if_not_found=False,
             not_found_content=None,
             backup='.bak',
-            show_changes=True):
+            show_changes=True,
+            ignore_if_missing=False):
     r'''
     Maintain an edit in a file.
 
@@ -3205,6 +3222,13 @@ def replace(name,
             diff. This may not normally be a concern, but could impact
             performance if used with large files.
 
+    ignore_if_missing : False
+        .. versionadded:: 2016.3.4
+
+        Controls what to do if the file is missing. If set to ``False``, the
+        state will display an error raised by the execution module. If set to
+        ``True``, the state will simply report no changes.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3248,7 +3272,8 @@ def replace(name,
                                        not_found_content=not_found_content,
                                        backup=backup,
                                        dry_run=__opts__['test'],
-                                       show_changes=show_changes)
+                                       show_changes=show_changes,
+                                       ignore_if_missing=ignore_if_missing)
 
     if changes:
         ret['pchanges']['diff'] = changes

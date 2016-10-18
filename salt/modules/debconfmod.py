@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ def set_(package, question, type, value, *extra):
     if extra:
         value = ' '.join((value,) + tuple(extra))
 
-    fd_, fname = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+    fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
     line = "{0} {1} {2} {3}".format(package, question, type, value)
     os.write(fd_, line)

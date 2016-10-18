@@ -262,7 +262,7 @@ class OptionParser(optparse.OptionParser, object):
                 )
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
-            log.shutdown_multiprocessing_logging_listener()
+            log.shutdown_multiprocessing_logging_listener(daemonizing=True)
         if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
             msg = '{0}\n'.format(msg)
         optparse.OptionParser.exit(self, status, msg)
@@ -2825,14 +2825,16 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=None,
             help='Pass in extra files to include in the state tarball.'
         )
-        self.add_option('--thin-extra-modules',
-                        dest='thin_extra_mods', default=None,
-                        help='One or comma-separated list of extra Python modules'
-                             'to be included into Thin Salt.')
         self.add_option('--min-extra-modules',
                         dest='min_extra_mods', default=None,
                         help='One or comma-separated list of extra Python modules'
                              'to be included into Minimal Salt.')
+        self.add_option(
+            '--thin-extra-modules',
+            dest='thin_extra_mods',
+            default=None,
+            help='One or comma-separated list of extra Python modules'
+                 'to be included into Thin Salt.')
         self.add_option(
             '-v', '--verbose',
             default=False,
@@ -2864,7 +2866,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             dest='regen_thin',
             default=False,
             action='store_true',
-            help=('Trigger a thin tarball regeneration. This is needed if',
+            help=('Trigger a thin tarball regeneration. This is needed if '
                   'custom grains/modules/states have been added or updated.'))
         self.add_option(
             '--python2-bin',

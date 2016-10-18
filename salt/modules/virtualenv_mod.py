@@ -14,6 +14,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
@@ -547,7 +548,7 @@ def get_resource_content(venv,
 
 def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
     if not salt.utils.is_windows():
-        tmppath = salt.utils.mkstemp(dir=cwd)
+        tmppath = salt.utils.files.mkstemp(dir=cwd)
     else:
         tmppath = __salt__['cp.cache_file'](source, saltenv)
 

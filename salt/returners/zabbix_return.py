@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 '''
 Return salt data to Zabbix
-The following Type: "Zabbix trapper" with "Type of information" Text items are required
 
-Key: salt.trap.info
-Key: salt.trap.average
-Key: salt.trap.warning
-Key: salt.trap.high
-Key: salt.trap.disaster
+The following Type: "Zabbix trapper" with "Type of information" Text items are required:
 
-  To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
-  .. code-block:: bash
+.. code-block:: cfg
+
+    Key: salt.trap.info
+    Key: salt.trap.average
+    Key: salt.trap.warning
+    Key: salt.trap.high
+    Key: salt.trap.disaster
+
+To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
+
+.. code-block:: bash
+
     salt '*' test.ping --return zabbix
 '''
 

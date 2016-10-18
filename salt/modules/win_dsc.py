@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing PowerShell modules
+Module for working with DSC (Alpha)
 
 :depends:
     - PowerShell 5.0
-
-Support for PowerShell
 '''
 from __future__ import absolute_import, unicode_literals
 
 # Import python libs
-import copy
 import logging
 import json
 import os
@@ -31,16 +28,17 @@ def __virtual__():
     '''
     Set the system module of the kernel is Windows
     '''
+    # Verify Windows
     if not salt.utils.is_windows():
-        return (False, 'Module DSC: Module only works on Windows systems ')
+        return False, 'Module DSC: Module only works on Windows systems'
 
+    # Verify PowerShell 5.0
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if (
-           powershell_info['installed'] and
-           ('version_major' in powershell_info) and
-           (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
-        ):
-        return (False, 'Module DSC: Module only works with PowerShell 5 or newer.')
+    if not powershell_info['installed'] or \
+        distutils.version.StrictVersion(
+            powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
+        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
+                      'newer.'
 
     return __virtualname__
 
@@ -68,167 +66,6 @@ def _pshell(cmd, cwd=None, json_depth=2):
         raise CommandExecutionError('No JSON results from powershell', info=results)
 
     return ret
-
-
-def bootstrap():
-    '''
-    Make sure that nuget-anycpu.exe is installed.
-    This will download the official nuget-anycpu.exe from the internet.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.bootstrap
-    '''
-    cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap'
-    ret = _pshell(cmd)
-    return ret
-
-
-def enable_scripts():
-    '''
-    Enable Powershell Scripts
-
-    Allows all Powershell scripts to be run.
-    Executes "Set-ExecutionPolicy Unrestricted" on the system.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.enable_scripts
-    '''
-    cmd = 'Set-ExecutionPolicy Unrestricted'
-    return _pshell(cmd)
-
-
-def psversion():
-    '''
-    Returns the Powershell version
-
-    This has been deprecated and has been replaced by ``cmd.shell_info`` Note
-    the minimum version return is 5 as ``dsc`` is not available for version
-    less than 5.  This function will be removed in 'Nitrogen' release.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.psversion
-    '''
-    salt.utils.warn_until('Nitrogen',
-        'The \'psversion\' has been deprecated and has been '
-        'replaced by \'cmd.shell_info\'.'
-    )
-    powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed'] and 'version_major' in powershell_info:
-        try:
-            return int(powershell_info['version_major'])
-        except ValueError:
-            pass
-    return 0
-
-
-def avail_modules(desc=False):
-    '''
-    List available modules in registered Powershell module repositories.
-
-    desc : False
-         If ``True``, the verbose description will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.avail_modules
-        salt 'win01' dsc.avail_modules desc=True
-    '''
-    cmd = 'Find-Module'
-    modules = _pshell(cmd)
-    names = []
-    if desc:
-        names = {}
-    for module in modules:
-        if desc:
-            names[module['Name']] = module['Description']
-            continue
-        names.append(module['Name'])
-    return names
-
-
-def list_modules(desc=False):
-    '''
-    List currently installed DSC Modules on the system.
-
-    desc : False
-         If ``True``, the verbose description will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.list_modules
-        salt 'win01' dsc.list_modules desc=True
-    '''
-    cmd = 'Get-InstalledModule'
-    modules = _pshell(cmd)
-    if isinstance(modules, dict):
-        ret = []
-        if desc:
-            modules_ret = {}
-            modules_ret[modules['Name']] = copy.deepcopy(modules)
-            modules = modules_ret
-            return modules
-        ret.append(modules['Name'])
-        return ret
-    names = []
-    if desc:
-        names = {}
-    for module in modules:
-        if desc:
-            names[module['Name']] = module
-            continue
-        names.append(module['Name'])
-    return names
-
-
-def install(name):
-    '''
-    Install a Powershell DSC module on the system.
-
-    name
-        Name of a Powershell DSC module
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.install PowerPlan
-    '''
-    # Putting quotes around the parameter protects against command injection
-    cmd = 'Install-Module -name "{0}" -Force'.format(name)
-    no_ret = _pshell(cmd)
-    return name in list_modules()
-
-
-def remove(name):
-    '''
-    Remove a Powershell DSC module from the system.
-
-    name
-        Name of a Powershell DSC module
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.remove PowerPlan
-    '''
-    # Putting quotes around the parameter protects against command injection
-    cmd = 'Uninstall-Module "{0}"'.format(name)
-    no_ret = _pshell(cmd)
-    return name not in list_modules()
 
 
 def run_config(path, source=None, config=None, salt_env='base'):

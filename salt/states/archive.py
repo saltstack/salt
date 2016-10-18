@@ -37,7 +37,7 @@ def __virtual__():
         return False
 
 
-def updateChecksum(fname, target, checksum):
+def _update_checksum(fname, target, checksum):
     lines = []
     compare_string = '{0}:{1}'.format(target, checksum)
     if os.path.exists(fname):
@@ -51,7 +51,7 @@ def updateChecksum(fname, target, checksum):
             f.write(line)
 
 
-def compareChecksum(fname, target, checksum):
+def _compare_checksum(fname, target, checksum):
     if os.path.exists(fname):
         compare_string = '{0}:{1}'.format(target, checksum)
         with salt.utils.fopen(fname, 'r') as f:
@@ -285,7 +285,7 @@ def extracted(name,
                             'files',
                             __env__,
                             source_file)
-        if compareChecksum(hash_fname, name, hash[1]):
+        if _compare_checksum(hash_fname, name, hash[1]):
             ret['result'] = True
             ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
             return ret
@@ -509,7 +509,7 @@ def extracted(name,
         if not keep:
             os.unlink(filename)
         if source_hash and source_hash_update:
-            updateChecksum(hash_fname, name, hash[1])
+            _update_checksum(hash_fname, name, hash[1])
 
     else:
         __salt__['file.remove'](if_missing)

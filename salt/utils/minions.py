@@ -15,7 +15,7 @@ import logging
 import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltCacheError
 import salt.auth.ldap
 import salt.cache
 import salt.ext.six as six
@@ -576,11 +576,18 @@ class CkMinions(object):
                 # Add in possible ip addresses of a locally connected minion
                 addrs.discard('127.0.0.1')
                 addrs.discard('0.0.0.0')
-                addrs.update(set(salt.utils.network.ip_addrs()))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
             if subset:
                 search = subset
             for id_ in search:
-                mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
+                try:
+                    mdata = self.cache.fetch('minions/{0}'.format(id_), 'data')
+                except SaltCacheError:
+                    # If a SaltCacheError is explicitly raised during the fetch operation,
+                    # permission was denied to open the cached data.p file. Continue on as
+                    # in the releases <= 2016.3. (An explicit error raise was added in PR
+                    # #35388. See issue #36867 for more information.
+                    continue
                 if mdata is None:
                     continue
                 grains = mdata.get('grains', {})

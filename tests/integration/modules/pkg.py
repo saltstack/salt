@@ -41,6 +41,14 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertEqual(self.run_function(func, lt), -1)
             self.assertEqual(self.run_function(func, eq), 0)
             self.assertEqual(self.run_function(func, gt), 1)
+        elif os_family == 'Suse':
+            lt = ['2.3.0-1', '2.3.1-15.1']
+            eq = ['2.3.1-15.1', '2.3.1-15.1']
+            gt = ['2.3.2-15.1', '2.3.1-15.1']
+
+            self.assertEqual(self.run_function(func, lt), -1)
+            self.assertEqual(self.run_function(func, eq), 0)
+            self.assertEqual(self.run_function(func, gt), 1)
         else:
             self.skipTest('{0} is unavailable on {1}'.format(func, os_family))
 
@@ -59,7 +67,6 @@ class PkgModuleTest(integration.ModuleCase,
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
                 ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
                 self.assertNotEqual(ret, {})
-                self.assertIn(repo, ret)
                 ret = self.run_function('pkg.get_repo', [repo])
                 self.assertEqual(ret['uri'], uri)
             elif os_grain == 'CentOS':
@@ -141,6 +148,7 @@ class PkgModuleTest(integration.ModuleCase,
             test_install()
             test_remove()
 
+    @requires_salt_modules('pkg.hold')
     @requires_network()
     @destructiveTest
     def test_hold_unhold(self):
@@ -191,6 +199,11 @@ class PkgModuleTest(integration.ModuleCase,
         if os_family == 'RedHat':
             ret = self.run_function(func)
             self.assertIn(ret, (True, None))
+        elif os_family == 'Suse':
+            ret = self.run_function(func)
+            if not isinstance(ret, dict):
+                self.skipTest('Upstream repo did not return coherent results. Skipping test.')
+            self.assertNotEqual(ret, {})
         elif os_family == 'Debian':
             ret = self.run_function(func)
             if not isinstance(ret, dict):
@@ -227,6 +240,64 @@ class PkgModuleTest(integration.ModuleCase,
             keys = ret.keys()
             self.assertIn('less', keys)
             self.assertIn('zypper', keys)
+
+    @requires_network()
+    @destructiveTest
+    def test_pkg_upgrade_has_pending_upgrades(self):
+        '''
+        Test running a system upgrade when there are packages that need upgrading
+        '''
+        func = 'pkg.upgrade'
+        os_family = self.run_function('grains.item', ['os_family'])['os_family']
+
+        # First make sure that an up-to-date copy of the package db is available
+        self.run_function('pkg.refresh_db')
+
+        if os_family == 'Suse':
+            # pkg.latest version returns empty if the latest version is already installed
+            vim_version_dict = self.run_function('pkg.latest_version', ['vim'])
+            if vim_version_dict == {}:
+                # Latest version is installed, get its version and construct
+                # a version selector so the immediately previous version is selected
+                vim_version_dict = self.run_function('pkg.info', ['vim'])
+                vim_version = 'version=<'+vim_version_dict['vim']['version']
+            else:
+                # Vim was not installed, so pkg.latest_version returns the latest one.
+                # Construct a version selector so immediately previous version is selected
+                vim_version = 'version=<'+vim_version_dict
+
+            # Install a version of vim that should need upgrading
+            ret = self.run_function('pkg.install', ['vim', vim_version])
+            if not isinstance(ret, dict):
+                if ret.startswith('ERROR'):
+                    self.skipTest('Could not install earlier vim to complete test.')
+            else:
+                self.assertNotEqual(ret, {})
+
+            # Run a system upgrade, which should catch the fact that Vim needs upgrading, and upgrade it.
+            ret = self.run_function(func)
+
+            # The changes dictionary should not be empty.
+            if 'changes' in ret:
+                self.assertIn('vim', ret['changes'])
+            else:
+                self.assertIn('vim', ret)
+        else:
+            ret = self.run_function('pkg.list_updates')
+            if ret == '' or ret == {}:
+                self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
+            else:
+                ret = self.run_function(func)
+
+                if 'Problem encountered' in ret:
+                    self.skipTest('A problem was encountered when running pkg.upgrade. This test is '
+                                  'meant to catch no-ops or problems with the salt function itself, '
+                                  'not problems with actual package installation. Skipping.')
+
+                # The changes dictionary should not be empty.
+                self.assertNotEqual(ret, {})
+                if 'changes' in ret:
+                    self.assertNotEqual(ret['changes'], {})
 
 
 if __name__ == '__main__':

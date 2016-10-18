@@ -186,7 +186,7 @@ def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEF
 
     Example of usage for creating a blacklist:
 
-   .. code-block:: yaml
+    .. code-block:: yaml
 
         smtp-connection-blacklist:
             win_smtp_server.connection_ip_list:

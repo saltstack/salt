@@ -426,6 +426,8 @@ def vm_present(name, vmconfig, config=None):
           - kvm_reboot (true) - reboots of kvm zones if needed for a config update
           - auto_import (false) - automatic importing of missing images
           - reprovision (false) - reprovision on image_uuid changes
+          - enforce_customer_metadata (true) - false = add metadata only, true =  add, update, and remove metadata
+          - enforce_tags (true) - false = add tags only, true =  add, update, and remove tags
 
     .. note::
 
@@ -457,7 +459,7 @@ def vm_present(name, vmconfig, config=None):
     config = {
         'kvm_reboot': True,
         'auto_import': False,
-        'reprovision': False
+        'reprovision': False,
     }
     config.update(state_config)
     log.debug('smartos.vm_present::{0}::config - {1}'.format(name, config))
@@ -551,12 +553,22 @@ def vm_present(name, vmconfig, config=None):
             if collection in vmconfig_type['create_only']:
                 continue
 
+            # enforcement
+            enforce = True
+            if 'enforce_{0}'.format(collection) in config:
+                enforce = config['enforce_{0}'.format(collection)]
+            log.debug('smartos.vm_present::enforce_{0} = {1}'.format(collection, enforce))
+
             # process add and update for collection
             if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
                 for prop in vmconfig['state'][collection]:
                     # skip unchanged properties
                     if prop in vmconfig['current'][collection] and \
                         vmconfig['current'][collection][prop] == vmconfig['state'][collection][prop]:
+                        continue
+
+                    # skip update if not enforcing
+                    if not enforce and prop in vmconfig['current'][collection]:
                         continue
 
                     # create set_ dict
@@ -567,7 +579,7 @@ def vm_present(name, vmconfig, config=None):
                     vmconfig['changed']['set_{0}'.format(collection)][prop] = vmconfig['state'][collection][prop]
 
             # process remove for collection
-            if collection in vmconfig['current'] and vmconfig['current'][collection] is not None:
+            if enforce and collection in vmconfig['current'] and vmconfig['current'][collection] is not None:
                 for prop in vmconfig['current'][collection]:
                     # skip if exists in state
                     if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:

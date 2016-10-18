@@ -32,15 +32,15 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     if not salt.utils.is_windows():
-        return (False, 'Module PSGet: Module only works on Windows systems ')
+        return False, 'Module PSGet: Module only works on Windows systems'
 
+    # Verify PowerShell 5.0
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if (
-           powershell_info['installed'] and
-           ('version_major' in powershell_info) and
-           (distutils.version.LooseVersion(powershell_info['version_major']) < distutils.version.LooseVersion('5'))
-       ):
-        return (False, 'Module PSGet: Module only works with PowerShell 5 or newer.')
+    if not powershell_info['installed'] or \
+            distutils.version.StrictVersion(
+                powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
+        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
+                      'newer.'
 
     return __virtualname__
 
@@ -89,9 +89,9 @@ def psversion():
         'replaced by \'cmd.shell_info\'.'
     )
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed'] and 'version_major' in powershell_info:
+    if powershell_info['installed']:
         try:
-            return int(powershell_info['version_major'])
+            return int(powershell_info['version'].split('.')[0])
         except ValueError:
             pass
     return 0

@@ -4,6 +4,21 @@
 Salt Release Notes - Codename Carbon
 ====================================
 
+Release Candidate
+=================
+
+See :ref:`Installing/Testing a Salt Release Candidate <release-candidate>` for instructions to install the latest release candidate.
+
+Release Candidate Known Issues
+------------------------------
+
+- :issue:`36729`: Minion does not shutdown properly when attempting to start multiple minions on same host
+- :issue:`36693`: /etc/salt/master.d/schedule.conf schedule jobs fail to run
+- :issue:`36746`: When killing a job jid output missing
+- :issue:`36748`: Proxy minion is not working
+- :issue:`36134`: multi-master with failover does not failover when master goes down
+- :issue:`36804`: error when using pkg.installed with url source
+
 New Features
 ============
 
@@ -65,7 +80,7 @@ Ponies!
 -------
 
 We all agreed that cowsay was just not good enough, install the `ponysay`
-command and the new `pony` outputter will work. For for the whole family!
+command and the new `pony` outputter will work. Fun for the whole family!
 
 Additional Features
 -------------------
@@ -103,9 +118,22 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
-          
-- The ``junos`` state module is now available. It has all the functions 
+
+- The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
+
+New Top File Merging Strategy for States
+========================================
+
+A new strategy called ``merge_all`` has been added to provide a new way of
+merging top file matches when executing a :ref:`highstate <running-highstate>`.
+See the :conf_master:`top_file_merging_strategy` documentation for further
+information.
+
+In addition, the ``same`` merging strategy was not functioning as documented.
+This has now been corrected. While this is technically a bugfix, we decided to
+hold a change in top file merging until a feature release to minimize user
+impact.
 
 Config Changes
 ==============
@@ -181,7 +209,7 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
-  
+
 Junos Module Changes
 ===================
 
@@ -245,6 +273,97 @@ Functionality Changes
           - host1
           - host2
           - host3
+
+New Modules
+===========
+
+Beacons
+-------
+
+- :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
+- :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
+- :mod:`salt.beacons.status <salt.beacons.status>`
+
+Engines
+-------
+
+- :mod:`salt.engines.hipchat <salt.engines.hipchat>`
+
+Modules
+-------
+
+- :mod:`salt.modules.boto_cloudwatch_event <salt.modules.boto_cloudwatch_event>`
+- :mod:`salt.modules.celery <salt.modules.celery>`
+- :mod:`salt.modules.ceph <salt.modules.ceph>`
+- :mod:`salt.modules.influx08 <salt.modules.influx08>`
+- :mod:`salt.modules.inspectlib.entities <salt.modules.inspectlib.entities>`
+- :mod:`salt.modules.inspectlib.fsdb <salt.modules.inspectlib.fsdb>`
+- :mod:`salt.modules.inspectlib.kiwiproc <salt.modules.inspectlib.kiwiproc>`
+- :mod:`salt.modules.inspector <salt.modules.inspector>`
+- :mod:`salt.modules.libcloud_dns <salt.modules.libcloud_dns>`
+- :mod:`salt.modules.openstack_mng <salt.modules.openstack_mng>`
+- :mod:`salt.modules.servicenow <salt.modules.servicenow>`
+- :mod:`salt.modules.testinframod <salt.modules.testinframod>`
+- :mod:`salt.modules.win_lgpo <salt.modules.win_lgpo>`
+- :mod:`salt.modules.win_pki <salt.modules.win_pki>`
+- :mod:`salt.modules.win_psget <salt.modules.win_psget>`
+- :mod:`salt.modules.win_snmp <salt.modules.win_snmp>`
+- :mod:`salt.modules.xbpspkg <salt.modules.xbpspkg>`
+
+Outputters
+----------
+
+- :mod:`salt.output.pony <salt.output.pony>`
+
+Pillar
+------
+
+- :mod:`salt.pillar.csvpillar <salt.pillar.csvpillar>`
+- :mod:`salt.pillar.http_json <salt.pillar.http_json>`
+- :mod:`salt.pillar.makostack <salt.pillar.makostack>`
+
+Returners
+---------
+
+- :mod:`salt.returners.zabbix_return <salt.returners.zabbix_return>`
+
+Runners
+-------
+
+- :mod:`salt.runners.auth <salt.runners.auth>`
+- :mod:`salt.runners.event <salt.runners.event>`
+- :mod:`salt.runners.smartos_vmadm <salt.runners.smartos_vmadm>`
+- :mod:`salt.runners.vistara <salt.runners.vistara>`
+
+SDB
+---
+
+- :mod:`salt.sdb.env <salt.sdb.env>`
+
+States
+------
+
+- :mod:`salt.states.boto_cloudwatch_event <salt.states.boto_cloudwatch_event>`
+- :mod:`salt.states.csf <salt.states.csf>`
+- :mod:`salt.states.ethtool <salt.states.ethtool>`
+- :mod:`salt.states.influxdb08_database <salt.states.influxdb08_database>`
+- :mod:`salt.states.influxdb08_user <salt.states.influxdb08_user>`
+- :mod:`salt.states.libcloud_dns <salt.states.libcloud_dns>`
+- :mod:`salt.states.snapper <salt.states.snapper>`
+- :mod:`salt.states.testinframod <salt.states.testinframod>`
+- :mod:`salt.states.win_lgpo <salt.states.win_lgpo>`
+- :mod:`salt.states.win_pki <salt.states.win_pki>`
+- :mod:`salt.states.win_snmp <salt.states.win_snmp>`
+
+Thorium
+-------
+
+- :mod:`salt.thorium.calc <salt.thorium.calc>`
+- :mod:`salt.thorium.key <salt.thorium.key>`
+- :mod:`salt.thorium.runner <salt.thorium.runner>`
+- :mod:`salt.thorium.status <salt.thorium.status>`
+- :mod:`salt.thorium.wheel <salt.thorium.wheel>`
+
 
 Deprecations
 ============

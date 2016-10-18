@@ -5,6 +5,8 @@ from __future__ import absolute_import
 import os
 import shutil
 import textwrap
+import threading
+import time
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -352,38 +354,22 @@ class StateModuleTest(integration.ModuleCase,
 
         with salt.utils.fopen(template_path, 'r') as fp_:
             template = fp_.read()
-        try:
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
             )
             self.assertSaltTrueReturn(ret)
 
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
-            )
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
-
         # Now using state.template
-        try:
-            ret = self.run_function(
-                'state.template', [template_path], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template', [template_path], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Now the problematic #2068 including dot's
-        try:
-            ret = self.run_function(
-                'state.sls', mods='issue-2068-template-str', timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.sls', mods='issue-2068-template-str', timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Let's load the template from the filesystem. If running this state
         # with state.sls works, so should using state.template_str
@@ -394,28 +380,16 @@ class StateModuleTest(integration.ModuleCase,
 
         with salt.utils.fopen(template_path, 'r') as fp_:
             template = fp_.read()
-        try:
-            ret = self.run_function(
-                'state.template_str', [template], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
-            )
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template_str', [template], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
         # Now using state.template
-        try:
-            ret = self.run_function(
-                'state.template', [template_path], timeout=120
-            )
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
+        ret = self.run_function(
+            'state.template', [template_path], timeout=120
+        )
+        self.assertSaltTrueReturn(ret)
 
     def test_template_invalid_items(self):
         TEMPLATE = textwrap.dedent('''\
@@ -1139,6 +1113,90 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn(bar_state, state_run)
         self.assertEqual(state_run[bar_state]['comment'],
                          'Command "echo bar" run')
+
+    def test_retry_option_defaults(self):
+        '''
+        test the retry option on a simple state with defaults
+        ensure comment is as expected
+        ensure state duration is greater than default retry_interval (30 seconds)
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='retry.retry_defaults'
+        )
+        retry_state = 'file_|-file_test_|-/path/to/a/non-existent/file.txt_|-exists'
+        expected_comment = ('Attempt 1: Returned a result of "False", with the following '
+                'comment: "Specified path /path/to/a/non-existent/file.txt does not exist"\n'
+                'Specified path /path/to/a/non-existent/file.txt does not exist')
+        self.assertEqual(state_run[retry_state]['comment'], expected_comment)
+        self.assertTrue(state_run[retry_state]['duration'] > 30)
+        self.assertEqual(state_run[retry_state]['result'], False)
+
+    def test_retry_option_custom(self):
+        '''
+        test the retry option on a simple state with custom retry values
+        ensure comment is as expected
+        ensure state duration is greater than custom defined interval * (retries - 1)
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='retry.retry_custom'
+        )
+        retry_state = 'file_|-file_test_|-/path/to/a/non-existent/file.txt_|-exists'
+        expected_comment = ('Attempt 1: Returned a result of "False", with the following '
+                'comment: "Specified path /path/to/a/non-existent/file.txt does not exist"\n'
+                'Attempt 2: Returned a result of "False", with the following comment: "Specified'
+                ' path /path/to/a/non-existent/file.txt does not exist"\nAttempt 3: Returned'
+                ' a result of "False", with the following comment: "Specified path'
+                ' /path/to/a/non-existent/file.txt does not exist"\nAttempt 4: Returned a'
+                ' result of "False", with the following comment: "Specified path'
+                ' /path/to/a/non-existent/file.txt does not exist"\nSpecified path'
+                ' /path/to/a/non-existent/file.txt does not exist')
+        self.assertEqual(state_run[retry_state]['comment'], expected_comment)
+        self.assertTrue(state_run[retry_state]['duration'] > 40)
+        self.assertEqual(state_run[retry_state]['result'], False)
+
+    def test_retry_option_success(self):
+        '''
+        test a state with the retry option that should return True immedietly (i.e. no retries)
+        '''
+        testfile = os.path.join(integration.TMP, 'retry_file')
+        state_run = self.run_function(
+            'state.sls',
+            mods='retry.retry_success'
+        )
+        os.unlink(testfile)
+        retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
+        self.assertNotIn('Attempt', state_run[retry_state]['comment'])
+
+    def run_create(self):
+        '''
+        helper function to wait 30 seconds and then create the temp retry file
+        '''
+        testfile = os.path.join(integration.TMP, 'retry_file')
+        time.sleep(30)
+        open(testfile, 'a').close()
+
+    def test_retry_option_eventual_success(self):
+        '''
+        test a state with the retry option that should return True after at least 4 retry attmempt
+        but never run 15 attempts
+        '''
+        testfile = os.path.join(integration.TMP, 'retry_file')
+        create_thread = threading.Thread(target=self.run_create)
+        create_thread.start()
+        state_run = self.run_function(
+            'state.sls',
+            mods='retry.retry_success2'
+        )
+        retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
+        self.assertIn('Attempt 1:', state_run[retry_state]['comment'])
+        self.assertIn('Attempt 2:', state_run[retry_state]['comment'])
+        self.assertIn('Attempt 3:', state_run[retry_state]['comment'])
+        self.assertIn('Attempt 4:', state_run[retry_state]['comment'])
+        self.assertNotIn('Attempt 15:', state_run[retry_state]['comment'])
+        self.assertEqual(state_run[retry_state]['result'], True)
+
 
 if __name__ == '__main__':
     from integration import run_tests

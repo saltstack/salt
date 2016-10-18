@@ -19,7 +19,7 @@ Salt also supports an explicit whitelist of additional functions that will be
 allowed during blackout. This is configured with the special pillar key
 ``minion_blackout_whitelist``, which is formed as a list:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     minion_blackout_whitelist:
       - test.ping

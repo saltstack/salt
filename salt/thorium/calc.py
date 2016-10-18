@@ -30,15 +30,14 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     Perform a calculation on the ``num`` most recent values. Requires a list.
     Valid values for ``oper`` are:
 
-      - add: Add last ``num`` values together
-      - mul: Multiple last ``num`` values together
-      - mean: Calculate mean of last ``num`` values
-      - median: Calculate median of last ``num`` values
-      - median_low: Calculate low median of last ``num`` values
-      - median_high: Calculate high median of last ``num`` values
-      - median_grouped: Calculate grouped median of last ``num`` values
-      - mode: Calculate mode of last ``num`` values
-
+    - add: Add last ``num`` values together
+    - mul: Multiple last ``num`` values together
+    - mean: Calculate mean of last ``num`` values
+    - median: Calculate median of last ``num`` values
+    - median_low: Calculate low median of last ``num`` values
+    - median_high: Calculate high median of last ``num`` values
+    - median_grouped: Calculate grouped median of last ``num`` values
+    - mode: Calculate mode of last ``num`` values
 
     USAGE:
 

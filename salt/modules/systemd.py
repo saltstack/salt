@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Provide the service module for systemd
+Provides the service module for systemd
 
 .. versionadded:: 0.10.0
 
@@ -69,6 +69,39 @@ def _canonical_unit_name(name):
     if any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
         return name
     return '%s.service' % name
+
+
+def _check_available(name):
+    '''
+    Returns boolean telling whether or not the named service is available
+    '''
+    _status = _systemctl_status(name)
+    sd_version = salt.utils.systemd.version(__context__)
+    if sd_version is not None and sd_version >= 231:
+        # systemd 231 changed the output of "systemctl status" for unknown
+        # services, and also made it return an exit status of 4. If we are on
+        # a new enough version, check the retcode, otherwise fall back to
+        # parsing the "systemctl status" output.
+        # See: https://github.com/systemd/systemd/pull/3385
+        # Also: https://github.com/systemd/systemd/commit/3dced37
+        return 0 <= _status['retcode'] < 4
+
+    out = _status['stdout'].lower()
+    if 'could not be found' in out:
+        # Catch cases where the systemd version is < 231 but the return code
+        # and output changes have been backported (e.g. RHEL 7.3).
+        return False
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        match = re.match(r'\s+loaded:\s+(\S+)', line)
+        if match:
+            ret = match.group(1) != 'not-found'
+            break
+    else:
+        raise CommandExecutionError(
+            'Failed to get information on unit \'%s\'' % name
+        )
+    return ret
 
 
 def _check_for_unit_changes(name):
@@ -270,9 +303,10 @@ def _systemctl_status(name):
     contextkey = 'systemd._systemctl_status.%s' % name
     if contextkey in __context__:
         return __context__[contextkey]
-    __context__[contextkey] = __salt__['cmd.run'](
+    __context__[contextkey] = __salt__['cmd.run_all'](
         _systemctl_cmd('status', name),
         python_shell=False,
+        redirect_stderr=True,
         ignore_retcode=True
     )
     return __context__[contextkey]
@@ -298,7 +332,7 @@ def _untracked_custom_unit_found(name):
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and not available(name)
+    return os.access(unit_path, os.R_OK) and not _check_available(name)
 
 
 def _unit_file_changed(name):
@@ -306,7 +340,7 @@ def _unit_file_changed(name):
     Returns True if systemctl reports that the unit file has changed, otherwise
     returns False.
     '''
-    return "'systemctl daemon-reload'" in _systemctl_status(name).lower()
+    return "'systemctl daemon-reload'" in _systemctl_status(name)['stdout'].lower()
 
 
 def systemctl_reload():
@@ -520,17 +554,8 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    out = _systemctl_status(name).lower()
-    for line in salt.utils.itertools.split(out, '\n'):
-        match = re.match(r'\s+loaded:\s+(\S+)', line)
-        if match:
-            ret = match.group(1) != 'not-found'
-            break
-    else:
-        raise CommandExecutionError(
-            'Failed to get information on unit \'%s\'' % name
-        )
-    return ret
+    _check_for_unit_changes(name)
+    return _check_available(name)
 
 
 def missing(name):

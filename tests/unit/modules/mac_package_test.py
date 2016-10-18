@@ -38,7 +38,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run_all': mock}):
             macpackage.install('/path/to/*.pkg')
-            mock.assert_called_once_with('installer -pkg \'/path/to/*.pkg\' -target LocalSystem', python_shell=True)
+            mock.assert_called_once_with('installer -pkg /path/to/*.pkg -target LocalSystem', python_shell=True)
 
     def test_install_with_extras(self):
         '''

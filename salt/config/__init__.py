@@ -186,7 +186,7 @@ VALID_OPTS = {
 
     # Append minion_id to these directories.  Helps with
     # multiple proxies and minions running on the same machine.
-    # Allowed elements in the list: pki_dir, cachedir, extension_modules
+    # Allowed elements in the list: pki_dir, cachedir, extension_modules, pidfile
     'append_minionid_config_dirs': list,
 
     # Flag to cache jobs locally.
@@ -431,6 +431,9 @@ VALID_OPTS = {
     # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
     # salt master
     'retry_dns': float,
+
+    # In the case when the resolve of the salt master hostname fails, fall back to localhost
+    'resolve_dns_fallback': bool,
 
     # set the zeromq_reconnect_ivl option on the minion.
     # http://lists.zeromq.org/pipermail/zeromq-dev/2011-January/008845.html
@@ -977,7 +980,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
     },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'default_top': 'base',
     'fileserver_limit_traversal': False,
@@ -1077,6 +1080,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
@@ -1195,7 +1199,7 @@ DEFAULT_MASTER_OPTS = {
     'thorium_roots': {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
-    'top_file_merging_strategy': 'default',
+    'top_file_merging_strategy': 'merge',
     'env_order': [],
     'environment': None,
     'default_top': 'base',
@@ -1440,7 +1444,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
-    'append_minionid_config_dirs': ['cachedir'],
+    'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
 }
 
@@ -1473,8 +1477,8 @@ CLOUD_CONFIG_DEFAULTS = {
 
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
-    'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
-    'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
+    'pidfile': '/var/run/salt-api.pid',
+    'logfile': '/var/log/salt/api',
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
@@ -3082,7 +3086,7 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ['pki_dir', 'cachedir', 'extension_modules']:
+        if directory in ['pki_dir', 'cachedir', 'extension_modules', 'pidfile']:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
 
@@ -3377,15 +3381,12 @@ def api_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for salt-api
     '''
-    # Let's grab a copy of salt's master opts
-    opts = client_config(path, defaults=DEFAULT_MASTER_OPTS)
+    # Let's grab a copy of salt's master default opts
+    defaults = DEFAULT_MASTER_OPTS
     # Let's override them with salt-api's required defaults
-    api_opts = {
-        'log_file': opts.get('api_logfile', DEFAULT_API_OPTS['api_logfile']),
-        'pidfile': opts.get('api_pidfile', DEFAULT_API_OPTS['api_pidfile'])
-    }
-    opts.update(api_opts)
-    return opts
+    defaults.update(DEFAULT_API_OPTS)
+
+    return client_config(path, defaults=defaults)
 
 
 def spm_config(path):

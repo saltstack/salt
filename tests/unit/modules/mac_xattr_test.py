@@ -30,7 +30,7 @@ class XAttrTestCase(TestCase):
                     'squidward': 'patrick'}
         with patch.object(xattr, 'read', MagicMock(side_effect=['squarepants',
                                                                 'patrick'])):
-            self.assertEqual(xattr.list('path/to/file'), expected)
+            self.assertEqual(xattr.list_('path/to/file'), expected)
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(side_effect=CommandExecutionError('No such file')))
@@ -38,7 +38,7 @@ class XAttrTestCase(TestCase):
         '''
         Test listing attributes of a missing file
         '''
-        self.assertRaises(CommandExecutionError, xattr.list, '/path/to/file')
+        self.assertRaises(CommandExecutionError, xattr.list_, '/path/to/file')
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(return_value='expected results'))
@@ -55,9 +55,12 @@ class XAttrTestCase(TestCase):
         '''
         with patch.object(salt.utils.mac_utils, 'execute_return_result',
                           MagicMock(return_value='expected results')) as mock:
-            self.assertEqual(xattr.read('/path/to/file', 'com.attr', True),
-                             'expected results')
-            mock.assert_called_once_with('xattr -p -x "com.attr" "/path/to/file"')
+            self.assertEqual(
+                xattr.read('/path/to/file', 'com.attr', **{'hex': True}),
+                'expected results'
+            )
+            mock.assert_called_once_with(
+                ['xattr', '-p', '-x', 'com.attr', '/path/to/file'])
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(side_effect=CommandExecutionError('No such file')))
@@ -101,7 +104,7 @@ class XAttrTestCase(TestCase):
         Test deleting a specific attribute from a file
         '''
         mock_cmd = MagicMock(return_value={'spongebob': 'squarepants'})
-        with patch.object(xattr, 'list', mock_cmd):
+        with patch.object(xattr, 'list_', mock_cmd):
             self.assertTrue(xattr.delete('/path/to/file', 'attribute'))
 
     @patch('salt.utils.mac_utils.execute_return_success',
@@ -122,7 +125,7 @@ class XAttrTestCase(TestCase):
         Test clearing all attributes on a file
         '''
         mock_cmd = MagicMock(return_value={})
-        with patch.object(xattr, 'list', mock_cmd):
+        with patch.object(xattr, 'list_', mock_cmd):
             self.assertTrue(xattr.clear('/path/to/file'))
 
     @patch('salt.utils.mac_utils.execute_return_success',

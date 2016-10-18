@@ -23,6 +23,7 @@ import logging
 import datetime
 import traceback
 import re
+import random
 
 # Import salt libs
 import salt.utils
@@ -82,6 +83,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'failhard',
     'onlyif',
     'unless',
+    'retry',
     'order',
     'prereq',
     'prereq_in',
@@ -1642,7 +1644,7 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def call(self, low, chunks=None, running=None):
+    def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
         before processing.
@@ -1808,7 +1810,78 @@ class State(object):
                 duration
             )
         )
+        if 'retry' in low:
+            low['retry'] = self.verify_retry_data(low['retry'])
+            if not sys.modules[self.states[cdata['full']].__module__].__opts__['test']:
+                if low['retry']['until'] != ret['result']:
+                    if low['retry']['attempts'] > retries:
+                        interval = low['retry']['interval']
+                        if low['retry']['splay'] != 0:
+                            interval = interval + random.randint(0, low['retry']['splay'])
+                        log.info(('State result does not match retry until value'
+                                  ', state will be re-run in {0} seconds'.format(interval)))
+                        self.functions['test.sleep'](interval)
+                        retry_ret = self.call(low, chunks, running, retries=retries+1)
+                        orig_ret = ret
+                        ret = retry_ret
+                        ret['comment'] = '\n'.join(
+                                [(
+                                     'Attempt {0}: Returned a result of "{1}", '
+                                     'with the following comment: "{2}"'.format(
+                                         retries,
+                                         orig_ret['result'],
+                                         orig_ret['comment'])
+                                 ),
+                                 '' if not ret['comment'] else ret['comment']])
+                        ret['duration'] = ret['duration'] + orig_ret['duration'] + (interval * 1000)
+                        if retries == 1:
+                            ret['start_time'] = orig_ret['start_time']
+            else:
+                ret['comment'] = '  '.join(
+                        ['' if not ret['comment'] else ret['comment'],
+                         ('The state would be retried every {1} seconds '
+                          '(with a splay of up to {3} seconds) '
+                          'a maximum of {0} times or until a result of {2} '
+                          'is returned').format(low['retry']['attempts'],
+                                                low['retry']['interval'],
+                                                low['retry']['until'],
+                                                low['retry']['splay'])])
         return ret
+
+    def verify_retry_data(self, retry_data):
+        '''
+        verifies the specified retry data
+        '''
+        retry_defaults = {
+                'until': True,
+                'attempts': 2,
+                'splay': 0,
+                'interval': 30,
+        }
+        expected_data = {
+            'until': bool,
+            'attempts': int,
+            'interval': int,
+            'splay': int,
+        }
+        validated_retry_data = {}
+        if isinstance(retry_data, dict):
+            for expected_key, value_type in expected_data.iteritems():
+                if expected_key in retry_data:
+                    if isinstance(retry_data[expected_key], value_type):
+                        validated_retry_data[expected_key] = retry_data[expected_key]
+                    else:
+                        log.warning(('An invalid value was passed for the retry {0}, '
+                                     'using default value {1}'.format(expected_key,
+                                                                      retry_defaults[expected_key])))
+                        validated_retry_data[expected_key] = retry_defaults[expected_key]
+                else:
+                    validated_retry_data[expected_key] = retry_defaults[expected_key]
+        else:
+            log.warning(('State is set to retry, but a valid dict for retry '
+                         'configuration was not found.  Using retry defaults'))
+            validated_retry_data = retry_defaults
+        return validated_retry_data
 
     def call_chunks(self, chunks):
         '''
@@ -2499,16 +2572,6 @@ class BaseHighState(object):
             opts['file_roots'] = mopts['file_roots']
             opts['top_file_merging_strategy'] = mopts.get('top_file_merging_strategy',
                                                           opts.get('top_file_merging_strategy'))
-            if opts['top_file_merging_strategy'] == 'merge':
-                salt.utils.warn_until(
-                    'Oxygen',
-                    'The top_file_merging_strategy \'merge\' has been renamed '
-                    'to \'default\'. Please comment out the '
-                    '\'top_file_merging_strategy\' line or change it to '
-                    '\'default\'.'
-                )
-                opts['top_file_merging_strategy'] = 'default'
-
             opts['env_order'] = mopts.get('env_order', opts.get('env_order', []))
             opts['default_top'] = mopts.get('default_top', opts.get('default_top'))
             opts['state_events'] = mopts.get('state_events')
@@ -2679,12 +2742,12 @@ class BaseHighState(object):
         except (AttributeError, TypeError):
             log.warning(
                 'Invalid top_file_merging_strategy \'%s\', falling back to '
-                '\'default\'', merging_strategy
+                '\'merge\'', merging_strategy
             )
-            merge_func = self._merge_tops_default
+            merge_func = self._merge_tops_merge
         return merge_func(tops)
 
-    def _merge_tops_default(self, tops):
+    def _merge_tops_merge(self, tops):
         '''
         The default merging strategy. The base env is authoritative, so it is
         checked first, followed by the remaining environments. In top files
@@ -2715,7 +2778,7 @@ class BaseHighState(object):
                         log.debug(
                             'Section for saltenv \'%s\' in the \'%s\' '
                             'saltenv\'s top file will be ignored, as the '
-                            'top_file_merging_strategy is set to \'default\' '
+                            'top_file_merging_strategy is set to \'merge\' '
                             'and the saltenvs do not match',
                             saltenv, cenv
                         )

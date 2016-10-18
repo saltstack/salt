@@ -338,10 +338,10 @@ def high(data, test=None, queue=False, **kwargs):
             'is specified.'
         )
     try:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
                 context=__context__)
     except NameError:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
+        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
 
     ret = st_.call_high(data)
     _set_retcode(ret)
@@ -1259,7 +1259,10 @@ def sls_id(
     opts['test'] = _get_test_value(test, **kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
-    st_ = salt.state.HighState(opts)
+    try:
+        st_ = salt.state.HighState(opts, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
