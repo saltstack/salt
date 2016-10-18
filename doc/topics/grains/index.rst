@@ -132,36 +132,26 @@ Using Jinja templating, only one match entry needs to be defined.
 Writing Grains
 ==============
 
-Consider adding grains when the information is needed for targeting within
-top.sls or salt cli. The grains should only contain the **bare minimum data**
-required for targeting. The "name" and "data structure" of the grain should be
-design to support many platforms, operating systems or applications. Most of the
-time an "execution module" called from within Jinja template will provide the
-necessary detail information for a Salt State. Consider if the idea for a grain
-should be developed as a execution module rather than a grain or a combination
-of both keeping minimum data within the grain.
+The grains are derived by executing all of the "public" functions (i.e. those
+which do not begin with an underscore) found in the modules located in the
+Salt's core grains code, followed by those in any custom grains modules. The
+functions in a grains module must return a Python :ref:`dict
+<python2:typesmapping>`, where the dictionary keys are the names of grains, and
+each key's value is that value for that grain.
 
-The grains interface is derived by executing
-all of the "public" functions found in the modules located in the grains
-package or the custom grains directory. The functions in the modules of
-the grains must return a Python :ref:`dict <python2:typesmapping>`, where the
-keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and
-the values are the values.
-
-Custom grains should be placed in a ``_grains`` directory located under the
-:conf_master:`file_roots` specified by the master config file.  The default path
-would be ``/srv/salt/_grains``.  Custom grains will be
-distributed to the minions when :mod:`state.highstate
+Custom grains modules should be placed in a subdirectory named ``_grains``
+located under the :conf_master:`file_roots` specified by the master config
+file. The default path would be ``/srv/salt/_grains``. Custom grains modules
+will be distributed to the minions when :mod:`state.highstate
 <salt.modules.state.highstate>` is run, or by executing the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
-Grains are easy to write, and only need to return a dictionary.  A common
-approach would be code something similar to the following:
+Grains modules are easy to write, and (as noted above) only need to return a
+dictionary. For example:
 
 .. code-block:: python
 
-   #!/usr/bin/env python
    def yourfunction():
         # initialize a grains dictionary
         grains = {}
@@ -170,9 +160,37 @@ approach would be code something similar to the following:
         grains['anothergrain'] = 'somevalue'
         return grains
 
-Before adding a grain to Salt, consider what the grain is and remember that
-grains need to be static data. If the data is something that is likely to
-change, consider using :doc:`Pillar <../pillar/index>` instead.
+The name of the function does not matter and will not factor into the grains
+data at all; only the keys/values returned become part of the grains.
+
+When to Use a Custom Grain
+--------------------------
+
+Before adding new grains, consider what the data is and remember that grains
+should (for the most part) be static data.
+
+If the data is something that is likely to change, consider using :doc:`Pillar
+<../pillar/index>` or an execution module instead. If it's a simple set of
+key/value pairs, pillar is a good match. If compiling the information requires
+that system commands be run, then putting this information in an execution
+module is likely a better idea.
+
+Good candidates for grains are data that is useful for targeting minions in the
+:ref:`top file <states-top>` or the Salt CLI. The name and data structure of
+the grain should be designed to support many platforms, operating systems or
+applications. Also, keep in mind that Jinja templating in Salt supports
+referencing pillar data as well as invoking functions from execution modules,
+so there's no need to place information in grains to make it available to Jinja
+templates. For example:
+
+.. code-block:: text
+
+    ...
+    ...
+    {{ salt['module.function_name']('argument_1', 'argument_2') }}
+    {{ pillar['my_pillar_key'] }}
+    ...
+    ...
 
 .. warning::
 
