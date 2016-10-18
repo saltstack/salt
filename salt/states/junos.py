@@ -19,10 +19,10 @@ def call_rpc(name, args=None, **kwargs):
 
     .. code-block:: yaml
 
-            get config:
-              junos:
+        get config:
+            junos:
         - call_rpc
-                    - args:
+        - args:
           - <configuration><system/></configuration>
           - dest: /home/user/rpc_data.txt
 
@@ -33,6 +33,7 @@ args: other arguments as taken by rpc call of PyEZ
 kwargs: keyworded arguments taken by rpc call of PyEZ
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
     if args is not None:
         ret['changes'] = __salt__['junos.call_rpc'](name, *args, **kwargs)
     else:
@@ -79,6 +80,7 @@ def commit(name):
 def rollback(name):
     '''
     Rollbacks the committed changes.
+    
     .. code-block:: yaml
 
             rollback the changes:
