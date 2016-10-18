@@ -56,6 +56,9 @@ This function forms a basic query, but with some add-ons not present in the
 currently available in these libraries has been added, but can be in future
 iterations.
 
+HTTPS Request Methods
+`````````````````````
+
 A basic query can be performed by calling this function with no more than a
 single URL:
 
@@ -82,7 +85,10 @@ required by the remote server (XML, JSON, plain text, etc).
         data=json.loads(mydict)
     )
 
-Bear in mind that this data must be sent pre-formatted; this function will not
+Data Formatting and Templating
+``````````````````````````````
+
+Bear in mind that the data must be sent pre-formatted; this function will not
 format it for you. However, a templated file stored on the local system may be
 passed through, along with variables to populate it with. To pass through only
 the file (untemplated):
@@ -147,6 +153,9 @@ However, this can be changed to ``master`` if necessary.
         node='master'
     )
 
+Headers
+```````
+
 Headers may also be passed through, either as a ``header_list``, a
 ``header_dict``, or as a ``header_file``. As with the ``data_file``, the
 ``header_file`` may also be templated. Take note that because HTTP headers are
@@ -168,6 +177,9 @@ Because much of the data that would be templated between headers and data may be
 the same, the ``template_data`` is the same for both. Correcting possible
 variable name collisions is up to the user.
 
+Authentication
+``````````````
+
 The ``query()`` function supports basic HTTP authentication. A username and
 password may be passed in as ``username`` and ``password``, respectively.
 
@@ -178,6 +190,9 @@ password may be passed in as ``username`` and ``password``, respectively.
         username='larry',
         password=`5700g3543v4r`,
     )
+
+Cookies and Sessions
+````````````````````
 
 Cookies are also supported, using Python's built-in ``cookielib``. However, they
 are turned off by default. To turn cookies on, set ``cookies`` to True.
