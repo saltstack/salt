@@ -1126,7 +1126,7 @@ def upgrade(refresh=True,
 
         if novendorchange:
             cmd_update.append('--no-allow-vendor-change')
-            log.info('Disabling changes of vendor')
+            log.info('Disabling vendor changes')
 
     old = list_pkgs()
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
