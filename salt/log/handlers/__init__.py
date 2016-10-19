@@ -104,6 +104,40 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler
     '''
 
 
+class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.RotatingFileHandler, NewStyleClassMixIn):
+    '''
+    Rotating file handler which properly handles exc_info on a per handler basis
+    '''
+    def handleError(self, record):
+        '''
+        Override the default error handling mechanism
+
+        Deal with log file rotation errors due to log file in use
+        more softly.
+        '''
+        handled = False
+
+        # Can't use "salt.utils.is_windows()" in this file
+        if (sys.platform.startswith('win') and
+                logging.raiseExceptions and
+                sys.stderr):  # see Python issue 13807
+            t, v, tb = sys.exc_info()
+            try:
+                # PermissionError is used since Python 3.3.
+                # OSError is used for previous versions of Python.
+                if t.__name__ in ('PermissionError', 'OSError') and v.winerror == 32:
+                    if self.level <= logging.WARNING:
+                        sys.stderr.write('[WARNING ] Unable to rotate the log file "{0}" '
+                                         'because it is in use\n'.format(self.baseFilename)
+                        )
+                    handled = True
+            finally:
+                del t, v, tb
+
+        if not handled:
+            super(RotatingFileHandler, self).handleError(record)
+
+
 if sys.version_info > (2, 6):
     class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
         '''

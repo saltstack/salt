@@ -603,6 +603,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger_config)
         # Setup the multiprocessing log queue listener if enabled
         self._mixin_after_parsed_funcs.append(self._setup_mp_logging_listener)
+        # Setup the multiprocessing log queue client if listener is enabled
+        # and using Windows
+        self._mixin_after_parsed_funcs.append(self._setup_mp_logging_client)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -799,28 +802,56 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # If we haven't changed the logfile path and it's not writeable,
             # salt will fail once we try to setup the logfile logging.
 
+        # Log rotate options
+        log_rotate_max_bytes = self.config.get('log_rotate_max_bytes', 0)
+        log_rotate_backup_count = self.config.get('log_rotate_backup_count', 0)
+        if not salt.utils.is_windows():
+            # Not supported on platforms other than Windows.
+            # Other platforms may use an external tool such as 'logrotate'
+            if log_rotate_max_bytes != 0:
+                logging.getLogger(__name__).warning('\'log_rotate_max_bytes\' is only supported on Windows')
+                log_rotate_max_bytes = 0
+            if log_rotate_backup_count != 0:
+                logging.getLogger(__name__).warning('\'log_rotate_backup_count\' is only supported on Windows')
+                log_rotate_backup_count = 0
+
         # Save the settings back to the configuration
         self.config[self._logfile_config_setting_name_] = logfile
         self.config[self._logfile_loglevel_config_setting_name_] = loglevel
         self.config['log_fmt_logfile'] = log_file_fmt
         self.config['log_datefmt_logfile'] = log_file_datefmt
+        self.config['log_rotate_max_bytes'] = log_rotate_max_bytes
+        self.config['log_rotate_backup_count'] = log_rotate_backup_count
 
     def setup_logfile_logger(self):
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all log file logging
+            # will go through the logging listener.
+            return
+
         logfile = self.config[self._logfile_config_setting_name_]
         loglevel = self.config[self._logfile_loglevel_config_setting_name_]
         log_file_fmt = self.config['log_fmt_logfile']
         log_file_datefmt = self.config['log_datefmt_logfile']
+        log_rotate_max_bytes = self.config['log_rotate_max_bytes']
+        log_rotate_backup_count = self.config['log_rotate_backup_count']
 
         log.setup_logfile_logger(
             logfile,
             loglevel,
             log_format=log_file_fmt,
-            date_format=log_file_datefmt
+            date_format=log_file_datefmt,
+            max_bytes=log_rotate_max_bytes,
+            backup_count=log_rotate_backup_count
         )
         for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all extended logging
+            # will go through the logging listener.
+            return
         log.setup_extended_logging(self.config)
 
     def _get_mp_logging_listener_queue(self):
@@ -832,6 +863,23 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 self.config,
                 self._get_mp_logging_listener_queue()
             )
+
+    def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows, all logging including console and
+            # log file logging will go through the multiprocessing
+            # logging listener if it exists.
+            # This will allow log file rotation on Windows
+            # since only one process can own the log file
+            # for log file rotation to work.
+            log.setup_multiprocessing_logging(
+                self._get_mp_logging_listener_queue()
+            )
+            # Remove the temp logger and any other configured loggers since all of
+            # our logging is going through the multiprocessing logging listener.
+            log.shutdown_temp_logging()
+            log.shutdown_console_logging()
+            log.shutdown_logfile_logging()
 
     def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
         # Since we're not going to be a daemon, setup the console logger
@@ -882,6 +930,11 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
         # If daemon is set force console logger to quiet
         if getattr(self.options, 'daemon', False) is True:
+            return
+
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all console logging
+            # will go through the logging listener.
             return
 
         log.setup_console_logger(
