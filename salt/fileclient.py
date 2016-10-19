@@ -553,11 +553,20 @@ class Client(object):
                 raise CommandExecutionError(
                     'Path {0!r} is not absolute'.format(url_data.path)
                 )
+            if dest is None:
+                with salt.utils.fopen(url_data.path, 'r') as fp_:
+                    data = fp_.read()
+                return data
             return url_data.path
 
         if url_data.scheme == 'salt':
-            return self.get_file(
-                url, dest, makedirs, saltenv, cachedir=cachedir)
+            result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
+            if result and dest is None:
+                with salt.utils.fopen(result, 'r') as fp_:
+                    data = fp_.read()
+                return data
+            return result
+
         if dest:
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
