@@ -3011,6 +3011,7 @@ def str_version_to_evr(verstring):
 
     return epoch, version, release
 
+
 def substr_in_list(string_to_search_for, list_to_search):
     '''
     Return a boolean value that indicates whether or not a given
