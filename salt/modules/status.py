@@ -155,7 +155,6 @@ def uptime():
     else:
         raise CommandExecutionError('This platform is not supported')
 
-
     utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
     ut_ret['since_iso'] = utc_time.isoformat()
     ut_ret['since_t'] = time.mktime(utc_time.timetuple())
