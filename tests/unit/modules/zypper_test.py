@@ -393,11 +393,11 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with patch('salt.modules.zypper.__zypper__', FailingZypperDummy()) as zypper_mock:
             zypper_mock.noraise.call = MagicMock()
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
-                    ret = zypper.upgrade(dist_upgrade=True, fromrepo="DUMMY")
-                    self.assertFalse(ret['result'])
-                    self.assertEqual(ret['comment'], zypper_out.strip())
-                    self.assertDictEqual(ret['changes'], {})
-                    zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--from', 'DUMMY')
+                ret = zypper.upgrade(dist_upgrade=True, fromrepo="DUMMY")
+                self.assertFalse(ret['result'])
+                self.assertEqual(ret['comment'], zypper_out.strip())
+                self.assertDictEqual(ret['changes'], {})
+                zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--from', 'DUMMY')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     def test_upgrade_available(self):

@@ -1106,30 +1106,27 @@ def upgrade(refresh=True,
            'comment': '',
     }
 
-    cmd_update = ['dist-upgrade'] if dist_upgrade else ['update']
-    cmd_update.extend(['--auto-agree-with-licenses'])
+    cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
     if refresh:
         refresh_db()
 
     if dryrun:
-        cmd_update.extend(['--dry-run'])
+        cmd_update.append('--dry-run')
 
     if dist_upgrade:
         if dryrun:
             # Creates a solver test case for debugging.
             log.info('Executing debugsolver and performing a dry-run dist-upgrade')
-            cmd_debugsolver = cmd_update + ['--debug-solver']
-            __zypper__.noraise.call(*cmd_debugsolver)
+            __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
 
         if fromrepo:
-            fromrepoopt = ['--from', fromrepo]
+            cmd_update.extend(['--from', fromrepo])
             log.info('Targeting repo {0!r}'.format(fromrepo))
-            cmd_update.extend(fromrepoopt)
 
         if novendorchange:
+            cmd_update.append('--no-allow-vendor-change')
             log.info('Disabling changes of vendor')
-            cmd_update.extend(['--no-allow-vendor-change'])
 
     old = list_pkgs()
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
