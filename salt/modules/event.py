@@ -63,6 +63,13 @@ def fire_master(data, tag, preload=None):
                     ip=salt.utils.ip_bracket(__opts__['interface']),
                     port=__opts__.get('ret_port', '4506')  # TODO, no fallback
                     )
+        masters = list()
+        ret = True
+        if 'master_uri_list' in __opts__:
+            for master_uri in __opts__['master_uri_list']:
+                masters.append(master_uri)
+        else:
+            masters.append(__opts__['master_uri'])
         auth = salt.crypt.SAuth(__opts__)
         load = {'id': __opts__['id'],
                 'tag': tag,
@@ -73,12 +80,13 @@ def fire_master(data, tag, preload=None):
         if isinstance(preload, dict):
             load.update(preload)
 
-        channel = salt.transport.Channel.factory(__opts__)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        return True
+        for master in masters:
+            channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+            try:
+                channel.send(load)
+            except Exception:
+                ret = False
+        return ret
     else:
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
