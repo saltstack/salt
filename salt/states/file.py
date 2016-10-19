@@ -2990,7 +2990,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     return ret
 
 
-def line(name, content, match=None, mode=None, location=None,
+def line(name, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True, create=False, user=None,
          group=None, file_mode=None):
@@ -3003,7 +3003,7 @@ def line(name, content, match=None, mode=None, location=None,
         Filesystem path to the file to be edited.
 
     :param content:
-        Content of the line.
+        Content of the line. Allowed to be empty if mode=delete.
 
     :param match:
         Match the target line for an action by
@@ -3108,6 +3108,17 @@ def line(name, content, match=None, mode=None, location=None,
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
+
+    # We've set the content to be empty in the function params but we want to make sure
+    # it gets passed when needed. Feature #37092
+    mode = mode and mode.lower() or mode
+    if mode is None:
+        return _error(ret, 'Mode was not defined. How to process the file?')
+
+    modeswithemptycontent = ['delete']
+    if mode not in modeswithemptycontent and content is None:
+        return _error(ret, 'Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+    del(modeswithemptycontent)
 
     changes = __salt__['file.line'](
         name, content, match=match, mode=mode, location=location,
