@@ -80,7 +80,7 @@ def commit(name):
 def rollback(name):
     '''
     Rollbacks the committed changes.
-    
+
     .. code-block:: yaml
 
             rollback the changes:
