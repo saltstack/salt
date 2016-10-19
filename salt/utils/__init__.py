@@ -3010,3 +3010,10 @@ def str_version_to_evr(verstring):
         release = ''
 
     return epoch, version, release
+
+def substr_in_list(string_to_search_for, list_to_search):
+    '''
+    Return a boolean value that indicates whether or not a given
+    string is present in any of the strings which comprise a list
+    '''
+    return any(string_to_search_for in s for s in list_to_search)
