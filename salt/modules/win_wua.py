@@ -16,6 +16,7 @@ import logging
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
+import salt.utils.win_wua
 
 # Import 3rd-party libs
 try:
