@@ -104,13 +104,15 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.call_rpc 'get_config' '<configuration><system/></configuration>' terse=True
+        salt 'device' junos.rpc 'get_config' 'text' filter='<configuration><system/></configuration>'
 
-        salt 'device' junos.call_rpc 'get-chassis-inventory' dest=/home/user/rpc_information.txt
+        salt 'device' junos.rpc 'get-interface-information' '/home/user/interface.log' interface_name='lo0' terse=True
 
 
     Options:
       * cmd: the rpc to be executed
+      * dest: destination file where the rpc ouput is dumped
+      * format: the format in which the rpc reply must be stored in file specified in the dest (used only when dest is specified)
       * args: other arguments as taken by rpc call of PyEZ
       * kwargs: keyworded arguments taken by rpc call of PyEZ
     '''
@@ -127,15 +129,15 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
         op.update(kwargs)
 
     if dest is None and format != 'xml':
-        log.error(
-            'Format can only be specified when the rpc output is stored in a file mentioned in dest.')
+        log.warning(
+            'Format ignored as it is only used for output which is dumped in the file.')
 
     write_response = ''
     try:
         if cmd in ['get-config', 'get_config']:
             filter_reply = None
-            if len(args) > 0:
-                filter_reply = etree.XML(args[0])
+            if 'filter' in op:
+                filter_reply = etree.XML(op['filter'])
 
             xml_reply = getattr(
                 conn.rpc,
@@ -145,7 +147,7 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
             ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
-            if format != 'xml':
+            if dest is not None and format != 'xml':
                 op.update({'format': format})
                 rpc_reply = getattr(
                     conn.rpc,
@@ -155,15 +157,14 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
                 if format == 'json':
                     write_response = json.dumps(rpc_reply, indent=1)
                 else:
-                    write_response = etree.tostring(rpc_reply)
-
+                    write_response = rpc_reply.text
         else:
 
             xml_reply = getattr(conn.rpc, cmd.replace('-', '_'))(**op)
             ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
             write_response = etree.tostring(xml_reply)
 
-            if format != 'xml':
+            if dest is not None and format != 'xml':
                 rpc_reply = getattr(
                     conn.rpc,
                     cmd.replace('-',
@@ -172,10 +173,9 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
                 if format == 'json':
                     write_response = json.dumps(rpc_reply, indent=1)
                 else:
-                    write_response = etree.tostring(rpc_reply)
+                    write_response = rpc_reply.text
 
     except Exception as exception:
-
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
 
