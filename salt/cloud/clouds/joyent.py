@@ -19,7 +19,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The location of the ssh private key that can log into the new VM
       private_key: /root/mykey.pem
       # The name of the private key
-      private_key: mykey
+      keyname: mykey
 
 When creating your profiles for the joyent cloud, add the location attribute to
 the profile, this will automatically get picked up when performing tasks
@@ -29,7 +29,7 @@ associated with that vm. An example profile might look like:
 
       joyent_512:
         provider: my-joyent-config
-        size: Extra Small 512 MB
+        size: g4-highcpu-512M
         image: centos-6
         location: us-east-1
 
