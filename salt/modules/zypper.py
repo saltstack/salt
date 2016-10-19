@@ -1052,7 +1052,7 @@ def upgrade(refresh=True,
             dist_upgrade=False,
             fromrepo=None,
             novendorchange=False,
-            **kwargs):
+            **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,Carbon
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
