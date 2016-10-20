@@ -371,7 +371,7 @@ def info(name):
 
 def start(name):
     '''
-    Start the specified service
+    Start the specified service.
 
     .. warning::
         You cannot start a disabled service in Windows. If the service is
