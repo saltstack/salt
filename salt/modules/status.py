@@ -143,13 +143,17 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    ut_path = "/proc/uptime"
-    if not os.path.exists(ut_path):
-        raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-
-    ut_ret = {
-        'seconds': int(float(open(ut_path).read().strip().split()[0]))
-    }
+    ut_ret = {'seconds': 0}
+    if salt.utils.is_linux():
+        ut_path = "/proc/uptime"
+        if not os.path.exists(ut_path):
+            raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+        ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
+    elif salt.utils.is_sunos():
+        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
+        ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+    else:
+        raise CommandExecutionError('This platform is not supported')
 
     utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
     ut_ret['since_iso'] = utc_time.isoformat()
