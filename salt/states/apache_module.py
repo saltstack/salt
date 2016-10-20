@@ -92,7 +92,7 @@ def disabled(name):
     Ensure an Apache module is disabled.
 
     .. versionadded:: 2016.3.0
-    
+
     name
         Name of the Apache module
     '''
