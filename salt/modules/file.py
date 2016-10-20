@@ -1501,7 +1501,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     modeswithemptycontent = ['delete']
     if mode not in modeswithemptycontent and content is None:
         raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
-    del(modeswithemptycontent)
+    del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:

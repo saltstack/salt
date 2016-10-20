@@ -3118,7 +3118,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     modeswithemptycontent = ['delete']
     if mode not in modeswithemptycontent and content is None:
         return _error(ret, 'Content can only be empty if mode is {0}'.format(modeswithemptycontent))
-    del(modeswithemptycontent)
+    del modeswithemptycontent
 
     changes = __salt__['file.line'](
         name, content, match=match, mode=mode, location=location,
