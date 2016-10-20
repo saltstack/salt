@@ -3,11 +3,10 @@ Description=The Salt Syndic daemon
 After=network.target
 
 [Service]
-EnvironmentFile=/etc/default/salt-syndic
-Type=simple
+Type=notify
+NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-syndic
-Restart=$RESTART
 
 [Install]
 WantedBy=multi-user.target
