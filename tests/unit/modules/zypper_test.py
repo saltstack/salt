@@ -332,7 +332,7 @@ class ZypperTestCase(TestCase):
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12,1]})
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12, 1]})
     def test_upgrade_success(self):
         '''
         Test system upgrade and dist-upgrade success.
@@ -367,7 +367,7 @@ class ZypperTestCase(TestCase):
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12,1]})
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12, 1]})
     def test_upgrade_failure(self):
         '''
         Test system upgrade failure.
