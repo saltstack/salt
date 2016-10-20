@@ -167,21 +167,18 @@ def uptime():
     else:
         return __salt__['cmd.run']('uptime')
 
-    ut = datetime.datetime.utcfromtimestamp(epoch_seconds - seconds)
-    days = seconds / 60 / 60 / 24
-    hours = (seconds - (days * 24 * 60 * 60)) / 60 / 60
-    minutes = ((seconds - (days * 24 * 60 * 60)) / 60) - hours * 60
+    boot_time = datetime.datetime.utcfromtimestamp(epoch_seconds - seconds)
+    curr_time = datetime.datetime.utcfromtimestamp(epoch_seconds)
+    up_time = curr_time - boot_time
 
-    ut_ret = {
+    return {
         'seconds': seconds,
-        'since_iso': ut.isoformat(),
-        'since_t': time.mktime(ut.timetuple()),
-        'days': days,
-        'time': '{0}:{1}'.format(hours, minutes),
+        'since_iso': boot_time.isoformat(),
+        'since_t': time.mktime(boot_time.timetuple()),
+        'days': up_time.days,
+        'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
         'users': len(__salt__['cmd.run']("who -s").split(os.linesep)),
     }
-
-    return ut_ret
 
 
 def loadavg():
