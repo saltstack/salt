@@ -178,8 +178,7 @@ def destroy(name):
     # The return of a destroy call is empty in the case of a success.
     # Errors are only indicated via HTTP status code. Status code 200
     # effetively therefore means "success".
-    if ('body' in result and 'text' in result and
-        result['body'] == '' and result['text'] == ''):
+    if result.get('body') == '' and result.get('text') == '':
         return True
     return result
 
