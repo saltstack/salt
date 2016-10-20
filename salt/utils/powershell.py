@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Common functions for working with powershell
+
+.. note:: The PSModulePath environment variable should be set to the default
+    location for PowerShell modules. This applies to all OS'es that support
+    powershell. If not set, then Salt will attempt to use some default paths.
+    If Salt can't find your modules, ensure that the PSModulePath is set and
+    pointing to all locations of your Powershell modules.
 '''
 # Import Python libs
 from __future__ import absolute_import
@@ -29,8 +35,8 @@ def module_exists(name):
 
     .. code-block:: python
 
-        import salt.utils.win_powershell
-        exists = salt.utils.win_powershell.module_exists('ServerManager')
+        import salt.utils.powershell
+        exists = salt.utils.powershell.module_exists('ServerManager')
     '''
     return name in get_modules()
 
@@ -49,18 +55,38 @@ def get_modules():
 
     .. code-block:: python
 
-        import salt.utils.win_powershell
+        import salt.utils.powershell
         modules = salt.utils.powershell.get_modules()
     '''
     ret = list()
     valid_extensions = ('.psd1', '.psm1', '.cdxml', '.xaml', '.dll')
     env_var = 'PSModulePath'
 
+    # See if PSModulePath is defined in the system environment
     if env_var not in os.environ:
-        log.error('Environment variable not present: %s', env_var)
-        return ret
+        # Once we determine how to find the PSVersion outside of powershell in
+        # other OS'es (non Windows), we'll add additional paths here
+        default_paths = [
+            '{0}/.local/share/powershell/Modules'.format(os.environ.get('HOME')),
+            '/usr/local/share/powershell/Modules']
 
-    root_paths = [str(path) for path in os.environ[env_var].split(';') if path]
+        # Check if defaults exist, add them if they do
+        root_paths = []
+        for item in default_paths:
+            if os.path.exists(item):
+                root_paths.append(item)
+
+        # Did we find any, if not log the error and return
+        if not root_paths:
+            log.error('Environment variable not present: %s', env_var)
+            log.error('Default paths not found')
+            return ret
+
+    else:
+        # Use PSModulePaths
+        root_paths = [
+            str(path) for path in os.environ[env_var].split(';') if path]
+
     for root_path in root_paths:
 
         # only recurse directories
