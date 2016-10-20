@@ -42,9 +42,9 @@ log = logging.getLogger(__name__)
 def _size_convert(_re_size):
     converted_size = int(_re_size.group('size_value'))
     if _re_size.group('size_unit') == 'm':
-        converted_size = int(size) * 1024
+        converted_size = int(converted_size) * 1024
     if _re_size.group('size_unit') == 'g':
-        converted_size = int(size) * 1024 * 1024
+        converted_size = int(converted_size) * 1024 * 1024
     return converted_size
 
 
