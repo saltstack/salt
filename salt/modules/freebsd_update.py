@@ -182,7 +182,7 @@ def update(**kwargs):
 
     for mode in ('fetch', 'install'):
         err_ = {}
-        ret = _wrapper( mode, err_=err_, **kwargs)
+        ret = _wrapper(mode, err_=err_, **kwargs)
         if 'retcode' in err_ and err_['retcode'] != 0:
             return ret
         if 'stdout' in err_:
