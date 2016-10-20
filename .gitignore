@@ -49,7 +49,6 @@ htmlcov/
 /*.iml
 *.sublime-project
 *.sublime-workspace
-/.vscode
 
 # ignore ctags file
 tags
