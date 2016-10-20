@@ -3510,6 +3510,7 @@ def get_managed(
         '''
         return {'hsum': get_hash(path, form='sha256'), 'hash_type': 'sha256'}
 
+    source_hash_name = kwargs.pop('source_hash_name', None)
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
@@ -3558,7 +3559,8 @@ def get_managed(
                         if not hash_fn:
                             return '', {}, ('Source hash file {0} not found'
                                             .format(source_hash))
-                        source_sum = extract_hash(hash_fn, '', name)
+                        source_sum = extract_hash(
+                            hash_fn, '', source_hash_name or name)
                         if source_sum is None:
                             return _invalid_source_hash_format()
 
