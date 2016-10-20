@@ -1083,7 +1083,7 @@ def upgrade(refresh=True,
         Perform a system dist-upgrade. Default: False
 
     fromrepo
-        Specify a package repository to upgrade from. Default: None
+        Specify a list of package repositories to upgrade from. Default: None
 
     novendorchange
         If set to True, no allow vendor changes. Default: False
@@ -1098,7 +1098,7 @@ def upgrade(refresh=True,
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-        salt '*' pkg.upgrade dist-upgrade=True fromrepo="MyRepoName" novendorchange=True
+        salt '*' pkg.upgrade dist-upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
         salt '*' pkg.upgrade dist-upgrade=True dryrun=True
     '''
     ret = {'changes': {},
@@ -1121,8 +1121,9 @@ def upgrade(refresh=True,
             __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
 
         if fromrepo:
-            cmd_update.extend(['--from', fromrepo])
-            log.info('Targeting repo {0!r}'.format(fromrepo))
+            for repo in fromrepo:
+                cmd_update.extend(['--from', repo])
+            log.info('Targeting repos: {0!r}'.format(fromrepo))
 
         if novendorchange:
             cmd_update.append('--no-allow-vendor-change')
