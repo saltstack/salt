@@ -196,7 +196,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 pass
         else:
             return thintar
-    if six.PY3:
+    if not six.PY3:
         # Let's check for the minimum python 2 version requirement, 2.6
         py_shell_cmd = (
             python2_bin + ' -c \'from __future__ import print_function; import sys; '
@@ -230,9 +230,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     # TODO: Consider putting known py2 and py3 compatible libs in it's own sharable directory.
     #       This would reduce the thin size.
     if six.PY2 and sys.version_info[0] == 2:
-        # Get python 3 tops
+        # Get python 2 tops
         py_shell_cmd = (
-            python3_bin + ' -c \'import sys; import json; import salt.utils.thin; '
+            python2_bin + ' -c \'import sys; import json; import salt.utils.thin; '
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
@@ -241,13 +241,13 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         if cmd.returncode == 0:
             try:
                 tops = json.loads(stdout)
-                tops_py_version_mapping['3'] = tops
+                tops_py_version_mapping['2'] = tops
             except ValueError:
                 pass
     if six.PY3 and sys.version_info[0] == 3:
-        # Get python 2 tops
+        # Get python 3 tops
         py_shell_cmd = (
-            python2_bin + ' -c \'from __future__ import print_function; '
+            python3_bin + ' -c \'from __future__ import print_function; '
             'import sys; import json; import salt.utils.thin; '
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
@@ -257,7 +257,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         if cmd.returncode == 0:
             try:
                 tops = json.loads(stdout.decode('utf-8'))
-                tops_py_version_mapping['2'] = tops
+                tops_py_version_mapping['3'] = tops
             except ValueError:
                 pass
 
