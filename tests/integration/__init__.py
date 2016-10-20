@@ -184,7 +184,7 @@ class TestDaemon(object):
         '''
         # Setup the multiprocessing logging queue listener
         salt_log_setup.setup_multiprocessing_logging_listener(
-            self.parser.options
+            vars(self.parser.options)
         )
 
         # Set up PATH to mockbin
