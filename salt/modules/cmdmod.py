@@ -315,6 +315,10 @@ def _run(cmd,
         raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
+        # Strip whitespace
+        if isinstance(cmd, six.string_types):
+            cmd = cmd.strip()
+
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
         # Else just run a Powershell command.
@@ -324,11 +328,11 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -NonInteractive -ExecutionPolicy Bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
         elif encoded_cmd:
             cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:
-            cmd = 'Powershell -NonInteractive "{0}"'.format(cmd.replace('"', '\\"'))
+            cmd = 'Powershell -NonInteractive -NoProfile "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
