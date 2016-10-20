@@ -2824,14 +2824,28 @@ def powershell(cmd,
         saltenv='base',
         use_vt=False,
         password=None,
+        depth=None,
         encode_cmd=False,
         **kwargs):
     '''
-    Execute the passed PowerShell command and return the output as a string.
+    Execute the passed PowerShell command and return the output as a dictionary.
+
+    Other ``cmd.*`` functions return the raw text output of the command. This
+    function appends ``| ConvertTo-JSON`` to the command and then parses the
+    JSON into a Python dictionary. If you want the raw textual result of your
+    PowerShell command you should use ``cmd.run`` with the ``shell=powershell``
+    option.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run '$PSVersionTable.CLRVersion' shell=powershell
+        salt '*' cmd.run 'Get-NetTCPConnection' shell=powershell
 
     .. versionadded:: 2016.3.0
 
-    .. warning ::
+    .. warning::
 
         This passes the cmd argument directly to PowerShell
         without any further processing! Be absolutely sure that you
@@ -2840,6 +2854,16 @@ def powershell(cmd,
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    In addition to the normal ``cmd.run`` parameters, this command offers the
+    ``depth`` parameter to change the Windows default depth for the
+    ``ConvertTo-JSON`` powershell command. The Windows default is 2. If you need
+    more depth, set that here.
+
+    .. note::
+        For some commands, setting the depth to a value greater than 4 greatly
+        increases the time it takes for the command to return and in many cases
+        returns useless data.
 
     :param str cmd: The powershell command to run.
 
@@ -2933,9 +2957,18 @@ def powershell(cmd,
 
     :param str saltenv: The salt environment to use. Default is 'base'
 
+    :param int depth: The number of levels of contained objects to be included.
+        Default is 2. Values greater than 4 seem to greatly increase the time
+        it takes for the command to complete for some commands. eg: ``dir``
+
+        .. versionadded:: 2016.3.4
+
     :param bool encode_cmd: Encode the command before executing. Use in cases
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
+
+    :returns:
+        :dict: A dictionary of data returned by the powershell command.
 
     CLI Example:
 
@@ -2949,7 +2982,9 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd = '{0} | ConvertTo-Json -Depth 32'.format(cmd)
+    cmd += ' | ConvertTo-JSON'
+    if depth is not None:
+        cmd += ' -Depth {0}'.format(depth)
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
