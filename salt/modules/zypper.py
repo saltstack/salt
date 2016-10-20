@@ -1126,18 +1126,24 @@ def upgrade(refresh=True,
             log.info('Targeting repos: {0!r}'.format(fromrepo))
 
         if novendorchange:
-            cmd_update.append('--no-allow-vendor-change')
-            log.info('Disabling vendor changes')
+            # TODO: Grains validation should be moved to Zypper class
+            if __grains__['osrelease_info'][0] != 11:
+                cmd_update.append('--no-allow-vendor-change')
+                log.info('Disabling vendor changes')
+            else:
+                log.warn('Disabling vendor changes is not supported on this Zypper version')
 
     old = list_pkgs()
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         ret['result'] = False
-        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
     else:
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         ret['changes'] = salt.utils.compare_dicts(old, new)
+
+    if dryrun or not ret['result']:
+        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
 
     return ret
 
