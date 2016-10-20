@@ -154,7 +154,7 @@ def uptime():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        seconds = int(float(open(ut_path).read().split()[0]))
+        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
     elif salt.utils.is_sunos():
         cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
         seconds = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
