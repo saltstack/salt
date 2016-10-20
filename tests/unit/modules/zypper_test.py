@@ -50,6 +50,7 @@ from salt.modules import zypper
 
 # Globals
 zypper.__salt__ = dict()
+zypper.__grains__ = dict()
 zypper.__context__ = dict()
 zypper.rpm = None
 
@@ -331,6 +332,7 @@ class ZypperTestCase(TestCase):
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12,1]})
     def test_upgrade_success(self):
         '''
         Test system upgrade and dist-upgrade success.
@@ -358,13 +360,14 @@ class ZypperTestCase(TestCase):
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--debug-solver')
 
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
-                ret = zypper.upgrade(dist_upgrade=True, fromrepo="Dummy", novendorchange=True)
+                ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
                 self.assertTrue(ret['result'])
                 self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
-                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy", '--no-allow-vendor-change')
+                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12,1]})
     def test_upgrade_failure(self):
         '''
         Test system upgrade failure.
@@ -393,7 +396,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with patch('salt.modules.zypper.__zypper__', FailingZypperDummy()) as zypper_mock:
             zypper_mock.noraise.call = MagicMock()
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
-                ret = zypper.upgrade(dist_upgrade=True, fromrepo="DUMMY")
+                ret = zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"])
                 self.assertFalse(ret['result'])
                 self.assertEqual(ret['comment'], zypper_out.strip())
                 self.assertDictEqual(ret['changes'], {})
