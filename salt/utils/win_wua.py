@@ -13,6 +13,11 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
+class Updates:
+    def __init__(self):
+        self.
+
+
 class WindowsUpdateAgent:
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
@@ -87,6 +92,61 @@ class WindowsUpdateAgent:
             raise CommandExecutionError(failure_code)
 
         self._updates = results.Updates
+
+    def available(self,
+                  skip_hidden=True,
+                  skip_installed=True,
+                  skip_present=False,
+                  skip_reboot=False,
+                  software=True,
+                  drivers=True,
+                  categories=None,
+                  severities=None):
+
+        found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+
+        if self._updates.Count == 0:
+            self._load_all_updates()
+
+        for update in self._updates:
+
+            if skip_hidden is not None:
+                if salt.utils.is_true(update.IsHidden) and skip_hidden:
+                    continue
+
+            if skip_installed is not None:
+                if salt.utils.is_true(update.IsInstalled) and skip_installed:
+                    continue
+
+            if skip_present is not None:
+                if salt.utils.is_true(update.IsPresent) and skip_present:
+                    continue
+
+            if skip_reboot is not None:
+                if salt.utils.is_true(update.RebootRequired) and skip_reboot:
+                    continue
+
+            if not software and update.Type == 1:
+                continue
+
+            if not drivers and update.Type == 2:
+                continue
+
+            if categories is not None:
+                match = false
+                for category in update.Categories:
+                    if category.Name in categories:
+                        match = True
+                if not match:
+                    continue
+
+            if severities is not None:
+                if update.MsrcSeverity not in severities:
+                    continue
+
+            found.Add(update)
+
+        self._found = found
 
     def search(self, search_string):
 
@@ -357,9 +417,9 @@ class WindowsUpdateAgent:
 
         return ret
 
-wua = WUA()
-wua.search('28cf1b09-2b1a-458c-9bd1-971d1b26b211')
-print(wua.list_found())
-print(wua.summary_found())
+# wua = WindowsUpdateAgent()
+# wua.search('28cf1b09-2b1a-458c-9bd1-971d1b26b211')
+# print(wua.list_found())
+# print(wua.summary_found())
 # print(wua.download())
 # print(wua.install())
