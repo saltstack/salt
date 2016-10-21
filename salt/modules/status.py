@@ -148,29 +148,31 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    epoch_seconds = time.time()
+    curr_seconds = time.time()
 
     # Get uptime in seconds
     if salt.utils.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
+        seconds = float(salt.utils.fopen(ut_path).read().split()[0])
     elif salt.utils.is_sunos():
         cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
-        seconds = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        seconds = float(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
     elif salt.utils.is_darwin():
         bt_data = __salt__['sysctl.get']('kern.boottime')
         if not bt_data:
             raise CommandExecutionError('Cannot find kern.boottime system parameter')
         sec_data, usec_data = bt_data.split('}')[0].strip(' {').split(', ')
-        seconds = int(epoch_seconds - int(sec_data.split('sec = ')[1]))
+        sec = sec_data.split('sec = ')[1]
+        usec = usec_data.split('usec = ')[1]
+        seconds = curr_seconds - float(sec + '.' + '{0:0>6}'.format(usec))
     else:
         return __salt__['cmd.run']('uptime')
 
     # Setup datetime and timedelta objects
-    boot_time = datetime.datetime.utcfromtimestamp(epoch_seconds - seconds)
-    curr_time = datetime.datetime.utcfromtimestamp(epoch_seconds)
+    boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
+    curr_time = datetime.datetime.utcfromtimestamp(curr_seconds)
     up_time = curr_time - boot_time
 
     # Construct return information
