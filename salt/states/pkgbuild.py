@@ -336,8 +336,8 @@ def repo(name,
         .. versionadded:: 2016.3.0
 
         Use a passphrase with the signing key presented in ``keyid``.
-        Passphrase is received from Pillar data which has been passed on
-        the command line. For example:
+        Passphrase is received from Pillar data which could be passed on the
+        command line with ``pillar`` parameter. For example:
 
         .. code-block:: bash
 
