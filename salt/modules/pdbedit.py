@@ -212,6 +212,7 @@ def modify(
     drive=None, homedir=None, fullname=None,
     account_desc=None, account_control=None,
     machine_sid=None, user_sid=None,
+    reset_login_hours=False, reset_bad_password_count=False,
 ):
     '''
     Modify user account
@@ -250,6 +251,10 @@ def modify(
             - H: Home directory required
             - L: Automatic Locking
             - X: Password does not expire
+    reset_login_hours : boolean
+        reset the users allowed logon hours
+    reset_bad_password_count : boolean
+        reset the stored bad login counter
 
     CLI Example:
 
@@ -318,13 +323,18 @@ def modify(
             if val is not None and key in current and current[key] != val:
                 changes[key] = val
 
-    if len(changes) > 0:
+    ## apply changes
+    if len(changes) > 0 or reset_login_hours or reset_bad_password_count:
         cmds = []
         for change in changes:
             cmds.append('{flag}{value}'.format(
                 flag=flags[change],
                 value=_quote_args(changes[change]),
             ))
+        if reset_login_hours:
+            cmds.append('--logon-hours-reset')
+        if reset_bad_password_count:
+            cmds.append('--bad-password-count-reset')
 
         res = __salt__['cmd.run_all'](
             'pdbedit --modify --user {login} {changes}'.format(
