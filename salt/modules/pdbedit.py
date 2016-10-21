@@ -210,7 +210,8 @@ def modify(
     login, password=None, password_hashed=False,
     domain=None, profile=None, script=None,
     drive=None, homedir=None, fullname=None,
-    account_desc=None, machine_sid=None, user_sid=None,
+    account_desc=None, account_control=None,
+    machine_sid=None, user_sid=None,
 ):
     '''
     Modify user account
@@ -239,6 +240,16 @@ def modify(
         specify the machines new primary group SID or rid
     user_sid : string
         specify the users new primary group SID or rid
+    account_control : string
+        specify user account control properties
+
+        .. note::
+            Only the follwing can be set:
+            - N: No password required
+            - D: Account disabled
+            - H: Home directory required
+            - L: Automatic Locking
+            - X: Password does not expire
 
     CLI Example:
 
@@ -247,6 +258,7 @@ def modify(
         salt '*' pdbedit.modify inara fullname='Inara Serra'
         salt '*' pdbedit.modify simon password=r1v3r
         salt '*' pdbedit.modify jane drive='V:' homedir='\\\\serenity\\jane\\profile'
+        salt '*' pdbedit.modify mal account_control=NX
     '''
     ## flag mapping
     flags = {
@@ -257,6 +269,7 @@ def modify(
         'homedir drive': '--drive=',
         'profile path': '--profile=',
         'logon script': '--script=',
+        'account flags': '--account-control=',
         'user sid': '-U ',
         'machine sid': '-M ',
     }
@@ -270,6 +283,7 @@ def modify(
         'homedir drive': drive,
         'profile path': profile,
         'logon script': script,
+        'account flags': account_control,
         'user sid': user_sid,
         'machine sid': machine_sid,
     }
@@ -287,6 +301,19 @@ def modify(
         if key in ['user sid', 'machine sid']:
             if val is not None and key in current and not current[key].endswith(str(val)):
                 changes[key] = str(val)
+        elif key in ['account flags']:
+            if val is not None:
+                if val.startswith('['):
+                    val = val[1:-1]
+                new = []
+                for f in val.upper():
+                    if f not in ['N', 'D', 'H', 'L', 'X']:
+                        log.warning(
+                            'pdbedit.modify - unknown {f} flag for account_control, ignored'.format(f=f)
+                        )
+                    else:
+                        new.append(f)
+                changes[key] = "[{flags}]".format(flags="".join(new))
         else:
             if val is not None and key in current and current[key] != val:
                 changes[key] = val
