@@ -2,9 +2,13 @@
 from __future__ import absolute_import
 import logging
 
-import win32com.client
-import pythoncom
-import pywintypes
+try:
+    import win32com.client
+    import pythoncom
+    import pywintypes
+    HAS_PYWIN32 = True
+except ImportError:
+    HAS_PYWIN32 = False
 
 import salt.utils
 from salt.ext import six
@@ -14,9 +18,102 @@ log = logging.getLogger(__name__)
 
 
 class Updates:
-    def __init__(self):
-        self.
 
+    update_types = {1: 'Software',
+                    2: 'Driver'}
+
+    reboot_behavior = {0: 'Never Requires Reboot',
+                       1: 'Always Requires Reboot',
+                       2: 'Can Require Reboot'}
+
+    def __init__(self):
+        self.updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+
+    def count(self):
+        return self.updates.Count
+
+    def list(self):
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+        if self.count() == 0:
+            return 'Nothing to return'
+
+        log.debug('Building a detailed report of the results.')
+
+        # Build a dictionary containing details for each update
+        results = {}
+        for update in self.updates:
+
+            results[update.Identity.UpdateID] = {
+                'guid': update.Identity.UpdateID,
+                'Title': str(update.Title),
+                'Type': self.update_types[update.Type],
+                'Description': update.Description,
+                'Downloaded': bool(update.IsDownloaded),
+                'Installed': bool(update.IsInstalled),
+                'Mandatory': bool(update.IsMandatory),
+                'EULAAccepted': bool(update.EulaAccepted),
+                'NeedsReboot': bool(update.RebootRequired),
+                'Severity': str(update.MsrcSeverity),
+                'UserInput':
+                    bool(update.InstallationBehavior.CanRequestUserInput),
+                'RebootBehavior':
+                    self.reboot_behavior[
+                        update.InstallationBehavior.RebootBehavior],
+                'KB': ['KB' + item for item in update.KBArticleIDs],
+                'Categories': [item.Name for item in update.Categories]
+            }
+
+        return results
+
+    def summary(self):
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+        if self.count() == 0:
+            return 'Nothing to return'
+
+        # Build a dictionary containing a summary of updates available
+        results = {'Total': 0,
+                   'Available': 0,
+                   'Downloaded': 0,
+                   'Installed': 0,
+                   'Categories': {},
+                   'Severity': {}}
+
+        for update in self.updates:
+
+            # Count the total number of updates available
+            results['Total'] += 1
+
+            # Updates available for download
+            if not salt.utils.is_true(update.IsDownloaded) \
+                    and not salt.utils.is_true(update.IsInstalled):
+                results['Available'] += 1
+
+            # Updates downloaded awaiting install
+            if salt.utils.is_true(update.IsDownloaded) \
+                    and not salt.utils.is_true(update.IsInstalled):
+                results['Downloaded'] += 1
+
+            # Updates installed
+            if salt.utils.is_true(update.IsInstalled):
+                results['Installed'] += 1
+
+            # Add Categories and increment total for each one
+            # The sum will be more than the total because each update can have
+            # multiple categories
+            for category in update.Categories:
+                if category.Name in results['Categories']:
+                    results['Categories'][category.Name] += 1
+                else:
+                    results['Categories'][category.Name] = 1
+
+            # Add Severity Summary
+            if update.MsrcSeverity:
+                if update.MsrcSeverity in results['Severity']:
+                    results['Severity'][update.MsrcSeverity] += 1
+                else:
+                    results['Severity'][update.MsrcSeverity] = 1
+
+        return results
 
 class WindowsUpdateAgent:
     # Error codes found at the following site:
@@ -43,11 +140,6 @@ class WindowsUpdateAgent:
                   -4292607993: 'Already uninstalled: 0x00240007',
                   -4292607994: 'Already installed: 0x00240006',
                   -4292607995: 'Reboot required: 0x00240005'}
-    update_types = {1: 'Software',
-                    2: 'Driver'}
-    reboot_behavior = {0: 'Never Requires Reboot',
-                       1: 'Always Requires Reboot',
-                       2: 'Can Require Reboot'}
 
     def __init__(self):
         # Initialize the PyCom system
@@ -58,14 +150,12 @@ class WindowsUpdateAgent:
 
         # Create Collection for Updates
         self._updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        self._found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        self._download = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        self._install = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         self._load_all_updates()
 
     def _load_all_updates(self):
         # Load all updates
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386526(v=vs.85).aspx
         search_string = 'Type=\'Software\' or ' \
                         'Type=\'Driver\''
 
@@ -96,35 +186,29 @@ class WindowsUpdateAgent:
     def available(self,
                   skip_hidden=True,
                   skip_installed=True,
-                  skip_present=False,
+                  skip_mandatory=False,
                   skip_reboot=False,
                   software=True,
                   drivers=True,
                   categories=None,
                   severities=None):
 
-        found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-
-        if self._updates.Count == 0:
-            self._load_all_updates()
+        updates = Updates()
+        found = updates.updates
 
         for update in self._updates:
 
-            if skip_hidden is not None:
-                if salt.utils.is_true(update.IsHidden) and skip_hidden:
-                    continue
+            if salt.utils.is_true(update.IsHidden) and skip_hidden:
+                continue
 
-            if skip_installed is not None:
-                if salt.utils.is_true(update.IsInstalled) and skip_installed:
-                    continue
+            if salt.utils.is_true(update.IsInstalled) and skip_installed:
+                continue
 
-            if skip_present is not None:
-                if salt.utils.is_true(update.IsPresent) and skip_present:
-                    continue
+            if salt.utils.is_true(update.IsMandatory) and skip_mandatory:
+                continue
 
-            if skip_reboot is not None:
-                if salt.utils.is_true(update.RebootRequired) and skip_reboot:
-                    continue
+            if salt.utils.is_true(update.RebootRequired) and skip_reboot:
+                continue
 
             if not software and update.Type == 1:
                 continue
@@ -146,14 +230,12 @@ class WindowsUpdateAgent:
 
             found.Add(update)
 
-        self._found = found
+        return updates
 
     def search(self, search_string):
 
-        found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-
-        if self._updates.Count == 0:
-            self._load_all_updates()
+        updates = Updates()
+        found = updates.updates
 
         if isinstance(search_string, six.string_types):
             search_string = [search_string]
@@ -182,120 +264,15 @@ class WindowsUpdateAgent:
                     found.Add(update)
                     continue
 
-        self._found = found
+        return updates
 
-    def updates_details(self):
-        return self._details(self._updates)
-
-    def found_details(self):
-        return self._details(self._found)
-
-    def _details(self, updates):
-
-        if updates.Count == 0:
-            return 'Nothing to return'
-
-        log.debug('Building a detailed report of the results.')
-
-        # Build a dictionary containing details for each update
-        results = {}
-        for update in updates:
-
-            results[update.Identity.UpdateID] = {
-                'guid': update.Identity.UpdateID,
-                'Title': str(update.Title),
-                'Type': self.update_types[update.Type],
-                'Description': update.Description,
-                'Downloaded': bool(update.IsDownloaded),
-                'Installed': bool(update.IsInstalled),
-                'Mandatory': bool(update.IsMandatory),
-                'EULAAccepted': bool(update.EulaAccepted),
-                'NeedsReboot': bool(update.RebootRequired),
-                'Severity': str(update.MsrcSeverity),
-                'UserInput':
-                    bool(update.InstallationBehavior.CanRequestUserInput),
-                'RebootBehavior':
-                    self.reboot_behavior[update.InstallationBehavior.RebootBehavior],
-                'KB': ['KB' + item for item in update.KBArticleIDs],
-                'Categories': [item.Name for item in update.Categories]
-            }
-
-        return results
-
-    def updates_summary(self):
-        return self._summary(self._updates)
-
-    def found_summary(self):
-        return self._summary(self._found)
-
-    def _summary(self, updates):
-
-        if updates.Count == 0:
-            return 'Nothing to return'
-
-        # Build a dictionary containing a summary of updates available
-        results = {'Total': 0,
-                   'Available': 0,
-                   'Downloaded': 0,
-                   'Installed': 0,
-                   'Categories': {},
-                   'Severity': {}}
-
-        for update in updates:
-
-            # Count the total number of updates available
-            results['Total'] += 1
-
-            # Updates available for download
-            if not salt.utils.is_true(update.IsDownloaded)\
-                    and not salt.utils.is_true(update.IsInstalled):
-                results['Available'] += 1
-
-            # Updates downloaded awaiting install
-            if salt.utils.is_true(update.IsDownloaded)\
-                    and not salt.utils.is_true(update.IsInstalled):
-                results['Downloaded'] += 1
-
-            # Updates installed
-            if salt.utils.is_true(update.IsInstalled):
-                results['Installed'] += 1
-
-            # Add Categories and increment total for each one
-            # The sum will be more than the total because each update can have
-            # multiple categories
-            for category in update.Categories:
-                if category.Name in results['Categories']:
-                    results['Categories'][category.Name] += 1
-                else:
-                    results['Categories'][category.Name] = 1
-
-            # Add Severity Summary
-            if update.MsrcSeverity:
-                if update.MsrcSeverity in results['Severity']:
-                    results['Severity'][update.MsrcSeverity] += 1
-                else:
-                    results['Severity'][update.MsrcSeverity] = 1
-
-        return results
-
-    def download_updates(self):
-        return self._download(self._updates)
-
-    def download_found(self):
-        return self._download(self._found)
-
-    def _download(self, updates):
-        # Lookup dictionaries
-        result_code = {0: 'Download Not Started',
-                       1: 'Download In Progress',
-                       2: 'Download Succeeded',
-                       3: 'Download Succeeded With Errors',
-                       4: 'Download Failed',
-                       5: 'Download Aborted'}
+    def download(self, updates):
 
         # Check for empty list
         if updates.Count == 0:
-            return 'Nothing to download'
+            ret = {'Success': False,
+                   'Updates': 'Nothing to download'}
+            return ret
 
         # Initialize the downloader object and list collection
         downloader = self._session.CreateUpdateDownloader()
@@ -304,12 +281,29 @@ class WindowsUpdateAgent:
 
         # Check for updates that aren't already downloaded
         for update in updates.Updates:
+
+            # Define uid to keep the lines shorter
+            uid = update.Identity.UpdateID
+            ret['Updates'][uid]['Title'] = update.Title
+
+            # Accept EULA
+            if not salt.utils.is_true(updates.EulaAccepted):
+                log.debug('Accepting EULA: {0}'.format(update.Title))
+                update.AcceptEula()  # pylint: disable=W0104
+
+            # Update already downloaded
+            ret['Updates'][uid]['AlreadyDownloaded'] = True
             if not salt.utils.is_true(update.IsDownloaded):
+                log.debug('To Be Downloaded: {0}'.format(uid))
+                log.debug('\tTitle: {0}'.format(update.Title))
+                ret['Updates'][uid]['AlreadyDownloaded'] = False
                 download_list.Add(update)
 
         # Check the download list
         if download_list.Count == 0:
-            return 'Nothing to download'
+            ret = {'Success': False,
+                   'Updates': 'Nothing to download'}
+            return ret
 
         # Send the list to the downloader
         downloader.Updates = download_list
@@ -328,16 +322,23 @@ class WindowsUpdateAgent:
             log.error('Download Failed: {0}'.format(failure_code))
             raise CommandExecutionError(failure_code)
 
+        # Lookup dictionary
+        result_code = {0: 'Download Not Started',
+                       1: 'Download In Progress',
+                       2: 'Download Succeeded',
+                       3: 'Download Succeeded With Errors',
+                       4: 'Download Failed',
+                       5: 'Download Aborted'}
+
         log.debug('Download Complete')
         log.debug(result_code[result.ResultCode])
+        ret['Message'] = result_code[result.ResultCode]
 
         # Was the download successful?
         if result.ResultCode in [2, 3]:
             ret['Success'] = True
         else:
             ret['Success'] = False
-
-        ret['Message'] = result_code[result.ResultCode]
 
         # Report results for each update
         for i in range(download_list.Count):
@@ -347,32 +348,43 @@ class WindowsUpdateAgent:
 
         return ret
 
-    def install_updates(self):
-        return self._install(self._updates)
+    def install(self, updates):
 
-    def install_found(self):
-        return self._install(self._found)
-
-    def _install(self, updates):
+        # Check for empty list
         if updates.Count == 0:
-            return 'Nothing to install'
+            ret = {'Success': False,
+                   'Updates': 'Nothing to install'}
+            return ret
 
         installer = self._session.CreateUpdateInstaller()
         self._session.ClientApplicationID = 'Salt: Install Update'
         install_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
-        # Install the updates
+        # Check for updates that aren't already installed
         for update in updates:
-            # Make sure the update has actually been downloaded
+
+            # Define uid to keep the lines shorter
+            uid = update.Identity.UpdateID
+            ret['Updates'][uid]['Title'] = update.Title
+
+            # Make sure the update has actually been installed
+            ret['Updates'][uid]['AlreadyInstalled'] = True
             if not salt.utils.is_true(update.IsInstalled):
+                log.debug('To Be Installed: {0}'.format(uid))
+                log.debug('\tTitle: {0}'.format(update.Title))
+                ret['Updates'][uid]['AlreadyInstalled'] = False
                 install_list.Add(update)
 
+        # Check the install list
         if install_list.Count == 0:
-            return 'Nothing to install'
+            ret = {'Success': False,
+                   'Updates': 'Nothing to install'}
+            return ret
 
+        # Send the list to the installer
         installer.Updates = install_list
 
-        # Try to run the installer
+        # Install the list
         try:
             result = installer.Install()
 
@@ -387,6 +399,7 @@ class WindowsUpdateAgent:
             log.error('Install Failed: {0}'.format(failure_code))
             raise CommandExecutionError(failure_code)
 
+        # Lookup dictionary
         result_code = {0: 'Installation Not Started',
                        1: 'Installation In Progress',
                        2: 'Installation Succeeded',
@@ -396,6 +409,7 @@ class WindowsUpdateAgent:
 
         log.debug('Install Complete')
         log.debug(result_code[result.ResultCode])
+        ret['Message'] = result_code[result.ResultCode]
 
         if result.ResultCode in [2, 3]:
             ret['Success'] = True
@@ -404,22 +418,96 @@ class WindowsUpdateAgent:
         else:
             ret['Success'] = False
 
-        ret['Message'] = result_code[result.ResultCode]
         reboot = {0: 'Never Reboot',
                   1: 'Always Reboot',
                   2: 'Poss Reboot'}
-        for i in range(wua_install_list.Count):
-            uid = wua_install_list.Item(i).Identity.UpdateID
+        for i in range(install_list.Count):
+            uid = install_list.Item(i).Identity.UpdateID
             ret['Updates'][uid]['Result'] = \
                 result_code[result.GetUpdateResult(i).ResultCode]
-            ret['Updates'][uid]['RebootBehavior'] = \
-                reboot[wua_install_list.Item(i).InstallationBehavior.RebootBehavior]
+            ret['Updates'][uid]['RebootBehavior'] = reboot[
+                install_list.Item(i).InstallationBehavior.RebootBehavior]
 
         return ret
 
-# wua = WindowsUpdateAgent()
-# wua.search('28cf1b09-2b1a-458c-9bd1-971d1b26b211')
-# print(wua.list_found())
-# print(wua.summary_found())
-# print(wua.download())
-# print(wua.install())
+    def uninstall(self, updates):
+
+        # Check for empty list
+        if updates.Count == 0:
+            ret = {'Success': False,
+                   'Updates': 'Nothing to uninstall'}
+            return ret
+
+        installer = self._session.CreateUpdateInstaller()
+        self._session.ClientApplicationID = 'Salt: Install Update'
+        uninstall_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+
+        # Check for updates that aren't already installed
+        for update in updates:
+
+            # Define uid to keep the lines shorter
+            uid = update.Identity.UpdateID
+            ret['Updates'][uid]['Title'] = update.Title
+
+            # Make sure the update has actually been installed
+            ret['Updates'][uid]['AlreadyUninstalled'] = True
+            if salt.utils.is_true(update.IsInstalled):
+                log.debug('To Be Uninstalled: {0}'.format(uid))
+                log.debug('\tTitle: {0}'.format(update.Title))
+                ret['Updates'][uid]['AlreadyUninstalled'] = False
+                uninstall_list.Add(update)
+
+        # Check the install list
+        if uninstall_list.Count == 0:
+            ret = {'Success': False,
+                   'Updates': 'Nothing to uninstall'}
+            return ret
+
+        # Send the list to the installer
+        installer.Updates = uninstall_list
+
+        # Uninstall the list
+        try:
+            result = installer.Uninstall()
+
+        except pywintypes.com_error as error:
+            # Something happened, raise an error
+            hr, msg, exc, arg = error.args  # pylint: disable=W0633
+            try:
+                failure_code = self.fail_codes[exc[5]]
+            except KeyError:
+                failure_code = 'Unknown Failure: {0}'.format(error)
+
+            log.error('Uninstall Failed: {0}'.format(failure_code))
+            raise CommandExecutionError(failure_code)
+
+        # Lookup dictionary
+        result_code = {0: 'Uninstallation Not Started',
+                       1: 'Uninstallation In Progress',
+                       2: 'Uninstallation Succeeded',
+                       3: 'Uninstallation Succeeded With Errors',
+                       4: 'Uninstallation Failed',
+                       5: 'Uninstallation Aborted'}
+
+        log.debug('Uninstall Complete')
+        log.debug(result_code[result.ResultCode])
+        ret['Message'] = result_code[result.ResultCode]
+
+        if result.ResultCode in [2, 3]:
+            ret['Success'] = True
+            ret['NeedsReboot'] = result.RebootRequired
+            log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
+        else:
+            ret['Success'] = False
+
+        reboot = {0: 'Never Reboot',
+                  1: 'Always Reboot',
+                  2: 'Poss Reboot'}
+        for i in range(uninstall_list.Count):
+            uid = uninstall_list.Item(i).Identity.UpdateID
+            ret['Updates'][uid]['Result'] = \
+                result_code[result.GetUpdateResult(i).ResultCode]
+            ret['Updates'][uid]['RebootBehavior'] = reboot[
+                uninstall_list.Item(i).InstallationBehavior.RebootBehavior]
+
+        return ret
