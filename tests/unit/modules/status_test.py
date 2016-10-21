@@ -25,7 +25,7 @@ class StatusTestCase(TestCase):
     '''
     test modules.status functions
     '''
-
+    @patch('salt.utils.is_linux', MagicMock(return_value=True))
     def test_uptime(self):
         '''
         Test modules.status.uptime function, new version
