@@ -623,7 +623,7 @@ def set_wu_settings(level=None,
                     msupdate=None,
                     day=None,
                     time=None):
-    """
+    '''
     Change Windows Update settings. If no parameters are passed, the current
     value will be returned.
 
@@ -674,7 +674,7 @@ def set_wu_settings(level=None,
 
         salt '*' win_wua.set_wu_settings level=4 recommended=True featured=False
 
-    """
+    '''
     ret = {}
     ret['Success'] = True
 
@@ -817,10 +817,13 @@ def set_wu_settings(level=None,
 
 
 def get_wu_settings():
-    """
+    '''
     Get current Windows Update settings.
 
-    :return:
+    Returns:
+
+        dict: A dictionary of Windows Update settings:
+
         Featured Updates:
             Boolean value that indicates whether to display notifications for
             featured updates.
@@ -860,7 +863,7 @@ def get_wu_settings():
     .. code-block:: bash
 
         salt '*' win_wua.get_wu_settings
-    """
+    '''
     ret = {}
 
     day = ['Every Day',
@@ -904,10 +907,10 @@ def get_wu_settings():
 
 
 def _get_msupdate_status():
-    """
+    '''
     Check to see if Microsoft Update is Enabled
     Return Boolean
-    """
+    '''
     # To get the status of Microsoft Update we actually have to check the
     # Microsoft Update Service Manager
     # Create a ServiceManager Object
@@ -926,11 +929,12 @@ def _get_msupdate_status():
 
 
 def get_needs_reboot():
-    """
+    '''
     Determines if the system needs to be rebooted.
 
-    :return: bool
-        True if the system requires a reboot, False if not
+    Returns:
+
+        bool: True if the system requires a reboot, False if not
 
     CLI Examples:
 
@@ -938,7 +942,7 @@ def get_needs_reboot():
 
         salt '*' win_wua.get_needs_reboot
 
-    """
+    '''
     # Initialize the PyCom system
     pythoncom.CoInitialize()
 
