@@ -112,7 +112,7 @@ can define a restricted list of minons which are allowed to remotely invoke this
         - ST: Utah
         - L: Salt Lake City
         - basicConstraints: "critical CA:false"
-        - keyUsage: "critical cRLSign, keyCertSign"
+        - keyUsage: "critical keyEncipherment"
         - subjectKeyIdentifier: hash
         - authorityKeyIdentifier: keyid,issuer:always
         - days_valid: 90
