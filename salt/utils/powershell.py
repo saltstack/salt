@@ -60,32 +60,41 @@ def get_modules():
     '''
     ret = list()
     valid_extensions = ('.psd1', '.psm1', '.cdxml', '.xaml', '.dll')
-    env_var = 'PSModulePath'
+    # need to create an info function to get PS information including version
+    # __salt__ is not available from salt.utils... need to create a salt.util
+    # for the registry to avoid loading powershell to get the version
+    # not sure how to get the powershell version in linux outside of powershell
+    # if running powershell to get version need to use subprocess.Popen
+    # That information will be loaded here
+    # ps_version = info()['version_raw']
+    root_paths = []
 
-    # See if PSModulePath is defined in the system environment
-    if env_var not in os.environ:
-        # Once we determine how to find the PSVersion outside of powershell in
-        # other OS'es (non Windows), we'll add additional paths here
-        default_paths = [
-            '{0}/.local/share/powershell/Modules'.format(os.environ.get('HOME')),
-            '/usr/local/share/powershell/Modules']
+    home_dir = os.environ.get('HOME', os.environ.get('HOMEPATH'))
+    system_dir = '{0}\\System32'.format(os.environ.get('WINDIR', 'C:\\Windows'))
+    program_files = os.environ.get('ProgramFiles', 'C:\\Program Files')
+    default_paths = [
+        '{0}/.local/share/powershell/Modules'.format(home_dir),
+        # Once version is available, these can be enabled
+        # '/opt/microsoft/powershell/{0}/Modules'.format(ps_version),
+        # '/usr/local/microsoft/powershell/{0}/Modules'.format(ps_version),
+        '/usr/local/share/powershell/Modules',
+        '{0}\\WindowsPowerShell\\v1.0\\Modules\\'.format(system_dir),
+        '{0}\\WindowsPowerShell\\Modules'.format(program_files)]
+    default_paths = ';'.join(default_paths)
 
-        # Check if defaults exist, add them if they do
-        root_paths = []
-        for item in default_paths:
-            if os.path.exists(item):
-                root_paths.append(item)
+    ps_module_path = os.environ.get('PSModulePath', default_paths)
 
-        # Did we find any, if not log the error and return
-        if not root_paths:
-            log.error('Environment variable not present: %s', env_var)
-            log.error('Default paths not found')
-            return ret
+    # Check if defaults exist, add them if they do
+    ps_module_path = ps_module_path.split(';')
+    for item in ps_module_path:
+        print(item)
+        if os.path.exists(item):
+            root_paths.append(item)
 
-    else:
-        # Use PSModulePaths
-        root_paths = [
-            str(path) for path in os.environ[env_var].split(';') if path]
+    # Did we find any, if not log the error and return
+    if not root_paths:
+        log.error('Default paths not found')
+        return ret
 
     for root_path in root_paths:
 
