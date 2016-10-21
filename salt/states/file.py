@@ -2396,6 +2396,8 @@ def recurse(name,
     # Check source path relative to fileserver root, make sure it is a
     # directory
     srcpath, senv = salt.utils.url.parse(source)
+    if senv is None:
+        senv = __env__
     master_dirs = __salt__['cp.list_master_dirs'](saltenv=senv)
     if srcpath not in master_dirs \
             and not any((x for x in master_dirs
