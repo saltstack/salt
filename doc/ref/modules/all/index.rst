@@ -259,6 +259,7 @@ execution modules
     parallels
     parted
     pcs
+    pdbedit
     pecl
     philips_hue
     pillar
