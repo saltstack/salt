@@ -8,6 +8,10 @@ from __future__ import absolute_import
 import logging
 import hashlib
 import binascii
+try:
+    from shlex import quote as _quote_args  # pylint: disable=e0611
+except ImportError:
+    from pipes import quote as _quote_args
 
 # Import Salt libs
 import salt.utils
@@ -38,9 +42,9 @@ def __virtual__():
     )
 
 
-def _generate_nt_hash(password):
+def generate_nt_hash(password):
     '''
-    Internal function to generate a nthash
+    Generate a NT HASH
     '''
     return binascii.hexlify(
         hashlib.new(
@@ -85,8 +89,7 @@ def list_users(verbose=True, hashes=False):
                 else:
                     label = user[:user.index(':')].strip().lower()
                     data = user[(user.index(':')+1):].strip()
-                    if len(data) > 0:
-                        user_data[label] = data
+                    user_data[label] = data
 
             if len(user_data) > 0:
                 users[user_data['unix username']] = user_data
@@ -137,7 +140,7 @@ def delete(login):
     '''
     if login in list_users(False):
         res = __salt__['cmd.run_all'](
-            'pdbedit --delete {login}'.format(login=login),
+            'pdbedit --delete {login}'.format(login=_quote_args(login)),
         )
 
         if res['retcode'] > 0:
@@ -168,17 +171,17 @@ def create(login, password, password_hashed=False, machine_account=False):
     '''
     ## generate nt hash if needed
     if password_hashed:
-        password_hash = password
+        password_hash = password.upper()
         password = ""  # wipe password
     else:
-        password_hash = _generate_nt_hash(password)
+        password_hash = generate_nt_hash(password)
 
     ## create user
     if login not in list_users(False):
         # NOTE: --create requires a password, even if blank
         res = __salt__['cmd.run_all'](
             cmd='pdbedit --create --user {login} -t {machine}'.format(
-                login=login,
+                login=_quote_args(login),
                 machine="--machine" if machine_account else "",
             ),
             stdin="{password}\n{password}\n".format(password=password),
@@ -192,8 +195,101 @@ def create(login, password, password_hashed=False, machine_account=False):
     if user['nt hash'] != password_hash:
         res = __salt__['cmd.run_all'](
             'pdbedit --modify --user {login} --set-nt-hash={nthash}'.format(
-                login=login,
-                nthash=password_hash
+                login=_quote_args(login),
+                nthash=_quote_args(password_hash)
+            ),
+        )
+
+        if res['retcode'] > 0:
+            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+
+    return True
+
+
+def modify(
+    login, password=None, password_hashed=False,
+    domain=None, profile=None, script=None,
+    drive=None, homedir=None, fullname=None,
+    account_desc=None):
+    '''
+    Modify user account
+
+    login : string
+        login name
+    password : string
+        password
+    password_hashed : boolean
+        set if password is a nt hash instead of plain text
+    domain : string
+        user domain
+    profile : string
+        profile path
+    script : string
+        logon script
+    drive : string
+        home drive
+    homedir : string
+        home directory
+    fullname : string
+        full name
+    account_desc : string
+        account description
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pdbedit.modify inara fullname='Inara Serra'
+        salt '*' pdbedit.modify simon password=r1v3r
+        salt '*' pdbedit.modify jane drive='V:' homedir='\\\\serenity\\jane\\profile'
+    '''
+    ## flag mapping
+    flags = {
+        'domain': 'domain',
+        'full name': 'fullname',
+        'account desc': 'account-desc',
+        'home directory': 'homedir',
+        'homedir drive': 'drive',
+        'profile path': 'profile',
+        'logon script': 'script',
+    }
+
+    ## field mapping
+    provided = {
+        'domain': domain,
+        'full name': fullname,
+        'account desc': account_desc,
+        'home directory': homedir,
+        'homedir drive': drive,
+        'profile path': profile,
+        'logon script': script,
+    }
+
+    ## update password
+    if password:
+        res = create(login, password, password_hashed)
+        if not isinstance(res, bool):
+            return res
+
+    ## check for changes
+    current = get_user(login, hashes=True)
+    changes = {}
+    for key, val in provided.items():
+        if val is not None and current[key] != val:
+            changes[key] = val
+
+    if len(changes) > 0:
+        cmds = []
+        for change in changes:
+            cmds.append('--{flag}={value}'.format(
+                flag=flags[change],
+                value=_quote_args(changes[change]),
+            ))
+
+        res = __salt__['cmd.run_all'](
+            'pdbedit --modify --user {login} {changes}'.format(
+                login=_quote_args(login),
+                changes=" ".join(cmds),
             ),
         )
 
