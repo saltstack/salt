@@ -12,6 +12,11 @@ log_file: minion
 #loop_interval: 0.05
 config_dir: /tmp/salt-tests-tmpdir
 
+# Give the minion extra attempts to find the master
+# This is especially needed for the TCP tests as we
+# wait for the master to come up in 2016.3. See #35489.
+master_tries: 5
+
 # module extension
 test.foo: baz
 hosts.file: /tmp/salt-tests-tmpdir/hosts
