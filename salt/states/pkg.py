@@ -1679,7 +1679,7 @@ def latest(
     targets = {}
     problems = []
     for pkg in desired_pkgs:
-        if not avail[pkg]:
+        if not avail.get(pkg):
             # Package either a) is up-to-date, or b) does not exist
             if not cur[pkg]:
                 # Package does not exist
