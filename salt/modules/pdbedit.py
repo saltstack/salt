@@ -210,7 +210,8 @@ def modify(
     login, password=None, password_hashed=False,
     domain=None, profile=None, script=None,
     drive=None, homedir=None, fullname=None,
-    account_desc=None):
+    account_desc=None, machine_sid=None, user_sid=None,
+):
     '''
     Modify user account
 
@@ -221,7 +222,7 @@ def modify(
     password_hashed : boolean
         set if password is a nt hash instead of plain text
     domain : string
-        user domain
+        users domain
     profile : string
         profile path
     script : string
@@ -234,6 +235,10 @@ def modify(
         full name
     account_desc : string
         account description
+    machine_sid : string
+        specify the machines new primary group SID or rid
+    user_sid : string
+        specify the users new primary group SID or rid
 
     CLI Example:
 
@@ -245,13 +250,15 @@ def modify(
     '''
     ## flag mapping
     flags = {
-        'domain': 'domain',
-        'full name': 'fullname',
-        'account desc': 'account-desc',
-        'home directory': 'homedir',
-        'homedir drive': 'drive',
-        'profile path': 'profile',
-        'logon script': 'script',
+        'domain': '--domain=',
+        'full name': '--fullname=',
+        'account desc': '--account-desc=',
+        'home directory': '--homedir=',
+        'homedir drive': '--drive=',
+        'profile path': '--profile=',
+        'logon script': '--script=',
+        'user sid': '-U ',
+        'machine sid': '-M ',
     }
 
     ## field mapping
@@ -263,6 +270,8 @@ def modify(
         'homedir drive': drive,
         'profile path': profile,
         'logon script': script,
+        'user sid': user_sid,
+        'machine sid': machine_sid,
     }
 
     ## update password
@@ -275,13 +284,17 @@ def modify(
     current = get_user(login, hashes=True)
     changes = {}
     for key, val in provided.items():
-        if val is not None and current[key] != val:
-            changes[key] = val
+        if key in ['user sid', 'machine sid']:
+            if val is not None and key in current and not current[key].endswith(str(val)):
+                changes[key] = str(val)
+        else:
+            if val is not None and key in current and current[key] != val:
+                changes[key] = val
 
     if len(changes) > 0:
         cmds = []
         for change in changes:
-            cmds.append('--{flag}={value}'.format(
+            cmds.append('{flag}{value}'.format(
                 flag=flags[change],
                 value=_quote_args(changes[change]),
             ))
