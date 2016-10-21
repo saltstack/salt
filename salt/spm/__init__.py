@@ -428,7 +428,7 @@ class SPMClient(object):
                 else:
                     response = http.query(dl_path, text=True)
                     with salt.utils.fopen(out_file, 'w') as outf:
-                        outf.write(response.get("text"))
+                        outf.write(response.get('text'))
 
                 self._local_install((None, out_file), package)
                 return
