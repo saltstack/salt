@@ -260,8 +260,8 @@ def get_error(e):
             aws['status'] = e.status
         if hasattr(e, 'reason'):
             aws['reason'] = e.reason
-        if hasattr(e, 'message') and e.message != '':
-            aws['message'] = e.message
+        if str(e) != '':
+            aws['message'] = str(e)
         if hasattr(e, 'error_code') and e.error_code is not None:
             aws['code'] = e.error_code
 
