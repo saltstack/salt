@@ -1075,6 +1075,7 @@ _OS_FAMILY_MAP = {
     'XCP': 'RedHat',
     'XenServer': 'RedHat',
     'RES': 'RedHat',
+    'Sangoma': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMware',
     'Mint': 'Debian',
