@@ -150,6 +150,7 @@ def uptime():
     '''
     epoch_seconds = time.time()
 
+    # Get uptime in seconds
     if salt.utils.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
@@ -167,18 +168,24 @@ def uptime():
     else:
         return __salt__['cmd.run']('uptime')
 
+    # Setup datetime and timedelta objects
     boot_time = datetime.datetime.utcfromtimestamp(epoch_seconds - seconds)
     curr_time = datetime.datetime.utcfromtimestamp(epoch_seconds)
     up_time = curr_time - boot_time
 
-    return {
+    # Construct return information
+    ut_ret = {
         'seconds': seconds,
         'since_iso': boot_time.isoformat(),
         'since_t': time.mktime(boot_time.timetuple()),
         'days': up_time.days,
         'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
-        'users': len(__salt__['cmd.run']("who -s").split(os.linesep)),
     }
+
+    if salt.utils.which('who'):
+        ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+
+    return ut_ret
 
 
 def loadavg():
