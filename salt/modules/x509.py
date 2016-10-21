@@ -194,6 +194,9 @@ def _get_csr_extensions(csr):
         csrexts = \
             csryaml['Certificate Request']['Data']['Requested Extensions']
 
+        if not csrexts:
+            return ret
+
         for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
             if csrexts and long_name in csrexts:
                 ret[short_name] = csrexts[long_name]
@@ -817,7 +820,7 @@ def create_private_key(path=None, text=False, bits=2048, verbose=True):
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         path=None, text=False, signing_private_key=None,
         signing_cert=None, revoked=None, include_expired=False,
-        days_valid=100):
+        days_valid=100, digest=''):
     '''
     Create a CRL
 
@@ -866,6 +869,10 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     days_valid:
         The number of days that the CRL should be valid. This sets the Next
         Update field in the CRL.
+
+    digest:
+        The digest to use for signing the CRL.
+        This has no effect on versions of pyOpenSSL less than 0.14
 
     .. note
 
@@ -938,8 +945,11 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
 
-    crltext = crl.export(
-        cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+    try:
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
+    except TypeError:
+        log.warning('Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
 
     if text:
         return crltext
@@ -1300,8 +1310,7 @@ def create_certificate(
         # Including listen_in and preqreuired because they are not included
         # in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
-                ['listen_in', 'preqrequired']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
         cert_txt = __salt__['publish.publish'](
@@ -1471,6 +1480,9 @@ def create_csr(path=None, text=False, **kwargs):
         If ``True``, return the PEM text without writing to a file.
         Default ``False``.
 
+    algorithm:
+        The hashing algorithm to be used for signing this request. Defaults to sha256.
+
     kwargs:
         The subject, extension and version arguments from
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
@@ -1493,15 +1505,24 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr = M2Crypto.X509.Request()
     subject = csr.get_subject()
-    _version = 3
-    if 'version' in kwargs:
-        _version = kwargs.get('version')
-    csr.set_version(_version - 1)
+
+    for prop, default in six.iteritems(CERT_DEFAULTS):
+        if prop not in kwargs:
+            kwargs[prop] = default
+
+    csr.set_version(kwargs['version'] - 1)
+
+    if 'private_key' not in kwargs and 'public_key' in kwargs:
+        kwargs['private_key'] = kwargs['public_key']
+        log.warning("OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+
+    if 'private_key' not in kwargs not in kwargs:
+        raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:
-        raise salt.exceptions.SaltInvocationError('public_key is required')
-    _key = get_public_key(kwargs['public_key'], asObj=True)
-    csr.set_pubkey(_key)
+        kwargs['public_key'] = kwargs['private_key']
+
+    csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
 
     # pylint: disable=unused-variable
     for entry, num in six.iteritems(subject.nid):
@@ -1539,7 +1560,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr.add_extensions(extstack)
 
-    csr.sign(pkey=_key, md=kwargs.get('algorithm', 'sha256'))
+    csr.sign(_get_private_key_obj(kwargs['private_key']), kwargs['algorithm'])
 
     if path:
         return write_pem(
@@ -1637,7 +1658,7 @@ def verify_crl(crl, cert):
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(
         crltempfile.name, certtempfile.name))
 
-    output = __salt__['cmd.run_stdout'](cmd)
+    output = __salt__['cmd.run_stderr'](cmd)
 
     crltempfile.close()
     certtempfile.close()
