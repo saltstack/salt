@@ -342,12 +342,13 @@ def master(master=None, connected=True):
     if master is not None:
         master_ips = _host_to_ips(master)
 
-    ips = _win_remotes_on(port)
     master_connection_status = False
-    for master_ip in master_ips:
-        if master_ip in ips:
-            master_connection_status = True
-            break
+    if master_ips:
+        ips = _win_remotes_on(port)
+        for master_ip in master_ips:
+            if master_ip in ips:
+                master_connection_status = True
+                break
 
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
