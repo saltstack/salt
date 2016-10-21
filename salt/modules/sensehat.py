@@ -175,7 +175,7 @@ def show_message(message, msg_type=None,
     _sensehat.show_message(message, scroll_speed, text_color, back_color)
     return {'message': message}
 
-def show_letter(letter, text_color, back_color):
+def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
     '''
     Displays a single letter on the LED matrix.
 
