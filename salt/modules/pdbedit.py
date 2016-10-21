@@ -17,7 +17,8 @@ __virtualname__ = 'pdbedit'
 
 # Function aliases
 __func_alias__ = {
-    'list_users': 'list'
+    'list_users': 'list',
+    'get_user': 'get',
 }
 
 
@@ -52,7 +53,7 @@ def list_users(verbose=True):
 
     if verbose:
         ## parse detailed user data
-        res = __salt__['cmd.run_all']('pdbedit -L -v')
+        res = __salt__['cmd.run_all']('pdbedit --list --verbose')
 
         if res['retcode'] > 0:
             log.error(res['stderr'] if 'stderr' in res else res['stdout'])
@@ -73,7 +74,7 @@ def list_users(verbose=True):
                 users[user_data['unix username']] = user_data
     else:
         ## list users
-        res = __salt__['cmd.run_all']('pdbedit -L')
+        res = __salt__['cmd.run_all']('pdbedit --list')
 
         if res['retcode'] > 0:
             log.error(res['stderr'] if 'stderr' in res else res['stdout'])
@@ -83,5 +84,21 @@ def list_users(verbose=True):
 
     return users
 
+
+def get_user(login):
+    '''
+    Get user account details
+
+    login : string
+        login name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pdbedit.get kaylee
+    '''
+    users = list_users()
+    return users[login] if login in users else {}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
