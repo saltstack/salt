@@ -146,7 +146,7 @@ def delete(login):
     return True
 
 
-def create(login, password, password_type='plain'):
+def create(login, password, password_hashed=False, machine_account=False):
     '''
     Create user account
 
@@ -154,12 +154,10 @@ def create(login, password, password_type='plain'):
         login name
     password : string
         password
-    password_type : string (plain|nthash)
-        set the type of the password variable
-
-        .. note::
-            plain - password is a plain text string
-            nthash - password is a nthash
+    password_hashed : boolean
+        set if password is a nt hash instead of plain text
+    machine_account : boolean
+        set to create a machine trust account instead
 
     CLI Example:
 
@@ -168,22 +166,21 @@ def create(login, password, password_type='plain'):
         salt '*' pdbedit.create zoe 9764951149F84E770889011E1DC4A927 nthash
         salt '*' pdbedit.create river  1sw4ll0w3d4bug
     '''
-    ## validate parameters
-    if password_type.lower() not in ['plain', 'nthash', 'nt-hash']:
-        return {'Error': 'password_type is not plain or nthash'}
-
     ## generate nt hash if needed
-    if password_type.lower() in ['nthash', 'nt-hash']:
-        password_nt_hash = password
+    if password_hashed:
+        password_hash = password
+        password = ""  # wipe password
     else:
-        password_nt_hash = _generate_nt_hash(password)
-        password = ""  # wipe password variable
+        password_hash = _generate_nt_hash(password)
 
     ## create user
     if login not in list_users(False):
         # NOTE: --create requires a password, even if blank
         res = __salt__['cmd.run_all'](
-            cmd='pdbedit --create --user {login} -t'.format(login=login),
+            cmd='pdbedit --create --user {login} -t {machine}'.format(
+                login=login,
+                machine="--machine" if machine_account else "",
+            ),
             stdin="{password}\n{password}\n".format(password=password),
         )
 
@@ -192,11 +189,11 @@ def create(login, password, password_type='plain'):
 
     ## update password if needed
     user = get_user(login, True)
-    if user['nt hash'] != password_nt_hash:
+    if user['nt hash'] != password_hash:
         res = __salt__['cmd.run_all'](
             'pdbedit --modify --user {login} --set-nt-hash={nthash}'.format(
                 login=login,
-                nthash=password_nt_hash
+                nthash=password_hash
             ),
         )
 
