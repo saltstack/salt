@@ -11,6 +11,16 @@ Known Issues
 :issue:`36055`: Salt Cloud events (``salt/cloud``) are not generated on the
 master event bus when provisioning cloud systems.
 
+`Bootstrap Issue #973`_: ``python-futures`` is not installed when installing from a git tag
+on RedHat-based distributions. ``Python futures`` is needed when running Salt with the TCP
+transport. This is fixed on the ``develop`` branch of the `salt-bootstrap repo`_ and the fix
+will be included in the upcoming release of salt-bootstrap, but is a bug in the bootstrap
+release that ships with this version of Salt. Please see the `salt-bootstrap repo`_
+for more information on how to update your bootstrap version.
+
+.. _`Bootstrap Issue #973`: https://github.com/saltstack/salt-bootstrap/issues/973
+.. _`salt-bootstrap repo`: https://github.com/saltstack/salt-bootstrap
+
 Changes for v2016.3.2..2016.3.3
 -------------------------------
 
