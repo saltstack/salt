@@ -1404,7 +1404,7 @@ def _get_line_indent(src, line, indent):
     return ''.join(idt) + line.strip()
 
 
-def line(path, content, match=None, mode=None, location=None,
+def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
@@ -1416,7 +1416,7 @@ def line(path, content, match=None, mode=None, location=None,
         Filesystem path to the file to be edited.
 
     :param content:
-        Content of the line.
+        Content of the line. Allowed to be empty if mode=delete.
 
     :param match:
         Match the target line for an action by
@@ -1495,6 +1495,13 @@ def line(path, content, match=None, mode=None, location=None,
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
             raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # We've set the content to be empty in the function params but we want to make sure
+    # it gets passed when needed. Feature #37092
+    modeswithemptycontent = ['delete']
+    if mode not in modeswithemptycontent and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+    del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
