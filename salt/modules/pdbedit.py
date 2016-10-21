@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import hashlib
+import binascii
 
 # Import Salt libs
 import salt.utils
@@ -36,12 +38,26 @@ def __virtual__():
     )
 
 
-def list_users(verbose=True):
+def _generate_nt_hash(password):
+    '''
+    Internal function to generate a nthash
+    '''
+    return binascii.hexlify(
+        hashlib.new(
+            'md4',
+            password.encode('utf-16le')
+        ).digest()
+    ).upper()
+
+
+def list_users(verbose=True, hashes=False):
     '''
     List user accounts
 
     verbose : boolean
         return all information
+    hashes : boolean
+        include NTHASH and LMHASH in verbose output
 
     CLI Example:
 
@@ -53,7 +69,9 @@ def list_users(verbose=True):
 
     if verbose:
         ## parse detailed user data
-        res = __salt__['cmd.run_all']('pdbedit --list --verbose')
+        res = __salt__['cmd.run_all'](
+            'pdbedit --list --verbose {hashes}'.format(hashes="--smbpasswd-style" if hashes else ""),
+        )
 
         if res['retcode'] > 0:
             log.error(res['stderr'] if 'stderr' in res else res['stdout'])
@@ -77,7 +95,7 @@ def list_users(verbose=True):
         res = __salt__['cmd.run_all']('pdbedit --list')
 
         if res['retcode'] > 0:
-            log.error(res['stderr'] if 'stderr' in res else res['stdout'])
+            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
         else:
             for user in res['stdout'].splitlines():
                 users.append(user.split(':')[0])
@@ -85,9 +103,28 @@ def list_users(verbose=True):
     return users
 
 
-def get_user(login):
+def get_user(login, hashes=False):
     '''
     Get user account details
+
+    login : string
+        login name
+    hashes : boolean
+        include NTHASH and LMHASH in verbose output
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pdbedit.get kaylee
+    '''
+    users = list_users(verbose=True, hashes=hashes)
+    return users[login] if login in users else {}
+
+
+def delete(login):
+    '''
+    Delete user account
 
     login : string
         login name
@@ -96,9 +133,76 @@ def get_user(login):
 
     .. code-block:: bash
 
-        salt '*' pdbedit.get kaylee
+        salt '*' pdbedit.delete wash
     '''
-    users = list_users()
-    return users[login] if login in users else {}
+    if login in list_users(False):
+        res = __salt__['cmd.run_all'](
+            'pdbedit --delete {login}'.format(login=login),
+        )
+
+        if res['retcode'] > 0:
+            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+
+    return True
+
+
+def create(login, password, password_type='plain'):
+    '''
+    Create user account
+
+    login : string
+        login name
+    password : string
+        password
+    password_type : string (plain|nthash)
+        set the type of the password variable
+
+        .. note::
+            plain - password is a plain text string
+            nthash - password is a nthash
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pdbedit.create zoe 9764951149F84E770889011E1DC4A927 nthash
+        salt '*' pdbedit.create river  1sw4ll0w3d4bug
+    '''
+    ## validate parameters
+    if password_type.lower() not in ['plain', 'nthash', 'nt-hash']:
+        return {'Error': 'password_type is not plain or nthash'}
+
+    ## generate nt hash if needed
+    if password_type.lower() in ['nthash', 'nt-hash']:
+        password_nt_hash = password
+    else:
+        password_nt_hash = _generate_nt_hash(password)
+        password = ""  # wipe password variable
+
+    ## create user
+    if login not in list_users(False):
+        # NOTE: --create requires a password, even if blank
+        res = __salt__['cmd.run_all'](
+            cmd='pdbedit --create --user {login} -t'.format(login=login),
+            stdin="{password}\n{password}\n".format(password=password),
+        )
+
+        if res['retcode'] > 0:
+            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+
+    ## update password if needed
+    user = get_user(login, True)
+    if user['nt hash'] != password_nt_hash:
+        res = __salt__['cmd.run_all'](
+            'pdbedit --modify --user {login} --set-nt-hash={nthash}'.format(
+                login=login,
+                nthash=password_nt_hash
+            ),
+        )
+
+        if res['retcode'] > 0:
+            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+
+    return True
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
