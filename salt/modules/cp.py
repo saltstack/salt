@@ -322,7 +322,7 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         result = _client().get_url(path, None, makedirs, saltenv, no_cache=True)
     if not result:
         log.error(
-            'Unable to fetch file {0!r} from saltenv {1!r}.'.format(
+            'Unable to fetch file {0} from saltenv {1}.'.format(
                 path, saltenv
             )
         )
