@@ -303,7 +303,7 @@ def csr_managed(name,
 
         /etc/pki/mycert.csr:
           x509.csr_managed:
-             - public_key: /etc/pki/mycert.key
+             - private_key: /etc/pki/mycert.key
              - CN: www.example.com
              - C: US
              - ST: Utah
@@ -493,6 +493,7 @@ def crl_managed(name,
                 signing_cert=None,
                 revoked=None,
                 days_valid=100,
+                digest="",
                 days_remaining=30,
                 include_expired=False,
                 backup=False,):
@@ -517,6 +518,10 @@ def crl_managed(name,
 
     days_valid:
         The number of days the certificate should be valid for. Default is 100.
+
+    digest:
+        The digest to use for signing the CRL.
+        This has no effect on versions of pyOpenSSL less than 0.14
 
     days_remaining:
         The crl should be automatically recreated if there are less than ``days_remaining``
@@ -574,7 +579,7 @@ def crl_managed(name,
         current = '{0} does not exist.'.format(name)
 
     new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
-            signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, include_expired=include_expired)
+            signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, digest=digest, include_expired=include_expired)
 
     new = __salt__['x509.read_crl'](crl=new_crl)
     new_comp = new.copy()
