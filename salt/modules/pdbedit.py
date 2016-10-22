@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Module for Samba's pdbedit tool
+Manage accounts in Samba's passdb using pdbedit
+
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      posix
+
+.. versionadded:: nitrogen
 '''
 from __future__ import absolute_import
 
