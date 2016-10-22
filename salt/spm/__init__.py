@@ -361,7 +361,7 @@ class SPMClient(object):
                     metadata = yaml.safe_load(rpm)
             else:
                 response = http.query(dl_path, text=True)
-                metadata = response.get('text', {})
+                metadata = yaml.safe_load(response.get('text', '{}'))
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
                 repo
