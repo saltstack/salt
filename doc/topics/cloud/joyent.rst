@@ -51,8 +51,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     joyent_512
       provider: my-joyent-config
-      size: Extra Small 512 MB
-      image: Arch Linux 2013.06
+      size: g4-highcpu-512M
+      image: ubuntu-16.04
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -64,22 +64,30 @@ command:
         ----------
         joyent:
             ----------
-            Extra Small 512 MB:
+            g4-highcpu-512M:
                 ----------
                 default:
-                    false
+                    False
+                description:
+                    Compute Optimized 512M RAM - 1 vCPU - 10 GB Disk
                 disk:
-                    15360
+                    10240
+                group:
+                    Compute Optimized
                 id:
-                    Extra Small 512 MB
+                    14aea8fc-d0f8-11e5-bfe4-a7458dbc6c99
+                lwps:
+                    4000
                 memory:
                     512
                 name:
-                    Extra Small 512 MB
+                    g4-highcpu-512M
                 swap:
-                    1024
+                    2048
                 vcpus:
-                    1
+                    0
+                version:
+                    1.0.3
     ...SNIP...
 
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
@@ -96,26 +104,40 @@ command:
                 ----------
                 description:
                     A 32-bit SmartOS image with just essential packages
-                    installed. Ideal for users who are comfortable with setting
-                    up their own environment and tools.
-                disabled:
-                    False
+                    installed. Ideal for users who are comfortabl e with
+                    setting up their own environment and tools.
                 files:
-                    ----------
-                    - compression:
-                        bzip2
-                    - sha1:
-                        40cdc6457c237cf6306103c74b5f45f5bf2d9bbe
-                    - size:
-                        82492182
+                    |_
+                      ----------
+                      compression:
+                          gzip
+                      sha1:
+                          b00a77408ddd9aeac85085b68b1cd22a07353956
+                      size:
+                          106918297
+                homepage:
+                    http://wiki.joyent.com/jpc2/Base+Instance
+                id:
+                    00aec452-6e81-11e4-8474-ebfec9a1a911
                 name:
                     base
                 os:
                     smartos
                 owner:
-                    352971aa-31ba-496c-9ade-a379feaecd52
+                    9dce1460-0c4c-4417-ab8b-25ca478c5a78
                 public:
                     True
+                published_at:
+                    2014-11-17T17:41:46Z
+                requirements:
+                    ----------
+                state:
+                    active
+                type:
+                    smartmachine
+                version:
+                    14.3.0
+
     ...SNIP...
 
 
