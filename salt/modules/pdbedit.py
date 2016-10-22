@@ -309,9 +309,9 @@ def modify(
 
     ## update password
     if password:
-        ret = create(login, password, password_hashed)
-        if ret[login] not in ['updated', 'created', 'unchanged']:
-            return ret
+        ret = create(login, password, password_hashed)[login]
+        if ret not in ['updated', 'created', 'unchanged']:
+            return {login: ret}
     elif login not in list_users(False):
         return {login: 'absent'}
 
