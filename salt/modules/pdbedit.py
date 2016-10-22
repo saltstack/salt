@@ -61,7 +61,7 @@ def list_users(verbose=True, hashes=False):
     verbose : boolean
         return all information
     hashes : boolean
-        include NTHASH and LMHASH in verbose output
+        include NT HASH and LM HASH in verbose output
 
     CLI Example:
 
@@ -144,9 +144,11 @@ def delete(login):
         )
 
         if res['retcode'] > 0:
-            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+            return {login: res['stderr'] if 'stderr' in res else res['stdout']}
 
-    return True
+        return {login: 'deleted'}
+
+    return {login: 'absent'}
 
 
 def create(login, password, password_hashed=False, machine_account=False):
@@ -169,6 +171,8 @@ def create(login, password, password_hashed=False, machine_account=False):
         salt '*' pdbedit.create zoe 9764951149F84E770889011E1DC4A927 nthash
         salt '*' pdbedit.create river  1sw4ll0w3d4bug
     '''
+    ret = 'unchanged'
+
     ## generate nt hash if needed
     if password_hashed:
         password_hash = password.upper()
@@ -188,7 +192,9 @@ def create(login, password, password_hashed=False, machine_account=False):
         )
 
         if res['retcode'] > 0:
-            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+            return {login: res['stderr'] if 'stderr' in res else res['stdout']}
+
+        ret = 'created'
 
     ## update password if needed
     user = get_user(login, True)
@@ -201,9 +207,12 @@ def create(login, password, password_hashed=False, machine_account=False):
         )
 
         if res['retcode'] > 0:
-            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+            return {login: res['stderr'] if 'stderr' in res else res['stdout']}
 
-    return True
+        if ret != 'created':
+            ret = 'updated'
+
+    return {login: ret}
 
 
 def modify(
@@ -256,6 +265,9 @@ def modify(
     reset_bad_password_count : boolean
         reset the stored bad login counter
 
+    .. note::
+        if user is absent and password is provided, the user will be created
+
     CLI Example:
 
     .. code-block:: bash
@@ -265,6 +277,8 @@ def modify(
         salt '*' pdbedit.modify jane drive='V:' homedir='\\\\serenity\\jane\\profile'
         salt '*' pdbedit.modify mal account_control=NX
     '''
+    ret = 'unchanged'
+
     ## flag mapping
     flags = {
         'domain': '--domain=',
@@ -295,9 +309,11 @@ def modify(
 
     ## update password
     if password:
-        res = create(login, password, password_hashed)
-        if not isinstance(res, bool):
-            return res
+        ret = create(login, password, password_hashed)
+        if ret[login] not in ['updated', 'created', 'unchanged']:
+            return ret
+    elif login not in list_users(False):
+        return {login: 'absent'}
 
     ## check for changes
     current = get_user(login, hashes=True)
@@ -344,8 +360,11 @@ def modify(
         )
 
         if res['retcode'] > 0:
-            return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
+            return {login: res['stderr'] if 'stderr' in res else res['stdout']}
 
-    return True
+        if ret != 'created':
+            ret = 'updated'
+
+    return {login: ret}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
