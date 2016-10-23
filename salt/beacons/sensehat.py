@@ -65,11 +65,11 @@ def beacon(config):
 
         sensor_config = config[sensor]
         if isinstance(sensor_config, list):
-            sensor_min = sensor_config[0]
-            sensor_max = sensor_config[1]
+            sensor_min = str(sensor_config[0])
+            sensor_max = str(sensor_config[1])
         else:
             sensor_min = min_default.get(sensor, '0')
-            sensor_max = sensor_config
+            sensor_max = str(sensor_config)
 
         if '%' in sensor_min:
             sensor_min = re.sub('%', '', sensor_min)
@@ -78,8 +78,8 @@ def beacon(config):
         sensor_min = float(sensor_min)
         sensor_max = float(sensor_max)
 
-        current_value = __salt__[sensor_function]
-        if not (sensor_min < current_value < sensor_max):
+        current_value = __salt__[sensor_function]()
+        if not (sensor_min <= current_value <= sensor_max):
             ret.append({
                 'tag': 'sensehat/{0}'.format(sensor),
                 sensor: current_value
