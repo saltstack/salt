@@ -335,7 +335,7 @@ def create(vm_):
         '''
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for hostname")
-        pprint.pprint(data)
+        # pprint.pprint(data)
         if str(data.get('main_ip', '0')) == '0':
             time.sleep(3)
             return False
@@ -347,7 +347,7 @@ def create(vm_):
         '''
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for default password")
-        pprint.pprint(data)
+        # pprint.pprint(data)
         if str(data.get('default_password', '')) == '':
             time.sleep(1)
             return False
