@@ -309,7 +309,7 @@ def assign_templates(host, templates, **kwargs):
 
         add_zabbix_templates_to_host:
             zabbix_host.assign_templates:
-                - host: TestHostWithInterfaces
+                - host: TestHost
                     - templates:
                         - "Template OS Linux"
                         - "Template App MySQL"
@@ -359,10 +359,7 @@ def assign_templates(host, templates, **kwargs):
             return ret
 
     # remove any duplications
-    log.info("XXX BEFORE {0}".format(requested_template_ids))
     requested_template_ids = list(set(requested_template_ids))
-    log.info("XXX AFTER {0}".format(requested_template_ids))
-
 
     if set(curr_template_ids) != set(requested_template_ids):
         update_host_templates = True
