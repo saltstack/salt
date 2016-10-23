@@ -1579,14 +1579,7 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
-    if image not in __salt__['dockerng.list_tags']():
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = (
-                'Image {} will be pulled and container {} will be created'
-                .format(image, name)
-            )
-            return ret
+    if image not in __salt__['dockerng.list_tags']() and not __opts__['test']:
         try:
             # Pull image
             pull_result = __salt__['dockerng.pull'](
@@ -1600,7 +1593,10 @@ def running(name,
         else:
             ret['changes']['image'] = pull_result
 
-    image_id = __salt__['dockerng.inspect_image'](image)['Id']
+    try:
+        image_id = __salt__['dockerng.inspect_image'](image)['Id']
+    except CommandExecutionError:
+        image_id = None
 
     if name not in __salt__['dockerng.list_containers'](all=True):
         pre_config = {}
@@ -1654,7 +1650,6 @@ def running(name,
         _validate_input(create_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
-        defaults_from_image = _get_defaults_from_image(image_id)
         if create_kwargs.get('binds') is not None:
             # Be smart and try to provide `volumes` argument derived from the
             # "binds" configuration.
@@ -1732,7 +1727,11 @@ def running(name,
             )
         else:
             ret['result'] = None
-            ret['comment'] = 'Container \'{0}\' will be '.format(name)
+            if image_id is None:
+                ret['comment'] = 'Image \'{0}\' will be pulled. '.format(image)
+            else:
+                ret['comment'] = ''
+            ret['comment'] += 'Container \'{0}\' will be '.format(name)
             if pre_config and force:
                 ret['comment'] += 'forcibly replaced'
             else:
