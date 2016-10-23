@@ -179,7 +179,7 @@ def uptime():
     ut_ret = {
         'seconds': seconds,
         'since_iso': boot_time.isoformat(),
-        'since_t': time.mktime(boot_time.timetuple()),
+        'since_t': curr_seconds - seconds,
         'days': up_time.days,
         'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
     }

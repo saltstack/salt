@@ -43,7 +43,7 @@ class StatusTestCase(TestCase):
         m.ret = {
             'users': 3,
             'seconds': 1540154,
-            'since_t': 1475485758.0,
+            'since_t': 1475464158.23,
             'days': 17,
             'since_iso': '2016-10-03T03:09:18.230000',
             'time': '19:49',
