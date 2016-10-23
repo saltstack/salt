@@ -347,7 +347,6 @@ def assign_templates(host, templates, **kwargs):
     for template_id in host_templates[0]['parentTemplates']:
         curr_template_ids.append(template_id['templateid'])
 
-
     # Get requested templateids
     for template in templates:
         try:
@@ -366,7 +365,7 @@ def assign_templates(host, templates, **kwargs):
 
     # Set change output
     changes_host_templates_modified = {host: {'old': 'Host templates: ' + ", ".join(curr_template_ids),
-                                              'new': 'Host templates: ' + ', '.join(requested_template_ids)} }
+                                              'new': 'Host templates: ' + ', '.join(requested_template_ids)}}
 
     # Dry run, test=true mode
     if __opts__['test']:
