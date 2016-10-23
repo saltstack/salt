@@ -29,7 +29,7 @@ def __virtual__():
     else:
         return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a Raspberry Pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
 
-def set_rotation(rotation, redraw=True):
+def set_rotation(rotation=0, redraw=True):
     '''
     Sets the rotation of the Pi. This is useful if you are using it upside down
     or sideways to correct the orientation of the image being shown.
@@ -44,6 +44,7 @@ def set_rotation(rotation, redraw=True):
 
     .. code-block:: bash
 
+    salt 'raspberry' sensehat.set_rotation
     salt 'raspberry' sensehat.set_rotation 90
     salt 'raspberry' sensehat.set_rotation 180 False
     '''
@@ -97,7 +98,7 @@ def set_pixel(x, y, color):
 
     .. code-block:: bash
 
-    salt 'raspberry' sensehat.set_pixel 0 0 [255, 0, 0]
+    salt 'raspberry' sensehat.set_pixel 0 0 '[255, 0, 0]'
     '''
     _sensehat.set_pixel(x, y, color)
     return {'color': color}
@@ -130,7 +131,7 @@ def low_light(low_light=True):
     return {'low_light': low_light}
 
 def show_message(message, msg_type=None,
-        scroll_speed=0.1, text_color=[255, 255, 255], back_color=[0, 0, 0]):
+        text_color=[255, 255, 255], back_color=[0, 0, 0], scroll_speed=0.1):
     '''
     Displays a message on the LED matrix.
 
@@ -159,13 +160,13 @@ def show_message(message, msg_type=None,
         salt 'raspberry' sensehat.show_message 'Status ok'
         salt 'raspberry' sensehat.show_message 'Something went wrong' error
         salt 'raspberry' sensehat.show_message 'Red' text_color='[255, 0, 0]'
-        salt 'raspberry' sensehat.show_message 'Hello world' None 0.2 [0, 0, 255] [255, 255, 0]
+        salt 'raspberry' sensehat.show_message 'Hello world' None '[0, 0, 255]' '[255, 255, 0]' 0.2
     '''
 
     color_by_type = {
         'error': [255, 0, 0],
         'warning': [255, 100, 0],
-        'success': [0, 255, 255],
+        'success': [0, 255, 0],
         'info': [0, 0, 255]
     }
 
@@ -191,8 +192,8 @@ def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
     .. code-block:: bash
 
     salt 'raspberry' sensehat.show_letter O
-    salt 'raspberry' sensehat.show_letter X [255, 0, 0]
-    salt 'raspberry' sensehat.show_letter B [0, 0, 255] [255, 255, 0]
+    salt 'raspberry' sensehat.show_letter X '[255, 0, 0]'
+    salt 'raspberry' sensehat.show_letter B '[0, 0, 255]' '[255, 255, 0]'
     '''
     _sensehat.show_letter(letter, text_color, back_color)
     return {'letter': letter}
@@ -221,7 +222,7 @@ def clear(color=None):
     .. code-block:: bash
 
     salt 'raspberry' sensehat.clear
-    salt 'raspberry' sensehat.clear [255, 0, 0]
+    salt 'raspberry' sensehat.clear '[255, 0, 0]'
     '''
     if color is None:
         _sensehat.clear()
@@ -244,7 +245,9 @@ def get_pressure():
 def get_temperature():
     '''
     Gets the temperature in degrees Celsius from the humidity sensor.
-    Equivalent to calling `get_temperature_from_humidity`
+    Equivalent to calling `get_temperature_from_humidity`.
+    
+    If you get strange results try using 'get_temperature_from_pressure'.
     '''
     return _sensehat.get_temperature()
 
