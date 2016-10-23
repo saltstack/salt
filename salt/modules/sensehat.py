@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
-Module for controlling the LED matrix on the SenseHat of a Raspberry Pi.
+Module for controlling the LED matrix or reading environment data on the SenseHat of a Raspberry Pi.
 
-:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>
+You can specify the rotation of the Pi in a pillar.
+This is useful if it is used upside down or sideways to correct the orientation of the image being shown.
+
+Example:
+
+.. code-block:: yaml
+
+    sensehat:
+        rotation: 90
+
+:maintainer:    Benedikt Werner <1benediktwerner@gmail.com>, Joachim Werner <joe@suse.com>
 :maturity:      new
 :depends:       sense_hat Python module
 '''
@@ -25,34 +35,15 @@ def __virtual__():
     Only load the module if SenseHat is available
     '''
     if has_sense_hat:
+        rotation = __salt__['pillar.get']('sensehat:rotation', 0)
+        if rotation in [0, 90, 180, 270]:
+            _sensehat.set_rotation(rotation, False)
+        else:
+            log.error("{0} is not a valid rotation. Using default rotation.".format(rotation))
+        
         return True
     else:
         return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a Raspberry Pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
-
-def set_rotation(rotation=0, redraw=True):
-    '''
-    Sets the rotation of the Pi. This is useful if you are using it upside down
-    or sideways to correct the orientation of the image being shown.
-
-    rotation
-        The angle to rotate the LED matrix to.
-        Valid values are 0, 90, 180 and 270.
-    redraw
-        Whether to redraw what is already being displayed on the LED matrix.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-    salt 'raspberry' sensehat.set_rotation
-    salt 'raspberry' sensehat.set_rotation 90
-    salt 'raspberry' sensehat.set_rotation 180 False
-    '''
-    if rotation not in [0, 90, 180, 270]:
-        log.error("{0} is not a valid rotation.".format(rotation))
-        raise TypeError("Rotation must be one of 0, 90, 180, 270. Found: {0}".format(rotation))
-    _sensehat.set_rotation(rotation, redraw)
-    return {'rotation': rotation}
 
 def set_pixels(pixels):
     '''
@@ -140,10 +131,10 @@ def show_message(message, msg_type=None,
     msg_type
         The type of the message. Changes the appearence of the message.
         Available types are:
-            error:        red text
+            error:      red text
             warning:    orange text
             success:    green text
-            info:        blue text
+            info:       blue text
     scroll_speed
         The speed at which the message moves over the LED matrix.
         This value represents the time paused for between shifting the text
