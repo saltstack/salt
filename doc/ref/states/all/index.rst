@@ -156,6 +156,7 @@ state modules
     pagerduty_user
     pcs
     pecl
+    pdbedit
     pip_state
     pkg
     pkgbuild
