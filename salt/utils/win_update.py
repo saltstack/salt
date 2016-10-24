@@ -531,7 +531,7 @@ class WindowsUpdateAgent(object):
                 # Populate the return dictionary
                 ret['Success'] = True
                 ret['Message'] = 'Uninstalled using WUSA'
-                ret['NeedsReboot'] = self.needs_reboot()
+                ret['NeedsReboot'] = needs_reboot()
                 log.debug('NeedsReboot: {0}'.format(ret['NeedsReboot']))
 
                 # Refresh the Updates Table
@@ -589,21 +589,25 @@ class WindowsUpdateAgent(object):
 
         return ret
 
-    def needs_reboot():
-        '''
-        Determines if the system needs to be rebooted.
 
-        Returns:
+def needs_reboot():
+    '''
+    Determines if the system needs to be rebooted.
 
-            bool: True if the system requires a reboot, False if not
+    Returns:
 
-        CLI Examples:
+        bool: True if the system requires a reboot, False if not
 
-        .. code-block:: bash
+    CLI Examples:
 
-            salt '*' win_wua.get_needs_reboot
+    .. code-block:: bash
 
-        '''
-        # Create an AutoUpdate object
-        obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
-        return salt.utils.is_true(obj_sys.RebootRequired)
+        salt '*' win_wua.get_needs_reboot
+
+    '''
+    # Initialize the PyCom system
+    pythoncom.CoInitialize()
+
+    # Create an AutoUpdate object
+    obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
+    return salt.utils.is_true(obj_sys.RebootRequired)
