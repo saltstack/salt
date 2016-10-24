@@ -128,7 +128,7 @@ def low_light(low_light=True):
 
 
 def show_message(message, msg_type=None,
-        text_color=[255, 255, 255], back_color=[0, 0, 0], scroll_speed=0.1):
+        text_color=None, back_color=None, scroll_speed=None):
     '''
     Displays a message on the LED matrix.
 
@@ -144,11 +144,11 @@ def show_message(message, msg_type=None,
     scroll_speed
         The speed at which the message moves over the LED matrix.
         This value represents the time paused for between shifting the text
-        to the left by one column of pixels.
+        to the left by one column of pixels. Defaults to '0.1'.
     text_color
-        The color in which the message is shown.
+        The color in which the message is shown. Defaults to '[255, 255, 255]' (white).
     back_color
-        The background color of the display.
+        The background color of the display. Defaults to '[0, 0, 0]' (black).
 
     CLI Example:
 
@@ -159,6 +159,9 @@ def show_message(message, msg_type=None,
         salt 'raspberry' sensehat.show_message 'Red' text_color='[255, 0, 0]'
         salt 'raspberry' sensehat.show_message 'Hello world' None '[0, 0, 255]' '[255, 255, 0]' 0.2
     '''
+    text_color = text_color or [255, 255, 255]
+    back_color = back_color or [0, 0, 0]
+    scroll_speed = scroll_speed or 0.1
 
     color_by_type = {
         'error': [255, 0, 0],
@@ -174,16 +177,16 @@ def show_message(message, msg_type=None,
     return {'message': message}
 
 
-def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
+def show_letter(letter, text_color=None, back_color=None):
     '''
     Displays a single letter on the LED matrix.
 
     letter
         The letter to display
     text_color
-        The color in which the letter is shown.
+        The color in which the letter is shown. Defaults to '[255, 255, 255]' (white).
     back_color
-        The background color of the display.
+        The background color of the display. Defaults to '[0, 0, 0]' (black).
 
     CLI Example:
 
@@ -193,6 +196,9 @@ def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
     salt 'raspberry' sensehat.show_letter X '[255, 0, 0]'
     salt 'raspberry' sensehat.show_letter B '[0, 0, 255]' '[255, 255, 0]'
     '''
+    text_color = text_color or [255, 255, 255]
+    back_color = back_color or [0, 0, 0]
+
     _sensehat.show_letter(letter, text_color, back_color)
     return {'letter': letter}
 
