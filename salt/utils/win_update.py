@@ -17,7 +17,7 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-class Updates:
+class Updates(object):
 
     update_types = {1: 'Software',
                     2: 'Driver'}
@@ -115,14 +115,17 @@ class Updates:
 
         return results
 
-class WindowsUpdateAgent:
+
+class WindowsUpdateAgent(object):
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
+    # https://technet.microsoft.com/en-us/library/cc720442(v=ws.10).aspx
     fail_codes = {-2145124300: 'Download failed: 0x80240034',
                   -2145124302: 'Invalid search criteria: 0x80240032',
                   -2145124305: 'Cancelled by policy: 0x8024002F',
                   -2145124307: 'Missing source: 0x8024002D',
                   -2145124308: 'Missing source: 0x8024002C',
+                  -2145124312: 'Uninstall not allowed: 0x80240028',
                   -2145124315: 'Prevented by policy: 0x80240025',
                   -2145124316: 'No Updates: 0x80240024',
                   -2145124322: 'Service being shutdown: 0x8024001E',
@@ -151,10 +154,18 @@ class WindowsUpdateAgent:
         # Create Collection for Updates
         self._updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
-        self._load_all_updates()
+        self.refresh()
 
-    def _load_all_updates(self):
-        # Load all updates
+    def updates(self):
+        updates = Updates()
+        found = updates.updates
+
+        for update in self._updates:
+            found.Add(update)
+
+        return updates
+
+    def refresh(self):
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386526(v=vs.85).aspx
         search_string = 'Type=\'Software\' or ' \
                         'Type=\'Driver\''
@@ -356,6 +367,7 @@ class WindowsUpdateAgent:
                    'Updates': 'Nothing to install'}
             return ret
 
+        ret = dict()
         installer = self._session.CreateUpdateInstaller()
         self._session.ClientApplicationID = 'Salt: Install Update'
         install_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
@@ -431,7 +443,12 @@ class WindowsUpdateAgent:
         return ret
 
     def uninstall(self, updates):
-
+        # This doesn't work...
+        # Always returns 0x80240028 Uninstall not allowed
+        # The update could not be uninstalled because the request did not
+        # originate from a Windows Server Update Services (WSUS) server.
+        # look at using the following on failure:
+        # wusa /uninstall /kb:3183838 /quiet
         # Check for empty list
         if updates.Count == 0:
             ret = {'Success': False,
@@ -443,13 +460,15 @@ class WindowsUpdateAgent:
         uninstall_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         # Check for updates that aren't already installed
+        ret = {'Success': True,
+               'Updates': {}}
         for update in updates:
 
             # Define uid to keep the lines shorter
             uid = update.Identity.UpdateID
-            ret['Updates'][uid]['Title'] = update.Title
+            ret['Updates'][uid] = {'Title': update.Title}
 
-            # Make sure the update has actually been installed
+            # Make sure the update has actually been Uninstalled
             ret['Updates'][uid]['AlreadyUninstalled'] = True
             if salt.utils.is_true(update.IsInstalled):
                 log.debug('To Be Uninstalled: {0}'.format(uid))

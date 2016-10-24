@@ -6,6 +6,8 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.win_update
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -17,24 +19,26 @@ def __virtual__():
     Only valid on Windows machines
     '''
     if not salt.utils.is_windows():
-        return False, 'wua state module failed to load: ' \
-                      'Only available on Window systems'
+        return False, 'WUA: Only available on Window systems'
+
+    if not salt.utils.win_update.HAS_PYWIN32:
+        return False, 'WUA: Requires PyWin32 libraries'
 
     return __virtualname__
 
 
 def installed(name):
     '''
-    Ensure a single Microsoft Update is installed.
+    Ensure Microsoft Updates are installed.
 
     Args:
 
-        name (str): Can be the GUID, the KB number, or any part of the Title of
-            Microsoft update. GUID is the preferred method to ensure you're
-            installing the correct update.
+        name (str): Can be the GUID, the KB number, or any part of the
+        Title of Microsoft update. GUID is the preferred method to ensure you're
+        installing the correct update. Can also be a list of identifiers.
 
         .. warning:: Using a partial KB number or a partial Title could result
-            in more than one update being applied.
+           in more than one update being applied.
 
     Returns:
         dict: A dictionary containing the results of the update
@@ -48,7 +52,7 @@ def installed(name):
           wua.installed:
             - name: 28cf1b09-2b1a-458c-9bd1-971d1b26b211
 
-        # using a KB:
+        # using a KB
         install_update:
           wua.installed:
             - name: KB3194343
@@ -57,61 +61,89 @@ def installed(name):
         install_update:
           wua.installed:
             - name: Security Update for Adobe Flash Player for Windows 10 Version 1607 (for x64-based Systems) (KB3194343)
+
+        # Install multiple updates
+        install_updates:
+          wua.installed:
+            - name:
+              - KB3194343
+              - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
     '''
+    if isinstance(name, list) and len(name) == 0:
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No updates provided'}
+
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    # Get pre update info
-    pre_info = __salt__['win_wua.list_update'](name)
+    wua = salt.utils.win_update.WindowsUpdateAgent()
+
+    # Search for updates
+    install_list = wua.search(name)
 
     # No updates found
-    if len(pre_info) == 0:
+    if install_list.count() == 0:
         ret['comment'] = 'No updates found'
         return ret
 
-    # List of updates to install
-    install = dict()
-    for item in pre_info:
-        if not salt.utils.is_true(pre_info[item]['Installed']):
-            install[item] = pre_info[item]['Title']
+    # List of updates to download
+    download = salt.utils.win_update.Updates()
+    for item in install_list.updates:
+        if not salt.utils.is_true(item.IsDownloaded):
+            download.updates.Add(item)
 
-    if not install:
-        ret['comment'] = 'Update {0} already installed'.format(name)
+    # List of updates to install
+    install = salt.utils.win_update.Updates()
+    for item in install_list.updates:
+        if not salt.utils.is_true(item.IsInstalled):
+            install.updates.Add(item)
+
+    if install.count() == 0:
+        ret['comment'] = 'Updates already installed'
         return ret
 
     # Return comment of changes if test.
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Updates will be installed:'
-        for item in install:
+        for update in install.updates:
             ret['comment'] += '\n'
-            ret['comment'] += ': '.join([item, install[item]])
+            ret['comment'] += ': '.join(
+                [update.Identity.UpdateID, update.Title])
         return ret
 
-    # Install the update
-    result = __salt__['win_wua.install_updates'](pre_info.keys())
-    print('*' * 68)
-    print(result)
-    print('*' * 68)
+    # Download updates
+    wua.download(download.updates)
 
-    # Get post update info
-    post_info = __salt__['win_wua.list_update'](name)
+    # Install updates
+    wua.install(install.updates)
+
+    # Refresh windows update info
+    wua.refresh()
+    post_info = wua.updates().list()
 
     # Verify the installation
-
-    for item in install:
+    for item in install.list():
         if not salt.utils.is_true(post_info[item]['Installed']):
             ret['changes']['failed'] = {
                 item: {'Title': post_info[item]['Title']}
             }
             ret['result'] = False
+            failed.append(item)
         else:
             ret['changes']['installed'] = {
                 item: {'Title': post_info[item]['Title'],
                        'NeedsReboot': post_info[item]['NeedsReboot']}
             }
-            ret['comment'] = 'Update {0} was installed'.format(name)
+            succeeded.append(item)
+
+    if ret['changes'].get('failed', False):
+        ret['comment'] = 'Some updates failed'
+    else:
+        ret['comment'] = 'Updates completed successfully'
 
     return ret

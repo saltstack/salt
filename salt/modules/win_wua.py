@@ -5,7 +5,7 @@ Module for managing Windows Updates using the Windows Update Agent.
 .. versionadded:: 2015.8.0
 
 :depends:
-        - salt.utils.win_wua
+        - salt.utils.win_update
 '''
 from __future__ import absolute_import
 
@@ -15,7 +15,7 @@ import logging
 # Import Salt libs
 from salt.ext import six
 import salt.utils
-import salt.utils.win_wua
+import salt.utils.win_update
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def __virtual__():
     if not salt.utils.is_windows():
         return False, 'WUA: Only available on Window systems'
 
-    if not salt.utils.win_wua.HAS_PYWIN32:
+    if not salt.utils.win_update.HAS_PYWIN32:
         return False, 'WUA: Requires PyWin32 libraries'
 
     return True
@@ -154,7 +154,7 @@ def available(software=True,
     '''
 
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Look for available
     updates = wua.available(skip_hidden, skip_installed, skip_mandatory,
@@ -234,7 +234,7 @@ def list_update(name=None, download=False, install=False):
         salt '*' win_wua.list_update 'Microsoft Camera Codec Pack'
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.search(name)
@@ -375,7 +375,7 @@ def list_updates(software=True,
         salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.available(skip_installed=skip_installed, software=software,
@@ -426,7 +426,7 @@ def download_update(name):
 
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.search(name)
@@ -462,7 +462,7 @@ def download_updates(names):
         salt '*' win_wua.download_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.search(names)
@@ -498,7 +498,7 @@ def install_update(name):
         salt '*' win_wua.install_update KB12312231
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.search(name)
@@ -534,7 +534,7 @@ def install_updates(names):
         salt '*' win_wua.install_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB12323211']
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Updates
     updates = wua.search(names)
@@ -570,7 +570,7 @@ def uninstall(name):
         salt '*' win_wua.uninstall KB12312233
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Update
     updates = wua.search(name)
@@ -605,10 +605,10 @@ def uninstall_list(names):
         salt '*' win_wua.uninstall_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB1231231']
     '''
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_wua.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Search for Updates
-    updates = wua.search(name)
+    updates = wua.search(names)
 
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
