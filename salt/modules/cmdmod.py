@@ -2671,7 +2671,6 @@ def shell_info(shell, list_modules=False):
         shell (str): Name of the shell. Support shells/script languages include
         bash, cmd, perl, php, powershell, python, ruby and zsh
 
-    Kwargs:
         list_modules (bool): True to list modules available to the shell.
         Currently only lists powershell modules.
 
