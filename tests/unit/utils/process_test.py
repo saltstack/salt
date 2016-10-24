@@ -81,7 +81,6 @@ class TestProcessManager(TestCase):
         '''
         def die():
             salt.utils.appendproctitle('test_restarting')
-            time.sleep(1)
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(die)
