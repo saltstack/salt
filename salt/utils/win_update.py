@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
+import subprocess
 
 try:
     import win32com.client
@@ -59,7 +60,7 @@ class Updates(object):
                 'RebootBehavior':
                     self.reboot_behavior[
                         update.InstallationBehavior.RebootBehavior],
-                'KB': ['KB' + item for item in update.KBArticleIDs],
+                'KBs': ['KB' + item for item in update.KBArticleIDs],
                 'Categories': [item.Name for item in update.Categories]
             }
 
@@ -137,6 +138,7 @@ class WindowsUpdateAgent(object):
                   -2145124343: 'Operation in progress: 0x80240009',
                   -2145124284: 'Access Denied: 0x8024044',
                   -2145124283: 'Unsupported search scope: 0x80240045',
+                  -2147024891: 'Access is denied: 0x80070005',
                   -2149843018: 'Setup in progress: 0x8024004A',
                   -4292599787: 'Install still pending: 0x00242015',
                   -4292607992: 'Already downloaded: 0x00240008',
@@ -250,6 +252,9 @@ class WindowsUpdateAgent(object):
 
         if isinstance(search_string, six.string_types):
             search_string = [search_string]
+
+        if isinstance(search_string, six.integer_types):
+            search_string = [str(search_string)]
 
         for update in self._updates:
 
@@ -443,10 +448,10 @@ class WindowsUpdateAgent(object):
         return ret
 
     def uninstall(self, updates):
-        # This doesn't work...
-        # Always returns 0x80240028 Uninstall not allowed
-        # The update could not be uninstalled because the request did not
-        # originate from a Windows Server Update Services (WSUS) server.
+        # This doesn't work with the WUA APi. It always returns "0x80240028
+        # Uninstall not allowed". The full message is: " The update could not be
+        # uninstalled because the request did not originate from a Windows
+        # Server Update Services (WSUS) server.
         # look at using the following on failure:
         # wusa /uninstall /kb:3183838 /quiet
         # Check for empty list
@@ -490,13 +495,66 @@ class WindowsUpdateAgent(object):
             result = installer.Uninstall()
 
         except pywintypes.com_error as error:
-            # Something happened, raise an error
+            # Something happened, return error or try using WUSA
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
             try:
                 failure_code = self.fail_codes[exc[5]]
             except KeyError:
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
+            # If "Uninstall Not Allowed" error, try using WUSA
+            if exc[5] == -2145124312:
+                try:
+                    for item in uninstall_list:
+                        for kb in item.KBArticleIDs:
+                            cmd = ['wusa.exe',
+                                   '/uninstall',
+                                   '/kb:' + kb,
+                                   '/quiet',
+                                   '/norestart']
+                            subprocess.Popen(
+                                cmd,
+                                shell=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT).communicate()[0]
+
+                except (OSError, IOError) as exc:
+                    log.debug('Uninstall using WUSA failed')
+                    log.debug('Command: {0}'.format(' '.join(cmd)))
+                    log.debug('Error: {0}'.format(str(exc)))
+                    raise CommandExecutionError('Uninstall using WUSA failed:'
+                                                '{0}'.format(str(exc)))
+
+                # WUSA Uninstall Completed Successfully
+                log.debug('Uninstall Completed using WUSA')
+
+                # Populate the return dictionary
+                ret['Success'] = True
+                ret['Message'] = 'Uninstalled using WUSA'
+                ret['NeedsReboot'] = self.needs_reboot()
+                log.debug('NeedsReboot: {0}'.format(ret['NeedsReboot']))
+
+                # Refresh the Updates Table
+                self.refresh()
+
+                # Check the status of each update
+                reboot = {0: 'Never Reboot',
+                          1: 'Always Reboot',
+                          2: 'Poss Reboot'}
+                for update in self.updates():
+                    uid = update.Identity.UpdateID
+                    for item in uninstall_list:
+                        if item.Identity.UpdateID == uid:
+                            if not update.IsInstalled:
+                                ret['Updates'][uid]['Result'] = 'Uninstallation Succeeded'
+                            else:
+                                ret['Updates'][uid]['Result'] = 'Uninstallation Failed'
+                            ret['Updates'][uid]['RebootBehavior'] = reboot[
+                                update.InstallationBehavior.RebootBehavior]
+
+                return ret
+
+            # Found a differenct exception, Raise error
             log.error('Uninstall Failed: {0}'.format(failure_code))
             raise CommandExecutionError(failure_code)
 
@@ -530,3 +588,22 @@ class WindowsUpdateAgent(object):
                 uninstall_list.Item(i).InstallationBehavior.RebootBehavior]
 
         return ret
+
+    def needs_reboot():
+        '''
+        Determines if the system needs to be rebooted.
+
+        Returns:
+
+            bool: True if the system requires a reboot, False if not
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' win_wua.get_needs_reboot
+
+        '''
+        # Create an AutoUpdate object
+        obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
+        return salt.utils.is_true(obj_sys.RebootRequired)

@@ -135,22 +135,22 @@ def available(software=True,
     .. code-block:: bash
 
         # Normal Usage (list all software updates)
-        salt '*' win_wua.list_updates
+        salt '*' win_wua.available
 
         # List all updates with categories of Critical Updates and Drivers
-        salt '*' win_wua.list_updates categories=['Critical Updates','Drivers']
+        salt '*' win_wua.available categories=['Critical Updates','Drivers']
 
         # List all Critical Security Updates
-        salt '*' win_wua.list_updates categories=['Security Updates'] severities=['Critical']
+        salt '*' win_wua.available categories=['Security Updates'] severities=['Critical']
 
         # List all updates with a severity of Critical
-        salt '*' win_wua.list_updates severities=['Critical']
+        salt '*' win_wua.available severities=['Critical']
 
         # A summary of all available updates
-        salt '*' win_wua.list_updates summary=True
+        salt '*' win_wua.available summary=True
 
         # A summary of all Feature Packs and Windows 8.1 Updates
-        salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
+        salt '*' win_wua.available categories=['Feature Packs','Windows 8.1'] summary=True
     '''
 
     # Create a Windows Update Agent instance
@@ -168,7 +168,7 @@ def available(software=True,
         return updates.list()
 
 
-def list_update(name=None, download=False, install=False):
+def list_update(name, download=False, install=False):
     '''
     Returns details for all updates that match the search criteria
 
@@ -943,13 +943,4 @@ def get_needs_reboot():
         salt '*' win_wua.get_needs_reboot
 
     '''
-    # Initialize the PyCom system
-    pythoncom.CoInitialize()
-
-    # Create an AutoUpdate object
-    obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
-
-    if obj_sys.RebootRequired:
-        return True
-    else:
-        return False
+    return salt.utils.win_update.WindowsUpdateAgent.needs_reboot()
