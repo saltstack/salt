@@ -2274,11 +2274,13 @@ def create(vm_):
     )
 
     container_ref = None
+
+    # If datacenter is specified, set the container reference to start search from it instead
+    if datacenter:
+        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+        container_ref = datacenter_ref if datacenter_ref else None
+
     if 'clonefrom' in vm_:
-        # If datacenter is specified, set the container reference to start search from it instead
-        if datacenter:
-            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
-            container_ref = datacenter_ref if datacenter_ref else None
 
         # Clone VM/template from specified VM/template
         object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref=container_ref)
@@ -2391,6 +2393,11 @@ def create(vm_):
             datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
             if not datastore_ref:
                 raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
+
+        if host:
+            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
+            if not host_ref:
+                log.error("Specified host: '{0}' does not exist".format(host))
 
     # Create the config specs
     config_spec = vim.vm.ConfigSpec()
@@ -2547,7 +2554,10 @@ def create(vm_):
         else:
             log.info('Creating {0}'.format(vm_['name']))
 
-            task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
+            if host:
+                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref, host_ref)
+            else:
+                task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
             salt.utils.vmware.wait_for_task(task, vm_name, "create", 5, 'info')
     except Exception as exc:
         err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
