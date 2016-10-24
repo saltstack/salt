@@ -2488,18 +2488,12 @@ class BaseHighState(object):
         client_envs = self.client.envs()
         if env_order and client_envs:
             env_intersection = set(env_order).intersection(client_envs)
-            final_list = []
-            for ord_env in env_order:
-                if ord_env in env_intersection:
-                    final_list.append(ord_env)
-            return final_list
+            return [env for env in env_order if env in env_intersection]
 
         elif env_order:
             return env_order
         else:
-            for cenv in client_envs:
-                if cenv not in envs:
-                    envs.append(cenv)
+            envs.extend([env for env in client_envs if env not in envs])
             return envs
 
     def get_tops(self):
