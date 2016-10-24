@@ -398,7 +398,6 @@ def create(vm_):
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
 
-
     __opts__['hard_timeout'] = config.get_cloud_config_value(
         'hard_timeout',
         get_configured_provider(),
