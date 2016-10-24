@@ -1580,6 +1580,13 @@ def running(name,
         image = ':'.join(_get_repo_tag(str(image)))
 
     if image not in __salt__['dockerng.list_tags']():
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = (
+                'Image {} will be pulled and container {} will be created'
+                .format(image, name)
+            )
+            return ret
         try:
             # Pull image
             pull_result = __salt__['dockerng.pull'](
