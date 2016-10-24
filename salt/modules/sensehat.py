@@ -24,11 +24,12 @@ try:
     from sense_hat import SenseHat
     _sensehat = SenseHat()
     has_sense_hat = True
-except ImportError, NameError:
+except (ImportError, NameError):
     _sensehat = None
     has_sense_hat = False
 
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -40,10 +41,10 @@ def __virtual__():
             _sensehat.set_rotation(rotation, False)
         else:
             log.error("{0} is not a valid rotation. Using default rotation.".format(rotation))
-        
         return True
     else:
         return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a Raspberry Pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
+
 
 def set_pixels(pixels):
     '''
@@ -54,6 +55,7 @@ def set_pixels(pixels):
     '''
     _sensehat.set_pixels(pixels)
     return {'pixels': pixels}
+
 
 def get_pixels():
     '''
@@ -73,6 +75,7 @@ def get_pixels():
     pixels end up in frame buffer memory after you have called `set_pixels`.
     '''
     return _sensehat.get_pixels()
+
 
 def set_pixel(x, y, color):
     '''
@@ -94,6 +97,7 @@ def set_pixel(x, y, color):
     _sensehat.set_pixel(x, y, color)
     return {'color': color}
 
+
 def get_pixel(x, y):
     '''
     Returns the color of a single pixel on the LED matrix.
@@ -106,6 +110,7 @@ def get_pixel(x, y):
     Note: Please read the note for `get_pixels`
     '''
     return _sensehat.get_pixel(x, y)
+
 
 def low_light(low_light=True):
     '''
@@ -120,6 +125,7 @@ def low_light(low_light=True):
     '''
     _sensehat.low_light = low_light
     return {'low_light': low_light}
+
 
 def show_message(message, msg_type=None,
         text_color=[255, 255, 255], back_color=[0, 0, 0], scroll_speed=0.1):
@@ -167,6 +173,7 @@ def show_message(message, msg_type=None,
     _sensehat.show_message(message, scroll_speed, text_color, back_color)
     return {'message': message}
 
+
 def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
     '''
     Displays a single letter on the LED matrix.
@@ -189,6 +196,7 @@ def show_letter(letter, text_color=[255, 255, 255], back_color=[0, 0, 0]):
     _sensehat.show_letter(letter, text_color, back_color)
     return {'letter': letter}
 
+
 def show_image(image):
     '''
     Displays a 8 x 8 image on the LED matrix.
@@ -203,6 +211,7 @@ def show_image(image):
     salt 'raspberry' sensehat.show_image /tmp/my_image.png
     '''
     return _sensehat.load_image(image)
+
 
 def clear(color=None):
     '''
@@ -221,11 +230,13 @@ def clear(color=None):
         _sensehat.clear(color)
     return {'color': color}
 
+
 def get_humidity():
     '''
     Get the percentage of relative humidity from the humidity sensor.
     '''
     return _sensehat.get_humidity()
+
 
 def get_pressure():
     '''
@@ -233,20 +244,23 @@ def get_pressure():
     '''
     return _sensehat.get_pressure()
 
+
 def get_temperature():
     '''
     Gets the temperature in degrees Celsius from the humidity sensor.
     Equivalent to calling `get_temperature_from_humidity`.
-    
+
     If you get strange results try using 'get_temperature_from_pressure'.
     '''
     return _sensehat.get_temperature()
+
 
 def get_temperature_from_humidity():
     '''
     Gets the temperature in degrees Celsius from the humidity sensor.
     '''
     return _sensehat.get_temperature_from_humidity()
+
 
 def get_temperature_from_pressure():
     '''
