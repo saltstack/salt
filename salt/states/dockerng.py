@@ -1647,7 +1647,6 @@ def running(name,
         _validate_input(create_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
-        defaults_from_image = _get_defaults_from_image(image_id)
         if create_kwargs.get('binds') is not None:
             # Be smart and try to provide `volumes` argument derived from the
             # "binds" configuration.
