@@ -14,8 +14,10 @@ import re
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     return 'sensehat.get_pressure' in __salt__
+
 
 def __validate__(config):
     '''
@@ -26,6 +28,7 @@ def __validate__(config):
         return False, ('Configuration for sensehat beacon '
                        'must be a dictionary.')
     return True, 'Valid beacon configuration'
+
 
 def beacon(config):
     '''
@@ -79,7 +82,7 @@ def beacon(config):
         sensor_max = float(sensor_max)
 
         current_value = __salt__[sensor_function]()
-        if not (sensor_min <= current_value <= sensor_max):
+        if not sensor_min <= current_value <= sensor_max:
             ret.append({
                 'tag': 'sensehat/{0}'.format(sensor),
                 sensor: current_value
