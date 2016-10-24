@@ -24,7 +24,7 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
-from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.utils.decorators import with_deprecated
@@ -1031,7 +1031,7 @@ def master(master=None, connected=True):
 
     # the default publishing port
     port = 4505
-    master_ip = None
+    master_ips = None
 
     if __salt__['config.get']('publish_port') != '':
         port = int(__salt__['config.get']('publish_port'))
@@ -1040,20 +1040,22 @@ def master(master=None, connected=True):
     # address and try resolving it first. _remote_port_tcp
     # only works with IP-addresses.
     if master is not None:
-        tmp_ip = _host_to_ip(master)
-        if tmp_ip is not None:
-            master_ip = tmp_ip
+        master_ips = _host_to_ips(master)
 
-    ips = _remote_port_tcp(port)
+    master_connection_status = False
+    if master_ips:
+        ips = _remote_port_tcp(port)
+        for master_ip in master_ips:
+            if master_ip in ips:
+                master_connection_status = True
+                break
 
-    if connected:
-        if master_ip not in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_disconnected')
-    else:
-        if master_ip in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+    if master_connection_status is not connected:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        if master_connection_status:
             event.fire_event({'master': master}, '__master_connected')
+        else:
+            event.fire_event({'master': master}, '__master_disconnected')
 
 
 def ping_master(master):

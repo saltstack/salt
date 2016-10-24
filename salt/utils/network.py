@@ -53,22 +53,24 @@ def isportopen(host, port):
     return out
 
 
-def host_to_ip(host):
+def host_to_ips(host):
     '''
-    Returns the IP address of a given hostname
+    Returns a list of IP addresses of a given hostname or None if not found.
     '''
+    ips = []
     try:
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
-            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
-
-        if family == socket.AF_INET:
-            ip, port = sockaddr
-        elif family == socket.AF_INET6:
-            ip, port, flow_info, scope_id = sockaddr
-
+        for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(
+                host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            if family == socket.AF_INET:
+                ip, port = sockaddr
+            elif family == socket.AF_INET6:
+                ip, port, flow_info, scope_id = sockaddr
+            ips.append(ip)
+        if not ips:
+            ips = None
     except Exception:
-        ip = None
-    return ip
+        ips = None
+    return ips
 
 
 def _filter_localhost_names(name_list):
