@@ -32,7 +32,7 @@ def __virtual__():
             'the rsync binary is not in the path.')
 
 
-def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun):
+def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh):
     '''
     Generate rsync options
     '''
@@ -44,6 +44,8 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun):
         options.append('--force')
     if update:
         options.append('--update')
+    if rsh:
+        options.append('--rsh={0}'.format(rsh))
     if passwordfile:
         options.extend(['--password-file', passwordfile])
     if excludefrom:
@@ -65,7 +67,8 @@ def rsync(src,
           passwordfile=None,
           exclude=None,
           excludefrom=None,
-          dryrun=False):
+          dryrun=False,
+          rsh=None):
     '''
     .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
@@ -78,8 +81,8 @@ def rsync(src,
 
     .. code-block:: bash
 
-        salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx}
-        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini}
+        salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx} {rsh}
+        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} {rsh}
     '''
     if not src:
         src = __salt__['config.option']('rsync.src')
@@ -99,10 +102,12 @@ def rsync(src,
         excludefrom = __salt__['config.option']('rsync.excludefrom')
     if not dryrun:
         dryrun = __salt__['config.option']('rsync.dryrun')
+    if not rsh:
+        rsh = __salt__['config.option']('rsync.rsh')
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
-    option = _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun)
+    option = _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh)
     cmd = ['rsync'] + option + [src, dst]
     log.debug('Running rsync command: {0}'.format(cmd))
     try:

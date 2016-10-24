@@ -24,7 +24,7 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
-from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
@@ -148,18 +148,17 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    ut_path = "/proc/uptime"
-    if not os.path.exists(ut_path):
-        if __grains__['kernel'] == 'Linux':
+    ut_ret = {'seconds': 0}
+    if salt.utils.is_linux():
+        ut_path = "/proc/uptime"
+        if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        elif not salt.utils.which('uptime'):
-            raise CommandExecutionError("No uptime binary available.")
-        else:
-            return __salt__['cmd.run']('uptime')
-
-    ut_ret = {
-        'seconds': int(float(open(ut_path).read().strip().split()[0]))
-    }
+        ut_ret['seconds'] = int(float(open(ut_path).read().strip().split()[0]))
+    elif salt.utils.is_sunos():
+        cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
+        ut_ret['seconds'] = int(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+    else:
+        return __salt__['cmd.run']('uptime')
 
     utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
     ut_ret['since_iso'] = utc_time.isoformat()
@@ -1009,7 +1008,7 @@ def master(master=None, connected=True):
 
     # the default publishing port
     port = 4505
-    master_ip = None
+    master_ips = None
 
     if __salt__['config.get']('publish_port') != '':
         port = int(__salt__['config.get']('publish_port'))
@@ -1018,12 +1017,15 @@ def master(master=None, connected=True):
     # address and try resolving it first. _remote_port_tcp
     # only works with IP-addresses.
     if master is not None:
-        tmp_ip = _host_to_ip(master)
-        if tmp_ip is not None:
-            master_ip = tmp_ip
+        master_ips = _host_to_ips(master)
 
-    ips = _remote_port_tcp(port)
-    master_connection_status = master_ip in ips
+    master_connection_status = False
+    if master_ips:
+        ips = _remote_port_tcp(port)
+        for master_ip in master_ips:
+            if master_ip in ips:
+                master_connection_status = True
+                break
 
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)

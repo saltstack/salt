@@ -39,6 +39,15 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
+def _size_convert(_re_size):
+    converted_size = int(_re_size.group('size_value'))
+    if _re_size.group('size_unit') == 'm':
+        converted_size = int(converted_size) * 1024
+    if _re_size.group('size_unit') == 'g':
+        converted_size = int(converted_size) * 1024 * 1024
+    return converted_size
+
+
 def mounted(name,
             device,
             fstype,
@@ -355,11 +364,7 @@ def mounted(name,
 
                     size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', opt)
                     if size_match:
-                        converted_size = int(size_match.group('size_value'))
-                        if size_match.group('size_unit') == 'm':
-                            converted_size = int(size_match.group('size_value')) * 1024
-                        if size_match.group('size_unit') == 'g':
-                            converted_size = int(size_match.group('size_value')) * 1024 * 1024
+                        converted_size = _size_convert(size_match)
                         opt = "size={0}k".format(converted_size)
                     # make cifs option user synonym for option username which is reported by /proc/mounts
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
@@ -378,8 +383,18 @@ def mounted(name,
                                 _id = _info[_param]
                         opt = _param + '=' + str(_id)
 
+                    _active_superopts = active[real_name].get('superopts', [])
+                    for _active_opt in _active_superopts:
+                        size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', _active_opt)
+                        if size_match:
+                            converted_size = _size_convert(size_match)
+                            opt = "size={0}k".format(converted_size)
+                            _active_superopts.remove(_active_opt)
+                            _active_opt = "size={0}k".format(converted_size)
+                            _active_superopts.append(_active_opt)
+
                     if opt not in active[real_name]['opts'] \
-                    and opt not in active[real_name].get('superopts', []) \
+                    and opt not in _active_superopts \
                     and opt not in mount_invisible_options \
                     and opt not in mount_ignore_fs_keys.get(fstype, []) \
                     and opt not in mount_invisible_keys:

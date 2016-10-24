@@ -232,11 +232,13 @@ def repo(name,
          env=None,
          use_passphrase=False,
          gnupghome='/etc/salt/gpgkeys',
-         runas='builder'):
+         runas='builder',
+         timeout=15.0):
     '''
-    Make a package repository and optionally sign it and packages present,
-    the name is directory to turn into a repo. This state is best used
-    with onchanges linked to your package building states
+    Make a package repository and optionally sign it and packages present
+
+    The name is directory to turn into a repo. This state is best used
+    with onchanges linked to your package building states.
 
     name
         The directory to find packages that will be in the repository
@@ -246,45 +248,49 @@ def repo(name,
 
         Optional Key ID to use in signing packages and repository.
         Utilizes Public and Private keys associated with keyid which have
-        been loaded into the minion's Pillar Data.
+        been loaded into the minion's Pillar data.
 
-        For example, contents from a pillar data file with named Public
+        For example, contents from a Pillar data file with named Public
         and Private keys as follows:
 
-        gpg_pkg_priv_key: |
-          -----BEGIN PGP PRIVATE KEY BLOCK-----
-          Version: GnuPG v1
+        .. code-block:: yaml
 
-          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-          .
-          .
-          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
-          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
-          =JvW8
-          -----END PGP PRIVATE KEY BLOCK-----
+            gpg_pkg_priv_key: |
+              -----BEGIN PGP PRIVATE KEY BLOCK-----
+              Version: GnuPG v1
 
-        gpg_pkg_priv_keyname: gpg_pkg_key.pem
+              lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+              R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+              =JvW8
+              -----END PGP PRIVATE KEY BLOCK-----
 
-        gpg_pkg_pub_key: |
-          -----BEGIN PGP PUBLIC KEY BLOCK-----
-          Version: GnuPG v1
+            gpg_pkg_priv_keyname: gpg_pkg_key.pem
 
-          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-          .
-          .
-          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
-          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
-          inNqW9c=
-          =s1CX
-          -----END PGP PUBLIC KEY BLOCK-----
+            gpg_pkg_pub_key: |
+              -----BEGIN PGP PUBLIC KEY BLOCK-----
+              Version: GnuPG v1
 
-        gpg_pkg_pub_keyname: gpg_pkg_key.pub
+              mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+              4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+              inNqW9c=
+              =s1CX
+              -----END PGP PUBLIC KEY BLOCK-----
+
+            gpg_pkg_pub_keyname: gpg_pkg_key.pub
 
     env
-        A dictionary of environment variables to be utlilized in creating the repository.
-        Example:
+        .. versionchanged:: 2016.3.0
+
+        A dictionary of environment variables to be utilized in creating the
+        repository. Example:
 
         .. code-block:: yaml
 
@@ -293,33 +299,52 @@ def repo(name,
 
         .. warning::
 
-            The above illustrates a common PyYAML pitfall, that **yes**,
+            The above illustrates a common ``PyYAML`` pitfall, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
-            quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
+            quotes to be used as strings. More info on this (and other)
+            ``PyYAML`` idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
-            Use of OPTIONS on some platforms, for example: ask-passphrase, will
-            require gpg-agent or similar to cache passphrases.
+            Use of ``OPTIONS`` on some platforms, for example:
+            ``ask-passphrase``, will require ``gpg-agent`` or similar to cache
+            passphrases.
 
+        .. note::
+
+            This parameter is not used for making ``yum`` repositories.
+
+    use_passphrase : False
         .. versionadded:: 2016.3.0
 
-    use_passphrase
-        Use a passphrase with the signing key presented in 'keyid'.
-        Passphrase is received from pillar data which has been passed on
-        the command line. For example:
+        Use a passphrase with the signing key presented in ``keyid``.
+        Passphrase is received from Pillar data which could be passed on the
+        command line with ``pillar`` parameter. For example:
 
-        pillar='{ "gpg_passphrase" : "my_passphrase" }'
+        .. code-block:: bash
 
-    gnupghome
+            pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome : /etc/salt/gpgkeys
+        .. versionadded:: 2016.3.0
+
         Location where GPG related files are stored, used with 'keyid'
 
-    runas
+    runas : builder
+        .. versionadded:: 2016.3.0
+
         User to create the repository as, and optionally sign packages.
 
-        Note: Ensure User has correct rights to any files and directories which
-              are to be utilized.
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
+
+    timeout : 15.0
+        .. versionadded:: 2016.3.4
+
+        Timeout in seconds to wait for the prompt for inputting the passphrase.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -345,7 +370,7 @@ def repo(name,
                 func = 'rpmbuild.make_repo'
                 break
 
-    res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas)
+    res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas, timeout)
 
     if res['retcode'] > 0:
         ret['result'] = False

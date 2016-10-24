@@ -993,17 +993,26 @@ def revoke_auth(preserve_minion_cache=False):
 
         salt '*' saltutil.revoke_auth
     '''
-    channel = salt.transport.Channel.factory(__opts__)
-    tok = channel.auth.gen_token('salt')
-    load = {'cmd': 'revoke_auth',
-            'id': __opts__['id'],
-            'tok': tok,
-            'preserve_minion_cache': preserve_minion_cache}
+    masters = list()
+    ret = True
+    if 'master_uri_list' in __opts__:
+        for master_uri in __opts__['master_uri_list']:
+            masters.append(master_uri)
+    else:
+        masters.append(__opts__['master_uri'])
 
-    try:
-        return channel.send(load)
-    except SaltReqTimeoutError:
-        return False
+    for master in masters:
+        channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+        tok = channel.auth.gen_token('salt')
+        load = {'cmd': 'revoke_auth',
+                'id': __opts__['id'],
+                'tok': tok,
+                'preserve_minion_cache': preserve_minion_cache}
+        try:
+            channel.send(load)
+        except SaltReqTimeoutError:
+            ret = False
+    return ret
 
 
 def _get_ssh_or_api_client(cfgfile, ssh=False):

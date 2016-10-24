@@ -4,11 +4,9 @@
 Windows
 =======
 
-Salt has full support for running the Salt Minion on Windows. Salt now supports
-running the Salt Master on Windows (Beta).
-
-You must connect Windows Salt minions to a Salt master on a supported operating
-system to control your Salt Minions.
+Salt has full support for running the Salt minion on Windows. You must connect
+Windows Salt minions to a Salt master on a supported operating system to
+control your Salt Minions.
 
 Many of the standard Salt modules have been ported to work on Windows and many
 of the Salt States currently work on Windows as well.
@@ -150,7 +148,7 @@ Here are some examples of using the silent installer:
 
     # install only the master but don't start the salt-master service
 
-    Salt-2016.9.1-Setup-amd64.exe /S /master-only /start-master=0
+    *-Setup-*.exe /S /master=yoursaltmaster /minion-name=yourminionname
 
 .. code-block:: bat
 
@@ -158,7 +156,7 @@ Here are some examples of using the silent installer:
     # configure the minion to talk to the local master
     # start both services
 
-    Salt-2016.9.1-Setup-amd64.exe /S /install-master /master=localhost /minion-name=local_minion
+    *-Setup-*.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
 
 
 Running the Salt Minion on Windows as an Unprivileged User

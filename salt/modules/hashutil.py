@@ -204,7 +204,7 @@ def base64_decodefile(instr, outfile):
     r'''
     Decode a base64-encoded string and write the result to a file
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
