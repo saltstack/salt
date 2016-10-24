@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import os
 import threading
 import platform
-import time
 
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
@@ -87,8 +86,8 @@ class BaseZMQReqCase(TestCase):
             return
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
-#        cls.process_manager.kill_children()
-#        time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
+        # cls.process_manager.kill_children()
+        # time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
 
