@@ -37,6 +37,22 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
+    def test_get_file_to_dir(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, '')
+        self.run_function(
+                'cp.get_file',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.fopen(tgt + 'scene33', 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
     def test_get_file_templated_paths(self):
         '''
         cp.get_file
@@ -179,6 +195,22 @@ class CPModuleTest(integration.ModuleCase):
                 makedirs=True
             )
         with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_url_to_dir(self):
+        '''
+        cp.get_url with salt:// source
+        '''
+        tgt = os.path.join(integration.TMP, '')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.fopen(tgt + 'scene33', 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
