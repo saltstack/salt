@@ -303,7 +303,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, refresh=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -312,6 +312,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
     :param bool refresh: Refresh package metadata. Default ``False`.
 
         {'<package_name>': '<version>'}
+
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -326,7 +333,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(kwargs.get('refresh', False))
     _refresh_db_conditional(saltenv, force=refresh)
 
     ret = {}

@@ -75,11 +75,18 @@ def _rehash():
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, refresh=False, **kwargs):  # pylint: disable=unused-argument
     '''
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
+
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -94,6 +101,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'xbps-query -l'
     ret = {}
+    # The current implementation always refreshes the installed packages
+    # cache. Due to this, 'refresh' is ignored.
     out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         if not line:

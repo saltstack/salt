@@ -544,11 +544,18 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     return __salt__['lowpkg.version_cmp'](pkg1, pkg2, ignore_epoch=ignore_epoch)
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, refresh=False, **kwargs):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
+
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -562,7 +569,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if not refresh and 'pkg.list_pkgs' in __context__:
         if versions_as_list:
             return __context__['pkg.list_pkgs']
         else:

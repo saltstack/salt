@@ -249,7 +249,7 @@ def refresh_db():
     return True
 
 
-def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
+def list_pkgs(versions_as_list=False, with_origin=False, refresh=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -260,6 +260,13 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
         for each installed package.
 
         .. versionadded:: 2014.1.0
+
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -273,7 +280,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if not refresh and 'pkg.list_pkgs' in __context__:
         ret = copy.deepcopy(__context__['pkg.list_pkgs'])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)

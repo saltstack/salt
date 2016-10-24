@@ -1244,6 +1244,7 @@ def _clean_pkglist(pkgs):
 def list_pkgs(versions_as_list=False,
               removed=False,
               purge_desired=False,
+              refresh=False,
               **kwargs):  # pylint: disable=W0613
     '''
     List the packages currently installed in a dict::
@@ -1265,6 +1266,13 @@ def list_pkgs(versions_as_list=False,
             Packages in this state now correctly show up in the output of this
             function.
 
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
+
     .. note:: External dependencies
 
         Virtual package resolution requires the ``dctrl-tools`` package to be
@@ -1281,7 +1289,7 @@ def list_pkgs(versions_as_list=False,
     removed = salt.utils.is_true(removed)
     purge_desired = salt.utils.is_true(purge_desired)
 
-    if 'pkg.list_pkgs' in __context__:
+    if not refresh and 'pkg.list_pkgs' in __context__:
         if removed:
             ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:

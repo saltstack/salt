@@ -346,6 +346,7 @@ def list_pkgs(versions_as_list=False,
               chroot=None,
               root=None,
               with_origin=False,
+              refresh=False,
               **kwargs):
     '''
     List the packages currently installed as a dict::
@@ -369,6 +370,13 @@ def list_pkgs(versions_as_list=False,
 
         .. versionadded:: 2014.1.0
 
+    refresh
+        Whether to refresh the installed packages cache (internal to Salt)
+        if it exists.
+        Default: False.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -386,7 +394,7 @@ def list_pkgs(versions_as_list=False,
     contextkey_pkg = _contextkey(jail, chroot, root)
     contextkey_origins = _contextkey(jail, chroot, root, prefix='pkg.origin')
 
-    if contextkey_pkg in __context__:
+    if not refresh and contextkey_pkg in __context__:
         ret = copy.deepcopy(__context__[contextkey_pkg])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
