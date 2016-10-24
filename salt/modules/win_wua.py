@@ -162,10 +162,7 @@ def available(software=True,
                             severities)
 
     # Return results as Summary or Details
-    if summary:
-        return updates.summary()
-    else:
-        return updates.list()
+    return updates.summary() if summary else updates.list()
 
 
 def list_update(name, download=False, install=False):
@@ -249,10 +246,7 @@ def list_update(name, download=False, install=False):
     if install:
         ret['Install'] = wua.install(updates.updates)
 
-    if not ret:
-        return updates.list()
-
-    return ret
+    return ret if ret else updates.list()
 
 
 def list_updates(software=True,
@@ -393,10 +387,7 @@ def list_updates(software=True,
         ret['Install'] = wua.install(updates.updates)
 
     if not ret:
-        if summary:
-            return updates.summary()
-        else:
-            return updates.list()
+        return updates.summary() if summary else updates.list()
 
     return ret
 
@@ -435,7 +426,7 @@ def download_update(name):
         raise CommandExecutionError('No updates found')
 
     if updates.count() > 1:
-        raise CommandExecutionError('More than one update found')
+        raise CommandExecutionError('Multiple updates found, narrow your search')
 
     return wua.download(updates.updates)
 
@@ -507,7 +498,7 @@ def install_update(name):
         raise CommandExecutionError('No updates found')
 
     if updates.count() > 1:
-        raise CommandExecutionError('More than one update found')
+        raise CommandExecutionError('Multiple updates found, narrow your search')
 
     return wua.install(updates.updates)
 
@@ -579,7 +570,7 @@ def uninstall(name):
         raise CommandExecutionError('No updates found')
 
     if updates.count() > 1:
-        raise CommandExecutionError('More than one update found')
+        raise CommandExecutionError('Multiple updates found, narrow your search')
 
     return wua.uninstall(updates.updates)
 
@@ -943,4 +934,4 @@ def get_needs_reboot():
         salt '*' win_wua.get_needs_reboot
 
     '''
-    return salt.utils.win_update.WindowsUpdateAgent.needs_reboot()
+    return salt.utils.win_update.needs_reboot()
