@@ -12,6 +12,10 @@ Setting a GitHub pull request
 This is the preferred method for contributions, simply create a GitHub
 fork, commit your changes to the fork, and then open up a pull request.
 
+Please review the following questions when creating a pull request:
+
+`<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_
+
 Posting patches to the mailing list
 -----------------------------------
 
