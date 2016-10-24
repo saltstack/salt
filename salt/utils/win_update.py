@@ -329,6 +329,7 @@ class WindowsUpdateAgent(object):
 
         # Download the list
         try:
+            log.debug('Downloading Updates')
             result = downloader.Download()
         except pywintypes.com_error as error:
             # Something happened, raise an error
@@ -355,8 +356,10 @@ class WindowsUpdateAgent(object):
 
         # Was the download successful?
         if result.ResultCode in [2, 3]:
+            log.debug('Downloaded Successfully')
             ret['Success'] = True
         else:
+            log.debug('Download Failed')
             ret['Success'] = False
 
         # Report results for each update
@@ -407,6 +410,7 @@ class WindowsUpdateAgent(object):
 
         # Install the list
         try:
+            log.debug('Installing Updates')
             result = installer.Install()
 
         except pywintypes.com_error as error:
@@ -437,6 +441,7 @@ class WindowsUpdateAgent(object):
             ret['NeedsReboot'] = result.RebootRequired
             log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
         else:
+            log.debug('Install Failed')
             ret['Success'] = False
 
         reboot = {0: 'Never Reboot',
@@ -452,7 +457,7 @@ class WindowsUpdateAgent(object):
         return ret
 
     def uninstall(self, updates):
-        # This doesn't work with the WUA APi. It always returns "0x80240028
+        # This doesn't work with the WUA API. It always returns "0x80240028
         # Uninstall not allowed". The full message is: " The update could not be
         # uninstalled because the request did not originate from a Windows
         # Server Update Services (WSUS) server.
@@ -498,6 +503,7 @@ class WindowsUpdateAgent(object):
 
         # Uninstall the list
         try:
+            log.debug('Uninstalling Updates')
             result = installer.Uninstall()
 
         except pywintypes.com_error as error:
@@ -508,35 +514,43 @@ class WindowsUpdateAgent(object):
             except KeyError:
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
-            # If "Uninstall Not Allowed" error, try using WUSA
+            # If "Uninstall Not Allowed" error, try using DISM
             if exc[5] == -2145124312:
+                log.debug('Uninstall Failed with WUA, attempting with DISM')
                 try:
                     for item in uninstall_list:
                         for kb in item.KBArticleIDs:
-                            cmd = ['wusa.exe',
-                                   '/uninstall',
-                                   '/kb:' + kb,
-                                   '/quiet',
-                                   '/norestart']
-                            subprocess.Popen(
-                                cmd,
-                                shell=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT).communicate()[0]
+                            cmd = ['dism', '/Online', '/Get-Packages']
 
-                except (OSError, IOError) as exc:
-                    log.debug('Uninstall using WUSA failed')
+                            pkg_list = self._run(cmd)[0].splitlines()
+                            for item in pkg_list:
+                                if 'kb' + kb in item.lower():
+                                    pkg = item.split(' : ')[1]
+
+                                    ret['DismPackage'] = pkg
+
+                                    cmd = ['dism',
+                                           '/Online',
+                                           '/Remove-Package',
+                                           '/PackageName:{0}'.format(pkg),
+                                           '/Quiet',
+                                           '/NoRestart']
+
+                                    self._run(cmd)
+
+                except CommandExecutionError as exc:
+                    log.debug('Uninstall using DISM failed')
                     log.debug('Command: {0}'.format(' '.join(cmd)))
                     log.debug('Error: {0}'.format(str(exc)))
-                    raise CommandExecutionError('Uninstall using WUSA failed:'
+                    raise CommandExecutionError('Uninstall using DISM failed:'
                                                 '{0}'.format(str(exc)))
 
                 # WUSA Uninstall Completed Successfully
-                log.debug('Uninstall Completed using WUSA')
+                log.debug('Uninstall Completed using DISM')
 
                 # Populate the return dictionary
                 ret['Success'] = True
-                ret['Message'] = 'Uninstalled using WUSA'
+                ret['Message'] = 'Uninstalled using DISM'
                 ret['NeedsReboot'] = needs_reboot()
                 log.debug('NeedsReboot: {0}'.format(ret['NeedsReboot']))
 
@@ -584,6 +598,7 @@ class WindowsUpdateAgent(object):
             ret['NeedsReboot'] = result.RebootRequired
             log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
         else:
+            log.debug('Uninstall Failed')
             ret['Success'] = False
 
         reboot = {0: 'Never Reboot',
@@ -597,6 +612,25 @@ class WindowsUpdateAgent(object):
                 uninstall_list.Item(i).InstallationBehavior.RebootBehavior]
 
         return ret
+
+    def _run(self, cmd):
+
+        if not isinstance(cmd, list):
+            cmd = salt.utils.shlex_split(cmd)
+
+        try:
+            log.debug(cmd)
+            p = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            return p.communicate()
+
+        except (OSError, IOError) as exc:
+            log.debug('Command Failed: {0}'.format(' '.join(cmd)))
+            log.debug('Error: {0}'.format(str(exc)))
+            raise CommandExecutionError(exc)
 
 
 def needs_reboot():
