@@ -285,7 +285,7 @@ class WindowsUpdateAgent(object):
     def download(self, updates):
 
         # Check for empty list
-        if updates.Count == 0:
+        if updates.count() == 0:
             ret = {'Success': False,
                    'Updates': 'Nothing to download'}
             return ret
@@ -295,29 +295,32 @@ class WindowsUpdateAgent(object):
         self._session.ClientApplicationID = 'Salt: Download Update'
         download_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
+        ret = {'Updates': {}}
+
         # Check for updates that aren't already downloaded
-        for update in updates.Updates:
+        for update in updates.updates:
 
             # Define uid to keep the lines shorter
             uid = update.Identity.UpdateID
+            ret['Updates'][uid] = {}
             ret['Updates'][uid]['Title'] = update.Title
+            ret['Updates'][uid]['AlreadyDownloaded'] = \
+                bool(update.IsDownloaded)
 
             # Accept EULA
-            if not salt.utils.is_true(updates.EulaAccepted):
+            if not salt.utils.is_true(update.EulaAccepted):
                 log.debug('Accepting EULA: {0}'.format(update.Title))
                 update.AcceptEula()  # pylint: disable=W0104
 
             # Update already downloaded
-            ret['Updates'][uid]['AlreadyDownloaded'] = True
             if not salt.utils.is_true(update.IsDownloaded):
                 log.debug('To Be Downloaded: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
-                ret['Updates'][uid]['AlreadyDownloaded'] = False
                 download_list.Add(update)
 
         # Check the download list
         if download_list.Count == 0:
-            ret = {'Success': False,
+            ret = {'Success': True,
                    'Updates': 'Nothing to download'}
             return ret
 
@@ -367,34 +370,35 @@ class WindowsUpdateAgent(object):
     def install(self, updates):
 
         # Check for empty list
-        if updates.Count == 0:
+        if updates.count() == 0:
             ret = {'Success': False,
                    'Updates': 'Nothing to install'}
             return ret
 
-        ret = dict()
         installer = self._session.CreateUpdateInstaller()
         self._session.ClientApplicationID = 'Salt: Install Update'
         install_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
+        ret = {'Updates': {}}
+
         # Check for updates that aren't already installed
-        for update in updates:
+        for update in updates.updates:
 
             # Define uid to keep the lines shorter
             uid = update.Identity.UpdateID
+            ret['Updates'][uid] = {}
             ret['Updates'][uid]['Title'] = update.Title
+            ret['Updates'][uid]['AlreadyInstalled'] = bool(update.IsInstalled)
 
             # Make sure the update has actually been installed
-            ret['Updates'][uid]['AlreadyInstalled'] = True
             if not salt.utils.is_true(update.IsInstalled):
                 log.debug('To Be Installed: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
-                ret['Updates'][uid]['AlreadyInstalled'] = False
                 install_list.Add(update)
 
         # Check the install list
         if install_list.Count == 0:
-            ret = {'Success': False,
+            ret = {'Success': True,
                    'Updates': 'Nothing to install'}
             return ret
 
@@ -442,8 +446,8 @@ class WindowsUpdateAgent(object):
             uid = install_list.Item(i).Identity.UpdateID
             ret['Updates'][uid]['Result'] = \
                 result_code[result.GetUpdateResult(i).ResultCode]
-            ret['Updates'][uid]['RebootBehavior'] = reboot[
-                install_list.Item(i).InstallationBehavior.RebootBehavior]
+            ret['Updates'][uid]['RebootBehavior'] = \
+                reboot[install_list.Item(i).InstallationBehavior.RebootBehavior]
 
         return ret
 
@@ -454,8 +458,9 @@ class WindowsUpdateAgent(object):
         # Server Update Services (WSUS) server.
         # look at using the following on failure:
         # wusa /uninstall /kb:3183838 /quiet
+
         # Check for empty list
-        if updates.Count == 0:
+        if updates.count() == 0:
             ret = {'Success': False,
                    'Updates': 'Nothing to uninstall'}
             return ret
@@ -464,21 +469,22 @@ class WindowsUpdateAgent(object):
         self._session.ClientApplicationID = 'Salt: Install Update'
         uninstall_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
+        ret = {'Updates': {}}
+
         # Check for updates that aren't already installed
-        ret = {'Success': True,
-               'Updates': {}}
-        for update in updates:
+        for update in updates.updates:
 
             # Define uid to keep the lines shorter
             uid = update.Identity.UpdateID
-            ret['Updates'][uid] = {'Title': update.Title}
+            ret['Updates'][uid] = {}
+            ret['Updates'][uid]['Title'] = update.Title
+            ret['Updates'][uid]['AlreadyUninstalled'] = \
+                not bool(update.IsInstalled)
 
             # Make sure the update has actually been Uninstalled
-            ret['Updates'][uid]['AlreadyUninstalled'] = True
             if salt.utils.is_true(update.IsInstalled):
                 log.debug('To Be Uninstalled: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
-                ret['Updates'][uid]['AlreadyUninstalled'] = False
                 uninstall_list.Add(update)
 
         # Check the install list
@@ -537,20 +543,23 @@ class WindowsUpdateAgent(object):
                 # Refresh the Updates Table
                 self.refresh()
 
-                # Check the status of each update
                 reboot = {0: 'Never Reboot',
                           1: 'Always Reboot',
                           2: 'Poss Reboot'}
-                for update in self.updates():
+
+                # Check the status of each update
+                for update in self._updates:
                     uid = update.Identity.UpdateID
                     for item in uninstall_list:
                         if item.Identity.UpdateID == uid:
                             if not update.IsInstalled:
-                                ret['Updates'][uid]['Result'] = 'Uninstallation Succeeded'
+                                ret['Updates'][uid]['Result'] = \
+                                    'Uninstallation Succeeded'
                             else:
-                                ret['Updates'][uid]['Result'] = 'Uninstallation Failed'
-                            ret['Updates'][uid]['RebootBehavior'] = reboot[
-                                update.InstallationBehavior.RebootBehavior]
+                                ret['Updates'][uid]['Result'] = \
+                                    'Uninstallation Failed'
+                            ret['Updates'][uid]['RebootBehavior'] = \
+                                reboot[update.InstallationBehavior.RebootBehavior]
 
                 return ret
 

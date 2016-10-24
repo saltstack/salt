@@ -240,11 +240,11 @@ def list_update(name, download=False, install=False):
 
     # Download
     if download or install:
-        ret['Download'] = wua.download(updates.updates)
+        ret['Download'] = wua.download(updates)
 
     # Install
     if install:
-        ret['Install'] = wua.install(updates.updates)
+        ret['Install'] = wua.install(updates)
 
     return ret if ret else updates.list()
 
