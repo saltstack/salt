@@ -158,7 +158,7 @@ def uptime():
         seconds = float(salt.utils.fopen(ut_path).read().split()[0])
     elif salt.utils.is_sunos():
         cmd = "kstat -p unix:0:system_misc:boot_time | nawk '{printf \"%d\\n\", srand()-$2}'"
-        seconds = float(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0)
+        seconds = int(float(__salt__['cmd.shell'](cmd, output_loglevel='trace').strip() or 0))
     elif salt.utils.is_darwin():
         bt_data = __salt__['sysctl.get']('kern.boottime')
         if not bt_data:
