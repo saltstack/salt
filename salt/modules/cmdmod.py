@@ -2751,17 +2751,16 @@ def shell_info(shell, list_modules=False):
                     if attribute['vname'].lower() == '(default)':
                         continue
                     elif attribute['vname'].lower() == 'powershellversion':
-                        ret['ps_version'] = attribute['vdata']
+                        ret['psversion'] = attribute['vdata']
                         ret['version_raw'] = attribute['vdata']
                     elif attribute['vname'].lower() == 'runtimeversion':
-                        ret['crl_version'] = attribute['vdata']
-                        if ret['crl_version'][0] == 'v' or \
-                                ret['crl_version'][0] == 'V':
-                            ret['crl_version'] = ret['crl_version'][1::]
+                        ret['crlversion'] = attribute['vdata']
+                        if ret['crlversion'][0].lower() == 'v':
+                            ret['crlversion'] = ret['crlversion'][1::]
                     elif attribute['vname'].lower() == 'pscompatibleversion':
                         # reg attribute does not end in s, the powershell
                         # attribute does
-                        ret['ps_compatible_versions'] = \
+                        ret['pscompatibleversions'] = \
                             attribute['vdata'].replace(' ', '').split(',')
                     else:
                         # keys are lower case as python is case sensitive the
