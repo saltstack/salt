@@ -119,7 +119,7 @@ def present(name,
         that contains a dict with region, key and keyid.
     '''
 
-    ret = {'name': name, 'result': (None if __opts__['test'] else True), 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     comments = []
     changes_old = {}
