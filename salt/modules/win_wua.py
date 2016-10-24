@@ -45,6 +45,8 @@ def available(software=True,
               severities=None,
               ):
     '''
+    .. versionadded:: nitrogen
+
     List updates that match the passed criteria.
 
     Args:
@@ -167,12 +169,15 @@ def available(software=True,
 
 def list_update(name, download=False, install=False):
     '''
+    .. deprecated:: nitrogen
+       Use :func:`get` instead
     Returns details for all updates that match the search criteria
 
     Args:
         name (str): The name of the update you're searching for. This can be the
-        GUID (preferred), a KB number, or any part of the name of the update.
-        Run ``list_updates`` to get the GUID for the update you're looking for.
+        GUID, a KB number, or any part of the name of the update. GUID's and
+        KB's are preferred. Run ``list_updates`` to get the GUID for the update
+        you're looking for.
 
         download (bool): Download the update returned by this function. Run this
         function first to see if the update exists, then set ``download=True``
@@ -230,6 +235,81 @@ def list_update(name, download=False, install=False):
         # Not all updates have an associated KB
         salt '*' win_wua.list_update 'Microsoft Camera Codec Pack'
     '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'get\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return get(name, download, install)
+
+
+def get(name, download=False, install=False):
+    '''
+    .. versionadded:: nitrogen
+
+    Returns details for all updates that match the search criteria
+
+    Args:
+        name (str): The name of the update you're searching for. This can be the
+        GUID, a KB number, or any part of the name of the update. GUID's and
+        KB's are preferred. Run ``list`` to get the GUID for the update
+        you're looking for.
+
+        download (bool): Download the update returned by this function. Run this
+        function first to see if the update exists, then set ``download=True``
+        to download the update.
+
+        install (bool): Install the update returned by this function. Run this
+        function first to see if the update exists, then set ``install=True`` to
+        install the update.
+
+    Returns:
+        dict: Returns a dict containing a list of updates that match the name if
+        download and install are both set to False. Should usually be a single
+        update, but can return multiple if a partial name is given.
+
+        If download or install is set to true it will return the results of the
+        operation.
+
+        .. code-block:: cfg
+
+            List of Updates:
+            {'<GUID>': {'Title': <title>,
+                        'KB': <KB>,
+                        'GUID': <the globally unique identifier for the update>
+                        'Description': <description>,
+                        'Downloaded': <has the update been downloaded>,
+                        'Installed': <has the update been installed>,
+                        'Mandatory': <is the update mandatory>,
+                        'UserInput': <is user input required>,
+                        'EULAAccepted': <has the EULA been accepted>,
+                        'Severity': <update severity>,
+                        'NeedsReboot': <is the update installed and awaiting reboot>,
+                        'RebootBehavior': <will the update require a reboot>,
+                        'Categories': [ '<category 1>',
+                                        '<category 2>',
+                                        ...]
+                        }
+            }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Recommended Usage using GUID without braces
+        # Use this to find the status of a specific update
+        salt '*' win_wua.get 12345678-abcd-1234-abcd-1234567890ab
+
+        # Use the following if you don't know the GUID:
+
+        # Using a KB number
+        # Not all updates have an associated KB
+        salt '*' win_wua.get KB3030298
+
+        # Using part or all of the name of the update
+        # Could possibly return multiple results
+        # Not all updates have an associated KB
+        salt '*' win_wua.get 'Microsoft Camera Codec Pack'
+    '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
@@ -258,6 +338,138 @@ def list_updates(software=True,
                  download=False,
                  install=False):
     '''
+    .. deprecated:: nitrogen
+       Use :func:`list` instead
+
+    Returns a detailed list of available updates or a summary. If download or
+    install is True the same list will be downloaded and/or installed.
+
+    Args:
+        software (bool): Include software updates in the results (default is
+        True)
+
+        drivers (bool): Include driver updates in the results (default is False)
+
+        summary (bool):
+        - True: Return a summary of updates available for each category.
+        - False (default): Return a detailed list of available updates.
+
+        skip_installed (bool): Skip installed updates in the results (default is
+        False)
+
+        download (bool): (Overrides reporting functionality) Download the list
+        of updates returned by this function. Run this function first with
+        ``download=False`` to see what will be downloaded, then set
+        ``download=True`` to download the updates.
+
+        install (bool): (Overrides reporting functionality) Install the list of
+        updates returned by this function. Run this function first with
+        ``install=False`` to see what will be installed, then set
+        ``install=True`` to install the updates.
+
+        categories (list): Specify the categories to list. Must be passed as a
+        list. All categories returned by default.
+
+            Categories include the following:
+
+            * Critical Updates
+            * Definition Updates
+            * Drivers (make sure you set drivers=True)
+            * Feature Packs
+            * Security Updates
+            * Update Rollups
+            * Updates
+            * Update Rollups
+            * Windows 7
+            * Windows 8.1
+            * Windows 8.1 drivers
+            * Windows 8.1 and later drivers
+            * Windows Defender
+
+        severities (list): Specify the severities to include. Must be passed as
+        a list. All severities returned by default.
+
+            Severities include the following:
+
+            * Critical
+            * Important
+
+    Returns:
+
+        dict: Returns a dict containing either a summary or a list of updates:
+
+        .. code-block:: cfg
+
+            List of Updates:
+            {'<GUID>': {'Title': <title>,
+                        'KB': <KB>,
+                        'GUID': <the globally unique identifier for the update>
+                        'Description': <description>,
+                        'Downloaded': <has the update been downloaded>,
+                        'Installed': <has the update been installed>,
+                        'Mandatory': <is the update mandatory>,
+                        'UserInput': <is user input required>,
+                        'EULAAccepted': <has the EULA been accepted>,
+                        'Severity': <update severity>,
+                        'NeedsReboot': <is the update installed and awaiting reboot>,
+                        'RebootBehavior': <will the update require a reboot>,
+                        'Categories': [ '<category 1>',
+                                        '<category 2>',
+                                        ...]
+                        }
+            }
+
+            Summary of Updates:
+            {'Total': <total number of updates returned>,
+             'Available': <updates that are not downloaded or installed>,
+             'Downloaded': <updates that are downloaded but not installed>,
+             'Installed': <updates installed (usually 0 unless installed=True)>,
+             'Categories': { <category 1>: <total for that category>,
+                             <category 2>: <total for category 2>,
+                             ... }
+            }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Normal Usage (list all software updates)
+        salt '*' win_wua.list_updates
+
+        # List all updates with categories of Critical Updates and Drivers
+        salt '*' win_wua.list_updates categories=['Critical Updates','Drivers']
+
+        # List all Critical Security Updates
+        salt '*' win_wua.list_updates categories=['Security Updates'] severities=['Critical']
+
+        # List all updates with a severity of Critical
+        salt '*' win_wua.list_updates severities=['Critical']
+
+        # A summary of all available updates
+        salt '*' win_wua.list_updates summary=True
+
+        # A summary of all Feature Packs and Windows 8.1 Updates
+        salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
+    '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'list\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return list(software, drivers, summary, skip_installed, categories,
+                severities, download, install)
+
+
+def list(software=True,
+         drivers=False,
+         summary=False,
+         skip_installed=True,
+         categories=None,
+         severities=None,
+         download=False,
+         install=False):
+    '''
+    .. versionadded:: nitrogen
+
     Returns a detailed list of available updates or a summary. If download or
     install is True the same list will be downloaded and/or installed.
 
@@ -394,6 +606,9 @@ def list_updates(software=True,
 
 def download_update(name):
     '''
+    .. deprecated:: oxygen
+       Use :func:`download` instead
+
     Downloads a single update.
 
     Args:
@@ -416,23 +631,18 @@ def download_update(name):
         salt '*' win_wua.download_update KB12312321
 
     '''
-    # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
-
-    # Search for Update
-    updates = wua.search(name)
-
-    if updates.count() == 0:
-        raise CommandExecutionError('No updates found')
-
-    if updates.count() > 1:
-        raise CommandExecutionError('Multiple updates found, narrow your search')
-
-    return wua.download(updates.updates)
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'download\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return download(name)
 
 
 def download_updates(names):
     '''
+    .. deprecated:: oxygen
+       Use :func:`download` instead
+
     Downloads updates that match the list of passed identifiers. It's easier to
     use this function by using list_updates and setting install=True.
 
@@ -450,7 +660,37 @@ def download_updates(names):
     .. code-block:: bash
 
         # Normal Usage
-        salt '*' win_wua.download_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
+        salt '*' win_wua.download guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
+    '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'download\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return download(names)
+
+
+def download(names):
+    '''
+    .. versionadded:: nitrogen
+    Downloads updates that match the list of passed identifiers. It's easier to
+    use this function by using list_updates and setting install=True.
+
+    Args:
+
+        names (str, list): A single update or a list of updates to download.
+        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
+        are preferred.
+
+    Returns:
+
+        dict: A dictionary containing the details about the downloaded updates
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Normal Usage
+        salt '*' win_wua.download guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
@@ -461,11 +701,18 @@ def download_updates(names):
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
 
-    return wua.download(updates.updates)
+    if updates.count() > len(names):
+        raise CommandExecutionError('Multiple updates found, names need to be '
+                                    'more specific')
+
+    return wua.download(updates)
 
 
 def install_update(name):
     '''
+    .. deprecated:: oxygen
+       Use :func:`install` instead
+
     Installs a single update
 
     Args:
@@ -488,23 +735,18 @@ def install_update(name):
 
         salt '*' win_wua.install_update KB12312231
     '''
-    # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
-
-    # Search for Update
-    updates = wua.search(name)
-
-    if updates.count() == 0:
-        raise CommandExecutionError('No updates found')
-
-    if updates.count() > 1:
-        raise CommandExecutionError('Multiple updates found, narrow your search')
-
-    return wua.install(updates.updates)
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'install\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return install(name)
 
 
 def install_updates(names):
     '''
+    .. deprecated:: oxygen
+       Use :func:`install` instead
+
     Installs updates that match the list of identifiers. It may be easier to use
     the list_updates function and set install=True.
 
@@ -512,6 +754,37 @@ def install_updates(names):
 
         names (list): A list of updates to install. This can be any combination
         of GUIDs, KB numbers, or names. GUIDs or KBs are preferred.
+
+    Returns:
+
+        dict: A dictionary containing the details about the installed updates
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Normal Usage
+        salt '*' win_wua.install_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB12323211']
+    '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'This function is replaced by \'install\' as of Salt Nitrogen. This'
+        'warning will be removed in Salt Oxygen')
+    return install(names)
+
+
+def install(names):
+    '''
+    .. versionadded:: nitrogen
+
+    Installs updates that match the list of identifiers. It may be easier to use
+    the list_updates function and set install=True.
+
+    Args:
+
+        names (str, list): A single update or a list of updates to install.
+        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
+        are preferred.
 
     Returns:
 
@@ -533,56 +806,24 @@ def install_updates(names):
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
 
-    return wua.install(updates.updates)
+    if updates.count() > len(names):
+        raise CommandExecutionError('Multiple updates found, names need to be '
+                                    'more specific')
+
+    return wua.install(updates)
 
 
-def uninstall(name):
+def uninstall(names):
     '''
-    Uninstalls a single update
+    .. versionadded:: nitrogen
+
+    Uninstall updates.
 
     Args:
 
-        name (str): The name of the update to uninstall. This can be a GUID, a
-        KB number, or any part of the name. To ensure a single item is matched
-        the GUID is preferred.
-
-        .. note:: If no results or more than one result is returned an error
-           will be raised.
-
-    Returns:
-        dict: A dictionary containing the results of the uninstall
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' win_wua.uninstall 12345678-abcd-1234-abcd-1234567890ab
-
-        salt '*' win_wua.uninstall KB12312233
-    '''
-    # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
-
-    # Search for Update
-    updates = wua.search(name)
-
-    if updates.count() == 0:
-        raise CommandExecutionError('No updates found')
-
-    if updates.count() > 1:
-        raise CommandExecutionError('Multiple updates found, narrow your search')
-
-    return wua.uninstall(updates.updates)
-
-
-def uninstall_list(names):
-    '''
-    Uninstalls updates that match the list of identifiers.
-
-    Args:
-
-        names (list): A list of updates to uninstall. This can be any
-        combination of GUIDs, KB numbers, or names. GUIDs or KBs are preferred.
+        names (str, list): A single update or a list of updates to uninstall.
+        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
+        are preferred.
 
     Returns:
 
@@ -593,7 +834,10 @@ def uninstall_list(names):
     .. code-block:: bash
 
         # Normal Usage
-        salt '*' win_wua.uninstall_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB1231231']
+        salt '*' win_wua.uninstall KB3121212
+
+        # As a list
+        salt '*' win_wua.uninstall guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB1231231']
     '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
@@ -604,7 +848,7 @@ def uninstall_list(names):
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
 
-    return wua.install(updates.updates)
+    return wua.uninstall(updates)
 
 
 def set_wu_settings(level=None,
