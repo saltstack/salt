@@ -87,7 +87,6 @@ def get_modules():
     # Check if defaults exist, add them if they do
     ps_module_path = ps_module_path.split(';')
     for item in ps_module_path:
-        print(item)
         if os.path.exists(item):
             root_paths.append(item)
 
