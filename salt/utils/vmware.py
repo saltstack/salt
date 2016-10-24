@@ -767,6 +767,42 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
     return object_list
 
 
+def get_properties_of_managed_object(mo_ref, properties):
+    '''
+    Returns specific properties of a managed object, retrieved in an
+    optimally.
+
+    mo_ref
+        The managed object reference.
+
+    properties
+        List of properties of the managed object to retrieve.
+    '''
+    service_instance = get_service_instance_from_managed_object(mo_ref)
+    log.trace('Retrieving name of {0}'''.format(type(mo_ref).__name__))
+    try:
+        items = get_mors_with_properties(service_instance,
+                                         type(mo_ref),
+                                         container_ref=mo_ref,
+                                         property_list=['name'],
+                                         local_properties=True)
+        mo_name = items[0]['name']
+    except vmodl.query.InvalidProperty:
+        mo_name = '<unnamed>'
+    log.trace('Retrieving properties \'{0}\' of {1} \'{2}\''
+              ''.format(properties, type(mo_ref).__name__, mo_name))
+    items = get_mors_with_properties(service_instance,
+                                     type(mo_ref),
+                                     container_ref=mo_ref,
+                                     property_list=properties,
+                                     local_properties=True)
+    if not items:
+        raise salt.exceptions.VMwareApiError(
+            'Properties of managed object \'{0}\' weren\'t '
+            'retrieved'.format(mo_name))
+    return items[0]
+
+
 def get_network_adapter_type(adapter_type):
     '''
     Return the network adapter type.
