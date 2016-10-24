@@ -2482,7 +2482,8 @@ class BaseHighState(object):
         '''
         envs = ['base']
         if 'file_roots' in self.opts:
-            envs.extend(list(self.opts['file_roots']))
+            envs.extend([x for x in list(self.opts['file_roots'])
+                         if x not in envs])
         env_order = self.opts.get('env_order', [])
         client_envs = self.client.envs()
         if env_order and client_envs:
@@ -2491,15 +2492,15 @@ class BaseHighState(object):
             for ord_env in env_order:
                 if ord_env in env_intersection:
                     final_list.append(ord_env)
-            return set(final_list)
+            return final_list
 
         elif env_order:
-            return set(env_order)
+            return env_order
         else:
             for cenv in client_envs:
                 if cenv not in envs:
                     envs.append(cenv)
-            return set(envs)
+            return envs
 
     def get_tops(self):
         '''
@@ -2574,7 +2575,7 @@ class BaseHighState(object):
                     else:
                         tops[saltenv].append({})
                         log.debug('No contents loaded for env: {0}'.format(saltenv))
-            if found > 1:
+            if found > 1 and not self.opts.get('env_order', None):
                 log.warning(
                     'top_file_merging_strategy is set to \'merge\' and '
                     'multiple top files were found. Merging order is not '
