@@ -460,11 +460,98 @@ def make_repo(repodir,
               env=None,
               use_passphrase=False,
               gnupghome='/etc/salt/gpgkeys',
-              runas='root'):
+              runas='root',
+              timeout=15.0):
     '''
+    Make a package repository and optionally sign it and packages present
+
     Given the repodir (directory to create repository in), create a Debian
     repository and optionally sign it and packages present. This state is
-    best used with onchanges linked to your package building states
+    best used with onchanges linked to your package building states.
+
+    repodir
+        The directory to find packages that will be in the repository.
+
+    keyid
+        .. versionchanged:: 2016.3.0
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar data. Leverages gpg-agent and
+        gpg-preset-passphrase for caching keys, etc.
+
+        For example, contents from a Pillar data file with named Public
+        and Private keys as follows:
+
+        .. code-block:: yaml
+
+            gpg_pkg_priv_key: |
+              -----BEGIN PGP PRIVATE KEY BLOCK-----
+              Version: GnuPG v1
+
+              lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+              R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+              =JvW8
+              -----END PGP PRIVATE KEY BLOCK-----
+
+            gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+            gpg_pkg_pub_key: |
+              -----BEGIN PGP PUBLIC KEY BLOCK-----
+              Version: GnuPG v1
+
+              mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+              4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+              inNqW9c=
+              =s1CX
+              -----END PGP PUBLIC KEY BLOCK-----
+
+            gpg_pkg_pub_keyname: gpg_pkg_key.pub
+
+    env
+        .. versionchanged:: 2016.3.0
+
+        A dictionary of environment variables to be utilized in creating the
+        repository.
+
+    use_passphrase : False
+        .. versionadded:: 2016.3.0
+
+        Use a passphrase with the signing key presented in ``keyid``.
+        Passphrase is received from Pillar data which could be passed on the
+        command line with ``pillar`` parameter. For example:
+
+        .. code-block:: bash
+
+            pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome : /etc/salt/gpgkeys
+        .. versionadded:: 2016.3.0
+
+        Location where GPG related files are stored, used with ``keyid``.
+
+    runas : root
+        .. versionadded:: 2016.3.0
+
+        User to create the repository as, and optionally sign packages.
+
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
+
+    timeout : 15.0
+        .. versionadded:: 2016.3.4
+
+        Timeout in seconds to wait for the prompt for inputting the passphrase.
 
     CLI Example:
 
@@ -472,73 +559,6 @@ def make_repo(repodir,
 
         salt '*' pkgbuild.make_repo /var/www/html
 
-    repodir
-        The directory to find packages that will be in the repository
-
-    keyid
-        .. versionchanged:: 2016.3.0
-
-        Optional Key ID to use in signing packages and repository.
-        Utilizes Public and Private keys associated with keyid which have
-        been loaded into the minion's Pillar Data. Leverages gpg-agent and
-        gpg-preset-passphrase for caching keys, etc.
-
-        For example, contents from a pillar data file with named Public
-        and Private keys as follows:
-
-        gpg_pkg_priv_key: |
-          -----BEGIN PGP PRIVATE KEY BLOCK-----
-          Version: GnuPG v1
-
-          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-          .
-          .
-          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
-          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
-          =JvW8
-          -----END PGP PRIVATE KEY BLOCK-----
-
-        gpg_pkg_priv_keyname: gpg_pkg_key.pem
-
-        gpg_pkg_pub_key: |
-          -----BEGIN PGP PUBLIC KEY BLOCK-----
-          Version: GnuPG v1
-
-          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
-          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
-          .
-          .
-          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
-          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
-          inNqW9c=
-          =s1CX
-          -----END PGP PUBLIC KEY BLOCK-----
-
-        gpg_pkg_pub_keyname: gpg_pkg_key.pub
-
-
-    env
-        Optional dictionary of environment variables to be utlilized in
-        creating the repository.
-
-        .. versionadded:: 2016.3.0
-
-    use_passphrase
-        Use a passphrase with the signing key presented in 'keyid'.
-        Passphrase is received from pillar data which has been passed on
-        the command line. For example:
-
-        pillar='{ "gpg_passphrase" : "my_passphrase" }'
-
-    gnupghome
-        Location where GPG related files are stored, used with 'keyid'
-
-    runas
-        User to create the repository as, and optionally sign packages.
-
-        Note: Ensure User has correct rights to any files and directories which
-              are to be utilized.
     '''
     SIGN_PROMPT_RE = re.compile(r'Enter passphrase: ', re.M)
     REPREPRO_SIGN_PROMPT_RE = re.compile(r'Passphrase: ', re.M)
@@ -559,6 +579,7 @@ def make_repo(repodir,
 
     local_fingerprint = None
     local_keyid = None
+    phrase = ''
 
     # preset passphase and interaction with gpg-agent
     gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
@@ -630,21 +651,23 @@ def make_repo(repodir,
                 break
 
             ## sign_it_here
+            # interval of 0.125 is really too fast on some systems
+            interval = 0.5
             for file in os.listdir(repodir):
                 if file.endswith('.dsc'):
                     abs_file = os.path.join(repodir, file)
-                    number_retries = 5
+                    number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
                     cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
                     try:
                         stdout, stderr = None, None
                         proc = salt.utils.vt.Terminal(
-                                cmd,
-                                shell=True,
-                                stream_stdout=True,
-                                stream_stderr=True
-                                )
+                            cmd,
+                            shell=True,
+                            stream_stdout=True,
+                            stream_stderr=True
+                        )
                         while proc.has_unread_data:
                             stdout, stderr = proc.recv()
                             if stdout and SIGN_PROMPT_RE.search(stdout):
@@ -655,16 +678,17 @@ def make_repo(repodir,
 
                             if times_looped > number_retries:
                                 raise SaltInvocationError(
-                                        'Attemping to sign file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
-                                 )
-                            # 0.125 is really too fast on some systems
-                            time.sleep(0.5)
+                                    'Attemping to sign file {0} failed, timed out after {1} seconds'
+                                    .format(abs_file, int(times_looped * interval))
+                                )
+                            time.sleep(interval)
 
                         proc_exitstatus = proc.exitstatus
                         if proc_exitstatus != 0:
                             raise SaltInvocationError(
-                                 'Signing file {0} failed with proc.status {1}'.format(abs_file, proc_exitstatus)
-                                 )
+                                'Signing file {0} failed with proc.status {1}'
+                                .format(abs_file, proc_exitstatus)
+                            )
                     except salt.utils.vt.TerminalException as err:
                         trace = traceback.format_exc()
                         log.error(error_msg, err, trace)

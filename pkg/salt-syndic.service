@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=notify
+NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-syndic
 
