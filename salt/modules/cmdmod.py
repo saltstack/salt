@@ -2826,7 +2826,7 @@ def shell_info(shell, list_modules=False):
 
     # Get a list of the PowerShell modules which are potentially available
     # to be imported
-    if shell == 'powershell' and ret['installed'] and 'list_modules':
+    if shell == 'powershell' and ret['installed'] and list_modules:
         ret['modules'] = salt.utils.powershell.get_modules()
 
     if 'version' not in ret:
