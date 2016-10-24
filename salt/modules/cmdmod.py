@@ -2658,7 +2658,7 @@ def shells():
     return ret
 
 
-def shell_info(shell, **kwargs):
+def shell_info(shell, list_modules=False):
     '''
     .. versionadded:: Carbon
 
@@ -2822,13 +2822,11 @@ def shell_info(shell, **kwargs):
                 ver_list.append('0')
             ret['version'] = '.'.join(ver_list[:3])
     else:
-        ret['installed'] = None  # Have an unexpect result
+        ret['installed'] = None  # Have an unexpected result
 
     # Get a list of the PowerShell modules which are potentially available
     # to be imported
-    if shell == 'powershell' and \
-            ret['installed'] and \
-            salt.utils.is_true(kwargs.get('list_modules', False)):
+    if shell == 'powershell' and ret['installed'] and 'list_modules':
         ret['modules'] = salt.utils.powershell.get_modules()
 
     if 'version' not in ret:
