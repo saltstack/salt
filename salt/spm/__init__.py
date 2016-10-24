@@ -464,7 +464,9 @@ class SPMClient(object):
                     dl_path = dl_path.replace('file://', '')
                     shutil.copyfile(dl_path, out_file)
                 else:
-                    http.query(dl_path, text_out=out_file)
+                    response = http.query(dl_path, text=True)
+                    with salt.utils.fopen(out_file, 'w') as outf:
+                        outf.write(response.get('text'))
 
                 self._local_install((None, out_file), package)
                 return
