@@ -83,7 +83,7 @@ class BaseZMQReqCase(TestCase):
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
 #        cls.process_manager.kill_children()
-        time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
+#        time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
 
