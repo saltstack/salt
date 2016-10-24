@@ -319,13 +319,13 @@ def assign_templates(host, templates, **kwargs):
 
     # Set comments
     comment_host_templates_updated = 'Templates updated.'
-    comment_host_templates_notupdated = 'Unable to update templates on host: {0}. '.format(host)
+    comment_host_templates_notupdated = 'Unable to update templates on host: {0}.'.format(host)
     comment_host_templates_in_sync = 'Templates already synced.'
 
     update_host_templates = False
     curr_template_ids = list()
     requested_template_ids = list()
-    hostid = ""
+    hostid = ''
 
     host_exists = __salt__['zabbix.host_exists'](host)
 
@@ -354,7 +354,7 @@ def assign_templates(host, templates, **kwargs):
             requested_template_ids.append(template_id)
         except TypeError:
             ret['result'] = False
-            ret['comment'] = 'Unable to find template: {0}. '.format(template)
+            ret['comment'] = 'Unable to find template: {0}.'.format(template)
             return ret
 
     # remove any duplications
