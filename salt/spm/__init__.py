@@ -229,7 +229,9 @@ class SPMClient(object):
                             dl_path = dl_path.replace('file://', '')
                             shutil.copyfile(dl_path, out_file)
                         else:
-                            http.query(dl_path, text_out=out_file)
+                            response = http.query(dl_path, text=True)
+                            with salt.utils.fopen(out_file, 'w') as outf:
+                                outf.write(response.get("text"))
 
                         # Kick off the install
                         self._install_indv_pkg(package, out_file)
@@ -549,41 +551,6 @@ class SPMClient(object):
             yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
 
         log.debug('Wrote {0}'.format(metadata_filename))
-
-    def _install(self, args):
-        '''
-        Install a package from a repo
-        '''
-        if len(args) < 2:
-            raise SPMInvocationError('A package must be specified')
-
-        package = args[1]
-
-        self._verbose('Installing package {0}'.format(package), log.debug)
-        repo_metadata = self._get_repo_metadata()
-        for repo in repo_metadata:
-            repo_info = repo_metadata[repo]
-            if package in repo_metadata[repo]['packages']:
-                cache_path = '{0}/{1}'.format(
-                    self.opts['spm_cache_dir'],
-                    repo
-                )
-                dl_path = '{0}/{1}'.format(repo_info['info']['url'], repo_info['packages'][package]['filename'])
-                out_file = '{0}/{1}'.format(cache_path, repo_info['packages'][package]['filename'])
-                if not os.path.exists(cache_path):
-                    os.makedirs(cache_path)
-
-                if dl_path.startswith('file://'):
-                    dl_path = dl_path.replace('file://', '')
-                    shutil.copyfile(dl_path, out_file)
-                else:
-                    response = http.query(dl_path, text=True)
-                    with salt.utils.fopen(out_file, 'w') as outf:
-                        outf.write(response.get('text'))
-
-                self._local_install((None, out_file), package)
-                return
-        raise SPMPackageError('Cannot install package {0}, no source package'.format(package))
 
     def _remove(self, args):
         '''
