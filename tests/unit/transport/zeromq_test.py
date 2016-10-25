@@ -16,6 +16,7 @@ if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
 from tornado.testing import AsyncTestCase
 
 import tornado.gen
+import distutils.version
 
 import salt.config
 import salt.utils
@@ -24,6 +25,7 @@ import salt.transport.client
 import salt.exceptions
 
 # Import Salt Testing libs
+import salttesting
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
@@ -79,12 +81,22 @@ class BaseZMQReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # Attempting to kill the children hangs the test suite.
-        # Let the test suite handle this instead.
-        # cls.process_manager.kill_children()
-        # time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
+        if distutils.version.LooseVersion(salttesting.__version__) < '2016.9.7':
+            # Attempting to kill the children hangs the test suite.
+            # Let the test suite handle this instead.
+            cls.process_manager.kill_children()
+            import time
+            time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
+
+    @classmethod
+    @tornado.gen.coroutine
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
