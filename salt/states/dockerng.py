@@ -1596,6 +1596,8 @@ def running(name,
     try:
         image_id = __salt__['dockerng.inspect_image'](image)['Id']
     except CommandExecutionError:
+        if not __opts__['test']:
+            raise
         image_id = None
 
     if name not in __salt__['dockerng.list_containers'](all=True):
