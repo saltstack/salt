@@ -1156,7 +1156,7 @@ def upgrade(refresh=True,
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: {0!r}'.format(fromrepo))
+            log.info('Targeting repos: {0}'.format(fromrepo))
 
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
