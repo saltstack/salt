@@ -1079,7 +1079,13 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True, skip_verify=False):
+def upgrade(refresh=True,
+            dryrun=False,
+            dist_upgrade=False,
+            fromrepo=None,
+            novendorchange=False,
+            skip_verify=False,
+            **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,Carbon
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -1102,6 +1108,22 @@ def upgrade(refresh=True, skip_verify=False):
         If set to False it depends on zypper if a refresh is
         executed.
 
+    dryrun
+        If set to True, it creates a debug solver log file and then perform
+        a dry-run upgrade (no changes are made). Default: False
+
+    dist_upgrade
+        Perform a system dist-upgrade. Default: False
+
+    fromrepo
+        Specify a list of package repositories to upgrade from. Default: None
+
+    novendorchange
+        If set to True, no allow vendor changes. Default: False
+
+    skip_verify
+        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     Returns a dictionary containing the changes:
 
     .. code-block:: python
@@ -1109,28 +1131,45 @@ def upgrade(refresh=True, skip_verify=False):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-
-
-    Options:
-
-    skip_verify
-        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
-
+        salt '*' pkg.upgrade dist-upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
+        salt '*' pkg.upgrade dist-upgrade=True dryrun=True
     '''
+    cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
+
     if refresh:
         refresh_db()
-    old = list_pkgs()
+
+    if dryrun:
+        cmd_update.append('--dry-run')
+
+    if dist_upgrade:
+        if dryrun:
+            # Creates a solver test case for debugging.
+            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
+            __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
+
+        if fromrepo:
+            for repo in fromrepo:
+                cmd_update.extend(['--from', repo])
+            log.info('Targeting repos: {0}'.format(fromrepo))
+
+        if novendorchange:
+            # TODO: Grains validation should be moved to Zypper class
+            if __grains__['osrelease_info'][0] > 11:
+                cmd_update.append('--no-allow-vendor-change')
+                log.info('Disabling vendor changes')
+            else:
+                log.warn('Disabling vendor changes is not supported on this Zypper version')
 
     if skip_verify:
-        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses', '--no-gpg-checks')
-    else:
-        __zypper__(systemd_scope=_systemd_scope()).noraise.call('update', '--auto-agree-with-licenses')
+        cmd_update.append('--no-gpg-checks')
+
+    old = list_pkgs()
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1147,6 +1186,9 @@ def upgrade(refresh=True, skip_verify=False):
             'Problem encountered upgrading packages',
             info={'changes': ret, 'result': result}
         )
+
+    if dryrun or not ret['result']:
+        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
 
     return ret
 
