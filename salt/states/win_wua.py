@@ -1,5 +1,52 @@
 # -*- coding: utf-8 -*-
+'''
+Installation of Windows Updates using the Windows Update Agent
 
+Salt can manage Windows updates via the "wua" state module. Updates can be
+installed and removed. Update management declarations are as follows:
+
+For installation:
+
+.. code-block:: yaml
+
+    # Install a single update using the KB
+    KB3194343:
+      wua.installed
+
+    # Install a single update using the name parameter
+    install_update:
+      wua.installed:
+        - name: KB3194343
+
+    # Install multiple updates using the updates parameter and a combination of
+    # KB number and GUID
+    install_updates:
+      wua.installed:
+       - updates:
+         - KB3194343
+         - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
+
+For removal:
+
+.. code-block:: yaml
+
+    # Remove a single update using the KB
+    KB3194343:
+      wua.removed
+
+    # Remove a single update using the name parameter
+    remove_update:
+      wua.removed:
+        - name: KB3194343
+
+    # Remove multiple updates using the updates parameter and a combination of
+    # KB number and GUID
+    remove_updates:
+      wua.removed:
+       - updates:
+         - KB3194343
+         - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
+'''
 # Import python libs
 from __future__ import absolute_import
 import logging
