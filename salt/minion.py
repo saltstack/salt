@@ -731,6 +731,27 @@ class MultiMinion(MinionBase):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS.current()
+        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+
+    def destroy(self):
+        '''
+        Tear down the minion
+        '''
+        self._running = False
+        if hasattr(self, 'schedule'):
+            del self.schedule
+        if hasattr(self, 'pub_channel'):
+            self.pub_channel.on_recv(None)
+            if hasattr(self.pub_channel, 'close'):
+                self.pub_channel.close()
+            del self.pub_channel
+        if hasattr(self, 'periodic_callbacks'):
+            for cb in six.itervalues(self.periodic_callbacks):
+                cb.stop()
+
+    def __del__(self):
+        self.destroy()
 
     def _spawn_minions(self):
         '''
