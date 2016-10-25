@@ -73,6 +73,14 @@ class BaseTCPReqCase(TestCase):
         cls.server_channel.close()
         del cls.server_channel
 
+    @classmethod
+    @tornado.gen.coroutine
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+
 
 @skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
 class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
