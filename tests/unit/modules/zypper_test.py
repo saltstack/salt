@@ -354,11 +354,12 @@ class ZypperTestCase(TestCase):
         :return:
         '''
         with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
-            with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
-                ret = zypper.upgrade()
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
-                zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
+            with patch.dict('salt.modules.zypper.__zypper__', {'stdout': '', 'stderr': ''}):
+                with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
+                    ret = zypper.upgrade(dryrun=True)
+                    self.assertTrue(ret['result'])
+                    self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
 
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade(dist_upgrade=True)
@@ -402,6 +403,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.stderr = MagicMock(return_value="")
                 self.exit_code = MagicMock(return_value=555)
                 self.noraise = MagicMock()
+                self.pid = {}
                 self.SUCCESS_EXIT_CODES = [0]
 
             def __call__(self, *args, **kwargs):
@@ -410,11 +412,12 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with patch('salt.modules.zypper.__zypper__', FailingZypperDummy()) as zypper_mock:
             zypper_mock.noraise.call = MagicMock()
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
-                ret = zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"])
-                self.assertFalse(ret['result'])
-                self.assertEqual(ret['comment'], zypper_out.strip())
-                self.assertDictEqual(ret['changes'], {})
-                zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--from', 'DUMMY')
+                try:
+                    self.assertRaises(CommandExecutionError, zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"], dryrun=True))
+                except CommandExecutionError as exc:
+                    pass
+                self.assertDictEqual(exc.info['changes'], {})
+                zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--debug-solver')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     def test_upgrade_available(self):
