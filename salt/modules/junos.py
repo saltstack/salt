@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import logging
 import json
 
+# Import salt libraries
+from salt.utils import fopen
+
 try:
     from lxml import etree
 except ImportError:
@@ -180,7 +183,7 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
         ret['out'] = False
 
     if dest is not None:
-        with open(dest, 'w') as fp:
+        with fopen(dest, 'w') as fp:
             fp.write(write_response)
 
     return ret
