@@ -759,7 +759,8 @@ class WindowsUpdateAgent(object):
         .. note:: Starting with Windows 10 the Windows Update Agent is unable to
         uninstall updates. An ``Uninstall Not Allowed`` error is returned. If
         this error is encountered this function will instead attempt to use
-        ``dism.exe`` to perform the uninstallation.
+        ``dism.exe`` to perform the uninstallation. ``dism.exe`` may fail to
+        to find the KB number for the package. In that case, removal will fail.
 
         Args:
 
