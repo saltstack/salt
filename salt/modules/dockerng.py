@@ -2872,7 +2872,7 @@ def create(image,
     cpu_shares
         CPU shares (relative weight)
 
-        Example: ``cpu_shares=0.5``, ``cpu_shares=1``
+        Example: ``cpu_shares=0``, ``cpu_shares=256``
 
     cpuset
         CPUs on which which to allow execution, specified as a string

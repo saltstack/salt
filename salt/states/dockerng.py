@@ -1131,14 +1131,14 @@ def running(name,
                   - /mnt/vol2
 
     cpu_shares
-        CPU shares (relative weight)
+        CPU shares (relative weight), specified as an integer between 2 and 1024.
 
         .. code-block:: yaml
 
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - cpu_shares: 0.5
+                - cpu_shares: 256
 
     cpuset
         CPUs on which which to allow execution, specified as a string
