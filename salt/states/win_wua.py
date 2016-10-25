@@ -55,7 +55,6 @@ import logging
 from salt.ext import six
 import salt.utils
 import salt.utils.win_update
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
