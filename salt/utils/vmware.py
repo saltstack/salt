@@ -803,6 +803,18 @@ def get_properties_of_managed_object(mo_ref, properties):
     return items[0]
 
 
+def get_managed_object_name(mo_ref):
+    '''
+    Returns the name of a managed object.
+    If the name wasn't found, it returns None.
+
+    mo_ref
+        The managed object reference.
+    '''
+    props = get_properties_of_managed_object(mo_ref, ['name'])
+    return props.get('name')
+
+
 def get_network_adapter_type(adapter_type):
     '''
     Return the network adapter type.
