@@ -123,10 +123,12 @@ def _get_distset(tgt):
     '''
     Get the distribution string for use with rpmbuild and mock
     '''
-    # Centos adds that string to rpm names, removing that to have
-    # consistent naming on Centos and Redhat
+    # Centos adds 'centos' string to rpm names, removing that to have
+    # consistent naming on Centos and Redhat, and allow for Amazon naming
     tgtattrs = tgt.split('-')
-    if tgtattrs[1] in ['5', '6', '7']:
+    if tgtattrs[0] == 'amzn':
+        distset = '--define "dist .{0}1"'.format(tgtattrs[0])
+    elif tgtattrs[1] in ['5', '6', '7']:
         distset = '--define "dist .el{0}"'.format(tgtattrs[1])
     else:
         distset = ''
@@ -239,10 +241,6 @@ def build(runas,
     noclean = ''
     deps_dir = tempfile.mkdtemp()
     deps_list = _get_deps(deps, deps_dir, saltenv)
-    if deps_list and not deps_list.isspace():
-        cmd = 'mock --root={0} {1}'.format(tgt, deps_list)
-        __salt__['cmd.run'](cmd, runas=runas)
-        noclean += ' --no-clean'
 
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
@@ -250,6 +248,12 @@ def build(runas,
         try:
             __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
             __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
+            cmd = 'mock --root={0} --resultdir={1} --init'.format(tgt, results_dir)
+            __salt__['cmd.run'](cmd, runas=runas)
+            if deps_list:
+                cmd = 'mock --root={0} --resultdir={1} --install {2} {3}'.format(tgt, results_dir, deps_list, noclean)
+                __salt__['cmd.run'](cmd, runas=runas)
+
             cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
                 tgt,
                 results_dir,
