@@ -137,7 +137,7 @@ def present(name,
     if exists['result'] is False:
         if __opts__['test']:
             ret['result'] = None
-            comments.append('Kinesis stream {} would be created'.format(name))
+            comments.append('Kinesis stream {0} would be created'.format(name))
             _add_changes(ret, changes_old, changes_new, comments)
             return ret
         else:
@@ -151,15 +151,15 @@ def present(name,
             )
             if 'error' in is_created:
                 ret['result'] = False
-                comments.append('Failed to create stream {}: {}'.format(name, is_created['error']))
+                comments.append('Failed to create stream {0}: {1}'.format(name, is_created['error']))
                 _add_changes(ret, changes_old, changes_new, comments)
                 return ret
 
-            comments.append('Kinesis stream {} successfully created'.format(name))
+            comments.append('Kinesis stream {0} successfully created'.format(name))
             changes_new['name'] = name
             changes_new['num_shards'] = num_shards
     else:
-        comments.append('Kinesis stream {} already exists'.format(name))
+        comments.append('Kinesis stream {0} already exists'.format(name))
 
     stream_response = __salt__['boto_kinesis.get_stream_when_active'](
         name,
@@ -170,7 +170,7 @@ def present(name,
     )
     if 'error' in stream_response:
         ret['result'] = False
-        comments.append('Kinesis stream {}: error getting description: {}'
+        comments.append('Kinesis stream {0}: error getting description: {1}'
                         .format(name, stream_response['error']))
         _add_changes(ret, changes_old, changes_new, comments)
         return ret
@@ -184,7 +184,7 @@ def present(name,
         if not retention_matches:
             if __opts__['test']:
                 ret['result'] = None
-                comments.append('Kinesis stream {}: retention hours would be updated to {}'
+                comments.append('Kinesis stream {0}: retention hours would be updated to {1}'
                                 .format(name, retention_hours))
             else:
                 if old_retention_hours > retention_hours:
@@ -208,12 +208,12 @@ def present(name,
 
                 if 'error' in retention_updated:
                     ret['result'] = False
-                    comments.append('Kinesis stream {}: failed to update retention hours: {}'
+                    comments.append('Kinesis stream {0}: failed to update retention hours: {1}'
                                     .format(name, retention_updated['error']))
                     _add_changes(ret, changes_old, changes_new, comments)
                     return ret
 
-                comments.append('Kinesis stream {}: retention hours was successfully updated'.format(name))
+                comments.append('Kinesis stream {0}: retention hours was successfully updated'.format(name))
                 changes_old['retention_hours'] = old_retention_hours
                 changes_new['retention_hours'] = retention_hours
 
@@ -228,17 +228,17 @@ def present(name,
                 )
                 if 'error' in stream_response:
                     ret['result'] = False
-                    comments.append('Kinesis stream {}: error getting description: {}'
+                    comments.append('Kinesis stream {0}: error getting description: {1}'
                                     .format(name, stream_response['error']))
                     _add_changes(ret, changes_old, changes_new, comments)
                     return ret
 
                 stream_details = stream_response['result']["StreamDescription"]
         else:
-            comments.append('Kinesis stream {}: retention hours did not require change, already set at {}'
+            comments.append('Kinesis stream {0}: retention hours did not require change, already set at {1}'
                             .format(name, old_retention_hours))
     else:
-        comments.append('Kinesis stream {}: did not configure retention hours'.format(name))
+        comments.append('Kinesis stream {0}: did not configure retention hours'.format(name))
 
     # Configure enhanced monitoring
     if enhanced_monitoring is not None:
@@ -268,7 +268,7 @@ def present(name,
         if len(enable_metrics) != 0:
             if __opts__['test']:
                 ret['result'] = None
-                comments.append('Kinesis stream {}: would enable enhanced monitoring for {}'
+                comments.append('Kinesis stream {0}: would enable enhanced monitoring for {1}'
                                 .format(name, enable_metrics))
             else:
 
@@ -282,18 +282,18 @@ def present(name,
                 )
                 if 'error' in metrics_enabled:
                     ret['result'] = False
-                    comments.append('Kinesis stream {}: failed to enable enhanced monitoring: {}'
+                    comments.append('Kinesis stream {0}: failed to enable enhanced monitoring: {1}'
                                     .format(name, metrics_enabled['error']))
                     _add_changes(ret, changes_old, changes_new, comments)
                     return ret
 
-                comments.append('Kinesis stream {}: enhanced monitoring was enabled for shard-level metrics {}'
+                comments.append('Kinesis stream {0}: enhanced monitoring was enabled for shard-level metrics {1}'
                                 .format(name, enable_metrics))
 
         if len(disable_metrics) != 0:
             if __opts__['test']:
                 ret['result'] = None
-                comments.append('Kinesis stream {}: would disable enhanced monitoring for {}'
+                comments.append('Kinesis stream {0}: would disable enhanced monitoring for {1}'
                                 .format(name, disable_metrics))
             else:
 
@@ -307,25 +307,24 @@ def present(name,
                 )
                 if 'error' in metrics_disabled:
                     ret['result'] = False
-                    comments.append('Kinesis stream {}: failed to disable enhanced monitoring: {}'
+                    comments.append('Kinesis stream {0}: failed to disable enhanced monitoring: {1}'
                                     .format(name, metrics_disabled['error']))
                     _add_changes(ret, changes_old, changes_new, comments)
                     return ret
 
-                comments.append('Kinesis stream {}: enhanced monitoring was disabled for shard-level metrics {}'
+                comments.append('Kinesis stream {0}: enhanced monitoring was disabled for shard-level metrics {1}'
                                 .format(name, disable_metrics))
 
         if len(disable_metrics) == 0 and len(enable_metrics) == 0:
-            comments.append('Kinesis stream {}: enhanced monitoring did not require change, already set at {}'
-                            .format(name, (old_enhanced_monitoring if len(old_enhanced_monitoring) > 0
-                                                  else "None")))
+            comments.append('Kinesis stream {0}: enhanced monitoring did not require change, already set at {1}'
+                            .format(name, (old_enhanced_monitoring if len(old_enhanced_monitoring) > 0 else "None")))
         elif not __opts__['test']:
             changes_old['enhanced_monitoring'] = (old_enhanced_monitoring if len(old_enhanced_monitoring) > 0
                                                   else "None")
             changes_new['enhanced_monitoring'] = (enhanced_monitoring if len(enhanced_monitoring) > 0
                                                   else "None")
     else:
-        comments.append('Kinesis stream {}: did not configure enhanced monitoring'.format(name))
+        comments.append('Kinesis stream {0}: did not configure enhanced monitoring'.format(name))
 
     # Reshard stream if necessary
     min_hash_key, max_hash_key, full_stream_details = __salt__['boto_kinesis.get_info_for_reshard'](
@@ -338,10 +337,10 @@ def present(name,
         if not num_shards_matches:
             if __opts__['test']:
                 ret['result'] = None
-                comments.append('Kinesis stream {}: would be resharded from {} to {} shards'
+                comments.append('Kinesis stream {0}: would be resharded from {1} to {2} shards'
                                 .format(name, old_num_shards, num_shards))
             else:
-                log.info("Resharding stream from {} to {} shards, this could take a while"
+                log.info("Resharding stream from {0} to {1} shards, this could take a while"
                          .format(old_num_shards, num_shards))
                 # reshard returns True when a split/merge action is taken,
                 # or False when no more actions are required
@@ -358,21 +357,21 @@ def present(name,
 
                     if 'error' in reshard_response:
                         ret['result'] = False
-                        comments.append('Encountered error while resharding {}: {}'
+                        comments.append('Encountered error while resharding {0}: {1}'
                                         .format(name, reshard_response['error']))
                         _add_changes(ret, changes_old, changes_new, comments)
                         return ret
 
                     continue_reshard = reshard_response['result']
 
-                comments.append('Kinesis stream {}: successfully resharded to {} shards'.format(name, num_shards))
+                comments.append('Kinesis stream {0}: successfully resharded to {1} shards'.format(name, num_shards))
                 changes_old['num_shards'] = old_num_shards
                 changes_new['num_shards'] = num_shards
         else:
-            comments.append('Kinesis stream {}: did not require resharding, remains at {} shards'
+            comments.append('Kinesis stream {0}: did not require resharding, remains at {1} shards'
                             .format(name, old_num_shards))
     else:
-        comments.append('Kinesis stream {}: did not reshard, remains at {} shards'.format(name, old_num_shards))
+        comments.append('Kinesis stream {0}: did not reshard, remains at {1} shards'.format(name, old_num_shards))
 
     _add_changes(ret, changes_old, changes_new, comments)
     return ret
@@ -412,11 +411,11 @@ def absent(name,
         profile
     )
     if exists['result'] is False:
-        ret['comment'] = 'Kinesis stream {} does not exist'.format(name)
+        ret['comment'] = 'Kinesis stream {0} does not exist'.format(name)
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'Kinesis stream {} would be deleted'.format(name)
+        ret['comment'] = 'Kinesis stream {0} would be deleted'.format(name)
         ret['result'] = None
         return ret
 
@@ -428,12 +427,12 @@ def absent(name,
         profile
     )
     if 'error' in is_deleted:
-        ret['comment'] = 'Failed to delete stream {}: {}'.format(name, is_deleted['error'])
+        ret['comment'] = 'Failed to delete stream {0}: {1}'.format(name, is_deleted['error'])
         ret['result'] = False
     else:
-        ret['comment'] = 'Deleted stream {}'.format(name)
-        ret['changes'].setdefault('old', 'Stream {} exists'.format(name))
-        ret['changes'].setdefault('new', 'Stream {} deleted'.format(name))
+        ret['comment'] = 'Deleted stream {0}'.format(name)
+        ret['changes'].setdefault('old', 'Stream {0} exists'.format(name))
+        ret['changes'].setdefault('new', 'Stream {0} deleted'.format(name))
 
     return ret
 
