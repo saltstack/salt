@@ -43,7 +43,7 @@ Connection module for Amazon Kinesis
 
 '''
 # keep lint from choking on _get_conn
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -252,7 +252,7 @@ def get_info_for_reshard(stream_details):
         shard_id = shard["ShardId"]
         if "EndingSequenceNumber" in shard["SequenceNumberRange"]:
             # EndingSequenceNumber is null for open shards, so this shard must be closed
-            log.debug("skipping closed shard {}".format(shard_id))
+            log.debug("skipping closed shard {0}".format(shard_id))
             continue
         stream_details["OpenShards"].append(shard)
         shard["HashKeyRange"]["StartingHashKey"] = long(
@@ -287,7 +287,7 @@ def reshard(stream_name, desired_size, force=False,
     stream_details = stream_response['result']["StreamDescription"]
     min_hash_key, max_hash_key, stream_details = get_info_for_reshard(stream_details)
 
-    log.debug("found {} open shards, min_hash_key {} max_hash_key {}".format(
+    log.debug("found {0} open shards, min_hash_key {1} max_hash_key {2}".format(
         len(stream_details["OpenShards"]), min_hash_key, max_hash_key))
 
     # find the first open shard that doesn't match the desired pattern. When we find it,
@@ -296,7 +296,7 @@ def reshard(stream_name, desired_size, force=False,
         shard_id = shard["ShardId"]
         if "EndingSequenceNumber" in shard["SequenceNumberRange"]:
             # something went wrong, there's a closed shard in our open shard list
-            log.debug("this should never happen! closed shard {}".format(shard_id))
+            log.debug("this should never happen! closed shard {0}".format(shard_id))
             continue
 
         starting_hash_key = shard["HashKeyRange"]["StartingHashKey"]
@@ -311,10 +311,10 @@ def reshard(stream_name, desired_size, force=False,
         if expected_ending_hash_key > max_hash_key:
             expected_ending_hash_key = max_hash_key
 
-        log.debug("Shard {} ({}) should start at {}: {}".format(shard_num, shard_id, expected_starting_hash_key,
+        log.debug("Shard {0} ({1}) should start at {2}: {3}".format(shard_num, shard_id, expected_starting_hash_key,
                                                                 starting_hash_key == expected_starting_hash_key
                                                                 ))
-        log.debug("Shard {} ({}) should end at {}: {}".format(shard_num, shard_id, expected_ending_hash_key,
+        log.debug("Shard {0} ({1}) should end at {2}: {3}".format(shard_num, shard_id, expected_ending_hash_key,
                                                               ending_hash_key == expected_ending_hash_key
                                                               ))
 
@@ -328,7 +328,7 @@ def reshard(stream_name, desired_size, force=False,
         if ending_hash_key > expected_ending_hash_key + 1:
             # split at expected_ending_hash_key
             if force:
-                log.debug("{} should end at {}, actual {}, splitting".format(
+                log.debug("{0} should end at {1}, actual {2}, splitting".format(
                     shard_id, expected_ending_hash_key, ending_hash_key))
                 r = _execute_with_retries(conn,
                                           "split_shard",
@@ -336,7 +336,7 @@ def reshard(stream_name, desired_size, force=False,
                                           ShardToSplit=shard_id,
                                           NewStartingHashKey=str(expected_ending_hash_key + 1))
             else:
-                log.debug("{} should end at {}, actual {} would split".format(
+                log.debug("{0} should end at {1}, actual {2} would split".format(
                     shard_id, expected_ending_hash_key, ending_hash_key))
 
             if 'error' not in r:
@@ -346,10 +346,10 @@ def reshard(stream_name, desired_size, force=False,
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r['error'] = "failed to find next shard after {}".format(shard_id)
+                r['error'] = "failed to find next shard after {0}".format(shard_id)
                 return r
             if force:
-                log.debug("{} should continue past {}, merging with {}".format(
+                log.debug("{0} should continue past {1}, merging with {2}".format(
                     shard_id, ending_hash_key, next_shard_id))
                 r = _execute_with_retries(conn,
                                           "merge_shards",
@@ -357,7 +357,7 @@ def reshard(stream_name, desired_size, force=False,
                                           ShardToMerge=shard_id,
                                           AdjacentShardToMerge=next_shard_id)
             else:
-                log.debug("{} should continue past {}, would merge with {}".format(
+                log.debug("{0} should continue past {1}, would merge with {2}".format(
                     shard_id, ending_hash_key, next_shard_id))
 
             if 'error' not in r:
@@ -407,7 +407,7 @@ def _execute_with_retries(conn, function, **kwargs):
     max_attempts = 18
     max_retry_delay = 10
     for attempt in range(max_attempts):
-        log.info("attempt: {} function: {}".format(attempt, function))
+        log.info("attempt: {0} function: {1}".format(attempt, function))
         try:
             fn = getattr(conn, function)
             r['result'] = fn(**kwargs)
@@ -417,7 +417,7 @@ def _execute_with_retries(conn, function, **kwargs):
             if "LimitExceededException" in error_code or "ResourceInUseException" in error_code:
                 # could be rate limited by AWS or another command is blocking,
                 # retry with exponential backoff
-                log.debug("Retrying due to AWS exception {}".format(e))
+                log.debug("Retrying due to AWS exception {0}".format(e))
                 time.sleep(_jittered_backoff(attempt, max_retry_delay))
             else:
                 # ResourceNotFoundException or InvalidArgumentException
@@ -425,7 +425,7 @@ def _execute_with_retries(conn, function, **kwargs):
                 r['result'] = None
                 return r
 
-    r['error'] = "Tried to execute function {} {} times, but was unable".format(function, max_attempts)
+    r['error'] = "Tried to execute function {0} {1} times, but was unable".format(function, max_attempts)
     return r
 
 
