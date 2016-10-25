@@ -19,6 +19,34 @@ log = logging.getLogger(__name__)
 
 
 class Updates(object):
+    '''
+    Wrapper around the 'Microsoft.Update.UpdateColl' instance
+    Adds the list and summary functions. For use by the WindowUpdateAgent class.
+
+    Usage:
+    .. code-block:: python
+
+        # Create an instance
+        updates = Updates()
+
+        # Bind to the collection object
+        found = updates.updates
+
+        # This exposes Collections properties and methods
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386107(v=vs.85).aspx
+        found.Count
+        found.Add
+
+        # To use custom functions, use the original instance
+        # Return the number of updates inside the collection
+        updates.count()
+
+        # Return a list of updates in the collection and details in a dictionary
+        updates.list()
+
+        # Return a summary of the contents of the updates collection
+        updates.summary()
+    '''
 
     update_types = {1: 'Software',
                     2: 'Driver'}
@@ -28,12 +56,65 @@ class Updates(object):
                        2: 'Can Require Reboot'}
 
     def __init__(self):
+        '''
+        Initialize the updates collection. Can be accessed via
+        ``Updates.updates``
+        '''
         self.updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
     def count(self):
+        '''
+        Return how many records are in the Microsoft Update Collection
+
+        Returns:
+            int: The number of updates in the collection
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            updates = salt.utils.win_update.Updates()
+            updates.count()
+        '''
         return self.updates.Count
 
     def list(self):
+        '''
+        Create a dictionary with the details for the updates in the collection.
+
+        Returns:
+            dict: Details about each update
+
+        .. code-block:: cfg
+
+            List of Updates:
+            {'<GUID>': {'Title': <title>,
+                        'KB': <KB>,
+                        'GUID': <the globally unique identifier for the update>
+                        'Description': <description>,
+                        'Downloaded': <has the update been downloaded>,
+                        'Installed': <has the update been installed>,
+                        'Mandatory': <is the update mandatory>,
+                        'UserInput': <is user input required>,
+                        'EULAAccepted': <has the EULA been accepted>,
+                        'Severity': <update severity>,
+                        'NeedsReboot': <is the update installed and awaiting reboot>,
+                        'RebootBehavior': <will the update require a reboot>,
+                        'Categories': [ '<category 1>',
+                                        '<category 2>',
+                                        ...]
+                        }
+            }
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            updates = salt.utils.win_update.Updates()
+            updates.list()
+        '''
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
         if self.count() == 0:
             return 'Nothing to return'
@@ -67,6 +148,31 @@ class Updates(object):
         return results
 
     def summary(self):
+        '''
+        Create a dictionary with a summary of the updates in the collection.
+
+        Returns:
+            dict: Summary of the contents of the collection
+
+        .. code-block:: cfg
+
+            Summary of Updates:
+            {'Total': <total number of updates returned>,
+             'Available': <updates that are not downloaded or installed>,
+             'Downloaded': <updates that are downloaded but not installed>,
+             'Installed': <updates installed (usually 0 unless installed=True)>,
+             'Categories': { <category 1>: <total for that category>,
+                             <category 2>: <total for category 2>,
+                             ... }
+            }
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            updates = salt.utils.win_update.Updates()
+            updates.summary()
+        '''
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
         if self.count() == 0:
             return 'Nothing to return'
@@ -118,6 +224,10 @@ class Updates(object):
 
 
 class WindowsUpdateAgent(object):
+    '''
+    Class for working with the Windows update agent
+
+    '''
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
     # https://technet.microsoft.com/en-us/library/cc720442(v=ws.10).aspx
@@ -147,6 +257,13 @@ class WindowsUpdateAgent(object):
                   -4292607995: 'Reboot required: 0x00240005'}
 
     def __init__(self):
+        '''
+        Initialize the session and load all updates into the ``_updates``
+        collection. This collection is used by the other class functions instead
+        of querying Windows update (expensive).
+
+        Need to look at the possibility of loading this into ``__context__``
+        '''
         # Initialize the PyCom system
         pythoncom.CoInitialize()
 
@@ -159,6 +276,26 @@ class WindowsUpdateAgent(object):
         self.refresh()
 
     def updates(self):
+        '''
+        Get the contents of ``_updates`` (all updates) and puts them in an
+        Updates class to expose the list and summary functions.
+
+        Returns:
+            Updates: An instance of the Updates class with all updates for the
+            system.
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+            updates = wua.updates()
+
+            # To get a list
+            updates.list()
+
+            # To get a summary
+            updates.summary()
+        '''
         updates = Updates()
         found = updates.updates
 
@@ -168,6 +305,19 @@ class WindowsUpdateAgent(object):
         return updates
 
     def refresh(self):
+        '''
+        Refresh the contents of the ``_updates`` collection. This gets all
+        updates in the Windows Update system and loads them into the collection.
+        This is the part that is slow.
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+            wua.refresh()
+        '''
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386526(v=vs.85).aspx
         search_string = 'Type=\'Software\' or ' \
                         'Type=\'Driver\''
@@ -205,7 +355,75 @@ class WindowsUpdateAgent(object):
                   drivers=True,
                   categories=None,
                   severities=None):
+        '''
+        Gets a list of all updates available on the system that match the passed
+        criteria.
 
+        Args:
+
+            skip_hidden (bool): Skip hidden updates. Default is True
+
+            skip_installed (bool): Skip installed updates. Default is True
+
+            skip_mandatory (bool): Skip mandatory updates. Default is False
+
+            skip_reboot (bool): Skip updates that can or do require reboot.
+            Default is False
+
+            software (bool): Include software updates. Default is True
+
+            drivers (bool): Include driver updates. Default is True
+
+            categories (list): Include updates that have these categories.
+            Default is none (all categories).
+
+                Categories include the following:
+
+                * Critical Updates
+                * Definition Updates
+                * Drivers (make sure you set drivers=True)
+                * Feature Packs
+                * Security Updates
+                * Update Rollups
+                * Updates
+                * Update Rollups
+                * Windows 7
+                * Windows 8.1
+                * Windows 8.1 drivers
+                * Windows 8.1 and later drivers
+                * Windows Defender
+
+            severities (list): Include updates that have these severities.
+            Default is none (all severities).
+
+                Severities include the following:
+
+                * Critical
+                * Important
+
+        .. note:: All updates are either software or driver updates. If both
+        ``software`` and ``drivers`` is False, nothing will be returned.
+
+        Returns:
+
+            Updates: An instance of Updates with the results of the search.
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+
+            # Gets all updates and shows a summary
+            updates = wua.available
+            updates.summary()
+
+            # Get a list of Critical updates
+            updates = wua.available(categories=['Critical Updates'])
+            updates.list()
+        '''
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
         updates = Updates()
         found = updates.updates
 
@@ -220,7 +438,8 @@ class WindowsUpdateAgent(object):
             if salt.utils.is_true(update.IsMandatory) and skip_mandatory:
                 continue
 
-            if salt.utils.is_true(update.RebootRequired) and skip_reboot:
+            if salt.utils.is_true(
+                    update.InstallationBehavior.RebootBehavior) and skip_reboot:
                 continue
 
             if not software and update.Type == 1:
@@ -246,7 +465,36 @@ class WindowsUpdateAgent(object):
         return updates
 
     def search(self, search_string):
+        '''
+        Search for either a single update or a specific list of updates. GUID's
+        are searched first, then KB numbers, and finally Titles.
 
+        Args:
+
+            search_string (str, list): The search string to use to find the
+            update. This can be the GUID or KB of the update (preferred). It can
+            also be the full Title of the update or any part of the Title. A
+            partial Title search is less specific and can return multiple
+            results.
+
+        Returns:
+            Updates: An instance of Updates with the results of the search
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+
+            # search for a single update and show its details
+            updates = wua.search('KB3194343')
+            updates.list()
+
+            # search for a list of updates and show their details
+            updates = wua.search(['KB3195432', '12345678-abcd-1234-abcd-1234567890ab'])
+            updates.list()
+        '''
         updates = Updates()
         found = updates.updates
 
@@ -283,6 +531,29 @@ class WindowsUpdateAgent(object):
         return updates
 
     def download(self, updates):
+        '''
+        Download the updates passed in the updates collection. Load the updates
+        collection using ``search`` or ``available``
+
+        Args:
+
+            updates (Updates): An instance of the Updates class containing a
+            the updates to be downloaded.
+
+        Returns:
+            dict: A dictionary containing the results of the download
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+
+            # Download KB3195454
+            updates = wua.search('KB3195454')
+            results = wua.download(updates)
+        '''
 
         # Check for empty list
         if updates.count() == 0:
@@ -371,7 +642,31 @@ class WindowsUpdateAgent(object):
         return ret
 
     def install(self, updates):
+        '''
+        Install the updates passed in the updates collection. Load the updates
+        collection using the ``search`` or ``available`` functions. If the
+        updates need to be downloaded, use the ``download`` function.
 
+        Args:
+
+            updates (Updates): An instance of the Updates class containing a
+            the updates to be installed.
+
+        Returns:
+            dict: A dictionary containing the results of the installation
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+
+            # install KB3195454
+            updates = wua.search('KB3195454')
+            results = wua.download(updates)
+            results = wua.install(updates)
+        '''
         # Check for empty list
         if updates.count() == 0:
             ret = {'Success': False,
@@ -457,12 +752,38 @@ class WindowsUpdateAgent(object):
         return ret
 
     def uninstall(self, updates):
-        # This doesn't work with the WUA API. It always returns "0x80240028
-        # Uninstall not allowed". The full message is: " The update could not be
-        # uninstalled because the request did not originate from a Windows
-        # Server Update Services (WSUS) server.
-        # look at using the following on failure:
-        # wusa /uninstall /kb:3183838 /quiet
+        '''
+        Uninstall the updates passed in the updates collection. Load the updates
+        collection using the ``search`` or ``available`` functions.
+
+        .. note:: Starting with Windows 10 the Windows Update Agent is unable to
+        uninstall updates. An ``Uninstall Not Allowed`` error is returned. If
+        this error is encountered this function will instead attempt to use
+        ``dism.exe`` to perform the uninstallation.
+
+        Args:
+
+            updates (Updates): An instance of the Updates class containing a
+            the updates to be uninstalled.
+
+        Returns:
+            dict: A dictionary containing the results of the uninstallation
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent()
+
+            # uninstall KB3195454
+            updates = wua.search('KB3195454')
+            results = wua.uninstall(updates)
+        '''
+        # This doesn't work with the WUA API since Windows 10. It always returns
+        # "0x80240028 # Uninstall not allowed". The full message is: "The update
+        # could not be uninstalled because the request did not originate from a
+        # Windows Server Update Services (WSUS) server.
 
         # Check for empty list
         if updates.count() == 0:
@@ -507,7 +828,7 @@ class WindowsUpdateAgent(object):
             result = installer.Uninstall()
 
         except pywintypes.com_error as error:
-            # Something happened, return error or try using WUSA
+            # Something happened, return error or try using DISM
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
             try:
                 failure_code = self.fail_codes[exc[5]]
@@ -518,12 +839,21 @@ class WindowsUpdateAgent(object):
             if exc[5] == -2145124312:
                 log.debug('Uninstall Failed with WUA, attempting with DISM')
                 try:
-                    for item in uninstall_list:
-                        for kb in item.KBArticleIDs:
-                            cmd = ['dism', '/Online', '/Get-Packages']
 
+                    # Go through each update...
+                    for item in uninstall_list:
+
+                        # Look for the KB numbers
+                        for kb in item.KBArticleIDs:
+
+                            # Get the list of packages
+                            cmd = ['dism', '/Online', '/Get-Packages']
                             pkg_list = self._run(cmd)[0].splitlines()
+
+                            # Find the KB in the pkg_list
                             for item in pkg_list:
+
+                                # Uninstall if found
                                 if 'kb' + kb in item.lower():
                                     pkg = item.split(' : ')[1]
 
@@ -545,7 +875,7 @@ class WindowsUpdateAgent(object):
                     raise CommandExecutionError('Uninstall using DISM failed:'
                                                 '{0}'.format(str(exc)))
 
-                # WUSA Uninstall Completed Successfully
+                # DISM Uninstall Completed Successfully
                 log.debug('Uninstall Completed using DISM')
 
                 # Populate the return dictionary
@@ -614,8 +944,17 @@ class WindowsUpdateAgent(object):
         return ret
 
     def _run(self, cmd):
+        '''
+        Internal function for running commands. Used by the uninstall function.
 
-        if not isinstance(cmd, list):
+        Args:
+            cmd (str, list): The command to run
+
+        Returns:
+            str: The stdout of the command
+        '''
+
+        if isinstance(cmd, six.string_types):
             cmd = salt.utils.shlex_split(cmd)
 
         try:
@@ -645,7 +984,9 @@ def needs_reboot():
 
     .. code-block:: bash
 
-        salt '*' win_wua.get_needs_reboot
+        import salt.utils.win_update
+
+        salt.utils.win_update.needs_reboot()
 
     '''
     # Initialize the PyCom system
