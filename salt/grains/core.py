@@ -1047,7 +1047,7 @@ def os_data():
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
-                    if init_bin:
+                    if init_bin and init_bin.endswith('bin/init'):
                         supported_inits = ('upstart', 'sysvinit', 'systemd')
                         edge_len = max(len(x) for x in supported_inits) - 1
                         buf_size = __opts__['file_buffer_size']
@@ -1070,6 +1070,8 @@ def os_data():
                                 'Unable to read from init_bin ({0}): {1}'
                                 .format(init_bin, exc)
                             )
+                    elif salt.utils.which('supervisord') in init_cmdline:
+                        grains['init'] = 'supervisord'
 
         # Add lsb grains on any distro with lsb-release
         try:
