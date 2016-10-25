@@ -1171,6 +1171,7 @@ def upgrade(refresh=True,
 
     old = list_pkgs()
 
+    __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -1187,8 +1188,8 @@ def upgrade(refresh=True,
             info={'changes': ret, 'result': result}
         )
 
-    if dryrun or not ret['result']:
-        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
+    if dryrun:
+        ret = (__zypper__.stdout + os.linesep + __zypper__.stderr).strip()
 
     return ret
 
