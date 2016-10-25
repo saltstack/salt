@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
+'''
+Classes for working with Windows Update Agent
+'''
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import subprocess
 
+# Import Salt libs
+import salt.utils
+from salt.ext import six
+from salt.ext.moves import range
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd Party libs
 try:
     import win32com.client
     import pythoncom
@@ -10,10 +21,6 @@ try:
     HAS_PYWIN32 = True
 except ImportError:
     HAS_PYWIN32 = False
-
-import salt.utils
-from salt.ext import six
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -330,8 +337,8 @@ class WindowsUpdateAgent(object):
         try:
             results = searcher.Search(search_string)
             if results.Updates.Count == 0:
-                log.debug('No Updates found for:\n\t\t{0}'.format(search_list))
-                return 'No Updates found: {0}'.format(search_list)
+                log.debug('No Updates found for:\n\t\t{0}'.format(search_string))
+                return 'No Updates found: {0}'.format(search_string)
         except pywintypes.com_error as error:
             # Something happened, raise an error
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
@@ -341,7 +348,7 @@ class WindowsUpdateAgent(object):
                 failure_code = 'Unknown Failure: {0}'.format(error)
 
             log.error('Search Failed: {0}\n\t\t{1}'.format(
-                failure_code, search_list))
+                failure_code, search_string))
             raise CommandExecutionError(failure_code)
 
         self._updates = results.Updates
@@ -449,7 +456,7 @@ class WindowsUpdateAgent(object):
                 continue
 
             if categories is not None:
-                match = false
+                match = False
                 for category in update.Categories:
                     if category.Name in categories:
                         match = True
