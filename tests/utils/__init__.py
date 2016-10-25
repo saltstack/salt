@@ -112,7 +112,7 @@ if HAS_CHERRYPY:
 
         def setUp(self):
             if not hasattr(self, '_cp_config'):
-                    self._cp_config = {}
+                self._cp_config = {}
             Root._cp_config = self._cp_config
             root = Root()
 
