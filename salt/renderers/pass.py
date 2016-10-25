@@ -83,8 +83,22 @@ def _fetch_secret(pass_path):
         msg = 'Could not fetch secret: {0} {1}'.format(pass_data, pass_error)
         log.warn(msg)
         pass_data = pass_path
-
     return pass_data
+
+
+def _decrypt_object(obj):
+    """
+    Recursively try to find a pass path (string) that can be handed off to pass
+    """
+    if isinstance(obj, six.string_types):
+        return _fetch_secret(obj)
+    elif isinstance(obj, dict):
+        for pass_key, pass_path in six.iteritems(obj):
+            obj[pass_key] = _decrypt_object(pass_path)
+    elif isinstance(obj, list):
+        for pass_key, pass_path in enumerate(obj):
+            obj[pass_key] = _decrypt_object(pass_path)
+    return obj
 
 
 def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
@@ -99,9 +113,4 @@ def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
     # Make sure environment variable HOME is set, since Pass looks for the
     # password-store under ~/.password-store.
     os.environ['HOME'] = expanduser('~')
-
-    for pass_key, pass_path in six.iteritems(pass_info):
-        secret = _fetch_secret(pass_path)
-        pass_info[pass_key] = secret
-
-    return pass_info
+    return _decrypt_object(pass_info)
