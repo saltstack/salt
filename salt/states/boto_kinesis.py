@@ -99,7 +99,8 @@ def present(name,
         Reshard stream (if necessary) to this number of shards
         !!!!! Resharding is expensive! Each split or merge can take up to 30 seconds,
         and the reshard method balances the partition space evenly.
-        Resharding from N to N+1 can require 2N operations !!!!!
+        Resharding from N to N+1 can require 2N operations.
+        Resharding is much faster with powers of 2 (e.g. 2^N to 2^N+1) !!!!!
 
     do_reshard (boolean)
         If set to False, this script will NEVER reshard the stream,
