@@ -54,7 +54,8 @@ def running(name,
             update=False,
             user=None,
             conf_file=None,
-            bin_env=None):
+            bin_env=None,
+            **kwargs):
     '''
     Ensure the named service is running.
 
@@ -274,7 +275,8 @@ def running(name,
 def dead(name,
          user=None,
          conf_file=None,
-         bin_env=None):
+         bin_env=None,
+         **kwargs):
     '''
     Ensure the named service is dead (not running).
 
