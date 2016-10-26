@@ -798,6 +798,7 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
         target=__process_multiprocessing_logging_queue,
         args=(opts, queue or get_multiprocessing_logging_queue(),)
     )
+    __MP_LOGGING_QUEUE_PROCESS.daemon = True
     __MP_LOGGING_QUEUE_PROCESS.start()
     __MP_LOGGING_LISTENER_CONFIGURED = True
 
