@@ -92,18 +92,18 @@ class GCETest(integration.ShellCase):
         '''
 
         # create the instance
-        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME))
+        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME), timeout=500)
         ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
@@ -127,11 +127,11 @@ class GCETest(integration.ShellCase):
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
@@ -152,7 +152,7 @@ class GCETest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':
