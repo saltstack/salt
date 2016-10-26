@@ -778,6 +778,11 @@ class MinionManager(MinionBase):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS.current()
+        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+
+    def __del__(self):
+        self.destroy()
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
