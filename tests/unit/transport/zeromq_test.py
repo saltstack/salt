@@ -139,7 +139,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
-                ret = self.channel.send(msg, timeout=1)
+                ret = self.channel.send(msg, timeout=5)
 
 
 class BaseZMQPubCase(AsyncTestCase):
