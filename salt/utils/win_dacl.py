@@ -36,7 +36,7 @@ class Flags(object):
         'group': win32security.GROUP_SECURITY_INFORMATION,
         'owner': win32security.OWNER_SECURITY_INFORMATION}
 
-    dacl_inheritance = {
+    inheritance = {
         'protected': win32security.PROTECTED_DACL_SECURITY_INFORMATION,
         'unprotected': win32security.UNPROTECTED_DACL_SECURITY_INFORMATION}
 
@@ -99,13 +99,13 @@ class Flags(object):
             raise CommandExecutionError(
                 'Invalid security info element: {0}'.format(name))
 
-    def dacl_inheritance_flags(self, name):
+    def inheritance_flags(self, name):
         '''
         Get the flag that determines whether the object will inherit parent
         permissions
         '''
         try:
-            return self.dacl_inheritance[name.lower()]
+            return self.inheritance[name.lower()]
         except KeyError:
             raise CommandExecutionError(
                 'Invalid inheritance: {0}'.format(name))
@@ -142,12 +142,10 @@ class Dacl(Flags):
         `obj_name` is not passed, an empty DACL is created.
 
         Args:
-            obj_name (str):
-                The full path to the object. If None, a blank DACL will be
-                created
+            obj_name (str): The full path to the object. If None, a blank DACL
+            will be created
 
-            obj_type (Optional[str]):
-                The type of object. Valid options are:
+            obj_type (Optional[str]): The type of object. Valid options are:
 
                 - file (default): This is a file or directory
                 - service
@@ -161,11 +159,13 @@ class Dacl(Flags):
 
         Usage:
 
+        .. code-block:: python
+
             # Create an Empty DACL
-            dacl = DACL(obj_type=obj_type)
+            dacl = Dacl(obj_type=obj_type)
 
             # Load the DACL of the named object
-            dacl = DACL(obj_name, obj_type)
+            dacl = Dacl(obj_name, obj_type)
         '''
         if obj_name is None:
             self.dacl = win32security.ACL()
@@ -182,16 +182,13 @@ class Dacl(Flags):
 
         Args:
 
-            sid (str):
-                The sid of the user/group to for the ACE
+            sid (str): The sid of the user/group to for the ACE
 
-            access_mode (str):
-                Determines the type of ACE to add. Must be either `grant` or
-                `deny`.
+            access_mode (str): Determines the type of ACE to add. Must be either
+            ``grant`` or ``deny``.
 
-            applies_to (str):
-                The objects to which these permissions will apply. Not all these
-                options apply to all object types. Valid options are:
+            applies_to (str): The objects to which these permissions will apply.
+            Not all these options apply to all object types. Valid options are:
 
                 - this_folder_only
                 - this_folder_subfolders_files
@@ -201,8 +198,8 @@ class Dacl(Flags):
                 - subfolders_only
                 - files_only
 
-            permission (str):
-                The type of permissions to grant/deny the user. Valid options:
+            permission (str): The type of permissions to grant/deny the user.
+            Valid options:
 
                 - full_control
                 - modify
@@ -215,7 +212,9 @@ class Dacl(Flags):
 
         Usage:
 
-            dacl = DACL(obj_type=obj_type)
+        .. code-block:: python
+
+            dacl = Dacl(obj_type=obj_type)
             dacl.add_ace(sid, access_mode, applies_to, permission)
             dacl.save(obj_name, obj_type, protected)
         '''
@@ -246,32 +245,38 @@ class Dacl(Flags):
 
         return True
 
-    def get_ace(self):
+    def get_ace(self, principal):
         '''
-        Get the ACE for the DACL
+        Get the ACE for the DACL. Used to work with an existing ACE.
+
+        principal (str): The name of the user or group for which to get the ace.
+        Can also be a SID.
 
         Returns:
             dict: A dictionary containing the ACE for the object
+
         Usage:
 
-            dacl = DACL(obj_type=obj_type)
+        .. code-block:: python
+
+            dacl = Dacl(obj_type=obj_type)
             dacl.get_ace()
         '''
+        # TODO: Return the ace by name, currently only returns the first ace
         return self.dacl.GetAce(0)
 
     def save(self, obj_name, obj_type, protected=None):
         '''
-        Save the dacl
+        Save the DACL
 
-        obj_name (str):
-            The object for which to set permissions. This can be the path to a
-            file or folder, a registry key, printer, etc. For more information
-            about how to format the name see:
-            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+        obj_name (str): The object for which to set permissions. This can be the
+        path to a file or folder, a registry key, printer, etc. For more
+        information about how to format the name see:
 
-        obj_type (str):
-            The type of object for which to set permissions. Valid objects are
-            as follows:
+        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+
+        obj_type (str): The type of object for which to set permissions. Valid
+        objects are as follows:
 
             - file (default): This is a file or directory
             - service
@@ -280,23 +285,26 @@ class Dacl(Flags):
             - registry32 (for WOW64)
             - share
 
-        protected (Optional[bool]):
-            True will disable inheritance for the object. False will enable
-            inheritance. None will make no change. Default is None.
+        protected (Optional[bool]): True will disable inheritance for the
+        object. False will enable inheritance. None will make no change. Default
+        is None.
 
         Returns:
             bool: True if successful, Otherwise raises an exception
 
         Usage:
-            dacl = DACL(obj_type=obj_type)
+
+        .. code-block:: python
+
+            dacl = Dacl(obj_type=obj_type)
             dacl.save(obj_name, obj_type, protected)
         '''
         sec_info = self.element_flags('dacl')
         if protected is not None:
             if protected:
-                sec_info = sec_info | self.dacl_inheritance_flags('protected')
+                sec_info = sec_info | self.inheritance_flags('protected')
             else:
-                sec_info = sec_info | self.dacl_inheritance_flags('unprotected')
+                sec_info = sec_info | self.inheritance_flags('unprotected')
 
         try:
             win32security.SetNamedSecurityInfo(
@@ -316,14 +324,22 @@ def get_sid(principal):
     Converts a username to a sid, or verifies a sid.
 
     Args:
-        principal(str):
-            The principal to lookup the sid. Can be a sid or a username.
+
+        principal(str): The principal to lookup the sid. Can be a sid or a
+        username.
 
     Returns:
         str: A sid
 
     Usage:
-        salt.utils.dacl.get_sid('jsnuffy')
+
+    .. code-block:: python
+
+        # Get a user's sid
+        salt.utils.win_dacl.get_sid('jsnuffy')
+
+        # Verify that the sid is valid
+        salt.utils.win_dacl.get_sid('S-1-5-32-544')
     '''
     # Test if the user passed a sid or a name
     try:
@@ -350,6 +366,12 @@ def get_name(sid):
 
     Returns:
         str: The name that corresponds to the passed SID
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.get_name('S-1-5-32-544')
     '''
     try:
         sid_obj = win32security.ConvertStringSidToSid(sid)
@@ -370,6 +392,12 @@ def get_owner(obj_name):
 
     Returns:
         str: The owner (group or user)
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.get_owner('c:\file')
     '''
     # Return owner
     security_descriptor = win32security.GetFileSecurity(
@@ -386,19 +414,17 @@ def set_owner(obj_name, principal, obj_type='file'):
 
     Args:
 
-        obj_name (str):
-            The object for which to set owner. This can be the path to a file or
-            folder, a registry key, printer, etc. For more information about how
-            to format the name see:
-            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+        obj_name (str): The object for which to set owner. This can be the path
+        to a file or folder, a registry key, printer, etc. For more information
+        about how to format the name see:
 
-        principal (str):
-            The name of the user or group to make owner of the object. Can also
-            pass a SID.
+        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
 
-        obj_type (Optional[str]):
-            The type of object for which to set the owner. Valid objects are as
-            follows:
+        principal (str): The name of the user or group to make owner of the
+        object. Can also pass a SID.
+
+        obj_type (Optional[str]): The type of object for which to set the owner.
+        Valid objects are as follows:
 
             - file (default): This is a file or directory
             - service
@@ -411,7 +437,10 @@ def set_owner(obj_name, principal, obj_type='file'):
         bool: True if successful, raises an error otherwise
 
     Usage:
-        salt.utils.dacl.set_owner('C:\\MyDirectory', 'jsnuffy', 'file')
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.set_owner('C:\\MyDirectory', 'jsnuffy', 'file')
     '''
     sid = get_sid(principal)
 
@@ -447,15 +476,14 @@ def set_permissions(obj_name,
 
     Args:
 
-        obj_name (str):
-            The object for which to set permissions. This can be the path to a
-            file or folder, a registry key, printer, etc. For more information
-            about how to format the name see:
-            https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+        obj_name (str): The object for which to set permissions. This can be the
+        path to a file or folder, a registry key, printer, etc. For more
+        information about how to format the name see:
 
-        obj_type (Optional[str]):
-            The type of object for which to set permissions. Valid objects are
-            as follows:
+        https://msdn.microsoft.com/en-us/library/windows/desktop/aa379593(v=vs.85).aspx
+
+        obj_type (Optional[str]): The type of object for which to set
+        permissions. Valid objects are as follows:
 
             - file (default): This is a file or directory
             - service
@@ -464,12 +492,11 @@ def set_permissions(obj_name,
             - registry32 (for WOW64)
             - share
 
-        principal (str):
-            The name of the user or group for which to set permissions. Can also
-            pass a SID.
+        principal (str): The name of the user or group for which to set
+        permissions. Can also pass a SID.
 
-        permission (str):
-            The type of permissions to grant/deny the user. Valid options:
+        permission (str): The type of permissions to grant/deny the user. Valid
+        options:
 
             - full_control
             - modify
@@ -477,23 +504,22 @@ def set_permissions(obj_name,
             - read
             -  write
 
-        access_mode(Optional[str]):
-            Whether to grant or deny user the access. Valid options are:
+        access_mode (Optional[str]): Whether to grant or deny user the access.
+        Valid options are:
 
             - grant (default): Grants the user access
             - deny: Denies the user access
 
-        reset_perms (Optional[bool]):
-            True will overwrite the permissions on the specified object. False
-            will append the permissions. Default is False
+        reset_perms (Optional[bool]): True will overwrite the permissions on the
+        specified object. False will append the permissions. Default is False
 
-        protected (Optional[bool]):
-            True will disable inheritance for the object. False will enable
-            inheritance. None will make no change. Default is None.
+        protected (Optional[bool]): True will disable inheritance for the
+        object. False will enable inheritance. None will make no change. Default
+        is None.
 
-        applies_to (Optional[str]):
-            The objects to which these permissions will apply. Not all these
-            options apply to all object types. Valid options are:
+        applies_to (Optional[str]): The objects to which these permissions will
+        apply. Not all these options apply to all object types. Valid options
+        are:
 
             - this_folder_only: Applies only to this object
             - this_folder_subfolders_files (default): Applies to this object and
@@ -507,15 +533,18 @@ def set_permissions(obj_name,
             - subfolders_only: Applies to all containers beneath the this object
             - files_only: Applies to all objects beneath this object
 
-        propagate (Optional[bool]):
-            Apply these permissions to all sub-containers and objects. Not yet
-            implemented. Would only apply to file type objects.
+        propagate (Optional[bool]): Apply these permissions to all
+        sub-containers and objects. Not yet implemented. Would only apply to
+        file type objects.
 
     Returns:
         bool: True if successful, raises an error otherwise
 
     Usage:
-        salt.utils.dacl.set_permissions(
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.set_permissions(
             'C:\\Temp', 'file', 'jsnuffy', 'full_control')
     '''
     sid = get_sid(principal)
@@ -533,8 +562,26 @@ def set_permissions(obj_name,
     return True
 
 
-def get_permissions(obj_name):
+def get_permissions(obj_name, principal):
+    '''
+    Get the permissions for the passed object
+
+    Args:
+
+        obj_name (str): The name of or path to the object.
+
+        principal (str): The name of the user or group for which to get
+        permissions. Can also pass a SID.
+
+    Returns:
+        dict: A dictionary representing the object permissions
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.get_permissions('C:\\Temp')
+    '''
+    # TODO: Return a human readable ace in a dict
     dacl = Dacl(obj_name)
-    return dacl.get_ace()
-
-
+    return dacl.get_ace(principal)
