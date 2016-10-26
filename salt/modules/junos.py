@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import logging
 import json
 
-# Import Salt libs
-import salt.ext.six as six
+# Import salt libraries
+from salt.utils import fopen
 
 try:
     from lxml import etree
@@ -25,11 +25,11 @@ try:
     from jnpr.junos.utils.scp import SCP
     import jnpr.junos.utils
     import jnpr.junos.cfg
+    import jxmlease
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
-
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def __virtual__():
         return __virtualname__
     else:
         return (False, 'The junos module could not be \
-                loaded: junos-eznc or proxy could not be loaded.')
+                loaded: junos-eznc or jxmlease or proxy could not be loaded.')
 
 
 def facts_refresh():
@@ -97,7 +97,7 @@ def facts():
     return ret
 
 
-def call_rpc(cmd=None, *args, **kwargs):
+def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
     '''
     This function executes the rpc provided as arguments on the junos device.
     The returned data can be stored in a file whose destination can be
@@ -107,48 +107,84 @@ def call_rpc(cmd=None, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.call_rpc 'get_config' '<configuration><system/></configuration>' terse=True
+        salt 'device' junos.rpc 'get_config' 'text' filter='<configuration><system/></configuration>'
 
-        salt 'device' junos.call_rpc 'get-chassis-inventory' dest=/home/user/rpc_information.txt
+        salt 'device' junos.rpc 'get-interface-information' '/home/user/interface.log' interface_name='lo0' terse=True
 
 
     Options:
       * cmd: the rpc to be executed
+      * dest: destination file where the rpc ouput is dumped
+      * format: the format in which the rpc reply must be stored in file specified in the dest (used only when dest is specified)
       * args: other arguments as taken by rpc call of PyEZ
       * kwargs: keyworded arguments taken by rpc call of PyEZ
     '''
+
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
 
     op = dict()
-    if '__pub_arg' in kwargs and isinstance(kwargs['__pub_arg'][-1], dict):
-        op.update(kwargs['__pub_arg'][-1])
+    if '__pub_arg' in kwargs:
+        if isinstance(kwargs['__pub_arg'][-1], dict):
+            op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
 
-    for k, v in six.iteritems(op):
-        op[k] = str(v)
-    op['format'] = 'json'
+    if dest is None and format != 'xml':
+        log.warning(
+            'Format ignored as it is only used for output which is dumped in the file.')
 
+    write_response = ''
     try:
         if cmd in ['get-config', 'get_config']:
             filter_reply = None
-            if len(args) > 0:
-                filter_reply = etree.XML(args[0])
-            ret['message'] = getattr(conn.rpc, cmd.replace('-', '_'))(filter_reply, options=op)
+            if 'filter' in op:
+                filter_reply = etree.XML(op['filter'])
+
+            xml_reply = getattr(
+                conn.rpc,
+                cmd.replace('-',
+                            '_'))(filter_reply,
+                                  options=op)
+            ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
+            write_response = etree.tostring(xml_reply)
+
+            if dest is not None and format != 'xml':
+                op.update({'format': format})
+                rpc_reply = getattr(
+                    conn.rpc,
+                    cmd.replace('-',
+                                '_'))(filter_reply,
+                                      options=op)
+                if format == 'json':
+                    write_response = json.dumps(rpc_reply, indent=1)
+                else:
+                    write_response = rpc_reply.text
         else:
-            ret['message'] = getattr(conn.rpc, cmd.replace('-', '_'))(op)
+
+            xml_reply = getattr(conn.rpc, cmd.replace('-', '_'))(**op)
+            ret['message'] = jxmlease.parse(etree.tostring(xml_reply))
+            write_response = etree.tostring(xml_reply)
+
+            if dest is not None and format != 'xml':
+                rpc_reply = getattr(
+                    conn.rpc,
+                    cmd.replace('-',
+                                '_'))({'format': format},
+                                      **op)
+                if format == 'json':
+                    write_response = json.dumps(rpc_reply, indent=1)
+                else:
+                    write_response = rpc_reply.text
 
     except Exception as exception:
-
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
 
-    if 'dest' in op:
-        f = open(op['dest'], 'w')
-        f.write(ret['message'])
-        f.close()
+    if dest is not None:
+        with fopen(dest, 'w') as fp:
+            fp.write(write_response)
 
     return ret
 
