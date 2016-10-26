@@ -473,7 +473,7 @@ class WindowsUpdateAgent(object):
 
     def search(self, search_string):
         '''
-        Search for either a single update or a specific list of updates. GUID's
+        Search for either a single update or a specific list of updates. GUIDs
         are searched first, then KB numbers, and finally Titles.
 
         Args:

@@ -87,7 +87,7 @@ def installed(name, updates=None):
         Overrides ``name``. Default is None.
 
     .. note:: Identifiers can be the GUID, the KB number, or any part of the
-       Title of the Microsoft update. GUID's and KB's are the preferred method
+       Title of the Microsoft update. GUIDs and KBs are the preferred method
        to ensure you're installing the correct update.
 
     .. warning:: Using a partial KB number or a partial Title could result in
@@ -218,7 +218,7 @@ def removed(name, updates=None):
         Overrides ``name``. Default is None.
 
     .. note:: Identifiers can be the GUID, the KB number, or any part of the
-       Title of the Microsoft update. GUID's and KB's are the preferred method
+       Title of the Microsoft update. GUIDs and KBs are the preferred method
        to ensure you're uninstalling the correct update.
 
     .. warning:: Using a partial KB number or a partial Title could result in
