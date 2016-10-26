@@ -160,16 +160,16 @@ class VultrTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(420)
         # delete the instance
-        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
         try:
             self.assertIn(
                 'True',
@@ -185,7 +185,7 @@ class VultrTest(integration.ShellCase):
         # If we exceed 6 minutes and the instance is still there, quit
         ct = 0
         while ct < 12 and INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             time.sleep(30)
             ct = ct + 1
 

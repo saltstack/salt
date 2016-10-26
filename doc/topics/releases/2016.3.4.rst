@@ -24,6 +24,7 @@ Changes
 - The `disk.wipe` execution module function has been modified
   so that it correctly wipes a disk.
 - Add ability to clone from a snapshot to the VMWare salt-cloud driver.
+- Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
 Changes for v2016.3.3..v2016.3.4
 --------------------------------
