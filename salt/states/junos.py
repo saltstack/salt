@@ -12,19 +12,18 @@ import logging
 log = logging.getLogger()
 
 
-def call_rpc(name, args=None, **kwargs):
+def rpc(name, dest=None, format='xml', args=None, **kwargs):
     '''
     Executes the given rpc. The returned data can be stored in a file
     by specifying the destination path with dest as an argument
 
     .. code-block:: yaml
 
-            get config:
-              junos:
-        - call_rpc
-                    - args:
-          - <configuration><system/></configuration>
-          - dest: /home/user/rpc_data.txt
+        get-interface-information:
+            junos:
+              - rpc
+              - dest: /home/user/rpc.log
+              - interface_name: lo0
 
 name: the rpc to be executed.
 
@@ -33,10 +32,16 @@ args: other arguments as taken by rpc call of PyEZ
 kwargs: keyworded arguments taken by rpc call of PyEZ
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
     if args is not None:
-        ret['changes'] = __salt__['junos.call_rpc'](name, *args, **kwargs)
+        ret['changes'] = __salt__['junos.rpc'](
+            name,
+            dest,
+            format,
+            *args,
+            **kwargs)
     else:
-        ret['changes'] = __salt__['junos.call_rpc'](name, **kwargs)
+        ret['changes'] = __salt__['junos.rpc'](name, dest, format, **kwargs)
     return ret
 
 
@@ -79,6 +84,7 @@ def commit(name):
 def rollback(name):
     '''
     Rollbacks the committed changes.
+
     .. code-block:: yaml
 
             rollback the changes:
