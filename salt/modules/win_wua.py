@@ -17,10 +17,9 @@ import salt.utils
 import salt.utils.win_update
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd Party libs
+# Import 3rd-party libs
 try:
     import pythoncom
-    import pywintypes
     import win32com.client
     HAS_PYWIN32 = True
 except ImportError:

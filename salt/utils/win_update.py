@@ -10,10 +10,10 @@ import subprocess
 # Import Salt libs
 import salt.utils
 from salt.ext import six
-from salt.ext.moves import range
+from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd Party libs
+# Import 3rd-party libs
 try:
     import win32com.client
     import pythoncom
