@@ -96,11 +96,11 @@ class ProfitBricksTest(integration.ShellCase):
             self.assertIn(
                 INSTANCE_NAME,
                 [i.strip() for i in self.run_cloud(
-                    '-p profitbricks-test {0}'.format(INSTANCE_NAME)
+                    '-p profitbricks-test {0}'.format(INSTANCE_NAME), timeout=500
                 )]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
@@ -108,7 +108,7 @@ class ProfitBricksTest(integration.ShellCase):
             self.assertIn(
                 INSTANCE_NAME + ':',
                 [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(INSTANCE_NAME)
+                    '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500
                 )]
             )
         except AssertionError:
@@ -123,7 +123,7 @@ class ProfitBricksTest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':
