@@ -369,6 +369,25 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     return service_instance
 
 
+def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
+    '''
+    Retrieves the service instance from a managed object.
+
+    me_ref
+        Reference to a managed object (of type vim.ManagedEntity).
+
+    name
+        Name of managed object. This field is optional.
+    '''
+    if not name:
+        name = mo_ref.name
+    log.trace('[{0}] Retrieving service instance from managed object'
+              ''.format(name))
+    si = vim.ServiceInstance('ServiceInstance')
+    si._stub = mo_ref._stub
+    return si
+
+
 def is_connection_to_a_vcenter(service_instance):
     '''
     Function that returns True if the connection is made to a vCenter Server and
