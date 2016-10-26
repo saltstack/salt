@@ -701,6 +701,8 @@ can be set in the cloud profile as shown in example below:
       datastore: esx01-datastore
       resourcepool: Resources
       folder: vm
+
+
       devices:
         disk:
           Hard disk 1:
