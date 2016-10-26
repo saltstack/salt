@@ -466,6 +466,9 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
+        if kwargs is None:
+            kwargs = {}
+
         mapper = salt.cloud.Map(self._opts_defaults(
             action=fun,
             names=names,
