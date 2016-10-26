@@ -296,8 +296,8 @@ class Dacl(Flags):
 
         .. code-block:: python
 
-            dacl = Dacl(obj_type=obj_type)
-            dacl.save(obj_name, obj_type, protected)
+            dacl = Dacl(obj_type='file')
+            dacl.save('C:\\Temp', 'file', True)
         '''
         sec_info = self.element_flags('dacl')
         if protected is not None:

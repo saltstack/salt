@@ -603,7 +603,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
 
                 # Give Admins, System and Owner permissions
-                # Get SIDs for Groups and Users
+                # Get SIDs
                 admins = salt.utils.win_dacl.get_sid('S-1-5-32-544')
                 system = salt.utils.win_dacl.get_sid('S-1-5-18')
                 owner = salt.utils.win_dacl.get_sid('S-1-3-4')
@@ -620,7 +620,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                              'full_control')
 
                 # Save the dacl to the object
-                dacl.save(path, 'file', True)
+                dacl.save(dir_, 'file', True)
 
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of "{0}".'
