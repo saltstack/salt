@@ -47,11 +47,11 @@ For removal:
          - KB3194343
          - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
+# Import Salt libs
 from salt.ext import six
 import salt.utils
 import salt.utils.win_update
