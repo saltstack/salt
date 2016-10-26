@@ -185,8 +185,8 @@ def list_update(name, download=False, install=False):
 
     Args:
         name (str): The name of the update you're searching for. This can be the
-        GUID, a KB number, or any part of the name of the update. GUID's and
-        KB's are preferred. Run ``list_updates`` to get the GUID for the update
+        GUID, a KB number, or any part of the name of the update. GUIDs and
+        KBs are preferred. Run ``list_updates`` to get the GUID for the update
         you're looking for.
 
         download (bool): Download the update returned by this function. Run this
@@ -260,8 +260,8 @@ def get(name, download=False, install=False):
 
     Args:
         name (str): The name of the update you're searching for. This can be the
-        GUID, a KB number, or any part of the name of the update. GUID's and
-        KB's are preferred. Run ``list`` to get the GUID for the update
+        GUID, a KB number, or any part of the name of the update. GUIDs and
+        KBs are preferred. Run ``list`` to get the GUID for the update
         you're looking for.
 
         download (bool): Download the update returned by this function. Run this
