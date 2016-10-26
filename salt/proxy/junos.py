@@ -75,7 +75,11 @@ def id(opts):
 
 def grains():
     thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
-    thisproxy['grains']['version_info'] = str(thisproxy['grains']['version_info'])
+    thisproxy[
+        'grains'][
+        'version_info'] = thisproxy[
+        'grains'][
+        'version_info'].v_dict
     return thisproxy['grains']
 
 

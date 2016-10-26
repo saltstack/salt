@@ -1257,7 +1257,7 @@ def os_data():
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
-                    if init_bin is not None:
+                    if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
@@ -1286,6 +1286,8 @@ def os_data():
                                 'Unable to read from init_bin ({0}): {1}'
                                 .format(init_bin, exc)
                             )
+                    elif salt.utils.which('supervisord') in init_cmdline:
+                        grains['init'] = 'supervisord'
                     else:
                         log.error(
                             'Could not determine init location from command line: ({0})'
