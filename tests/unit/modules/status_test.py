@@ -37,15 +37,15 @@ class StatusTestCase(TestCase):
             '''
 
         m = MockData()
-        m.now = 1477004312.23
+        m.now = 1477004312
         m.ut = 1540154.00
         m.idle = 3047777.32
         m.ret = {
             'users': 3,
             'seconds': 1540154,
-            'since_t': 1475464158.23,
+            'since_t': 1475464158,
             'days': 17,
-            'since_iso': '2016-10-03T03:09:18.230000',
+            'since_iso': '2016-10-03T03:09:18',
             'time': '19:49',
         }
 
