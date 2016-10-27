@@ -252,6 +252,12 @@ class RAETEvent(object):
                 except Exception:
                     pass
 
+    def close_pub(self):
+        '''
+        Here for compatability
+        '''
+        return
+
     def destroy(self):
         if hasattr(self, 'stack'):
             self.stack.server.close()
