@@ -60,7 +60,7 @@ def set_option(file_name, sections=None, separator='='):
         A character used to separate keys and values. Standard ini files use
         the "=" character.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     API Example:
 
