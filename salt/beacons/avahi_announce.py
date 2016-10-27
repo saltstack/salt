@@ -2,7 +2,7 @@
 '''
 Beacon to announce via avahi (zeroconf)
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Dependencies
 ============
