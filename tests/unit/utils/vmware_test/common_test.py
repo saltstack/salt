@@ -11,10 +11,9 @@ import logging
 
 # Import Salt testing libraries
 from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
         PropertyMock
 
-import salt.exceptions as excs
 # Import Salt libraries
 import salt.exceptions as excs
 import salt.utils.vmware
@@ -393,6 +392,73 @@ class GetMorsWithPropertiesTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_service_instance_from_managed_object',
+       MagicMock())
+@patch('salt.utils.vmware.get_mors_with_properties',
+       MagicMock(return_value=[MagicMock()]))
+class GetPropertiesOfManagedObjectTestCase(TestCase):
+    '''Tests for salt.utils.get_properties_of_managed_object'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.fake_mo_ref = vim.ManagedEntity('Fake')
+        self.mock_props = MagicMock()
+        self.mock_item_name = {'name': 'fake_name'}
+        self.mock_item = MagicMock()
+
+    def test_get_service_instance_from_managed_object_call(self):
+        mock_get_instance_from_managed_object = MagicMock()
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            mock_get_instance_from_managed_object):
+
+            salt.utils.vmware.get_properties_of_managed_object(
+                self.fake_mo_ref, self.mock_props)
+        mock_get_instance_from_managed_object.assert_called_once_with(
+            self.fake_mo_ref)
+
+    def test_get_mors_with_properties_calls(self):
+        mock_get_mors_with_properties = MagicMock(return_value=[MagicMock()])
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            MagicMock(return_value=self.mock_si)):
+
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       mock_get_mors_with_properties):
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        mock_get_mors_with_properties.assert_has_calls(
+            [call(self.mock_si, vim.ManagedEntity,
+                  container_ref=self.fake_mo_ref,
+                  property_list=['name'],
+                  local_properties=True),
+             call(self.mock_si, vim.ManagedEntity,
+                  container_ref=self.fake_mo_ref,
+                  property_list=self.mock_props,
+                  local_properties=True)])
+
+    def test_managed_object_no_name_property(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(side_effect=[vmodl.query.InvalidProperty(), []])):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        self.assertEqual('Properties of managed object \'<unnamed>\' weren\'t '
+                         'retrieved', excinfo.exception.strerror)
+
+    def test_no_items_named_object(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(side_effect=[[self.mock_item_name], []])):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        self.assertEqual('Properties of managed object \'fake_name\' weren\'t '
+                         'retrieved', excinfo.exception.strerror)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_root_folder', MagicMock())
 @patch('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
        MagicMock(return_value=MagicMock()))
 @patch('salt.utils.vmware.vmodl.query.PropertyCollector.PropertySpec',
@@ -596,5 +662,6 @@ if __name__ == '__main__':
     from integration import run_tests
     run_tests(WaitForTaskTestCase, needs_daemon=False)
     run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
+    run_tests(GetPropertiesOfManagedObjectTestCase, needs_daemon=False)
     run_tests(GetContentTestCase, needs_daemon=False)
     run_tests(GetRootFolderTestCase, needs_daemon=False)
