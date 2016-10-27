@@ -341,14 +341,14 @@ def groups(username, **kwargs):
                 if 'cn' in entry:
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
-            
-        if _config('freeipa'):
+
+        elif _config('freeipa'):
             escaped_username = ldap.filter.escape_filter_chars(username)
             search_base = _config('group_basedn')
             search_string = _render_template(_config('group_filter'), escaped_username)
-            search_results = bind.search_s(search_base, 
-                                           ldap.SCOPE_SUBTREE, 
-                                           search_string, 
+            search_results = bind.search_s(search_base,
+                                           ldap.SCOPE_SUBTREE,
+                                           search_string,
                                            [_config('accountattributename'), 'cn'])
 
             for entry, result in search_results:
