@@ -294,7 +294,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
                 - port: 443
                 - sslflags: 1
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -363,7 +363,7 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
                 - ipaddress: 192.168.1.199
                 - port: 443
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {'name': name,
            'changes': {},
