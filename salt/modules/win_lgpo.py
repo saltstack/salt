@@ -3270,6 +3270,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
             this_vtype = 'REG_DWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
@@ -3280,13 +3281,14 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
             if check_deleted:
                 this_vtype = 'REG_SZ'
         elif etree.QName(element).localname == 'longDecimal':
             # https://msdn.microsoft.com/en-us/library/dn606015(v=vs.85).aspx
             this_vtype = 'REG_QWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
@@ -3297,8 +3299,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
         elif etree.QName(element).localname == 'text':
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = 'REG_SZ'
@@ -3920,6 +3922,8 @@ def _write_regpol_data(data_to_write, policy_file_path):
     try:
         if data_to_write:
             reg_pol_header = u'\u5250\u6765\x01\x00'
+            if not os.path.exists(policy_file_path):
+                ret = __salt__['file.makedirs'](policy_file_path)
             with open(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
@@ -4319,34 +4323,36 @@ def _getScriptSettingsFromIniFile(policy_info):
     helper function to parse/read a GPO Startup/Shutdown script file
     '''
     _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    _existingData = _existingData.split('\r\n')
-    script_settings = {}
-    this_section = None
-    for eLine in _existingData:
-        if eLine.startswith('[') and eLine.endswith(']'):
-            this_section = eLine.replace('[', '').replace(']', '')
-            log.debug('adding section {0}'.format(this_section))
-            if this_section:
-                script_settings[this_section] = {}
+    if _existingData:
+        _existingData = _existingData.split('\r\n')
+        script_settings = {}
+        this_section = None
+        for eLine in _existingData:
+            if eLine.startswith('[') and eLine.endswith(']'):
+                this_section = eLine.replace('[', '').replace(']', '')
+                log.debug('adding section {0}'.format(this_section))
+                if this_section:
+                    script_settings[this_section] = {}
+            else:
+                if '=' in eLine:
+                    log.debug('working with config line {0}'.format(eLine))
+                    eLine = eLine.split('=')
+                    if this_section in script_settings:
+                        script_settings[this_section][eLine[0]] = eLine[1]
+        if 'SettingName' in policy_info['ScriptIni']:
+            log.debug('Setting Name is in policy_info')
+            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
+                log.debug('the value is set in the file')
+                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+            else:
+                return None
+        elif policy_info['ScriptIni']['Section'] in script_settings:
+            log.debug('no setting name')
+            return script_settings[policy_info['ScriptIni']['Section']]
         else:
-            if '=' in eLine:
-                log.debug('working with config line {0}'.format(eLine))
-                eLine = eLine.split('=')
-                if this_section in script_settings:
-                    script_settings[this_section][eLine[0]] = eLine[1]
-    if 'SettingName' in policy_info['ScriptIni']:
-        log.debug('Setting Name is in policy_info')
-        if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-            log.debug('the value is set in the file')
-            return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
-        else:
+            log.debug('broad else')
             return None
-    elif policy_info['ScriptIni']['Section'] in script_settings:
-        log.debug('no setting name')
-        return script_settings[policy_info['ScriptIni']['Section']]
-    else:
-        log.debug('broad else')
-        return None
+    return None
 
 
 def _writeGpoScript(psscript=False):
