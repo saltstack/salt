@@ -456,6 +456,34 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                          'retrieved', excinfo.exception.strerror)
 
 
+@patch('salt.utils.vmware.get_properties_of_managed_object',
+       MagicMock(return_value={'key': 'value'}))
+class GetManagedObjectName(TestCase):
+    '''Tests for salt.utils.get_managed_object_name'''
+
+    def setUp(self):
+        self.mock_mo_ref = MagicMock()
+
+    def test_get_properties_of_managed_object_call(self):
+        mock_get_properties_of_managed_object = MagicMock()
+        with patch('salt.utils.vmware.get_properties_of_managed_object',
+                   mock_get_properties_of_managed_object):
+            salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        mock_get_properties_of_managed_object.assert_called_once_with(
+            self.mock_mo_ref, ['name'])
+
+    def test_no_name_in_property_dict(self):
+        ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        self.assertIsNone(ret)
+
+    def test_return_managed_object_name(self):
+        mock_get_properties_of_managed_object = MagicMock()
+        with patch('salt.utils.vmware.get_properties_of_managed_object',
+                   MagicMock(return_value={'name': 'fake_name'})):
+            ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        self.assertEqual(ret, 'fake_name')
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_root_folder', MagicMock())
@@ -663,5 +691,6 @@ if __name__ == '__main__':
     run_tests(WaitForTaskTestCase, needs_daemon=False)
     run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
     run_tests(GetPropertiesOfManagedObjectTestCase, needs_daemon=False)
+    run_tests(GetManagedObjectName, needs_daemon=False)
     run_tests(GetContentTestCase, needs_daemon=False)
     run_tests(GetRootFolderTestCase, needs_daemon=False)
