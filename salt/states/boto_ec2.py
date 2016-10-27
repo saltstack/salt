@@ -212,7 +212,7 @@ def eni_present(
         allocate Elastic IP to EC2 region or 'vpc' to get it for a
         particular VPC
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
     arecords
         A list of arecord dicts with attributes needed for the DNS add_record state.
@@ -703,10 +703,14 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         specifications for the instance.
     network_interface_name
          (string) - The name of Elastic Network Interface to attach
-    .. versionadded:: Carbon
+
+        .. versionadded:: 2016.11.0
+
     network_interface_id
          (string) - The id of Elastic Network Interface to attach
-    .. versionadded:: Carbon
+
+        .. versionadded:: 2016.11.0
+
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
@@ -918,6 +922,8 @@ def instance_absent(name, instance_name=None, instance_id=None,
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
+    .. versionupdated:: 2016.11.0
+
     name
         (string) - The name of the state definition.
     instance_name
@@ -945,7 +951,6 @@ def instance_absent(name, instance_name=None, instance_id=None,
         - filters:
             vpc-id: vpc-abcdef12
 
-    .. versionupdated:: Carbon
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
@@ -1030,6 +1035,8 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     '''
     Ensure the EC2 volume is detached and absent.
 
+    .. versionadded:: 2016.11.0
+
     name
         State definition name.
 
@@ -1065,7 +1072,6 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
     '''
 
     ret = {'name': name,
@@ -1132,6 +1138,8 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
     '''
     Ensure EC2 volume(s) matching the given filters have the defined tags.
 
+    .. versionadded:: 2016.11.0
+
     name
         State definition name.
 
@@ -1182,7 +1190,6 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
 
-    .. versionadded:: Carbon
     '''
 
     ret = {'name': name,

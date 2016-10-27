@@ -214,7 +214,7 @@ def team_present(
                         enforce_mfa_from: 2016/06/15
                 - enforce_mfa: True
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {
         'name': name,
@@ -435,7 +435,7 @@ def team_absent(name, profile="github", **kwargs):
     name
         This is the name of the team in the organization.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {
         'name': name,
@@ -525,7 +525,7 @@ def repo_present(
                 - name: 'my-repo'
                 - description: 'My very important repository'
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {
         'name': name,
@@ -623,7 +623,7 @@ def repo_absent(name, profile="github", **kwargs):
     name
         This is the name of the repository in the organization.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     ret = {
         'name': name,
