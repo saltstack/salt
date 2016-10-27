@@ -425,7 +425,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase):
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
 
-
+@skipIf('boto_apigateway.describe_apis' not in funcs, 'The boto_apigateway execution module is needed and is not available.')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
