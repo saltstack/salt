@@ -134,7 +134,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
 
         This option is dangerous, use it with caution.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
     '''
     ret = {'changes': {},
            'comment': '{0} already formatted with {1}'.format(name, fs_type),
