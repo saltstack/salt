@@ -94,7 +94,7 @@ They can now also be defined as a YAML list, like this:
         - host2
         - host3
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Using Nodegroups in SLS files
 =============================

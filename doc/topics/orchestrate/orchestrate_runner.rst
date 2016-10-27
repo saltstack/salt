@@ -72,7 +72,7 @@ apply the states defined in that file.
 Masterless Orchestration
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 To support salt orchestration on masterless minions, the Orchestrate Runner is
 available as an execution module. The syntax for masterless orchestration is

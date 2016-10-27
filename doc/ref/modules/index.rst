@@ -156,7 +156,7 @@ module and pass the argument ``bar`` to it.
 Calling Execution Modules on the Salt Master
 ============================================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 Execution modules can now also be called via the :command:`salt-run` command
 using the :ref:`salt runner <salt_salt_runner>`.
 
