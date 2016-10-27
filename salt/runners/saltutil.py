@@ -253,7 +253,7 @@ def sync_pillar(saltenv='base'):
 
 def sync_utils(saltenv='base'):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Sync utils modules from ``salt://_utils`` to the master
 
