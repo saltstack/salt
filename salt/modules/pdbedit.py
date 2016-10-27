@@ -51,6 +51,12 @@ def __virtual__():
 def generate_nt_hash(password):
     '''
     Generate a NT HASH
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pdbedit.generate_nt_hash my_passwd
     '''
     return binascii.hexlify(
         hashlib.new(
