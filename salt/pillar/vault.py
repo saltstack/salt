@@ -6,7 +6,7 @@ Vault Pillar Module
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 This module allows pillar data to be stored in Hashicorp Vault.
 
