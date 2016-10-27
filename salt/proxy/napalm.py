@@ -55,7 +55,7 @@ in `NAPALM Automation community`_.
 .. _`NAPALM Salt reference`: https://github.com/napalm-automation/napalm-salt
 .. _`NAPALM Automation community`: https://github.com/napalm-automation
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 '''
 
 from __future__ import absolute_import
