@@ -655,7 +655,7 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI example:
 
@@ -683,7 +683,7 @@ def list_groups(region=None, key=None, keyid=None, profile=None):
     Return all AutoScale Groups visible in the account
     (as a list of names).
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI example:
 
@@ -740,11 +740,12 @@ def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
     '''
     Switch desired instances to StandBy mode
 
+    .. versionadded:: 2016.11.0
+
     CLI example::
 
         salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
 
-    .. versionadded:: Carbon
     '''
     conn = _get_conn_autoscaling_boto3(
         region=region, key=key, keyid=keyid, profile=profile)
@@ -766,11 +767,12 @@ def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
     '''
     Exit desired instances from StandBy mode
 
+    .. versionadded:: 2016.11.0
+
     CLI example::
 
         salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
 
-    .. versionadded:: Carbon
     '''
     conn = _get_conn_autoscaling_boto3(
         region=region, key=key, keyid=keyid, profile=profile)
