@@ -8,15 +8,13 @@ Version 2016.3.4 is a bugfix release for :doc:`2016.3.0
 Known Issues
 ------------
 
-`Bootstrap Issue #973`_: ``python-futures`` is not installed when installing from a git tag
-on RedHat-based distributions. ``Python futures`` is needed when running Salt with the TCP
-transport. This is fixed on the ``develop`` branch of the `salt-bootstrap repo`_ and the fix
-will be included in the upcoming release of salt-bootstrap, but is a bug in the bootstrap
-release that ships with this version of Salt. Please see the `salt-bootstrap repo`_
-for more information on how to update your bootstrap version.
+The release of the `bootstrap-salt.sh` script that is included with 2016.3.4 release has a bug
+in it that fails to install salt correctly for git installs using tags in the 2015.5 branch.
+This bug has not been fixed in the `salt-bootstrap repository`_ yet, but the
+`previous bootstrap release`_ (v2016.08.16) does not contain this bug.
 
-.. _`Bootstrap Issue #973`: https://github.com/saltstack/salt-bootstrap/issues/973
-.. _`salt-bootstrap repo`: https://github.com/saltstack/salt-bootstrap
+.. _`previous bootstrap release`: https://raw.githubusercontent.com/saltstack/salt-bootstrap/v2016.08.16/bootstrap-salt.sh
+.. _`salt-bootstrap repository`: https://github.com/saltstack/salt-bootstrap
 
 Changes
 -------
@@ -37,6 +35,8 @@ Total Merges: **274**
 
 Changes:
 
+- **PR** `#37282`_: (*thatch45*) add cpub to raet event for compat
+- **PR** `#37278`_: (*jfindlay*) update 2016.3.4 release notes
 - **PR** `#37252`_: (*vutny*) Set logging level to 'info' for message about init system detection
 - 47290d8 Update man pages for the 2016.3 branch (`#37259`_)
 - **PR** `#37257`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
@@ -742,3 +742,5 @@ Changes:
 .. _`#37254`: https://github.com/saltstack/salt/pull/37254
 .. _`#37257`: https://github.com/saltstack/salt/pull/37257
 .. _`#37259`: https://github.com/saltstack/salt/pull/37259
+.. _`#37278`: https://github.com/saltstack/salt/pull/37278
+.. _`#37282`: https://github.com/saltstack/salt/pull/37282
