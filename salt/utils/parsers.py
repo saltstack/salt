@@ -1668,7 +1668,7 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
@@ -1684,7 +1684,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'minion'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
+    _default_logging_logfile_ = config.DEFAULT_MINION_OPTS['log_file']
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
@@ -1710,7 +1710,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'proxy'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
+    _default_logging_logfile_ = config.DEFAULT_PROXY_MINION_OPTS['log_file']
 
     def setup_config(self):
         try:
@@ -1719,7 +1719,8 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
             minion_id = None
 
         return config.minion_config(self.get_config_file_path(),
-                                   cache_minion_id=False, minion_id=minion_id)
+                                    cache_minion_id=False,
+                                    minion_id=minion_id)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
@@ -1739,7 +1740,8 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['syndic_log_file']
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
@@ -1768,9 +1770,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'warning'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
-    _loglevel_config_setting_name_ = 'cli_salt_log_file'
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
     try:
         os.getcwd()
     except OSError:
@@ -2057,9 +2058,8 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'warning'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
-    _loglevel_config_setting_name_ = 'cli_salt_cp_log_file'
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
@@ -2398,8 +2398,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'minion'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'info'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
+    _default_logging_level_ = config.DEFAULT_MINION_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MINION_OPTS['log_file']
 
     def _mixin_setup(self):
         self.add_option(
@@ -2606,9 +2606,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'warning'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
-    _loglevel_config_setting_name_ = 'cli_salt_run_log_file'
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
     def _mixin_setup(self):
         self.add_option(
@@ -2671,9 +2670,8 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'warning'
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'ssh')
-    _loglevel_config_setting_name_ = 'cli_salt_run_log_file'
 
     def _mixin_setup(self):
         self.add_option(
@@ -2914,10 +2912,8 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'cloud'
 
     # LogLevelMixIn attributes
-    _default_logging_level_ = 'info'
-    _logfile_config_setting_name_ = 'log_file'
-    _loglevel_config_setting_name_ = 'log_level_logfile'
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
+    _default_logging_level_ = config.DEFAULT_CLOUD_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_CLOUD_OPTS['log_file']
 
     def print_versions_report(self, file=sys.stdout):  # pylint: disable=redefined-builtin
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
@@ -2967,7 +2963,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'spm'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'spm')
+    _default_logging_logfile_ = config.DEFAULT_SPM_OPTS['spm_logfile']
 
     def _mixin_setup(self):
         self.add_option(
@@ -3012,7 +3008,7 @@ class SaltAPIParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'api')
+    _default_logging_logfile_ = config.DEFAULT_API_OPTS['logfile']
 
     def setup_config(self):
         return salt.config.api_config(self.get_config_file_path())  # pylint: disable=no-member
