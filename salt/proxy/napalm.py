@@ -10,17 +10,24 @@ Proxy minion for managing network devices via NAPALM_ library.
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
-:platform:   linux
+:platform:   unix
 
 Dependencies
 ------------
 
-- :doc:`napalm basic network functions (salt.modules.napalm_network) </ref/modules/all/salt.modules.napalm_network>`
+The ``napalm`` proxy module requires `NAPALM`_ library to be installed:  ``pip install napalm``
+Please check `Installation`_ for complete details.
+
+.. _`NAPALM`: https://github.com/napalm-automation/napalm
+.. _`Installation`: https://napalm.readthedocs.io/en/latest/installation.html
 
 See also
 --------
 
-- :doc:`NTP peers management module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
+- :doc:`NET module: execute basic commands (salt.modules.napalm_network) </ref/modules/all/salt.modules.napalm_network>`
+- :doc:`NTP operational and configuration module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
+- :doc:`BGP operational and configuration module (salt.modules.napalm_bgp) </ref/modules/all/salt.modules.napalm_bgp>`
+- :doc:`Probes oper and config module (salt.modules.napalm_probes) </ref/modules/all/salt.modules.napalm_probes>`
 
 Pillar
 ------
@@ -45,15 +52,9 @@ Example:
         host: core05.nrt02
         username: my_username
         passwd: my_password
-
-NAPALM Salt documentation
--------------------------
-
-For futher documentation and usage examples, please check the dedicated `NAPALM Salt reference`_
-in `NAPALM Automation community`_.
-
-.. _`NAPALM Salt reference`: https://github.com/napalm-automation/napalm-salt
-.. _`NAPALM Automation community`: https://github.com/napalm-automation
+        optional_args:
+            port: 12201
+            nxos_protocol: https
 
 .. versionadded: Carbon
 '''
@@ -61,11 +62,20 @@ in `NAPALM Automation community`_.
 from __future__ import absolute_import
 
 # Import python lib
+import traceback
 import logging
 log = logging.getLogger(__file__)
 
 # Import third party lib
-import napalm
+try:
+    # will try to import NAPALM
+    # https://github.com/napalm-automation/napalm
+    # pylint: disable=W0611
+    import napalm_base
+    # pylint: enable=W0611
+    HAS_NAPALM = True
+except ImportError:
+    HAS_NAPALM = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
@@ -79,6 +89,7 @@ __proxyenabled__ = ['napalm']
 # ----------------------------------------------------------------------------------------------------------------------
 
 NETWORK_DEVICE = {}
+DETAILS = {}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -86,7 +97,7 @@ NETWORK_DEVICE = {}
 
 
 def __virtual__():
-    return True
+    return HAS_NAPALM or (False, 'Please install NAPALM library: `pip install napalm`')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -98,40 +109,44 @@ def __virtual__():
 
 
 def init(opts):
-
     '''
     Opens the connection with the network device.
     '''
-
-    NETWORK_DEVICE['HOSTNAME'] = opts.get('proxy', {}).get('host')
-    NETWORK_DEVICE['USERNAME'] = opts.get('proxy', {}).get('username')
-    NETWORK_DEVICE['PASSWORD'] = opts.get('proxy', {}).get('passwd')
-    NETWORK_DEVICE['DRIVER_NAME'] = opts.get('proxy', {}).get('driver')
+    proxy_dict = opts.get('proxy', {})
+    NETWORK_DEVICE['HOSTNAME'] = proxy_dict.get('host') or proxy_dict.get('hostname')
+    NETWORK_DEVICE['USERNAME'] = proxy_dict.get('username') or proxy_dict.get('user')
+    NETWORK_DEVICE['DRIVER_NAME'] = proxy_dict.get('driver') or proxy_dict.get('os')
+    NETWORK_DEVICE['PASSWORD'] = proxy_dict.get('passwd') or proxy_dict.get('password') or proxy_dict.get('pass')
+    NETWORK_DEVICE['TIMEOUT'] = proxy_dict.get('timeout', 60)
+    NETWORK_DEVICE['OPTIONAL_ARGS'] = proxy_dict.get('optional_args', {})
 
     NETWORK_DEVICE['UP'] = False
 
-    _driver_ = napalm.get_network_driver(NETWORK_DEVICE.get('DRIVER_NAME'))
+    _driver_ = napalm_base.get_network_driver(NETWORK_DEVICE.get('DRIVER_NAME'))
     # get driver object form NAPALM
 
-    optional_args = {
-        'config_lock': False  # to avoid locking config DB
-    }
+    if 'config_lock' not in NETWORK_DEVICE['OPTIONAL_ARGS'].keys():
+        NETWORK_DEVICE['OPTIONAL_ARGS']['config_lock'] = False
 
     try:
         NETWORK_DEVICE['DRIVER'] = _driver_(
             NETWORK_DEVICE.get('HOSTNAME', ''),
             NETWORK_DEVICE.get('USERNAME', ''),
             NETWORK_DEVICE.get('PASSWORD', ''),
-            timeout=120,
-            optional_args=optional_args
+            timeout=NETWORK_DEVICE['TIMEOUT'],
+            optional_args=NETWORK_DEVICE['OPTIONAL_ARGS']
         )
         NETWORK_DEVICE.get('DRIVER').open()
         # no exception raised here, means connection established
         NETWORK_DEVICE['UP'] = True
-    except napalm.exceptions.ConnectionException as error:
+        DETAILS['initialized'] = True
+    except napalm_base.exceptions.ConnectionException as error:
         log.error(
-            "Cannot connect to {hostname} as {username}. Please check error: {error}".format(
+            "Cannot connect to {hostname}{port} as {username}. Please check error: {error}".format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', ''),
+                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
+                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
+                ),
                 username=NETWORK_DEVICE.get('USERNAME', ''),
                 error=error
             )
@@ -146,23 +161,72 @@ def ping():
     Connection open successfully?
     '''
 
-    return NETWORK_DEVICE['UP']
+    return NETWORK_DEVICE.get('UP', False)
+
+
+def initialized():
+
+    '''
+    Connection finished initializing?
+    '''
+
+    return DETAILS.get('initialized', False)
+
+
+def grains():
+
+    '''
+    Retrieve facts from the network device.
+    '''
+
+    refresh_needed = False
+    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
+    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
+    refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('out', {}))
+
+    if refresh_needed:
+        facts = call('get_facts', **{})
+        DETAILS['grains_cache'] = facts
+
+    return DETAILS.get('grains_cache', {})
+
+
+def grains_refresh():
+
+    '''
+    Refresh the grains.
+    '''
+
+    DETAILS['grains_cache'] = {}
+    return grains()
+
+
+def fns():
+
+    '''
+    Method called by NAPALM grains module.
+    '''
+
+    return {
+        'details': 'Network device grains.'
+    }
 
 
 def shutdown(opts):
-
     '''
     Closes connection with the device.
     '''
-
     try:
         if not NETWORK_DEVICE.get('UP', False):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
     except Exception as error:
         log.error(
-            'Cannot close connection with {hostname}! Please check error: {error}'.format(
+            'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
                 hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
+                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
+                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
+                ),
                 error=error
             )
         )
@@ -180,7 +244,7 @@ def call(method, **params):
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
 
-    .. _readthedocs: https://napalm.readthedocs.io/en/latest/support/index.html#getters-support-matrix
+    .. _readthedocs: http://napalm.readthedocs.org/en/latest/support/index.html#getters-support-matrix
 
     :param method: specifies the name of the method to be called
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
@@ -215,14 +279,20 @@ def call(method, **params):
     except Exception as error:
         # either not connected
         # either unable to execute the command
+        err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
         return {
             'out': {},
             'result': False,
-            'comment': 'Cannot execute "{method}" on {device}. Reason: {error}!'.format(
+            'comment': 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
                 device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
+                port=(':{port}'.format(port=NETWORK_DEVICE['OPTIONAL_ARGS'])
+                        if NETWORK_DEVICE['OPTIONAL_ARGS'].get('port') else ''
+                ),
+                user=NETWORK_DEVICE.get('USERNAME', ''),
                 method=method,
                 error=error
-            )
+            ),
+            'traceback': err_tb
         }
 
     return {
